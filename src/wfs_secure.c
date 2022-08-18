@@ -61,31 +61,29 @@ extern unsigned long int wfs_sec_sig(char c0, char c1, char c2, char c3);
  * Clears the (POSIX) capabilities of the program.
  * \return 0 on success, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_clear_cap (
 #ifdef WFS_ANSIC
-	wfs_error_type_t * const error)
-#else
-	error)
-	wfs_error_type_t * const error;
+	void
 #endif
+)
 {
 #ifdef HAVE_SYS_CAPABILITY_H
 	int res;
 	cap_t my_capab;
 #endif
-
-	error->errcode.gerror = WFS_SUCCESS;
+	wfs_errcode_t ret = WFS_SUCCESS;
 
 #ifdef HAVE_SYS_CAPABILITY_H
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	/* Valgring says this calls gapget(..., NULL), but there's nothing we can do about it. */
+	/* NOTE: Valgring says this calls capget(..., NULL), but
+	there's nothing we can do about it. */
 	my_capab = cap_init ();
 	if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
@@ -104,9 +102,9 @@ wfs_clear_cap (
 		   )
 		{
 # ifdef HAVE_ERRNO_H
-			error->errcode.gerror = errno;
+			ret = errno;
 # else
-			error->errcode.gerror = 1L;
+			ret = 1L;
 # endif
 		}
 		/* don't care about any cap_free() errors right now */
@@ -137,9 +135,9 @@ wfs_clear_cap (
 			   )
 			{
 # ifdef HAVE_ERRNO_H
-				error->errcode.gerror = errno;
+				ret = errno;
 # else
-				error->errcode.gerror = 1L;
+				ret = 1L;
 # endif
 			}
 			else
@@ -155,9 +153,9 @@ wfs_clear_cap (
 				   )
 				{
 # ifdef HAVE_ERRNO_H
-					error->errcode.gerror = errno;
+					ret = errno;
 # else
-					error->errcode.gerror = 1L;
+					ret = 1L;
 # endif
 				}
 			}
@@ -167,21 +165,25 @@ wfs_clear_cap (
 		else
 		{	/* cap_get_proc() failed. */
 # ifdef HAVE_ERRNO_H
-			error->errcode.gerror = errno;
+			ret = errno;
 # else
-			error->errcode.gerror = 1L;
+			ret = 1L;
 # endif
 		}
 	}
 #endif /* HAVE_SYS_CAPABILITY_H */
 
-	return error->errcode.gerror;
+	return ret;
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if stdout & stderr are open.
- * \param stdout_open Pointer to an int, which will get the value 0 if standard output is not open.
- * \param stderr_open Pointer to an int, which will get the value 0 if standard error output is not open.
+ * \param stdout_open Pointer to an int which will get the value 0 if
+ *	the standard output is not open.
+ * \param stderr_open Pointer to an int which will get the value 0 if
+ *	the standard error output is not open.
  */
 void
 #ifdef WFS_ANSIC
@@ -250,15 +252,23 @@ wfs_check_stds (
 #endif	/* HAVE_SYS_STAT_H */
 	}
 
-	if ( (stdout == NULL) && (stdout_open != NULL) ) *stdout_open = 0;
-	if ( (stderr == NULL) && (stderr_open != NULL) ) *stderr_open = 0;
+	if ( (stdout == NULL) && (stdout_open != NULL) )
+	{
+		*stdout_open = 0;
+	}
+	if ( (stderr == NULL) && (stderr_open != NULL) )
+	{
+		*stderr_open = 0;
+	}
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if the program is being run setuid(root).
  * \return WFS_SUCCESS if not.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 wfs_check_suid (
 #ifdef WFS_ANSIC
 	void)
@@ -277,6 +287,8 @@ wfs_check_suid (
 	return ret;
 }
 
+
+/* ======================================================================== */
 
 /**
  * Clears the environment.

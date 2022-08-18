@@ -46,10 +46,6 @@
 # include <locale.h>
 #endif
 
-/* redefine the inline sig function from hfsp, each time with a different name */
-extern unsigned long int wfs_wipe_sig(char c0, char c1, char c2, char c3);
-#define sig(a,b,c,d) wfs_wipe_sig(a,b,c,d)
-
 #include "wipefreespace.h"
 #include "wfs_wiping.h"
 #include "wfs_signal.h"
@@ -328,7 +324,7 @@ init_wiping (
  * \param buffer Buffer to be filled.
  * \param buflen Length of the buffer.
  * \param selected The array which tells which of the patterns have already been used.
- * \param FS The filesystem this wiping refers to.
+ * \param wfs_fs The filesystem this wiping refers to.
  */
 void
 #ifdef WFS_ANSIC
@@ -340,14 +336,14 @@ fill_buffer (
 	unsigned char * const 		buffer,
 	const size_t 			buflen,
 	int * const			selected,
-	const wfs_fsid_t		FS )
+	const wfs_fsid_t		wfs_fs )
 #else
-	pat_no,	buffer,	buflen,	selected, FS )
+	pat_no,	buffer,	buflen,	selected, wfs_fs )
 	unsigned long int 		pat_no;
 	unsigned char * const 		buffer;
 	const size_t 			buflen;
 	int * const			selected;
-	const wfs_fsid_t		FS;
+	const wfs_fsid_t		wfs_fs;
 #endif
 		/*@requires notnull buffer @*/ /*@sets *buffer @*/
 {
@@ -486,6 +482,7 @@ fill_buffer (
 	}
 	/* Taken from `shred' source and modified */
 	bits |= bits << 12;
+
 	buffer[0] = (unsigned char) ((bits >> 4) & 0xFF);
 	buffer[1] = (unsigned char) ((bits >> 8) & 0xFF);
 	buffer[2] = (unsigned char) (bits & 0xFF);
@@ -494,7 +491,7 @@ fill_buffer (
 	{
 		if ( wfs_is_pass_random (pat_no, opt_method) == 1 )
 		{
-			show_msg ( 1, msg_pattern, msg_random, FS );
+			wfs_show_msg ( 1, msg_pattern, msg_random, wfs_fs );
 		}
 		else
 		{
@@ -504,7 +501,7 @@ fill_buffer (
 			res = sprintf (tmp, "%02x%02x%02x", buffer[0], buffer[1], buffer[2] );
 #endif
 			tmp[7] = '\0';
-			show_msg ( 1, msg_pattern, (res > 0)? tmp: "??????", FS );
+			wfs_show_msg ( 1, msg_pattern, (res > 0)? tmp: "??????", wfs_fs );
 		}
 	}
 	for (i = 3; (i < buflen / 2) && (sig_recvd == 0); i *= 2)

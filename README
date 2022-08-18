@@ -10,7 +10,7 @@ Wipefreespace wipes the following things (when supported by the backing
 Wipefreespace does NOT decrease the amount of available free space when
  working.
 
-NOTE: it is best to use this program on un-mounted file systems, which
+NOTE: it is best to use this program on un-mounted file systems, what
  makes sure the journal is committed.
 
 NOTE: if a block is damaged, it is only wiped until the first error. There is
@@ -74,8 +74,6 @@ Requirements for compiling the full version:
   	http://www.linux-ntfs.org/
   Then compile and install that package. You can also use ntfs3g-ntfsprogs:
 	http://www.tuxera.com/community/ntfs-3g-download/
-  Remember to copy all the *.h files from the "include" directory to the
-  destination "include" directory (like /usr/include/ntfs/).
 
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/. The following utilities
@@ -113,13 +111,18 @@ Requirements for compiling the full version:
 - MinixFS: "mfstool", the MinixFS tool. Go to
 	http://mfstool.sourceforge.net/
   to get this program. Before compiling, perform:
+
   	sed -i 's/opt_squash/0/g' `ls *.c | egrep -v main`
+
   then compile the program (./configure && make), then perform
+
   	ar surf libminixfs.a `ls *.o | egrep -v main`
+
   Then copy the files libminixfs.a, minix_fs.h and protos.h to a directory
   where the C compiler can find them (or put the correct -I and -L options
   in the compiler flags). You can use the provided patches to do this
   instead of the sed command:
+
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff
 
 - JFS: jfsutils and libuuid (the <uuid/uuid.h> header file). Go to
@@ -138,7 +141,9 @@ Requirements for compiling the full version:
 - HFS+: the "hfsplus" package. Go to
 https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
   to get it. Before compiling, apply the patch:
+
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff
+
   After compiling, install all the libraries and ALL the *.h header files
   from the libhfsp/src/ directory where the C compiler can find them (or
   put the correct -I and -L options in the compiler flags).
@@ -155,12 +160,15 @@ WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program
  of these filesystems (you can compile two versions of the program).
  Don't complain to me, complain to the guys that made reiserfsprogs and
  reiser4progs. You can fix either of these libraries yourself, by running
+
 	find . -type f -exec sed -i 's/misc_mntent/new_misc_mntent/g' '{}' \;
+
  in the root directory of either reiserfsprogs or reiser4progs (but
  NOT both, because this would bring back the same problem, but with a
  different name). Type the command as above. The command must be run
  BEFORE compiling the reiserfs programs. You can use the provided patches
  to do this:
+
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser4-1.0.7.diff
 
@@ -170,12 +178,15 @@ WARNING: If both ReiserFSv3 and MinixFS are enabled, the program
  definitions. If you have this problem, disable the support for either
  of these filesystems (you can compile two versions of the program).
  You can fix either of these libraries yourself, by running
+
 	find . -type f -exec sed -i 's/die/new_die/g' '{}' \;
+
  in the root directory of either reiserfsprogs or mfstool (but
  NOT both, because this would bring back the same problem, but with a
  different name). Type the command as above. The command must be run
  BEFORE compiling reiserfs/mfstool. You can use the provided patches
  to do this:
+
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
 
@@ -183,21 +194,29 @@ WARNING: If both ReiserFSv3 and JFS are enabled, you MUST either disable
  the support for either of these filesystems (you can compile two
  versions of the program) or fix either of these libraries yourself,
  by running
+
 	find . -type f -exec sed -i 's/bread/new_bread/g' '{}' \;
+
  in the root directory of either reiserfsprogs or jfsutils (but
  NOT both, because this would bring back the same problem, but with a
  different name). Type the command as above. The command must be run
  BEFORE compiling reiserfs/jfsutils. You can use the provided patches
  to do this:
+
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/jfsutils-1.1.11.diff
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
+
  Even if your linker/compiler accepts the "-Wl,-z -Wl,muldefs" option, it
  won't help in this case.
 
 The patches for ntfsprogs are optional. Whether or not they will be included
  in the official release of ntfsprogs, wipefreespace still will compile.
 
-Type './configure' to configure the program for your system.
+Type
+
+	./configure
+
+to configure the program for your system.
 If you do not wish support for a filesystem, give the '--enable-FS=no'
  option to ./configure (FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT,
  MINIX, JFS, HFSP, OCFS).
@@ -209,10 +228,16 @@ Run './configure --help' for details.
 
 If you do NOT wish wipefreespace to use the network or get the computer's IP
  address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
+
 	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
+
 NOTE: this may cause network filesystem wiping to fail.
 
-Type 'make' to compile the program.
+Type
+
+	make
+
+to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program
  ('texinfo' package).
 Translations will be compiled, if you have the 'gettext' package.
@@ -220,8 +245,12 @@ Translations will be compiled, if you have the 'gettext' package.
 NOTE: if you have trouble compiling, send me some of the first error messages
 in each file and the config.h file generated by the 'configure' script.
 
-Type 'make install' to install the program (NOT recommended) or read below on
-how to make an RPM package (recommended).
+Type
+
+	make install
+
+ to install the program (NOT recommended) or read below on how to make an
+ RPM package (recommended).
 
 Type 'info wipefreespace' to get help.
 
@@ -233,7 +262,7 @@ Command line options:
 
 --all-zeros		Use only zeros for wiping
 --background		Continue work in the background, if possible. This
-			disables verose mode.
+			disables verbose mode.
 -b|--superblock <off>	Superblock offset on the given filesystems
 -B|--blocksize <size>	Block size on the given filesystems
 -f|--force		Wipe even if the file system has errors
@@ -245,7 +274,11 @@ Command line options:
 --nopart		Do NOT wipe free space in partially used blocks
 --nounrm		Do NOT wipe undelete information
 --nowfs			Do NOT wipe free space on file system
---use-ioctl		Disable device caching during work (can be DANGEROUS)
+--use-ioctl		Disable device caching during work (can be DANGEROUS).
+			NOTE: this may not work for sub-partitions on drives.
+			To disable the cache, run the 'hdparm' utility with
+			the correct options to disable the cache before
+			running wipefreespace and enable the cache afterwards.
 -v|--verbose		Verbose output. Use twice for more. This also enables
 			progress bars, but be warned: these may not always be
 			accurate or increase at a constant rate.
@@ -267,19 +300,32 @@ Each given filesystem is wiped ONLY ONCE, no matter how many times it
 WipeFreeSpace also works for file systems created inside regular
  files on any host file system.
 
+NOTE: wiping with just one pattern at a time (-n 1) will NOT perform wiping
+ with all patterns of the given method one by one, it will always use the
+ first pattern. However, it will be MUCH faster than any "full" method.
+ If you need just random wiping, run
+
+	wipefreespace -n 1 /dev/XY
+
+ a few times in a row.
+
 Any option affects all filesystems given on the command line, not just
  the ones following it.
 
 To perform a command after wiping (like sending e-mail), simply run a
  program after WipeFreeSpace is finished, for example:
+
 	wipefreespace [options] /dev/XY; mail [options]
+
  or in a script:
+
 	#!/bin/bash
 	wipefreespace [options] /dev/XY
 	mail [options]
 
 To run WipeFreeSpace with a higher or lower priority, simply use the
  "renice" utility, for example:
+
 	renice +1 $(pidof wipefreespace)
 
 =======================================================
@@ -290,7 +336,7 @@ Building an RPM package (the old way):
 2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
 3) type
 	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
-4) get the rpms from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
+4) get the RPMs from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
 
 NOTE: some systems may use other directories than these.
 
@@ -300,7 +346,7 @@ Building an RPM package (the new way):
 2) copy the source package wipefreespace-XX.tar.gz to $HOME/rpmbuild/SOURCES
 3) type
         rpmbuild -ba $HOME/rpmbuild/SPECS/wipefreespace.spec
-4) get the rpms from $HOME/rpmbuild/RPMS/i386 and $HOME/rpmbuild/SRPMS
+4) get the RPMs from $HOME/rpmbuild/RPMS/i386 and $HOME/rpmbuild/SRPMS
 
 =======================================================
 

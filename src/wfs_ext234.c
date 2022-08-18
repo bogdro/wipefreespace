@@ -25,6 +25,8 @@
 
 #include "wfs_cfg.h"
 
+#include <stdio.h>
+
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>		/* dev_t: just for ext2fs.h */
 #else
@@ -48,13 +50,15 @@
 # include <string.h>	/* memset() */
 #endif
 
-/* redefine the inline sig function from hfsp, each time with a different name */
-extern unsigned long int wfs_e234_sig(char c0, char c1, char c2, char c3);
-#define sig(a,b,c,d) wfs_e234_sig(a,b,c,d)
-
 #include "wipefreespace.h"
-/* fix conflict with reiser4: */
-#undef blk_t
+
+#ifdef HAVE_COM_ERR_H
+# include <com_err.h>
+#else
+# if defined HAVE_ET_COM_ERR_H
+#  include <et/com_err.h>
+# endif
+#endif
 
 /* fix e2fsprogs inline functions - some linkers saw double definitions and
    failed with an error message */
@@ -90,6 +94,14 @@ extern unsigned long int wfs_e234_sig(char c0, char c1, char c2, char c3);
 # include <errno.h>
 #endif
 
+#ifdef HAVE_LIBINTL_H
+# include <libintl.h>	/* translation stuff */
+#endif
+
+#ifdef HAVE_LOCALE_H
+# include <locale.h>
+#endif
+
 #include "wfs_ext234.h"
 #include "wfs_signal.h"
 #include "wfs_wiping.h"
@@ -107,36 +119,39 @@ struct wfs_e234_block_data
 /* ======================================================================== */
 
 #ifndef WFS_ANSIC
-static size_t WFS_ATTR ((warn_unused_result)) wfs_e234_get_block_size WFS_PARAMS ((const wfs_fsid_t FS));
+static size_t GCC_WARN_UNUSED_RESULT wfs_e234_get_block_size WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 #endif
 
 /**
  * Returns the buffer size needed to work on the smallest physical unit on a ext2/3/4 filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return Block size on the filesystem.
  */
-static size_t WFS_ATTR ((warn_unused_result))
+static size_t GCC_WARN_UNUSED_RESULT
 wfs_e234_get_block_size (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS )
+	const wfs_fsid_t wfs_fs )
 #else
-	FS)
-	const wfs_fsid_t FS;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
-	if ( FS.e2fs == NULL )
+	ext2_filsys e2fs;
+
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	if ( e2fs == NULL )
 	{
 		return 0;
 	}
-	if ( FS.e2fs->super == NULL )
+	if ( e2fs->super == NULL )
 	{
 		return 0;
 	}
-	return (size_t) EXT2_BLOCK_SIZE (FS.e2fs->super);
+	return (size_t) EXT2_BLOCK_SIZE (e2fs->super);
 }
 
 #ifndef WFS_ANSIC
-static int WFS_ATTR ((warn_unused_result)) e2_do_block WFS_PARAMS ((const ext2_filsys FS,
+static int GCC_WARN_UNUSED_RESULT e2_do_block WFS_PARAMS ((const ext2_filsys wfs_fs,
 	blk_t * const BLOCKNR, const int BLOCKCNT, void * const PRIVATE));
 #endif
 
@@ -144,45 +159,48 @@ static int WFS_ATTR ((warn_unused_result)) e2_do_block WFS_PARAMS ((const ext2_f
 
 /**
  * Wipes a block on an ext2/3/4 filesystem and writes it to the media.
- * \param FS The filesystem which the block is on.
+ * \param wfs_fs The filesystem which the block is on.
  * \param BLOCKNR Pointer to physical block number.
  * \param BLOCKCNT Block type (<0 for metadata blocks, >=0 is the number of the block in the i-node).
  * \param PRIVATE Private data. Pointer to a 'struct wfs_e234_block_data'.
  * \return 0 in case of no errors, and BLOCK_ABORT in case of signal or error.
  */
-static int WFS_ATTR ((warn_unused_result))
+static int GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 e2_do_block (
 #ifdef WFS_ANSIC
-		const ext2_filsys		FS,
+		const ext2_filsys		wfs_fs,
 		blk_t * const	 		BLOCKNR,
 		const int			BLOCKCNT,
 		void * const			PRIVATE)
 #else
-		FS, BLOCKNR, BLOCKCNT, PRIVATE)
-		const ext2_filsys		FS;
+		wfs_fs, BLOCKNR, BLOCKCNT, PRIVATE)
+		const ext2_filsys		wfs_fs;
 		blk_t * const	 		BLOCKNR;
 		const int			BLOCKCNT;
 		void * const			PRIVATE;
 #endif
-		/*@requires notnull FS, BLOCKNR @*/
+		/*@requires notnull wfs_fs, BLOCKNR @*/
 {
 	unsigned long int j;
 	int returns = 0;
 	size_t buf_start = 0;
-	int selected[WFS_NPAT];
-	wfs_error_type_t error;
+	int selected[WFS_NPAT] = {0};
 	struct wfs_e234_block_data *bd;
 	static int first_journ = 1;
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
+	wfs_errcode_t gerror = 0;
 
-	if ( (FS == NULL) || (BLOCKNR == NULL) || (PRIVATE == NULL) )
+	if ( (wfs_fs == NULL) || (BLOCKNR == NULL) || (PRIVATE == NULL) )
 	{
 		return BLOCK_ABORT;
 	}
 
 	bd = (struct wfs_e234_block_data *)PRIVATE;
+	error_ret = (errcode_t *) bd->wd.filesys.fs_error;
 	if ( bd->wd.buf == NULL )
 	{
 		return BLOCK_ABORT;
@@ -193,21 +211,25 @@ e2_do_block (
 	{
 		buf_start = (size_t)(bd->ino->i_size % wfs_e234_get_block_size (bd->wd.filesys));
 		/* The beginning of the block must NOT be wiped, read it here. */
-		error.errcode.e2error = io_channel_read_blk (FS->io, *BLOCKNR, 1, bd->wd.buf);
-		if ( error.errcode.e2error != 0 )
+		e2error = io_channel_read_blk (wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
+		if ( e2error != 0 )
 		{
+			if ( error_ret != NULL )
+			{
+				*error_ret = e2error;
+			}
 			return BLOCK_ABORT;
 		}
 	}
 
 	/* mark bad blocks if needed. Taken from libext2fs->lib/ext2fs/inode.c */
-	if (FS->badblocks == NULL)
+	if (wfs_fs->badblocks == NULL)
 	{
-		error.errcode.e2error = ext2fs_read_bb_inode (FS, &(FS->badblocks));
-		if ( (error.errcode.e2error != 0) && (FS->badblocks != NULL) )
+		e2error = ext2fs_read_bb_inode (wfs_fs, &(wfs_fs->badblocks));
+		if ( (e2error != 0) && (wfs_fs->badblocks != NULL) )
 		{
-			ext2fs_badblocks_list_free (FS->badblocks);
-			FS->badblocks = NULL;
+			ext2fs_badblocks_list_free (wfs_fs->badblocks);
+			wfs_fs->badblocks = NULL;
 		}
 	}
 
@@ -220,28 +242,32 @@ e2_do_block (
 	for ( j = 0; (j < bd->wd.filesys.npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer (j, bd->wd.buf + buf_start /* buf OK */,
-			wfs_e234_get_block_size (bd->wd.filesys) - buf_start, selected, bd->wd.filesys);
+			wfs_e234_get_block_size (bd->wd.filesys) - buf_start,
+			selected, bd->wd.filesys);
 		if ( sig_recvd != 0 )
 		{
 			returns = BLOCK_ABORT;
 		       	break;
 		}
-		error.errcode.e2error = 0;
+		e2error = 0;
 		/* do NOT overwrite the first block of the journal */
-		if ( ((bd->wd.isjournal != 0) && (first_journ == 0)) || (bd->wd.isjournal == 0) )
+		if ( ((bd->wd.isjournal != 0) && (first_journ == 0))
+			|| (bd->wd.isjournal == 0) )
 		{
-			error.errcode.e2error = io_channel_write_blk (FS->io, *BLOCKNR, 1, bd->wd.buf);
+			e2error = io_channel_write_blk (
+				wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 		}
-		if ( (error.errcode.e2error != 0) )
+		if ( (e2error != 0) )
 		{
 			/* check if block is marked as bad. If there is no 'badblocks' list
 			   or the block is marked OK, then print the error. */
-			if (FS->badblocks == NULL)
+			if (wfs_fs->badblocks == NULL)
 			{
 				returns = BLOCK_ABORT;
 				break;
 			}
-			else if (ext2fs_badblocks_list_test (FS->badblocks, *BLOCKNR) == 0)
+			else if (ext2fs_badblocks_list_test (
+				wfs_fs->badblocks, *BLOCKNR) == 0)
 			{
 				returns = BLOCK_ABORT;
 				break;
@@ -251,36 +277,41 @@ e2_do_block (
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
 		if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
 		{
-			error.errcode.gerror = wfs_e234_flush_fs (bd->wd.filesys, &error);
+			gerror = wfs_e234_flush_fs (bd->wd.filesys);
 		}
 	}
 	if ( (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* perform last wipe with zeros */
 #ifdef HAVE_MEMSET
-		memset (bd->wd.buf + buf_start, 0, wfs_e234_get_block_size (bd->wd.filesys) - buf_start);
+		memset (bd->wd.buf + buf_start, 0,
+			wfs_e234_get_block_size (bd->wd.filesys) - buf_start);
 #else
-		for ( j=0; j < wfs_e234_get_block_size (bd->wd.filesys) - buf_start; j++ )
+		for ( j = 0; j < wfs_e234_get_block_size (bd->wd.filesys)
+			- buf_start; j++ )
 		{
 			bd->wd.buf[buf_start+j] = '\0';
 		}
 #endif
-		error.errcode.e2error = 0;
+		e2error = 0;
 		/* do NOT overwrite the first block of the journal */
-		if ( (((bd->wd.isjournal != 0) && (first_journ == 0)) || (bd->wd.isjournal == 0))
+		if ( (((bd->wd.isjournal != 0) && (first_journ == 0))
+			|| (bd->wd.isjournal == 0))
 			&& (sig_recvd == 0) )
 		{
-			error.errcode.e2error = io_channel_write_blk (FS->io, *BLOCKNR, 1, bd->wd.buf);
+			e2error = io_channel_write_blk (
+				wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 		}
-		if ( (error.errcode.e2error != 0) )
+		if ( (e2error != 0) )
 		{
 			/* check if block is marked as bad. If there is no 'badblocks' list
 			   or the block is marked OK, then print the error. */
-			if (FS->badblocks == NULL)
+			if (wfs_fs->badblocks == NULL)
 			{
 				returns = BLOCK_ABORT;
 			}
-			else if (ext2fs_badblocks_list_test (FS->badblocks, *BLOCKNR) == 0)
+			else if (ext2fs_badblocks_list_test (
+				wfs_fs->badblocks, *BLOCKNR) == 0)
 			{
 				returns = BLOCK_ABORT;
 			}
@@ -289,7 +320,7 @@ e2_do_block (
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
 		if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
 		{
-			error.errcode.gerror = wfs_e234_flush_fs (bd->wd.filesys, &error);
+			gerror = wfs_e234_flush_fs (bd->wd.filesys);
 		}
 	}
 	/* zero-out the journal after wiping */
@@ -306,7 +337,8 @@ e2_do_block (
 			memset (bd->wd.buf + buf_start, 0,
 				wfs_e234_get_block_size (bd->wd.filesys) - buf_start);
 #else
-			for ( j=0; j < wfs_e234_get_block_size (bd->wd.filesys) - buf_start; j++ )
+			for ( j = 0; j < wfs_e234_get_block_size (bd->wd.filesys)
+				- buf_start; j++ )
 			{
 				bd->wd.buf[buf_start+j] = '\0';
 			}
@@ -315,16 +347,17 @@ e2_do_block (
 			{
 				returns = BLOCK_ABORT;
 			}
-			error.errcode.e2error = io_channel_write_blk (FS->io, *BLOCKNR, 1, bd->wd.buf);
-			if ( (error.errcode.e2error != 0) )
+			e2error = io_channel_write_blk (wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
+			if ( (e2error != 0) )
 			{
 				/* check if block is marked as bad. If there is no 'badblocks' list
 				   or the block is marked OK, then print the error. */
-				if (FS->badblocks == NULL)
+				if (wfs_fs->badblocks == NULL)
 				{
 					returns = BLOCK_ABORT;
 				}
-				else if (ext2fs_badblocks_list_test (FS->badblocks, *BLOCKNR) == 0)
+				else if (ext2fs_badblocks_list_test (
+					wfs_fs->badblocks, *BLOCKNR) == 0)
 				{
 					returns = BLOCK_ABORT;
 				}
@@ -333,13 +366,24 @@ e2_do_block (
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
 			if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
 			{
-				error.errcode.gerror = wfs_e234_flush_fs (bd->wd.filesys, &error);
+				gerror = wfs_e234_flush_fs (bd->wd.filesys);
 			}
 		}
 		bd->curr_inode++;
-		show_progress (WFS_PROGRESS_UNRM,
+		wfs_show_progress (WFS_PROGRESS_UNRM,
 			50 /* unrm i-nodes */ + (bd->curr_inode * 50)/(bd->number_of_blocks_in_inode),
 			& (bd->prev_percent));
+	}
+	if ( error_ret != NULL )
+	{
+		if ( e2error != 0 )
+		{
+			*error_ret = e2error;
+		}
+		else
+		{
+			*error_ret = (errcode_t)gerror;
+		}
 	}
 	if ( sig_recvd != 0 )
 	{
@@ -353,7 +397,7 @@ e2_do_block (
 
 #ifdef WFS_WANT_PART
 # ifndef WFS_ANSIC
-static int e2_count_blocks WFS_PARAMS ((const ext2_filsys FS WFS_ATTR ((unused)),
+static int e2_count_blocks WFS_PARAMS ((const ext2_filsys wfs_fs WFS_ATTR ((unused)),
 	blk_t * const BLOCKNR, const int BLOCKCNT WFS_ATTR ((unused)), void * PRIVATE));
 # endif
 
@@ -362,7 +406,7 @@ static int e2_count_blocks WFS_PARAMS ((const ext2_filsys FS WFS_ATTR ((unused))
 /**
  * Finds the last block number used by an ext2/3/4 i-node. Simply gets all block numbers one at
  * a time and saves the last one.
- * \param FS The filesystem which the block is on (unused).
+ * \param wfs_fs The filesystem which the block is on (unused).
  * \param BLOCKNR Pointer to physical block number.
  * \param BLOCKCNT Block type (<0 for metadata blocks, >=0 is the number
  *	of the block in the i-node), unused.
@@ -375,18 +419,18 @@ WFS_ATTR ((nonnull))
 # endif
 e2_count_blocks (
 # ifdef WFS_ANSIC
-		/*@unused@*/ 		const ext2_filsys	FS WFS_ATTR ((unused)),
+		/*@unused@*/ 		const ext2_filsys	wfs_fs WFS_ATTR ((unused)),
 					blk_t * const		BLOCKNR,
 		/*@unused@*/ 		const int		BLOCKCNT WFS_ATTR ((unused)),
 					void *			PRIVATE
 		)
 # else
-		/*@unused@*/ 		FS,
+		/*@unused@*/ 		wfs_fs,
 					BLOCKNR,
 		/*@unused@*/ 		BLOCKCNT,
 					PRIVATE
 		)
-		/*@unused@*/ 		const ext2_filsys	FS WFS_ATTR ((unused));
+		/*@unused@*/ 		const ext2_filsys	wfs_fs WFS_ATTR ((unused));
 					blk_t * const		BLOCKNR;
 		/*@unused@*/ 		const int		BLOCKCNT WFS_ATTR ((unused));
 					void *			PRIVATE;
@@ -460,8 +504,10 @@ e2_wipe_unrm_dir (
 	int changed = 0;
 	struct ext2_inode unrm_ino;
 	char* filename;
-	int selected[WFS_NPAT];
-	wfs_error_type_t error;
+	int selected[WFS_NPAT] = {0};
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
 
 	if ( (DIRENT == NULL) || (BUF == NULL) || (PRIVATE == NULL) )
 	{
@@ -471,11 +517,13 @@ e2_wipe_unrm_dir (
 	filename = BUF + OFFSET + sizeof (DIRENT->inode) + sizeof (DIRENT->rec_len)
 		+ sizeof (DIRENT->name_len);
 	bd = (struct wfs_e234_block_data *) PRIVATE;
-	if ( bd->wd.filesys.e2fs == NULL )
+	e2fs = (ext2_filsys) bd->wd.filesys.fs_backend;
+	error_ret = (errcode_t *) bd->wd.filesys.fs_error;
+	if ( e2fs == NULL )
 	{
 		return DIRENT_ABORT;
 	}
-	if ( bd->wd.filesys.e2fs->super == NULL )
+	if ( e2fs->super == NULL )
 	{
 		return DIRENT_ABORT;
 	}
@@ -490,14 +538,17 @@ e2_wipe_unrm_dir (
 			if ( j < wd->filesys.npasses )
 			{
 				fill_buffer (j, (unsigned char *)filename /* buf OK */,
-					(size_t) (DIRENT->name_len & 0xFF), selected, wd->filesys);
+					(size_t) (DIRENT->name_len & 0xFF),
+					selected, wd->filesys);
 			}
 			else
 			{
 # ifdef HAVE_MEMSET
-				memset ((unsigned char *)filename, 0, (size_t)(DIRENT->name_len&0xFF));
+				memset ((unsigned char *)filename, 0,
+					(size_t)(DIRENT->name_len&0xFF));
 # else
-				for ( j=0; j < (size_t) (DIRENT->name_len & 0xFF); j++ )
+				for ( j=0; j < (size_t) (DIRENT->name_len & 0xFF);
+					j++ )
 				{
 					filename[j] = '\0';
 				}
@@ -512,7 +563,8 @@ e2_wipe_unrm_dir (
 		else
 		{
 			fill_buffer (j, (unsigned char *)filename /* buf OK */,
-				(size_t) (DIRENT->name_len & 0xFF), selected, wd->filesys);
+				(size_t) (DIRENT->name_len & 0xFF),
+				selected, wd->filesys);
 			if ( j == wd->filesys.npasses-1 )
 			{
 				DIRENT->name_len = 0;
@@ -528,8 +580,9 @@ e2_wipe_unrm_dir (
 			&& (sig_recvd == 0)
 		)
 	{
-		error.errcode.e2error = ext2fs_read_inode (wd->filesys.e2fs, DIRENT->inode, &unrm_ino);
-		if ( error.errcode.e2error != 0 )
+		e2error = ext2fs_read_inode (e2fs,
+			DIRENT->inode, &unrm_ino);
+		if ( e2error != 0 )
 		{
 			ret_unrm = WFS_INOREAD;
 		}
@@ -539,15 +592,15 @@ e2_wipe_unrm_dir (
 	 		&& LINUX_S_ISDIR (unrm_ino.i_mode)
 		   )
 		{
-			error.errcode.e2error = ext2fs_dir_iterate2 ( wd->filesys.e2fs, DIRENT->inode,
-				DIRENT_FLAG_INCLUDE_EMPTY | DIRENT_FLAG_INCLUDE_REMOVED, NULL,
-				&e2_wipe_unrm_dir, PRIVATE );
+			e2error = ext2fs_dir_iterate2 ( e2fs, DIRENT->inode,
+				DIRENT_FLAG_INCLUDE_EMPTY | DIRENT_FLAG_INCLUDE_REMOVED,
+				NULL, &e2_wipe_unrm_dir, PRIVATE );
 			bd->curr_inode++;
-			show_progress (WFS_PROGRESS_UNRM,
-				(bd->curr_inode * 50)/(wd->filesys.e2fs->super->s_inodes_count
-					- wd->filesys.e2fs->super->s_free_inodes_count),
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(bd->curr_inode * 50)/(e2fs->super->s_inodes_count
+					- e2fs->super->s_free_inodes_count),
 				& (bd->prev_percent));
-			if ( error.errcode.e2error != 0 )
+			if ( e2error != 0 )
 			{
 				ret_unrm = WFS_DIRITER;
 			}
@@ -555,6 +608,10 @@ e2_wipe_unrm_dir (
 
 	} /* do nothing on non-deleted, non-directory i-nodes */
 
+	if ( error_ret != NULL )
+	{
+		*error_ret = e2error;
+	}
 	if ( (ret_unrm != WFS_SUCCESS) || (sig_recvd != 0) )
 	{
 		return DIRENT_ABORT;
@@ -575,21 +632,20 @@ e2_wipe_unrm_dir (
 #ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given ext2/3/4 filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_e234_wipe_part (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 # endif
 {
 	ext2_inode_scan ino_scan = 0;
@@ -600,56 +656,62 @@ wfs_e234_wipe_part (
 	struct wfs_e234_block_data block_data;
 	unsigned int prev_percent = 0;
 	unsigned int curr_inode = 0;
-	wfs_error_type_t error = {CURR_EXT234FS, {0}};
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
+	wfs_errcode_t gerror = 0;
 
-	if ( FS.e2fs == NULL )
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( e2fs == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
-	if ( FS.e2fs->super == NULL )
+	if ( e2fs->super == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	block_data.wd.buf = (unsigned char *) malloc (wfs_e234_get_block_size (FS));
+	block_data.wd.buf = (unsigned char *) malloc (
+		wfs_e234_get_block_size (wfs_fs));
 	if ( block_data.wd.buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		e2error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		e2error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_MALLOC;
 	}
-	block_data.wd.filesys = FS;
+	block_data.wd.filesys = wfs_fs;
 	block_data.wd.passno = 0;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
 	block_data.wd.isjournal = 0;
 
-	error.errcode.e2error = ext2fs_open_inode_scan (FS.e2fs, 0, &ino_scan);
-	if ( error.errcode.e2error != 0 )
+	e2error = ext2fs_open_inode_scan (e2fs, 0, &ino_scan);
+	if ( e2error != 0 )
 	{
 		free (block_data.wd.buf);
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_INOSCAN;
 	}
@@ -657,9 +719,10 @@ wfs_e234_wipe_part (
 	{
 		do
 		{
-			error.errcode.e2error = ext2fs_get_next_inode (ino_scan, &ino_number, &ino);
+			e2error = ext2fs_get_next_inode (
+				ino_scan, &ino_number, &ino);
 
-			if ( error.errcode.e2error != 0 )
+			if ( e2error != 0 )
 			{
 				continue;
 			}
@@ -668,7 +731,7 @@ wfs_e234_wipe_part (
 				break;	/* 0 means "last done" */
 			}
 
-			if ( ino_number < (ext2_ino_t) EXT2_FIRST_INO (FS.e2fs->super) )
+			if ( ino_number < (ext2_ino_t) EXT2_FIRST_INO (e2fs->super) )
 			{
 				continue;
 			}
@@ -679,7 +742,7 @@ wfs_e234_wipe_part (
 			}
 
 			/* skip if no data blocks */
-			if ( ext2fs_inode_data_blocks (FS.e2fs, &ino) == 0 )
+			if ( ext2fs_inode_data_blocks (e2fs, &ino) == 0 )
 			{
 				continue;
 			}
@@ -688,7 +751,7 @@ wfs_e234_wipe_part (
 		 	 * If the index flag is set, then
 		 	 * this is a bogus device/fifo/socket
 		 	 */
-			if ( /*(ext2fs_inode_data_blocks (FS.e2fs, &ino) != 0) ||*/
+			if ( /*(ext2fs_inode_data_blocks (e2fs, &ino) != 0) ||*/
 				((ino.i_flags & EXT2_INDEX_FL) != 0)
 			   )
 			{
@@ -701,16 +764,17 @@ wfs_e234_wipe_part (
 			}
 
 			/* check if there's unused space in any block */
-			if ( (ino.i_size % wfs_e234_get_block_size (FS)) == 0 )
+			if ( (ino.i_size % wfs_e234_get_block_size (wfs_fs)) == 0 )
 			{
 				continue;
 			}
 
 			/* find the last data block number. */
 			last_block_no = 0;
-			error.errcode.e2error = ext2fs_block_iterate (FS.e2fs, ino_number,
-				BLOCK_FLAG_DATA_ONLY, NULL, &e2_count_blocks, &last_block_no);
-			if ( error.errcode.e2error != 0 )
+			e2error = ext2fs_block_iterate (e2fs, ino_number,
+				BLOCK_FLAG_DATA_ONLY, NULL, &e2_count_blocks,
+				&last_block_no);
+			if ( e2error != 0 )
 			{
 				ret_part = WFS_BLKITER;
 			}
@@ -720,35 +784,50 @@ wfs_e234_wipe_part (
 			}
 			/* partially wipe the last block */
 			block_data.ino = &ino;
-			ret_part = e2_do_block (FS.e2fs, &last_block_no, 1, &block_data);
+			ret_part = e2_do_block (e2fs, &last_block_no,
+				1, &block_data);
 
 			if ( ret_part != WFS_SUCCESS )
 			{
+				if ( error_ret != NULL )
+				{
+					/* get the error back */
+					e2error = *error_ret;
+				}
+				ret_part = WFS_BLKITER;
 				break;
 			}
 
 			curr_inode++;
-			show_progress (WFS_PROGRESS_PART,
-				(curr_inode * 100)/(FS.e2fs->super->s_inodes_count
-					- FS.e2fs->super->s_free_inodes_count),
+			wfs_show_progress (WFS_PROGRESS_PART,
+				(curr_inode * 100)/(e2fs->super->s_inodes_count
+					- e2fs->super->s_free_inodes_count),
 				&prev_percent);
 		}
 		while ( (
-				(error.errcode.e2error == 0)
-				|| (error.errcode.e2error == EXT2_ET_BAD_BLOCK_IN_INODE_TABLE)
+				(e2error == 0)
+				|| (e2error == EXT2_ET_BAD_BLOCK_IN_INODE_TABLE)
 			) && (sig_recvd == 0) );
 
 		ext2fs_close_inode_scan (ino_scan);
-		if ( (FS.npasses > 1) && (sig_recvd == 0) )
+		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 		{
-			error.errcode.gerror = wfs_e234_flush_fs (FS, &error);
+			gerror = wfs_e234_flush_fs (wfs_fs);
 		}
 	}
-	show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 	free (block_data.wd.buf);
+
 	if ( error_ret != NULL )
 	{
-		*error_ret = error;
+		if ( e2error != 0 )
+		{
+			*error_ret = e2error;
+		}
+		else
+		{
+			*error_ret = (errcode_t)gerror;
+		}
 	}
 	if ( sig_recvd != 0 )
 	{
@@ -763,65 +842,68 @@ wfs_e234_wipe_part (
 #ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given ext2/3/4 filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_e234_wipe_fs (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	const wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret)
-	const wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	blk_t blno;			/* block number */
 	struct wfs_e234_block_data block_data;
 	unsigned int prev_percent = 0;
-	wfs_error_type_t error = {CURR_EXT234FS, {0}};
 	int block_ret = 0;
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
 
-	if ( FS.e2fs == NULL )
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( e2fs == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
-	if ( FS.e2fs->super == NULL )
+	if ( e2fs->super == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	block_data.wd.buf = (unsigned char *) malloc (wfs_e234_get_block_size (FS));
+	block_data.wd.buf = (unsigned char *) malloc (wfs_e234_get_block_size (wfs_fs));
 	if ( block_data.wd.buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		e2error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		e2error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_MALLOC;
 	}
-	block_data.wd.filesys = FS;
+	block_data.wd.filesys = wfs_fs;
 	block_data.wd.passno = 0;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
@@ -832,26 +914,28 @@ wfs_e234_wipe_fs (
 	block_data.number_of_blocks_in_inode = 0;
 
 	/* read the bitmap of blocks */
-	error.errcode.e2error = ext2fs_read_block_bitmap (FS.e2fs);
-	if ( error.errcode.e2error != 0 )
+	e2error = ext2fs_read_block_bitmap (e2fs);
+	if ( e2error != 0 )
 	{
 		free (block_data.wd.buf);
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BLBITMAPREAD;
 	}
 
 	/* wiping free blocks on the whole device */
-	for ( blno = 1; (blno < FS.e2fs->super->s_blocks_count) && (sig_recvd == 0); blno++ )
+	for ( blno = 1; (blno < e2fs->super->s_blocks_count)
+		&& (sig_recvd == 0); blno++ )
 	{
 		/* if we find an empty block, we shred it */
-		if ( ext2fs_test_block_bitmap (FS.e2fs->block_map, blno) == 0 )
+		if ( ext2fs_test_block_bitmap (e2fs->block_map, blno) == 0 )
 		{
-			block_ret = e2_do_block (FS.e2fs, &blno, 1, &block_data);
-			show_progress (WFS_PROGRESS_WFS, (blno * 100)/FS.e2fs->super->s_blocks_count,
+			block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(blno * 100)/e2fs->super->s_blocks_count,
 				&prev_percent);
 			if ( (block_ret != 0) || (sig_recvd != 0) )
 			{
@@ -860,11 +944,11 @@ wfs_e234_wipe_fs (
 			}
 		}
 	}
-	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	free (block_data.wd.buf);
 	if ( error_ret != NULL )
 	{
-		*error_ret = error;
+		*error_ret = e2error;
 	}
 	if ( sig_recvd != 0 )
 	{
@@ -878,12 +962,12 @@ wfs_e234_wipe_fs (
 
 #ifdef WFS_WANT_UNRM
 # ifndef WFS_ANSIC
-static wfs_errcode_t wfs_e234_wipe_journal WFS_PARAMS ((const wfs_fsid_t FS, wfs_error_type_t * const error));
+static wfs_errcode_t wfs_e234_wipe_journal WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 # endif
 
 /**
  * Wipes the journal on an ext2/3/4 filesystem.
- * \param FS The ext2/3/4 filesystem.
+ * \param wfs_fs The ext2/3/4 filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -893,35 +977,38 @@ WFS_ATTR ((nonnull))
 # endif
 wfs_e234_wipe_journal (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	const wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret )
-	const wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 # endif
 {
 	wfs_errcode_t ret_journ = WFS_SUCCESS;
 	struct wfs_e234_block_data block_data;
 	struct ext2_inode jino;
-	wfs_error_type_t error = {CURR_EXT234FS, {0}};
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
 
-	if ( FS.e2fs == NULL )
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( e2fs == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
-	if ( FS.e2fs->super == NULL )
+	if ( e2fs->super == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
-	block_data.wd.filesys = FS;
+	block_data.wd.filesys = wfs_fs;
 	block_data.wd.passno = 0;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
@@ -931,24 +1018,24 @@ wfs_e234_wipe_journal (
 	block_data.prev_percent = 50;
 
 # if (defined EXT2_HAS_COMPAT_FEATURE) && (defined EXT3_FEATURE_COMPAT_HAS_JOURNAL)
-	if ( EXT2_HAS_COMPAT_FEATURE (FS.e2fs->super, EXT3_FEATURE_COMPAT_HAS_JOURNAL)
+	if ( EXT2_HAS_COMPAT_FEATURE (e2fs->super, EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 		!= EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return ret_journ;
 	}
 # endif
 	/* do nothing if external journal */
-	if ( FS.e2fs->super->s_journal_inum == 0 )
+	if ( e2fs->super->s_journal_inum == 0 )
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return ret_journ;
 	}
@@ -956,39 +1043,40 @@ wfs_e234_wipe_journal (
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	block_data.wd.buf = (unsigned char *) malloc ( wfs_e234_get_block_size (FS) );
+	block_data.wd.buf = (unsigned char *) malloc (
+		wfs_e234_get_block_size (wfs_fs) );
 	if ( block_data.wd.buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		e2error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		e2error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_MALLOC;
 	}
 
-	error.errcode.e2error = ext2fs_read_inode (FS.e2fs, FS.e2fs->super->s_journal_inum, &jino);
+	e2error = ext2fs_read_inode (e2fs, e2fs->super->s_journal_inum, &jino);
 	block_data.number_of_blocks_in_inode = jino.i_blocks;
 
-	error.errcode.e2error = ext2fs_block_iterate (FS.e2fs,
-		FS.e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
+	e2error = ext2fs_block_iterate (e2fs,
+		e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
 		BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
 
-	if ( error.errcode.e2error != 0 )
+	if ( e2error != 0 )
 	{
 		ret_journ = WFS_BLKITER;
 	}
 
-	show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
+	wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 	free (block_data.wd.buf);
 	if ( error_ret != NULL )
 	{
-		*error_ret = error;
+		*error_ret = e2error;
 	}
 	if ( sig_recvd != 0 )
 	{
@@ -1001,83 +1089,93 @@ wfs_e234_wipe_journal (
 
 /**
  * Starts recursive directory search for deleted inodes and undelete data on the given ext2/3/4 fs.
- * \param FS The filesystem.
- * \param node Directory i-node number.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_e234_wipe_unrm (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, const wfs_fselem_t node, wfs_error_type_t * const error_ret)
+	const wfs_fsid_t wfs_fs)
 # else
-	FS, node, error_ret)
-	const wfs_fsid_t FS;
-	const wfs_fselem_t node;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 # endif
 {
 	unsigned long int j;
 	struct wfs_e234_block_data bd;
 	wfs_errcode_t ret = WFS_SUCCESS;
-	wfs_error_type_t error = {CURR_EXT234FS, {0}};
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
+	wfs_errcode_t gerror = 0;
 
-	if ( FS.e2fs == NULL )
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( e2fs == NULL )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = e2error;
 		}
 		return WFS_BADPARAM;
 	}
 
-	bd.wd.filesys = FS;
+	bd.wd.filesys = wfs_fs;
 	bd.wd.passno = 0;
 	bd.wd.ret_val = WFS_SUCCESS;
 	bd.wd.total_fs = 0;	/* dummy value, unused */
 	bd.curr_inode = 0;
 	bd.prev_percent = 0;
 
-	for ( j = 0; (j <= FS.npasses) && (sig_recvd == 0) /*&& (ret == WFS_SUCCESS)*/; j++ )
+	for ( j = 0; (j <= wfs_fs.npasses) && (sig_recvd == 0)
+		/*&& (ret == WFS_SUCCESS)*/; j++ )
 	{
-		if ( (FS.zero_pass == 0) && (j == FS.npasses) )
+		if ( (wfs_fs.zero_pass == 0) && (j == wfs_fs.npasses) )
 		{
 			break;
 		}
 		bd.wd.passno = j;
-		error.errcode.e2error = ext2fs_dir_iterate2 (FS.e2fs, node.e2elem,
-			DIRENT_FLAG_INCLUDE_EMPTY | DIRENT_FLAG_INCLUDE_REMOVED, NULL,
-			&e2_wipe_unrm_dir, &bd);
-		if ( error.errcode.e2error != 0 )
+		e2error = ext2fs_dir_iterate2 (e2fs, EXT2_ROOT_INO,
+			DIRENT_FLAG_INCLUDE_EMPTY | DIRENT_FLAG_INCLUDE_REMOVED,
+			NULL, &e2_wipe_unrm_dir, &bd);
+		if ( e2error != 0 )
 		{
 			ret = WFS_DIRITER;
 			break;
 		}
-		if ( (FS.npasses > 1) && (sig_recvd == 0) )
+		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 		{
-			error.errcode.gerror = wfs_e234_flush_fs (FS, &error);
+			gerror = wfs_e234_flush_fs (wfs_fs);
 		}
 	}
 
-	show_progress (WFS_PROGRESS_UNRM, 50, &(bd.prev_percent));
+	wfs_show_progress (WFS_PROGRESS_UNRM, 50, &(bd.prev_percent));
 	if ( ret == WFS_SUCCESS )
 	{
-		ret = wfs_e234_wipe_journal (FS, &error);
+		ret = wfs_e234_wipe_journal (wfs_fs);
 	}
 	else if ( ret != WFS_SIGNAL )
 	{
-		wfs_e234_wipe_journal (FS, &error);
+		wfs_e234_wipe_journal (wfs_fs);
 	}
 	else
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &(bd.prev_percent));
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(bd.prev_percent));
 	}
 	if ( error_ret != NULL )
 	{
-		*error_ret = error;
+		if ( e2error != 0 )
+		{
+			*error_ret = e2error;
+		}
+		else
+		{
+			*error_ret = (errcode_t)gerror;
+		}
 	}
 
 	return ret;
@@ -1089,60 +1187,66 @@ wfs_e234_wipe_unrm (
 /**
  * Opens an ext2/3/4 filesystem on the given device.
  * \param devname Device name, like /dev/hdXY
- * \param FS Pointer to where the result will be put.
+ * \param wfs_fs Pointer to where the result will be put.
  * \param whichfs Pointer to an int saying which fs is curently in use.
  * \param data Pointer to wfs_fsdata_t structure containing information which may be needed to
  *	open the filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_e234_open_fs (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_fsid_t * const FS, wfs_curr_fs_t * const whichfs,
-	const wfs_fsdata_t * const data, wfs_error_type_t * const error_ret)
+	wfs_fsid_t * const wfs_fs,
+	const wfs_fsdata_t * const data)
 #else
-	dev_name, FS, whichfs, data, error_ret)
-	const char * const dev_name;
-	wfs_fsid_t * const FS;
-	wfs_curr_fs_t * const whichfs;
+	wfs_fs, data)
+	wfs_fsid_t * const wfs_fs;
 	const wfs_fsdata_t * const data;
-	wfs_error_type_t * const error_ret;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
-	wfs_error_type_t error = {CURR_EXT234FS, {0}};
+	errcode_t * error_ret;
+	errcode_t e2error = 0;
 
-	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL) || (data == NULL))
+	if ((wfs_fs == NULL) || (data == NULL))
+	{
+		return WFS_BADPARAM;
+	}
+	if ( wfs_fs->fsname == NULL )
 	{
 		return WFS_BADPARAM;
 	}
 
-	*whichfs = CURR_NONE;
-	error.errcode.e2error = ext2fs_open (dev_name, EXT2_FLAG_RW
+	error_ret = (errcode_t *) wfs_fs->fs_error;
+	wfs_fs->whichfs = WFS_CURR_FS_NONE;
+	e2error = ext2fs_open (wfs_fs->fsname, EXT2_FLAG_RW
 #ifdef EXT2_FLAG_EXCLUSIVE
 		| EXT2_FLAG_EXCLUSIVE
 #endif
 		, (int)(data->e2fs.super_off), (unsigned int) (data->e2fs.blocksize),
-		unix_io_manager, &(FS->e2fs));
+		unix_io_manager, (ext2_filsys *) &(wfs_fs->fs_backend));
 
-	if ( error.errcode.e2error != 0 )
+	if ( e2error != 0 )
 	{
 		ret = WFS_OPENFS;
-		error.errcode.e2error = ext2fs_open (dev_name, EXT2_FLAG_RW, (int)(data->e2fs.super_off),
-			(unsigned int) (data->e2fs.blocksize), unix_io_manager, &(FS->e2fs));
+		e2error = ext2fs_open (wfs_fs->fsname, EXT2_FLAG_RW,
+			(int)(data->e2fs.super_off),
+			(unsigned int) (data->e2fs.blocksize),
+			unix_io_manager,
+			(ext2_filsys *) &(wfs_fs->fs_backend));
 	}
-	if ( error.errcode.e2error == 0 )
+	if ( e2error == 0 )
 	{
-		*whichfs = CURR_EXT234FS;
+		wfs_fs->whichfs = WFS_CURR_FS_EXT234FS;
 		ret = WFS_SUCCESS;
 	}
 	if ( error_ret != NULL )
 	{
-		*error_ret = error;
+		*error_ret = e2error;
 	}
 	return ret;
 }
@@ -1155,34 +1259,39 @@ wfs_e234_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_e234_chk_mount (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_error_type_t * const error_ret)
+	const wfs_fsid_t wfs_fs)
 #else
-	dev_name, error_ret)
-	const char * const dev_name;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	int mtflags = 0;		/* Mount flags */
-	wfs_error_type_t error = {CURR_EXT234FS, {0}};
+	wfs_errcode_t error = 0;
+	errcode_t e2error = 0;
+	errcode_t * error_ret;
 
-	initialize_ext2_error_table ();
-
-	if ( dev_name == NULL )
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( wfs_fs.fsname == NULL )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
 	/* reject if mounted for read and write (when we can't go on with our work) */
-	error.errcode.e2error = ext2fs_check_if_mounted (dev_name, &mtflags);
-	if ( error.errcode.e2error != 0 )
+	e2error = ext2fs_check_if_mounted (wfs_fs.fsname, &mtflags);
+	if ( e2error != 0 )
 	{
+		error = e2error;
 		ret = WFS_MNTCHK;
 	}
 	if ( 	(ret == WFS_SUCCESS) &&
@@ -1190,7 +1299,7 @@ wfs_e234_chk_mount (
 		((mtflags & EXT2_MF_READONLY) == 0)
 	   )
 	{
-		error.errcode.e2error = 1L;
+		error = 1L;
 		ret = WFS_MNTRW;
 	}
 	if ( error_ret != NULL )
@@ -1205,7 +1314,7 @@ wfs_e234_chk_mount (
 
 /**
  * Closes the ext2/3/4 filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -1215,28 +1324,31 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_e234_close_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error)
+	wfs_fsid_t wfs_fs)
 #else
-	FS, error)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	errcode_t wfs_err;
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
 
-	if ( FS.e2fs == NULL )
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( e2fs == NULL )
 	{
 		return WFS_BADPARAM;
 	}
 
-	wfs_err = ext2fs_close (FS.e2fs);
+	wfs_err = ext2fs_close (e2fs);
 	if ( wfs_err != 0 )
 	{
 		ret = WFS_FSCLOSE;
-		if ( error != NULL )
+		if ( error_ret != NULL )
 		{
-			error->errcode.e2error = wfs_err;
+			*error_ret = wfs_err;
 		}
 	}
 	return ret;
@@ -1246,19 +1358,29 @@ wfs_e234_close_fs (
 
 /**
  * Checks if the ext2/3/4 filesystem has errors.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 wfs_e234_check_err (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS)
+	const wfs_fsid_t wfs_fs)
 #else
-	FS)
-	const wfs_fsid_t FS;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
-	return (FS.e2fs->super->s_state & EXT2_ERROR_FS);
+	ext2_filsys e2fs;
+
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	if ( e2fs != NULL )
+	{
+		if ( e2fs->super != NULL )
+		{
+			return (e2fs->super->s_state & EXT2_ERROR_FS);
+		}
+	}
+	return 1;
 }
 
 
@@ -1266,29 +1388,32 @@ wfs_e234_check_err (
 
 /**
  * Checks if the ext2/3/4 filesystem is dirty (has unsaved changes).
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 if clean, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 wfs_e234_is_dirty (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS)
+	const wfs_fsid_t wfs_fs)
 #else
-	FS)
-	const wfs_fsid_t FS;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
-	if ( FS.e2fs == NULL )
+	ext2_filsys e2fs;
+
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	if ( e2fs == NULL )
 	{
 		return 1;
 	}
-	if ( FS.e2fs->super == NULL )
+	if ( e2fs->super == NULL )
 	{
 		return 1;
 	}
-	return ( ((FS.e2fs->super->s_state & EXT2_VALID_FS) == 0) ||
-		((FS.e2fs->flags & EXT2_FLAG_DIRTY) != 0) ||
-		(ext2fs_test_changed (FS.e2fs) != 0)
+	return ( ((e2fs->super->s_state & EXT2_VALID_FS) == 0) ||
+		((e2fs->flags & EXT2_FLAG_DIRTY) != 0) ||
+		(ext2fs_test_changed (e2fs) != 0)
 		);
 }
 
@@ -1296,7 +1421,7 @@ wfs_e234_is_dirty (
 
 /**
  * Flushes the ext2/3/4 filesystem.
- * \param FS The ext2/3/4 filesystem.
+ * \param wfs_fs The ext2/3/4 filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -1306,27 +1431,30 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_e234_flush_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error)
+	wfs_fsid_t wfs_fs)
 #else
-	FS, error)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	errcode_t wfs_err;
+	ext2_filsys e2fs;
+	errcode_t * error_ret;
 
-	if ( FS.e2fs == NULL )
+	e2fs = (ext2_filsys) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( e2fs == NULL )
 	{
 		return WFS_BADPARAM;
 	}
-	wfs_err = ext2fs_flush (FS.e2fs);
+	wfs_err = ext2fs_flush (e2fs);
 	if ( wfs_err != 0 )
 	{
 		ret = WFS_FLUSHFS;
-		if ( error != NULL )
+		if ( error_ret != NULL )
 		{
-			error->errcode.e2error = wfs_err;
+			*error_ret = wfs_err;
 		}
 	}
 #if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
@@ -1334,3 +1462,121 @@ wfs_e234_flush_fs (
 #endif
 	return ret;
 }
+
+/* ======================================================================== */
+
+/**
+ * Print the version of the current library, if applicable.
+ */
+void wfs_e234_print_version (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	const char *lib_ver = NULL;
+
+	ext2fs_get_library_version ( &lib_ver, NULL );
+	printf ( "Libext2fs %s Copyright (C) Theodore Ts'o\n",
+		(lib_ver != NULL)? lib_ver: "<?>" );
+}
+
+/* ======================================================================== */
+
+/**
+ * Get the preferred size of the error variable.
+ * \return the preferred size of the error variable.
+ */
+size_t wfs_e234_get_err_size (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	return sizeof (errcode_t);
+}
+
+/* ======================================================================== */
+
+/**
+ * Initialize the library.
+ */
+void wfs_e234_init (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	initialize_ext2_error_table ();
+}
+
+/* ======================================================================== */
+
+/**
+ * De-initialize the library.
+ */
+void wfs_e234_deinit (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+#if (defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)
+	remove_error_table (&et_ext2_error_table);
+#endif
+}
+
+/* ======================================================================== */
+
+/**
+ * Displays an error message.
+ * \param msg The message.
+ * \param extra Last element of the error message (fsname or signal).
+ * \param wfs_fs The filesystem this message refers to.
+ */
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_e234_show_error (
+#ifdef WFS_ANSIC
+	const char * const	msg,
+	const char * const	extra,
+	const wfs_fsid_t	wfs_fs )
+#else
+	msg, extra, wfs_fs )
+	const char * const	msg;
+	const char * const	extra;
+	const wfs_fsid_t	wfs_fs;
+#endif
+{
+#if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
+	errcode_t e = 0;
+	const char * progname;
+#endif
+
+	if ( (wfs_is_stderr_open() == 0) || (msg == NULL) )
+	{
+		return;
+	}
+#if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
+	if ( wfs_fs.fs_error != NULL )
+	{
+		e = *(errcode_t *)(wfs_fs.fs_error);
+	}
+
+	progname = wfs_get_program_name();
+	com_err ((progname != NULL)? progname : "",
+		e,
+		WFS_ERR_MSG_FORMATL,
+		_(wfs_err_msg),
+		e,
+		_(msg),
+		(extra != NULL)? extra : "",
+		(wfs_fs.fsname != NULL)? wfs_fs.fsname : "");
+#else
+	wfs_show_fs_error_gen (msg, extra, wfs_fs);
+#endif
+	fflush (stderr);
+}
+

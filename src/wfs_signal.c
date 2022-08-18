@@ -57,6 +57,7 @@ extern unsigned long int wfs_signal_sig(char c0, char c1, char c2, char c3);
 
 #include "wipefreespace.h"
 #include "wfs_signal.h"
+#include "wfs_wrappers.h"
 
 /* ======================================================================== */
 
@@ -217,10 +218,9 @@ child_signal_received (
 
 void wfs_set_sigh (
 #ifdef WFS_ANSIC
-	wfs_error_type_t * const error, const int opt_verbose)
+	const int opt_verbose)
 #else
-	error, opt_verbose)
-	wfs_error_type_t * const error;
+	opt_verbose)
 	const int opt_verbose;
 #endif
 {
@@ -229,7 +229,7 @@ void wfs_set_sigh (
 	char tmp[TMPSIZE];		/* Place for a signal number in case of error. */
 	int res;			/* s(n)printf result */
 	size_t s;			/* sizeof(signals) */
-# if (defined __STRICT_ANSI__) && (defined HAVE_SIGNAL_H)
+# if (!defined HAVE_SIGACTION) || (defined __STRICT_ANSI__)
 	typedef void (*sighandler_t) (int);
 	sighandler_t shndlr;
 # endif
@@ -237,21 +237,26 @@ void wfs_set_sigh (
 	size_t i;
 # endif
 	wfs_fsid_t wf_gen;
+	wfs_errcode_t err;
 
 	wf_gen.fsname = "";
+	wf_gen.whichfs = WFS_CURR_FS_NONE;
+	wf_gen.fs_error = &err;
+
 	/*
 	 * Setting signal handlers. We need to catch signals in order to close (and flush)
 	 * an opened file system, to prevent unconsistencies.
 	 */
 
 # if (!defined HAVE_SIGACTION) || (defined __STRICT_ANSI__)
+
 	/* ANSI C */
-	for ( s=0; s < sizeof (signals) / sizeof (signals[0]); s++ )
+	for ( s = 0; s < sizeof (signals) / sizeof (signals[0]); s++ )
 	{
 #  ifdef HAVE_ERRNO_H
 		errno = 0;
 #  endif
-		shndlr = signal ( signals[s], &term_signal_received );
+		shndlr = signal (signals[s], &term_signal_received);
 		if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
 /*			|| (errno != 0)*/
@@ -259,23 +264,27 @@ void wfs_set_sigh (
 		   )
 		{
 #  ifdef HAVE_ERRNO_H
-			error->errcode.gerror = errno;
+			err = errno;
 #  else
-			error->errcode.gerror = 1L;
+			err = 1L;
 #  endif
-			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s] );
+			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s]);
 			tmp[TMPSIZE-1] = '\0';
-			if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
+			if ( err == 0 )
+			{
+				err = 1L;
+			}
 			if ( opt_verbose > 0 )
 			{
-				show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
+				wfs_show_error (wfs_err_msg_signal,
+					(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
 			}
 		}
 	}
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	shndlr = signal ( SIGCHLD, &child_signal_received );
+	shndlr = signal (SIGCHLD, &child_signal_received);
 	if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
@@ -283,16 +292,20 @@ void wfs_set_sigh (
 	   )
 	{
 #  ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		err = errno;
 #  else
-		error->errcode.gerror = 1L;
+		err = 1L;
 #  endif
-		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD );
+		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD);
 		tmp[TMPSIZE-1] = '\0';
-		if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
+		if ( err == 0 )
+		{
+			err = 1L;
+		}
 		if ( opt_verbose > 0 )
 		{
-			show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
+			wfs_show_error (wfs_err_msg_signal,
+				(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
 		}
 	}
 
@@ -301,18 +314,18 @@ void wfs_set_sigh (
 #  ifdef HAVE_MEMSET
 	memset (&sa, 0, sizeof (struct sigaction));
 #  else
-	for ( i=0; i < sizeof (struct sigaction); i++ )
+	for ( i = 0; i < sizeof (struct sigaction); i++ )
 	{
 		((char *)&sa)[i] = '\0';
 	}
 #  endif
 	sa.sa_handler = &term_signal_received;
-	for ( s=0; s < sizeof (signals) / sizeof (signals[0]); s++ )
+	for ( s = 0; s < sizeof (signals) / sizeof (signals[0]); s++ )
 	{
 #  ifdef HAVE_ERRNO_H
 		errno = 0;
 #  endif
-		res = sigaction ( signals[s], &sa, NULL);
+		res = sigaction (signals[s], &sa, NULL);
 		if ( (res != 0)
 #  ifdef HAVE_ERRNO_H
 /*			|| (errno != 0)*/
@@ -320,21 +333,26 @@ void wfs_set_sigh (
 		   )
 		{
 #  ifdef HAVE_ERRNO_H
-			error->errcode.gerror = errno;
+			err = errno;
 #  else
-			error->errcode.gerror = 1L;
+			err = 1L;
 #  endif
 
 #  ifdef HAVE_SNPRINTF
-			res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, signals[s] );
+			res = snprintf (tmp, TMPSIZE-1, "%.*d",
+				TMPSIZE-1, signals[s] );
 #  else
-			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s] );
+			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s]);
 #  endif
 			tmp[TMPSIZE-1] = '\0';
-			if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
+			if ( err == 0 )
+			{
+				err = 1L;
+			}
 			if ( opt_verbose > 0 )
 			{
-				show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
+				wfs_show_error (wfs_err_msg_signal,
+					(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
 			}
 		}
 	}
@@ -342,7 +360,7 @@ void wfs_set_sigh (
 	errno = 0;
 #  endif
 	sa.sa_handler = &child_signal_received;
-	res = sigaction ( SIGCHLD, &sa, NULL);
+	res = sigaction (SIGCHLD, &sa, NULL);
 	if ( (res != 0)
 #  ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
@@ -350,21 +368,25 @@ void wfs_set_sigh (
 	   )
 	{
 #  ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		err = errno;
 #  else
-		error->errcode.gerror = 1L;
+		err = 1L;
 #  endif
 
 #  ifdef HAVE_SNPRINTF
-		res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, SIGCHLD );
+		res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, SIGCHLD);
 #  else
-		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD );
+		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD);
 #  endif
 		tmp[TMPSIZE-1] = '\0';
-		if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
+		if ( err == 0 )
+		{
+			err = 1L;
+		}
 		if ( opt_verbose > 0 )
 		{
-			show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
+			wfs_show_error (wfs_err_msg_signal,
+				(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
 		}
 	}
 # endif		/* ! ANSI C */

@@ -31,7 +31,7 @@
  *	   Copyright (C) 1999-2006 Free Software Foundation, Inc.
  *	   Copyright (C) 1997, 1998, 1999 Colin Plumb.
  * - Mark Lord for the great 'hdparm' utility.
- * - knightray@gmail.com for The Tiny FAT FS library (on LGPL).
+ * - knightray@gmail.com for The Tiny FAT wfs_fs library (on LGPL).
  *
  */
 
@@ -108,10 +108,6 @@
 # endif
 #endif
 
-/* redefine the inline sig function from hfsp, each time with a different name */
-extern unsigned long int wfs_main_sig(char c0, char c1, char c2, char c3);
-#define sig(a,b,c,d) wfs_main_sig(a,b,c,d)
-
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 #include "wfs_secure.h"
@@ -153,40 +149,48 @@ static const char lic_str[] = N_(							\
 	"\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
 
 /* Error messages explaining the stage during which an error occurred. */
-const char * const err_msg         = N_("error");
-const char * const err_msg_open    = N_("during opening");
-const char * const err_msg_flush   = N_("while flushing");
-const char * const err_msg_close   = N_("during closing");
-const char * const err_msg_malloc  = N_("during malloc while working on");
-const char * const err_msg_checkmt = N_("during checking if the file system is mounted");
-const char * const err_msg_mtrw    = N_("- Device is mounted in read-write mode");
-const char * const err_msg_rdblbm  = N_("during reading block bitmap from");
-const char * const err_msg_wrtblk  = N_("during writing of a block on");
-const char * const err_msg_rdblk   = N_("during reading of a block on");
-const char * const err_msg_rdino   = N_("during reading of an inode on");
-const char * const err_msg_signal  = N_("while trying to set a signal handler for");
-const char * const err_msg_fserr   = N_("Filesystem has errors");
-const char * const err_msg_openscan= N_("during opening a scan of");
-const char * const err_msg_blkiter = N_("during iterating over blocks on");
-const char * const err_msg_diriter = N_("during iterating over a directory on");
-const char * const err_msg_nowork  = N_("Nothing selected for wiping.");
-const char * const err_msg_suid    = N_("PLEASE do NOT set this program's suid bit. Use sgid instead.");
-const char * const err_msg_capset  = N_("during setting capabilities");
-const char * const err_msg_fork    = N_("during creation of child process");
-const char * const err_msg_nocache = N_("during disabling device cache");
-const char * const err_msg_cacheon = N_("during enabling device cache");
+const char * const wfs_err_msg         = N_("error");
+const char * const wfs_err_msg_open    = N_("during opening");
+const char * const wfs_err_msg_flush   = N_("while flushing");
+const char * const wfs_err_msg_close   = N_("during closing");
+const char * const wfs_err_msg_malloc  = N_("during malloc while working on");
+const char * const wfs_err_msg_checkmt = N_("during checking if the file system is mounted");
+const char * const wfs_err_msg_mtrw    = N_("- Device is mounted in read-write mode");
+const char * const wfs_err_msg_rdblbm  = N_("during reading block bitmap from");
+const char * const wfs_err_msg_wrtblk  = N_("during writing of a block on");
+const char * const wfs_err_msg_rdblk   = N_("during reading of a block on");
+const char * const wfs_err_msg_rdino   = N_("during reading of an inode on");
+const char * const wfs_err_msg_signal  = N_("while trying to set a signal handler for");
+const char * const wfs_err_msg_fserr   = N_("Filesystem has errors");
+const char * const wfs_err_msg_openscan= N_("during opening a scan of");
+const char * const wfs_err_msg_blkiter = N_("during iterating over blocks on");
+const char * const wfs_err_msg_diriter = N_("during iterating over a directory on");
+const char * const wfs_err_msg_nowork  = N_("Nothing selected for wiping.");
+const char * const wfs_err_msg_suid    = N_("PLEASE do NOT set this program's suid bit. Use sgid instead.");
+const char * const wfs_err_msg_capset  = N_("during setting capabilities");
+const char * const wfs_err_msg_fork    = N_("during creation of child process");
+const char * const wfs_err_msg_nocache = N_("during disabling device cache");
+const char * const wfs_err_msg_cacheon = N_("during enabling device cache");
+const char * const wfs_err_msg_attopen = N_("during opening an attribute");
+const char * const wfs_err_msg_runlist = N_("during mapping a runlist");
+const char * const wfs_err_msg_srchctx = N_("during creating a search context");
+const char * const wfs_err_msg_param   = N_("during checking parameters");
+const char * const wfs_err_msg_pipe    = N_("during creating a pipe");
+const char * const wfs_err_msg_exec    = N_("during starting a sub-process");
+const char * const wfs_err_msg_seek    = N_("during seeking to position");
+const char * const wfs_err_msg_ioctl   = N_("during performing a control operation on");
 
 /* Messages displayed when verbose mode is on */
 static const char * const msg_signal   = N_("Setting signal handlers");
 static const char * const msg_chkmnt   = N_("Checking if file system is mounted");
 static const char * const msg_openfs   = N_("Opening file system");
 static const char * const msg_flushfs  = N_("Flushing file system");
-static const char * const msg_rdblbm   = N_("Reading block bitmap from");
 static const char * const msg_wipefs   = N_("Wiping free space on file system");
 static const char * const msg_wipeused = N_("Wiping unused space in used blocks on");
 static const char * const msg_wipeunrm = N_("Wiping undelete data on");
 static const char * const msg_closefs  = N_("Closing file system");
 static const char * const msg_nobg     = N_("Going into background not supported or failed");
+static const char * const msg_cacheoff = N_("Disabling cache");
 
 /* Command-line options. */
 static int opt_allzero = 0;
@@ -239,12 +243,12 @@ static const struct option opts[] =
 #endif
 
 #ifdef HAVE_IOCTL
-static fs_ioctl * ioctls = NULL;	/* array of structures */
+static fs_ioctl_t * ioctls = NULL;	/* array of structures */
 #endif
 
 /* Signal-related stuff */
 #ifdef HAVE_SIGNAL_H
-const char * const sig_unk = N_("unknown");
+const char * const wfs_sig_unk = N_("unknown");
 #endif /* HAVE_SIGNAL_H */
 
 static unsigned long int blocksize = 0;
@@ -253,65 +257,177 @@ static unsigned long int super_off = 0;
 static /*@observer@*/ const char *wfs_progname;	/* The name of the program */
 static int stdout_open = 1, stderr_open = 1;
 
-unsigned long int npasses = 0;		/* Number of passes (patterns used) */
+static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
 
 /* ======================================================================== */
 
 /**
- * Displays an error message.
- * \param err Error code.
- * \param msg The message.
- * \param extra Last element of the error message (fsname or signal).
- * \param FS The filesystem this message refers to.
+ * Tells if the standard output is open for use.
+ * @return a non-zero value if the standard output is open for use.
  */
-void
+int
+wfs_is_stdout_open (
 #ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
+	void
 #endif
-show_error (
+)
+{
+	return stdout_open;
+}
+
+/* ======================================================================== */
+
+/**
+ * Tells if the standard error output is open for use.
+ * @return a non-zero value if the standard error output is open for use.
+ */
+int
+wfs_is_stderr_open (
 #ifdef WFS_ANSIC
-	const wfs_error_type_t	err,
-	const char * const	msg,
-	const char * const	extra,
-	const wfs_fsid_t	FS )
+	void
+#endif
+)
+{
+	return stderr_open;
+}
+
+/* ======================================================================== */
+
+/**
+ * Gets the program's name.
+ * @return the program's name.
+ */
+const char *
+wfs_get_program_name (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	return wfs_progname;
+}
+
+/* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static const char * wfs_get_err_msg WFS_PARAMS ((const wfs_errcode_t wfs_err));
+#endif
+
+/**
+ * Gets a suitalbe error message for the given error code.
+ * @param wfs_err the error code (result) to get a message for.
+ * @return a suitalbe error message for the given error code.
+ */
+static const char *
+wfs_get_err_msg (
+#ifdef WFS_ANSIC
+	const wfs_errcode_t wfs_err)
 #else
-	err, msg, extra, FS )
-	const wfs_error_type_t	err;
-	const char * const	msg;
-	const char * const	extra;
-	const wfs_fsid_t	FS;
+	wfs_err)
+	const wfs_errcode_t wfs_err;
 #endif
 {
-	if ( (stderr_open == 0) || (msg == NULL) )
+	if ( wfs_err == WFS_MNTCHK )
 	{
-		return;
+		return wfs_err_msg_checkmt;
 	}
-
-#if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
-# if (defined WFS_EXT234) || (defined WFS_OCFS)
-	if ( (err.whichfs == CURR_EXT234FS) || (err.whichfs == CURR_OCFS) )
+	else if ( wfs_err == WFS_MNTRW )
 	{
-		com_err ( wfs_progname, err.errcode.e2error, WFS_WFS_ERR_MSG_FORMATL,
-			_(err_msg), err.errcode.e2error, _(msg),
-			(extra != NULL)? extra : "",
-			(FS.fsname != NULL)? FS.fsname : "" );
+		return wfs_err_msg_mtrw;
 	}
-	else
-# endif
+	else if ( wfs_err == WFS_OPENFS )
 	{
-		com_err ( wfs_progname, err.errcode.gerror, WFS_ERR_MSG_FORMAT,
-			_(err_msg), err.errcode.gerror, _(msg),
-			(extra != NULL)? extra : "",
-			(FS.fsname != NULL)? FS.fsname : "" );
+		return wfs_err_msg_open;
 	}
-#else
-	fprintf ( stderr, "%s:%s: " WFS_ERR_MSG_FORMAT, wfs_progname,
-		(FS.fsname != NULL)? FS.fsname : "", _(err_msg),
-		err.errcode.gerror, _(msg),
-		(extra != NULL)? extra : "",
-		(FS.fsname != NULL)? FS.fsname : "" );
-#endif
-	fflush (stderr);
+	else if ( wfs_err == WFS_FLUSHFS )
+	{
+		return wfs_err_msg_flush;
+	}
+	else if ( wfs_err == WFS_FSCLOSE )
+	{
+		return wfs_err_msg_close;
+	}
+	else if ( wfs_err == WFS_MALLOC )
+	{
+		return wfs_err_msg_malloc;
+	}
+	else if ( wfs_err == WFS_BLBITMAPREAD )
+	{
+		return wfs_err_msg_rdblbm;
+	}
+	else if ( wfs_err == WFS_BLKWR )
+	{
+		return wfs_err_msg_wrtblk;
+	}
+	else if ( wfs_err == WFS_BLKRD )
+	{
+		return wfs_err_msg_rdblk;
+	}
+	else if ( wfs_err == WFS_INOREAD )
+	{
+		return wfs_err_msg_rdino;
+	}
+	else if ( wfs_err == WFS_FSHASERROR )
+	{
+		return wfs_err_msg_fserr;
+	}
+	else if ( wfs_err == WFS_INOSCAN )
+	{
+		return wfs_err_msg_openscan;
+	}
+	else if ( wfs_err == WFS_BLKITER )
+	{
+		return wfs_err_msg_blkiter;
+	}
+	else if ( wfs_err == WFS_DIRITER )
+	{
+		return wfs_err_msg_diriter;
+	}
+	else if ( wfs_err == WFS_NOTHING )
+	{
+		return wfs_err_msg_nowork;
+	}
+	else if ( wfs_err == WFS_SUID )
+	{
+		return wfs_err_msg_suid;
+	}
+	else if ( wfs_err == WFS_FORKERR )
+	{
+		return wfs_err_msg_fork;
+	}
+	else if ( wfs_err == WFS_ATTROPEN )
+	{
+		return wfs_err_msg_attopen;
+	}
+	else if ( wfs_err == WFS_NTFSRUNLIST )
+	{
+		return wfs_err_msg_runlist;
+	}
+	else if ( wfs_err == WFS_CTXERROR )
+	{
+		return wfs_err_msg_srchctx;
+	}
+	else if ( wfs_err == WFS_BADPARAM )
+	{
+		return wfs_err_msg_param;
+	}
+	else if ( wfs_err == WFS_PIPEERR )
+	{
+		return wfs_err_msg_pipe;
+	}
+	else if ( wfs_err == WFS_EXECERR )
+	{
+		return wfs_err_msg_exec;
+	}
+	else if ( wfs_err == WFS_SEEKERR )
+	{
+		return wfs_err_msg_seek;
+	}
+	else if ( wfs_err == WFS_IOCTL )
+	{
+		return wfs_err_msg_ioctl;
+	}
+	return "?";
 }
 
 /* ======================================================================== */
@@ -321,24 +437,24 @@ show_error (
  * \param type Type of message (0 == "%s: %s: %s\n", 1 == "%s: %s: %s: '%s'\n")
  * \param msg The message.
  * \param extra Last element of the error message (fsname or signal).
- * \param FS The filesystem this message refers to.
+ * \param wfs_fs The filesystem this message refers to.
  */
 void
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
-show_msg (
+wfs_show_msg (
 #ifdef WFS_ANSIC
 	const int		type,
 	const char * const	msg,
 	const char * const	extra,
-	const wfs_fsid_t	FS )
+	const wfs_fsid_t	wfs_fs )
 #else
-	type, msg, extra, FS )
+	type, msg, extra, wfs_fs )
 	const int		type;
 	const char * const	msg;
 	const char * const	extra;
-	const wfs_fsid_t	FS;
+	const wfs_fsid_t	wfs_fs;
 #endif
 {
 	if ( (stdout_open == 0) || (msg == NULL) )
@@ -349,12 +465,12 @@ show_msg (
 	if ( (type == 0) || (extra == NULL) )
 	{
 		printf ( "%s:%s: %s\n", wfs_progname,
-			(FS.fsname != NULL)? FS.fsname : "", _(msg) );
+			(wfs_fs.fsname != NULL)? wfs_fs.fsname : "", _(msg) );
 	}
 	else
 	{
 		printf ( "%s:%s: %s: '%s'\n", wfs_progname,
-			(FS.fsname != NULL)? FS.fsname : "", _(msg), extra );
+			(wfs_fs.fsname != NULL)? wfs_fs.fsname : "", _(msg), extra );
 	}
 	fflush (stdout);
 }
@@ -371,15 +487,15 @@ void
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
-show_progress (
+wfs_show_progress (
 #ifdef WFS_ANSIC
-	const unsigned int		type,
+	const wfs_progress_type_t	type,
 	const unsigned int		percent,
 	unsigned int * const		prev_percent
 	)
 #else
 	type, percent, prev_percent )
-	const unsigned int		type;
+	const wfs_progress_type_t	type;
 	const unsigned int		percent;
 	unsigned int * const		prev_percent;
 #endif
@@ -387,7 +503,11 @@ show_progress (
 	unsigned int i;
 
 	if ( (stdout_open == 0) || (opt_verbose == 0) || (prev_percent == NULL)
-		|| ((type != 0) && (type != 1) && (type != 2)) )
+		|| (
+			(type != WFS_PROGRESS_WFS)
+			&& (type != WFS_PROGRESS_PART)
+			&& (type != WFS_PROGRESS_UNRM)
+		) )
 	{
 		return;
 	}
@@ -401,17 +521,17 @@ show_progress (
 		return;
 	}
 
-	for ( i=*prev_percent; i < percent; i++ )
+	for ( i = *prev_percent; i < percent; i++ )
 	{
-		if ( type == 0 )
+		if ( type == WFS_PROGRESS_WFS )
 		{
 			printf ("=");
 		}
-		else if ( type == 1 )
+		else if ( type == WFS_PROGRESS_PART )
 		{
 			printf ("-");
 		}
-		else if ( type == 2 )
+		else if ( type == WFS_PROGRESS_UNRM )
 		{
 			printf ("*");
 		}
@@ -462,100 +582,41 @@ print_help (
 		prog = my_name;
 	}
 
-	printf ("%s", prog);
+	/* this has to be printf() because puts() adds a new line at the end. */
+	printf ( "%s", prog );
 	printf ( "%s",
 		_(" - Program for secure cleaning of free space on filesystems\nSyntax: ") );
-	printf ("%s", prog);
+	printf ( "%s", prog );
 	printf ( "%s", _(" [options] ") );
 	printf ( "%s", "/dev/XY [...]\n\n" );
-	puts ( _("Options:\
-\n--all-zeros\t\tUse only zeros for wiping\
-\n--background\t\tContinue work in the background, if possible\
-\n-b|--superblock <off>\tSuperblock offset on the given filesystems\
-\n-B|--blocksize <size>\tBlock size on the given filesystems\
-\n-f|--force\t\tWipe even if the file system has errors") );
-	puts (
-		_("-h|--help\t\tPrint help\
-\n-n|--iterations NNN\tNumber of passes (greater than 0)\
-\n--last-zero\t\tPerform additional wiping with zeros\
-\n-l|--license\t\tPrint license information\
-\n--method <name>\t\tUse the given method for wiping\
-\n--nopart\t\tDo NOT wipe free space in partially used blocks")		);
-	puts (
-		_("--nounrm\t\tDo NOT wipe undelete information\
-\n--nowfs\t\t\tDo NOT wipe free space on file system\
-\n--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)\
-\n-v|--verbose\t\tVerbose output\
-\n-V|--version\t\tPrint version number")
-				);
+	puts ( _("Options:") );
+	puts ( _("--all-zeros\t\tUse only zeros for wiping") );
+	puts ( _("--background\t\tContinue work in the background, if possible") );
+	puts ( _("-b|--superblock <off>\tSuperblock offset on the given filesystems") );
+	puts ( _("-B|--blocksize <size>\tBlock size on the given filesystems") );
+	puts ( _("-f|--force\t\tWipe even if the file system has errors") );
+	puts ( _("-h|--help\t\tPrint help") );
+	puts ( _("-n|--iterations NNN\tNumber of passes (greater than 0)") );
+	puts ( _("--last-zero\t\tPerform additional wiping with zeros") );
+	puts ( _("-l|--license\t\tPrint license information") );
+	puts ( _("--method <name>\t\tUse the given method for wiping") );
+	puts ( _("--nopart\t\tDo NOT wipe free space in partially used blocks") );
+	puts ( _("--nounrm\t\tDo NOT wipe undelete information") );
+	puts ( _("--nowfs\t\t\tDo NOT wipe free space on file system") );
+	puts ( _("--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)") );
+	puts ( _("-v|--verbose\t\tVerbose output") );
+	puts ( _("-V|--version\t\tPrint version number") );
 
 }
 
 /* ======================================================================== */
 
 #ifndef WFS_ANSIC
-static void print_versions WFS_PARAMS ((void));
-#endif
-
-static void print_versions (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
-{
-#if (defined WFS_EXT234) || (defined WFS_NTFS) || (defined WFS_REISER4)
-	const char *lib_ver = NULL;
-#endif
-#ifdef WFS_EXT234
-	ext2fs_get_library_version ( &lib_ver, NULL );
-	printf ( "Libext2fs %s Copyright (C) Theodore Ts'o\n",
-		(lib_ver != NULL)? lib_ver: "<?>" );
-#endif
-#ifdef WFS_NTFS
-# ifndef HAVE_LIBNTFS_3G
-	lib_ver = ntfs_libntfs_version ();
-	printf ( "LibNTFS %s, http://www.linux-ntfs.org\n",
-		(lib_ver != NULL)? lib_ver : "<?>" );
-# else
-	printf ( "NTFS-3G: <?>\n");
-# endif
-#endif
-#ifdef WFS_XFS
-	printf ( "XFS: <?>\n");
-#endif
-#ifdef WFS_REISER
-	printf ( "ReiserFSv3: <?>\n");
-#endif
-#ifdef WFS_REISER4
-	lib_ver = libreiser4_version ();
-	printf ( "LibReiser4 %s\n",
-		(lib_ver != NULL)? lib_ver : "<?>" );
-#endif
-#ifdef WFS_FATFS
-	printf ( "FAT (TFFS): <?>\n");
-#endif
-#ifdef WFS_MINIXFS
-	printf ( "MinixFS: <?>\n");
-#endif
-#ifdef WFS_JFS
-	printf ( "JFS: <?>\n");
-#endif
-#ifdef WFS_HFSP
-	printf ( "HFS+: <?>\n");
-#endif
-#ifdef WFS_OCFS
-	printf ( "OCFS: <?>\n");
-#endif
-}
-
-/* ======================================================================== */
-
-#ifndef WFS_ANSIC
-static wfs_errcode_t WFS_ATTR((warn_unused_result)) wfs_wipe_filesytem
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT wfs_wipe_filesytem
 	WFS_PARAMS ((const char * const dev_name, const int total_fs));
 #endif
 
-static wfs_errcode_t WFS_ATTR((warn_unused_result))
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT
 wfs_wipe_filesytem (
 #ifdef WFS_ANSIC
 	const char * const dev_name, const int total_fs)
@@ -568,8 +629,6 @@ wfs_wipe_filesytem (
 	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned */
 	wfs_fsid_t fs;			/* The file system we're working on */
 	wfs_fsdata_t data;
-	wfs_error_type_t error;
-	wfs_curr_fs_t curr_fs = CURR_NONE;
 	wfs_errcode_t res;
 #ifndef HAVE_MEMSET
 	size_t i;
@@ -577,138 +636,199 @@ wfs_wipe_filesytem (
 
 #ifdef HAVE_MEMSET
 	memset ( &fs, 0, sizeof (wfs_fsid_t) );
-	memset ( &error, 0, sizeof (wfs_error_type_t) );
 	memset ( &data, 0, sizeof (wfs_fsdata_t) );
 #else
 	for (i = 0; i < sizeof (wfs_fsid_t); i++)
 	{
 		((char *)&fs)[i] = '\0';
 	}
-	for (i = 0; i < sizeof (wfs_error_type_t); i++)
-	{
-		((char *)&error)[i] = '\0';
-	}
 	for (i = 0; i < sizeof (wfs_fsdata_t); i++)
 	{
 		((char *)&data)[i] = '\0';
 	}
 #endif
-	error.whichfs = CURR_NONE;
 	fs.fsname = dev_name;
 	fs.zero_pass = opt_zero;
 	fs.npasses = npasses;
+	fs.fs_error = malloc (wfs_get_err_size ());
+	fs.whichfs = WFS_CURR_FS_NONE;
 
 	if ( dev_name == NULL )
 	{
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_BAD_CMDLN;
 	}
 
 	if ( dev_name[0] == '\0' /*strlen (dev_name) == 0*/ )
 	{
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_BAD_CMDLN;
 	}
 
 	if ( (sig_recvd == 0) && (opt_verbose > 0) )
 	{
-		show_msg ( 1, msg_chkmnt, dev_name, fs );
+		wfs_show_msg (1, msg_chkmnt, dev_name, fs);
 	}
 
 	if ( sig_recvd != 0 )
 	{
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_SIGNAL;
 	}
 
-	/* checking if fs mounted */
-	ret = wfs_chk_mount ( dev_name, &error );
+	/* checking if fs mounted *
+	ret = wfs_chk_mount (fs);
 	if ( ret != WFS_SUCCESS )
 	{
-		show_error ( error, (ret==WFS_MNTCHK)? err_msg_checkmt : err_msg_mtrw,
-			dev_name, fs );
+		wfs_show_error ((ret==WFS_MNTCHK)? wfs_err_msg_checkmt : wfs_err_msg_mtrw,
+			dev_name, fs);
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return ret;
-	}
-
-	/* opening the file system */
-	if ( (sig_recvd == 0) && (opt_verbose > 0) )
-	{
-		show_msg ( 1, msg_openfs, dev_name, fs );
-	}
+	}*/
 
 	if ( sig_recvd != 0 )
 	{
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_SIGNAL;
 	}
 
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
 	{
-		disable_drive_cache (dev_name, total_fs, ioctls);
+		/* opening the file system */
+		if ( (sig_recvd == 0) && (opt_verbose > 0) )
+		{
+			wfs_show_msg (1, msg_cacheoff, dev_name, fs);
+		}
+		res = disable_drive_cache (fs, total_fs, ioctls);
+		if ( res != WFS_SUCCESS )
+		{
+			wfs_show_error (wfs_err_msg_nocache,
+				dev_name, fs);
+		}
 	}
 #endif
+	/* opening the file system */
+	if ( (sig_recvd == 0) && (opt_verbose > 0) )
+	{
+		wfs_show_msg (1, msg_openfs, dev_name, fs);
+	}
+
 	data.e2fs.super_off = super_off;
 	data.e2fs.blocksize = blocksize;
-	ret = wfs_open_fs ( dev_name, &fs, &curr_fs, &data, &error );
+	ret = wfs_open_fs (&fs, &data);
 	if ( ret != WFS_SUCCESS )
 	{
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
-			enable_drive_cache (dev_name, total_fs, ioctls);
+			res = enable_drive_cache (fs, total_fs, ioctls);
+			if ( res != WFS_SUCCESS )
+			{
+				wfs_show_error (wfs_err_msg_cacheon,
+					dev_name, fs);
+			}
 		}
 #endif
-		show_error ( error, err_msg_open, dev_name, fs );
+		wfs_show_error (wfs_err_msg_open, dev_name, fs);
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_OPENFS;
 	}
 
 	if ( (sig_recvd == 0) && (opt_verbose > 0) )
 	{
-		show_msg ( 0, convert_fs_to_name (curr_fs), dev_name, fs );
+		wfs_show_msg (0, convert_fs_to_name (fs.whichfs), dev_name, fs);
 	}
 
-	error.whichfs = curr_fs;
 	if ( sig_recvd != 0 )
 	{
-		wfs_close_fs ( fs, curr_fs, &error );
+		wfs_close_fs (fs);
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
-			enable_drive_cache (dev_name, total_fs, ioctls);
+			res = enable_drive_cache (fs, total_fs, ioctls);
+			if ( res != WFS_SUCCESS )
+			{
+				wfs_show_error (wfs_err_msg_cacheon,
+					dev_name, fs);
+			}
 		}
 #endif
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_SIGNAL;
 	}
 
-	if ( (opt_force == 0) && (wfs_check_err (fs, curr_fs, &error) != 0) )
+	if ( (opt_force == 0) && (wfs_check_err (fs) != 0) )
 	{
-		show_msg ( 1, err_msg_fserr, dev_name, fs );
-		wfs_close_fs ( fs, curr_fs, &error );
+		wfs_show_msg (1, wfs_err_msg_fserr, dev_name, fs);
+		wfs_close_fs (fs);
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
-			enable_drive_cache (dev_name, total_fs, ioctls);
+			res = enable_drive_cache (fs, total_fs, ioctls);
+			if ( res != WFS_SUCCESS )
+			{
+				wfs_show_error (wfs_err_msg_cacheon,
+					dev_name, fs);
+			}
 		}
 #endif
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
 		return WFS_FSHASERROR;
 	}
 
 	/* ALWAYS flush the file system before starting. */
-	/*if ( (sig_recvd == 0) && ( wfs_is_dirty (fs, curr_fs) != 0) )*/
+	/*if ( (sig_recvd == 0) && (wfs_is_dirty (fs) != 0) )*/
 	{
 		if ( (sig_recvd == 0) && (opt_verbose > 0) )
 		{
-			show_msg ( 1, msg_flushfs, dev_name, fs );
+			wfs_show_msg (1, msg_flushfs, dev_name, fs);
 		}
-		wfs_flush_fs ( fs, curr_fs, &error );
+		wfs_flush_fs (fs);
 	}
 
         if ( sig_recvd != 0 )
         {
-		wfs_close_fs ( fs, curr_fs, &error );
+		wfs_close_fs (fs);
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
-			enable_drive_cache (dev_name, total_fs, ioctls);
+			res = enable_drive_cache (fs, total_fs, ioctls);
+			if ( res != WFS_SUCCESS )
+			{
+				wfs_show_error (wfs_err_msg_cacheon,
+					dev_name, fs);
+			}
 		}
 #endif
+		if ( fs.fs_error != NULL )
+		{
+			free (fs.fs_error);
+		}
         	return WFS_SIGNAL;
         }
 #ifdef WFS_WANT_UNRM
@@ -717,12 +837,17 @@ wfs_wipe_filesytem (
 	{
 		if ( opt_verbose > 0 )
 		{
-			show_msg ( 1, msg_wipeunrm, dev_name, fs );
+			wfs_show_msg (1, msg_wipeunrm, dev_name, fs);
 		}
-		res = wipe_unrm (fs, curr_fs, &error);
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+		res = wipe_unrm (fs);
+		if ( res != WFS_SUCCESS )
 		{
-			ret = res;
+			if ( ret == WFS_SUCCESS )
+			{
+				ret = res;
+			}
+			wfs_show_error (wfs_get_err_msg (res),
+				dev_name, fs);
 		}
 	}
 #endif
@@ -732,13 +857,18 @@ wfs_wipe_filesytem (
 	{
 		if ( opt_verbose > 0 )
 		{
-			show_msg ( 1, msg_wipeused, dev_name, fs );
+			wfs_show_msg (1, msg_wipeused, dev_name, fs);
 		}
 
-		res = wipe_part (fs, curr_fs, &error);
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+		res = wipe_part (fs);
+		if ( res != WFS_SUCCESS )
 		{
-			ret = res;
+			if ( ret == WFS_SUCCESS )
+			{
+				ret = res;
+			}
+			wfs_show_error (wfs_get_err_msg (res),
+				dev_name, fs);
 		}
 	}
 #endif
@@ -747,32 +877,51 @@ wfs_wipe_filesytem (
 	{
 		if ( opt_verbose > 0 )
 		{
-			show_msg ( 1, msg_wipefs, dev_name, fs );
+			wfs_show_msg (1, msg_wipefs, dev_name, fs);
 		}
-		res = wipe_fs (fs, curr_fs, &error);
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+		res = wipe_fs (fs);
+		if ( res != WFS_SUCCESS )
 		{
-			ret = res;
+			if ( ret == WFS_SUCCESS )
+			{
+				ret = res;
+			}
+			wfs_show_error (wfs_get_err_msg (res),
+				dev_name, fs);
 		}
 	}
 #endif
 	if ( opt_verbose > 0 )
 	{
-		show_msg ( 1, msg_closefs, dev_name, fs );
+		wfs_show_msg (1, msg_closefs, dev_name, fs);
 	}
 
-	wfs_flush_fs ( fs, curr_fs, &error );
-	res = wfs_close_fs ( fs, curr_fs, &error );
-	if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+	wfs_flush_fs (fs);
+	res = wfs_close_fs (fs);
+	if ( res != WFS_SUCCESS )
 	{
-		ret = res;
+		if ( ret == WFS_SUCCESS )
+		{
+			ret = res;
+		}
+		wfs_show_error (wfs_get_err_msg (res),
+			dev_name, fs);
 	}
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
 	{
-		enable_drive_cache (dev_name, total_fs, ioctls);
+		res = enable_drive_cache (fs, total_fs, ioctls);
+		if ( res != WFS_SUCCESS )
+		{
+			wfs_show_error (wfs_err_msg_cacheon,
+				dev_name, fs);
+		}
 	}
 #endif
+	if ( fs.fs_error != NULL )
+	{
+		free (fs.fs_error);
+	}
 	return ret;
 }
 
@@ -797,10 +946,12 @@ main (
 	pid_t child_pid;
 	int child_status;
 #endif
-	wfs_error_type_t error;
 	wfs_fsid_t wf_gen;
+	wfs_errcode_t err;
 
 	wf_gen.fsname = "";
+	wf_gen.fs_error = &err;
+	wf_gen.whichfs = WFS_CURR_FS_NONE;
 	wfs_check_stds (&stdout_open, &stderr_open);
 
 #ifdef HAVE_LIBINTL_H
@@ -829,11 +980,11 @@ main (
 
 	if ( argv[0] != NULL )
 	{
-#ifdef HAVE_LIBGEN_H
+#if (defined HAVE_LIBGEN_H) && (defined HAVE_BASENAME)
 		wfs_progname = basename (argv[0]);
 #else
 # if (defined HAVE_STRING_H)
-		wfs_progname = strrchr (argv[0], (int)'/');
+		wfs_progname = strrchr (argv[0], (int)'/') + 1;
 # else
 		wfs_progname = argv[0];
 # endif
@@ -851,14 +1002,15 @@ main (
 	res = wfs_check_suid ();
 	if ( res != WFS_SUCCESS )
 	{
-		error.errcode.gerror = 1L;
-		show_error ( error, err_msg_suid, wfs_progname, wf_gen );
+		err = 1L;
+		wfs_show_error (wfs_err_msg_suid, wfs_progname, wf_gen);
 	}
 
-	res = wfs_clear_cap (&error);
+	res = wfs_clear_cap ();
 	if ( res != WFS_SUCCESS )
 	{
-		show_error ( error, err_msg_capset, wfs_progname, wf_gen );
+		err = res;
+		wfs_show_error (wfs_err_msg_capset, wfs_progname, wf_gen);
 	}
 
 	/* NOTE: XFS support requires the $PATH environment variable right now,
@@ -897,8 +1049,8 @@ main (
 
 		if ( (opt_char == (int)'V') || (opt_version == 1) )
 		{
-			show_msg ( 1, ver_str, VERSION, wf_gen );
-			print_versions ();
+			wfs_show_msg ( 1, ver_str, VERSION, wf_gen );
+			wfs_print_version ();
 			return WFS_NOTHING;
 		}
 
@@ -906,9 +1058,9 @@ main (
 		{
 			if ( stdout_open == 1 )
 			{
-				show_msg ( 0, lic_str, "", wf_gen );
+				wfs_show_msg ( 0, lic_str, "", wf_gen );
 				puts ( author_str );
-				print_versions ();
+				wfs_print_version ();
 			}
 			return WFS_NOTHING;
 		}
@@ -1046,8 +1198,8 @@ main (
 
 		if ( (strcmp (argv[i], "-V") == 0) || (strcmp (argv[i], "--version") == 0) )
 		{
-			show_msg ( 1, ver_str, VERSION, wf_gen );
-			print_versions ();
+			wfs_show_msg ( 1, ver_str, VERSION, wf_gen );
+			wfs_print_version ();
 			return WFS_NOTHING;
 		}
 
@@ -1056,9 +1208,9 @@ main (
 		{
 			if ( stdout_open == 1 )
 			{
-				show_msg ( 0, lic_str, "", wf_gen );
+				wfs_show_msg ( 0, lic_str, "", wf_gen );
 				puts ( author_str );
-				print_versions ();
+				wfs_print_version ();
 			}
 			return WFS_NOTHING;
 		}
@@ -1292,7 +1444,7 @@ main (
 	if ( (opt_nopart == 1) && (opt_nounrm == 1) && (opt_nowfs == 1) )
 	{
 
-		show_msg ( 0, err_msg_nowork, "", wf_gen );
+		wfs_show_msg ( 0, wfs_err_msg_nowork, "", wf_gen );
 		return WFS_BAD_CMDLN;
 	}
 
@@ -1322,9 +1474,9 @@ main (
 #ifdef HAVE_SIGNAL_H
 	if ( opt_verbose > 0 )
 	{
-		show_msg ( 0, msg_signal, "", wf_gen );
+		wfs_show_msg ( 0, msg_signal, "", wf_gen );
 	}
-	wfs_set_sigh (&error, opt_verbose);
+	wfs_set_sigh (opt_verbose);
 #endif		/* HAVE_SIGNAL_H */
 
         if ( sig_recvd != 0 )
@@ -1390,7 +1542,8 @@ main (
 #ifdef HAVE_IOCTL
 	if ( argc > wfs_optind )
 	{
-		ioctls = (fs_ioctl *) malloc ( (size_t)(argc - wfs_optind) * sizeof (fs_ioctl) );
+		ioctls = (fs_ioctl_t *) malloc (
+			(size_t)(argc - wfs_optind) * sizeof (fs_ioctl_t));
 		if ( ioctls != NULL )
 		{
 			for ( i = 0; i < argc - wfs_optind; i++ )
@@ -1402,13 +1555,16 @@ main (
 				{
 					continue;
 				}
-				strncpy (ioctls[i].fs_name, argv[wfs_optind+i], sizeof (ioctls[i].fs_name)-1);
+				strncpy (ioctls[i].fs_name,
+					argv[wfs_optind+i],
+					sizeof (ioctls[i].fs_name)-1);
 				ioctls[i].fs_name[sizeof (ioctls[i].fs_name)-1] = '\0';
 			}
 		}
 	}
 #endif
 
+	wfs_lib_init ();
 	/*
 	 * Unrecognised command line options are assumed to be devices
 	 * which we are supposed to wipe the free space on.
@@ -1431,12 +1587,13 @@ main (
 		if ( child_pid < 0 )
 # endif
 		{
+			/* error */
 # ifdef HAVE_ERRNO_H
-			error.errcode.gerror = errno;
+			err = errno;
 # else
-			error.errcode.gerror = 1L;
+			err = 1L;
 # endif
-			show_error ( error, err_msg_fork, argv[wfs_optind], wf_gen );
+			wfs_show_error (wfs_err_msg_fork, argv[wfs_optind], wf_gen);
 #ifdef HAVE_IOCTL
 			if ( ioctls != NULL )
 			{
@@ -1444,6 +1601,7 @@ main (
 			}
 			ioctls = NULL;
 #endif
+			wfs_lib_deinit ();
 			return WFS_FORKERR;
 		}
 		else
@@ -1451,7 +1609,7 @@ main (
 		if ( child_pid > 0 )	/* NOTE: do NOT write '>= 0' */
 # endif
 		{
-			/* parent process simply waits for the child */
+			/* parent process: simply wait for the child */
 			while ( 1 == 1 )
 			{
 # ifdef HAVE_FORK
@@ -1463,7 +1621,11 @@ main (
 #  ifdef WIFEXITED
 				if ( WIFEXITED (child_status) )
 				{
-					ret = WEXITSTATUS (child_status);
+					res = WEXITSTATUS (child_status);
+					if ( res != 0 )
+					{
+						ret = res;
+					}
 					break;
 				}
 #  endif
@@ -1484,6 +1646,7 @@ main (
 # ifdef HAVE_FORK
 		else
 		{
+			/* child process: wipe the given filesystem */
 #ifdef HAVE_IOCTL
 /* Valgrind: when this is enabled, no memory leak in main() is reported, but the
 subsequent loop iterations may fail, so don't enable. */
@@ -1493,12 +1656,15 @@ subsequent loop iterations may fail, so don't enable. */
 			}
 			ioctls = NULL;*/
 #endif
-			/* child */
 			exit (wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind));
 		}
 # endif
 #else /* ! ((defined WFS_REISER) || (defined WFS_MINIXFS)) */
-		ret = wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind);
+		res = wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind);
+		if ( res != 0 )
+		{
+			ret = res;
+		}
 #endif
 		if ( (ret == WFS_SIGNAL) || (sig_recvd != 0) )
 		{
@@ -1514,9 +1680,7 @@ subsequent loop iterations may fail, so don't enable. */
 	}
 	ioctls = NULL;
 #endif
-#if ((defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)) && (defined WFS_EXT234)
-	remove_error_table (&et_ext2_error_table);
-#endif
+	wfs_lib_deinit ();
 
 	if ( sig_recvd != 0 )
 	{

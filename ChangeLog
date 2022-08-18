@@ -1,3 +1,96 @@
+2013-11-01	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 2.0
+	  Portability improvements. Documentation improvements. Code cleanup.
+	  Better error handling. The filesystem backends are now completely
+	  separate from each other (they are not including each other's
+	  header files, not passing each other's handlers, etc.).
+	* src/wfs_signal.c (wfs_set_sigh): corrected some conditions for
+	  variable declarations.
+	* doc/wipefreespace.texi.in, README: added info about wiping with
+	  "full" methods versus one iteration at a time. Added a note about
+	  the --use-ioctl command-line option.
+	* src/wipefreespace.c (main): fix getting the program name when
+	  basename() is unavailable.
+	* configure.ac: checking for the basename() function, checking for
+	  the "warn_unused_result" gcc attribute, checking for execvpe()
+	  along with execvp(), checking for setenv() and putenv() for systems
+	  that do not support execvpe().
+	* doc/wipefreespace.texi.in, README, INSTALL: commands in separate
+	  paragraphs, fixed typos, removed the necessity of copying all NTFS
+	  header files.
+	* src/wipefreespace.h: renamed WFS_WFS_ERR_MSG_FORMATL to
+	  WFS_ERR_MSG_FORMATL, removed wfs_fselem_t, removed the "_t" on
+	  non-typedefs, added missing wfs_ prefixes, made an enum out of the
+	  WFS_PROGRESS_* constants, the current filesystem is now kept in
+	  the wfs_fsid structure, made wfs_fsid_t independent of the
+	  filesystem includes or types, made wfs_error_type_t a part
+	  of wfs_fsid_t, removed including all the filesystem-specific headers
+	* src/wfs_xfs.c: renamed MAX_SELECT_FAILS to WFS_XFS_MAX_SELECT_FAILS,
+	  running the "xfs_db" program with the default locale, LC_ALL=C, to
+	  avoid problems with the need to parse translated messages, moved
+	  the non-constant strings back to the functions to avoid threading
+	  problems (should such appear).
+	* src/*.{c,h}: changed WFS_ATTR((warn_unused_result)) to
+	  GCC_WARN_UNUSED_RESULT, removed wfs_fselem_t, initializing the
+	  list of used patterns before using it, renamed the "show_*"
+	  functions to wfs_show_*, renamed the constants in the wfs_curr_fs
+	  enum, moved the version-printing functions to the backends, moved
+	  the error-printing functions to the backends, removed some of the
+	  "will never be executed" warnings, filesystem backends now include
+	  all the required filesystem-specific headers.
+	* src/wfs_xfs.c (wfs_xfs_read_line): making some conditionally needed
+	  variables compile only when the conditions are met.
+	* po/pl.po: corrected license transation.
+	* po/LINGUAS, wipefreespace.spec: added the en@quot and en@boldquot
+	  pseudo-translations.
+	* src/wipefreespace.c, po/pl.po: one help line per one translated
+	  message.
+	* src/wfs_ntfs.c, configure.ac, src/Makefile.am: no longer requiring
+	  and distributing the list.h header file.
+	* src/wfs_ntfs.c (free_file): more checks for NULL.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_part): corrected displaying the
+	  progress in case of error.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): fixed returning an error in
+	  one place.
+	* src/wfs_reiser4.c: portability improvements.
+	* src/wipefreespace.{c,h}: made the progress types an enumeration.
+	* src/wfs_reiser4.c (wfs_r4_wipe_unrm_work): small performance
+	  improvements.
+	* src/*.{c,h}, src/wfs_wrappers.c: additional init and deinit
+	  functions for one-time initialization and deinitialization, getting
+	  and putting the current filesystem from/into the wfs_fsid_t
+	  structure, removed "dev_name" from wfs_*open_fs, removed "dev_name"
+	  and "error" from wfs_*chk_mount, added functions that return a
+	  preferred error size to allocate.
+	* src/wipefreespace.c (wfs_wipe_filesytem): checking and displaying
+	  the correct message for error returned by the backends. Allocating
+	  the storage for the error, used by the backends.
+	* src/wipefreespace.c (main): keeping the last error.
+	* README, doc/wipefreespace.texi.in, doc/wipefreespace.1: changed
+	  the information about the last preserved error.
+	* src/wfs_util.c (wfs_show_fs_error_gen): a generic function to
+	  display an error, if a filesystem backend has nothing own to use.
+	* src/wfs_util.{c,h} (child_function, child_id): allowing passing
+	  a set of environment variables to the child process.
+	* src/wfs_fat.c (wfs_fat_wipe_file_tails_in_dir): not returning an
+	  error at the end of the directory.
+	* src/wfs_xfs.c (wfs_xfs_wipe_part): not returning an error at the
+	  end of data.
+	* src/wipefreespace.c (wfs_get_err_msg): a new function that selects
+	  a message for the given error code.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_part): fixed error handling.
+	* doc/wipefreespace.texi.in: added a note about possible errors when
+	  wiping sparse files and other exotic objects.
+	* src/wfs_fat.c (wfs_fat_wipe_part, wfs_fat_wipe_unrm): opening the
+	  root directory instead of using the already-open one to allow
+	  wiping partially-used blocks after undelete data.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_part): skipping invalid and
+	  non-iterable i-nodes.
+	* src/wfs_hfsp.c (wfs_hfsp_open_fs): fixed a resource leak after a
+	  failed open attempt.
+
+
 2013-01-06	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.7.2

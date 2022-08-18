@@ -31,6 +31,8 @@
 
 #include "wfs_cfg.h"
 
+#include <stdio.h>
+
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
@@ -75,34 +77,19 @@
 # include <errno.h>
 #endif
 
-/* redefine the inline sig function from hfsp, each time with a different name */
-extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
-#define sig(a,b,c,d) wfs_ntfs_sig(a,b,c,d)
-
 #include "wipefreespace.h"
-#undef BLOCK_SIZE	/* fix conflict with MinixFS. Unused in NTFS anyway. */
 
-#undef WFS_NTFS_NEED_LIST
 #if ((defined HAVE_NTFS_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_NTFS_VOLUME_H)) \
 	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 # ifdef HAVE_NTFS_NTFS_VOLUME_H
 #  include <ntfs/ntfs_volume.h>
+#  include <ntfs/ntfs_version.h>
 #  include <ntfs/ntfs_attrib.h>		/* ntfs_attr_search_ctx() */
-#  ifdef HAVE_NTFS_NTFS_LIST_H
-#   include <ntfs/ntfs_list.h>		/* list_for_each_safe() */
-#  else
-#   define WFS_NTFS_NEED_LIST
-#  endif
 #  include <ntfs/ntfs_mft.h>		/* ntfs_mft_records_write() */
 #  include <ntfs/ntfs_logfile.h>	/* ntfs_empty_logfile() */
 # else
 #  include <ntfs-3g/ntfs_volume.h>
 #  include <ntfs-3g/ntfs_attrib.h>	/* ntfs_attr_search_ctx() */
-#  ifdef HAVE_NTFS_3G_NTFS_LIST_H
-#   include <ntfs-3g/ntfs_list.h>	/* list_for_each_safe() */
-#  else
-#   define WFS_NTFS_NEED_LIST
-#  endif
 #  include <ntfs-3g/ntfs_mft.h>		/* ntfs_mft_records_write() */
 #  include <ntfs-3g/ntfs_logfile.h>	/* ntfs_empty_logfile() */
 # endif
@@ -111,34 +98,23 @@ extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 #  ifdef HAVE_NTFS_VOLUME_H
 #   include <ntfs/volume.h>
+#   include <ntfs/version.h>
 #   include <ntfs/attrib.h>		/* ntfs_attr_search_ctx() */
-#   ifdef HAVE_NTFS_LIST_H
-#    include <ntfs/list.h>		/* list_for_each_safe() */
-#   else
-#    define WFS_NTFS_NEED_LIST
-#   endif
 #   include <ntfs/mft.h>		/* ntfs_mft_records_write() */
 #   include <ntfs/logfile.h>		/* ntfs_empty_logfile() */
 #  else
 #   include <ntfs-3g/volume.h>
 #   include <ntfs-3g/attrib.h>		/* ntfs_attr_search_ctx() */
-#   ifdef HAVE_NTFS_3G_LIST_H
-#    include <ntfs-3g/list.h>		/* list_for_each_safe() */
-#   else
-#    define WFS_NTFS_NEED_LIST
-#   endif
 #   include <ntfs-3g/mft.h>		/* ntfs_mft_records_write() */
 #   include <ntfs-3g/logfile.h>		/* ntfs_empty_logfile() */
 #  endif
 # else
 #  if (defined HAVE_VOLUME_H) && ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 #   include <volume.h>
-#   include <attrib.h>
-#   ifdef HAVE_LIST_H
-#    include <list.h>
-#   else
-#    define WFS_NTFS_NEED_LIST
+#   ifndef HAVE_LIBNTFS_3G
+#    include <version.h>
 #   endif
+#   include <attrib.h>
 #   include <mft.h>
 #   include <logfile.h>
 #  else
@@ -152,27 +128,34 @@ extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 
-#ifdef WFS_NTFS_NEED_LIST
-/* list.h header (in any form) not present - use our definitions */
-# ifdef HAVE_LIBNTFS_3G
-#  include "ntfs-3g/list.h"
-# else
-#  include "ntfs/list.h"
-# endif
-#endif
-
 /*#define USE_NTFSWIPE*/
+
+/* ====================== list definitions ================================ */
+
+struct wfs_ntfs_list_head
+{
+	struct wfs_ntfs_list_head * prev;
+	struct wfs_ntfs_list_head * next;
+};
+
+#define WFS_NTFS_INIT_LIST_HEAD(ptr) \
+	do { \
+		(ptr)->next = (ptr); (ptr)->prev = (ptr); \
+	} while (0)
+
+#define WFS_NTFS_LIST_ENTRY(ptr, type, member) \
+	((type *)((char *)(ptr) - (unsigned long int)(&((type *)0)->member)))
+
+#define WFS_NTFS_LIST_FOR_EACH_SAFE(pos, n, head) \
+	for (pos = (head)->next, n = pos->next; pos != (head); \
+		pos = n, n = pos->next)
 
 /* ======================================================================== */
 
 struct filename
 {
 	char		*parent_name;
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	struct ntfs_list_head list;	/* Previous/Next links */
-#else
-	struct list_head list;		/* Previous/Next links */
-#endif
+	struct wfs_ntfs_list_head list;	/* Previous/Next links */
 	ntfschar	*uname;		/* Filename in unicode */
 	int		 uname_len;	/* and its length */
 	long long int	 size_alloc;	/* Allocated size (multiple of cluster size) */
@@ -198,11 +181,7 @@ struct filename
 
 struct data
 {
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	struct ntfs_list_head list;	/* Previous/Next links */
-#else
-	struct list_head list;		/* Previous/Next links */
-#endif
+	struct wfs_ntfs_list_head list;	/* Previous/Next links */
 	char		*name;		/* Stream name in current locale */
 	ntfschar	*uname;		/* Unicode stream name */
 	int		 uname_len;	/* and its length */
@@ -228,16 +207,8 @@ struct ufile
 {
 	long long int	 inode;		/* MFT record number */
 	time_t		 date;		/* Last modification date/time */
-# if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	struct ntfs_list_head name;	/* A list of filenames */
-# else
-	struct list_head name;		/* A list of filenames */
-# endif
-# if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	struct ntfs_list_head data;	/* A list of data streams */
-# else
-	struct list_head data;		/* A list of data streams */
-# endif
+	struct wfs_ntfs_list_head name;	/* A list of filenames */
+	struct wfs_ntfs_list_head data;	/* A list of data streams */
 	char		*pref_name;	/* Preferred filename */
 	char		*pref_pname;	/*	     parent filename */
 	long long int	 max_size;	/* Largest size we find */
@@ -255,8 +226,8 @@ struct ufile
 struct ufile {
         long long        inode;         /* MFT record number */
         time_t           date;          /* Last modification date/time */
-        struct list_head name;          /* A list of filenames */
-        struct list_head data;          /* A list of data streams */
+        struct wfs_ntfs_list_head name;          /* A list of filenames */
+        struct wfs_ntfs_list_head data;          /* A list of data streams */
         char            *pref_name;     /* Preferred filename */
         char            *pref_pname;    /*           parent filename */
         long long        max_size;      /* Largest size we find */
@@ -268,38 +239,42 @@ struct ufile {
 
 #ifndef USE_NTFSWIPE
 # ifndef WFS_ANSIC
-static u32 WFS_ATTR ((warn_unused_result)) wfs_ntfs_get_block_size WFS_PARAMS ((const wfs_fsid_t FS));
+static u32 GCC_WARN_UNUSED_RESULT wfs_ntfs_get_block_size WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 # endif
 
 /* ======================================================================== */
 
 /**
  * Returns the buffer size needed to work on the smallest physical unit on a NTFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return Block size on the filesystem.
  */
-static u32 WFS_ATTR ((warn_unused_result))
+static u32 GCC_WARN_UNUSED_RESULT
 wfs_ntfs_get_block_size (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS )
+	const wfs_fsid_t wfs_fs )
 # else
-	FS )
-	const wfs_fsid_t FS;
+	wfs_fs )
+	const wfs_fsid_t wfs_fs;
 # endif
 {
-	if ( FS.ntfs == NULL )
+	ntfs_volume * ntfs;
+
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	if ( ntfs == NULL )
 	{
 		return 0;
 	}
-	return FS.ntfs->cluster_size;
-	/* return ntfs_device_sector_size_get(FS.ntfs); */
+	return ntfs->cluster_size;
+	/* return ntfs_device_sector_size_get(ntfs); */
 }
 
 /* ======================================================================== */
 
 # ifdef WFS_WANT_PART
 #  ifndef WFS_ANSIC
-static s64 wipe_compressed_attribute WFS_PARAMS((ntfs_attr * const na, unsigned char * const buf, wfs_fsid_t FS));
+static s64 wipe_compressed_attribute WFS_PARAMS((ntfs_attr * const na,
+	unsigned char * const buf, wfs_fsid_t wfs_fs));
 #  endif
 
 /**
@@ -322,13 +297,13 @@ wipe_compressed_attribute (
 #  ifdef WFS_ANSIC
 	ntfs_attr * const na,
 	unsigned char * const buf,
-	wfs_fsid_t FS
+	wfs_fsid_t wfs_fs
 	)
 #  else
-	na, buf, FS)
+	na, buf, wfs_fs)
 	ntfs_attr * const na;
 	unsigned char * const buf;
-	wfs_fsid_t FS;
+	wfs_fsid_t wfs_fs;
 #  endif
 {
 	unsigned char *mybuf = NULL;
@@ -349,12 +324,16 @@ wipe_compressed_attribute (
 #  ifdef HAVE_LIBNTFS_3G
 	s64 s64zero = 0;
 #  endif
-	/*wfs_fsid_t FS;*/
+	/*wfs_fsid_t wfs_fs;*/
 	int go_back;
-	int selected[WFS_NPAT];
-	wfs_error_type_t error;
+	int selected[WFS_NPAT] = {0};
+	ntfs_volume * ntfs;
+	wfs_errcode_t gerror = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( (FS.ntfs == NULL) || (na == NULL) || (buf == NULL) )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( (ntfs == NULL) || (na == NULL) || (buf == NULL) )
 	{
 		return 0;
 	}
@@ -382,6 +361,10 @@ wipe_compressed_attribute (
 		}
 		if ( sig_recvd != 0 )
 		{
+			if ( error_ret != NULL )
+			{
+				*error_ret = WFS_SIGNAL;
+			}
 			return -1;
 		}
 
@@ -403,7 +386,7 @@ wipe_compressed_attribute (
 				rlc++;
 				continue;
 			}
-			offset = (offset & (~cu_mask)) << FS.ntfs->cluster_size_bits;
+			offset = (offset & (~cu_mask)) << ntfs->cluster_size_bits;
 			rlt = rlc;
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 			while ((rlt - 1)->lcn == NTFS_LCN_HOLE)
@@ -418,10 +401,14 @@ wipe_compressed_attribute (
 #  endif
 			while ( sig_recvd == 0 )
 			{
-				ret = ntfs_rl_pread (FS.ntfs, na->rl, offset, two, &block_size);
+				ret = ntfs_rl_pread (ntfs, na->rl, offset, two, &block_size);
 				block_size = le16_to_cpu (block_size);
 				if (ret != two)
 				{
+					if ( error_ret != NULL )
+					{
+						*error_ret = WFS_BLKITER;
+					}
 					return -1;
 				}
 				if (block_size == 0)
@@ -431,7 +418,7 @@ wipe_compressed_attribute (
 				}
 				block_size = (u16) ((block_size & 0x0FFF) + 3);
 				offset += block_size;
-				if (offset >= ( ((rlt->vcn) << FS.ntfs->cluster_size_bits) - 2) )
+				if (offset >= ( ((rlt->vcn) << ntfs->cluster_size_bits) - 2) )
 				{
 					go_back = 1;
 					break;
@@ -441,12 +428,12 @@ wipe_compressed_attribute (
 			{
 				continue;
 			}
-			size = (rlt->vcn << FS.ntfs->cluster_size_bits) - offset;
+			size = (rlt->vcn << ntfs->cluster_size_bits) - offset;
 		}
 		else
 		{
 			size = na->allocated_size - na->data_size;
-			offset = (cur_vcn << FS.ntfs->cluster_size_bits) - size;
+			offset = (cur_vcn << ntfs->cluster_size_bits) - size;
 		}
 
 		if ( (size < 0) || (sig_recvd!=0) )
@@ -460,7 +447,7 @@ wipe_compressed_attribute (
 			rlc++;
 			continue;
 		}
-		if ( size > wfs_ntfs_get_block_size (FS) )
+		if ( size > (s64)wfs_ntfs_get_block_size (wfs_fs) )
 		{
 			bufsize = (size_t) size;
 			mybuf = (unsigned char *) malloc (bufsize);
@@ -470,16 +457,16 @@ wipe_compressed_attribute (
 			}
 		}
 
-		for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
+		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
 
 			if ( mybuf != NULL )
 			{
-				fill_buffer (j, mybuf, bufsize, selected, FS);	/* buf OK */
+				fill_buffer (j, mybuf, bufsize, selected, wfs_fs);	/* buf OK */
 			}
 			else
 			{
-				fill_buffer (j, buf, (size_t) size, selected, FS);	/* buf OK */
+				fill_buffer (j, buf, (size_t) size, selected, wfs_fs);	/* buf OK */
 			}
 			if ( sig_recvd != 0 )
 			{
@@ -488,33 +475,33 @@ wipe_compressed_attribute (
 			if ( mybuf != NULL )
 			{
 #  ifndef HAVE_LIBNTFS_3G
-				ret = ntfs_rl_pwrite (FS.ntfs, na->rl, offset, size, mybuf);
+				ret = ntfs_rl_pwrite (ntfs, na->rl, offset, size, mybuf);
 #  else
-				ret = ntfs_rl_pwrite (FS.ntfs, na->rl, s64zero, offset, size, mybuf);
+				ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, mybuf);
 #  endif
 			}
 			else
 			{
 #  ifndef HAVE_LIBNTFS_3G
-				ret = ntfs_rl_pwrite (FS.ntfs, na->rl, offset, size, buf);
+				ret = ntfs_rl_pwrite (ntfs, na->rl, offset, size, buf);
 #  else
-				ret = ntfs_rl_pwrite (FS.ntfs, na->rl, s64zero, offset, size, buf);
+				ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, buf);
 #  endif
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (FS.npasses > 1) && (sig_recvd == 0) )
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
 				/*ntfs_inode_mark_dirty(na->ni);*/
 				ntfs_inode_sync (na->ni);
-				error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+				gerror = wfs_ntfs_flush_fs (wfs_fs);
 			}
 			if (ret != size)
 			{
 				break;
 			}
 		}
-		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
 			if ( mybuf != NULL )
@@ -544,26 +531,26 @@ wipe_compressed_attribute (
 				if ( mybuf != NULL )
 				{
 #  ifndef HAVE_LIBNTFS_3G
-					ret = ntfs_rl_pwrite (FS.ntfs, na->rl, offset, size, mybuf);
+					ret = ntfs_rl_pwrite (ntfs, na->rl, offset, size, mybuf);
 #  else
-					ret = ntfs_rl_pwrite (FS.ntfs, na->rl, s64zero, offset, size, mybuf);
+					ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, mybuf);
 #  endif
 				}
 				else
 				{
 #  ifndef HAVE_LIBNTFS_3G
-					ret = ntfs_rl_pwrite (FS.ntfs, na->rl, offset, size, buf);
+					ret = ntfs_rl_pwrite (ntfs, na->rl, offset, size, buf);
 #  else
-					ret = ntfs_rl_pwrite (FS.ntfs, na->rl, s64zero, offset, size, buf);
+					ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, buf);
 #  endif
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
 					/*ntfs_inode_mark_dirty(na->ni);*/
 					ntfs_inode_sync (na->ni);
-					error.errcode.gerror = wfs_ntfs_flush_fs ( FS, &error );
+					gerror = wfs_ntfs_flush_fs (wfs_fs);
 				}
 				if (ret != size)
 				{
@@ -579,7 +566,7 @@ wipe_compressed_attribute (
 		{
 			free (mybuf);
 		}
-		if (ret != size)
+		if ( ret != size )
 		{
 			break;
 		}
@@ -588,6 +575,10 @@ wipe_compressed_attribute (
 		rlc++;
 	} /* while */
 
+	if ( error_ret != NULL )
+	{
+		*error_ret = gerror;
+	}
 	if ( sig_recvd != 0 )
 	{
 		return -1;
@@ -598,7 +589,8 @@ wipe_compressed_attribute (
 /* ======================================================================== */
 
 #  ifndef WFS_ANSIC
-static s64 wipe_attribute WFS_PARAMS ((ntfs_attr * const na, unsigned char * const buf, wfs_fsid_t FS));
+static s64 wipe_attribute WFS_PARAMS ((ntfs_attr * const na,
+	unsigned char * const buf, wfs_fsid_t wfs_fs));
 #  endif
 
 /**
@@ -621,26 +613,30 @@ wipe_attribute (
 #  ifdef WFS_ANSIC
 	ntfs_attr * const na,
 	unsigned char * const buf,
-	wfs_fsid_t FS
+	wfs_fsid_t wfs_fs
 	)
 #  else
-	na, buf, FS)
+	na, buf, wfs_fs)
 	ntfs_attr * const na;
 	unsigned char * const buf;
-	wfs_fsid_t FS;
+	wfs_fsid_t wfs_fs;
 #  endif
 {
 	s64 size, ret = 0;
 	unsigned long int j;
 	s64 offset;
-	/*wfs_fsid_t FS;*/
-	int selected[WFS_NPAT];
-	wfs_error_type_t error;
+	/*wfs_fsid_t wfs_fs;*/
+	int selected[WFS_NPAT] = {0};
 #  ifdef HAVE_LIBNTFS_3G
 	s64 s64zero = 0;
 #  endif
+	ntfs_volume * ntfs;
+	wfs_errcode_t gerror = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( (FS.ntfs == NULL) || (na == NULL) || (buf == NULL) )
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	if ( (ntfs == NULL) || (na == NULL) || (buf == NULL) )
 	{
 		return 0;
 	}
@@ -655,36 +651,40 @@ wipe_attribute (
 	{
 		offset = (((offset - 1) >> 10) + 1) << 10;
 	}
-	size = FS.ntfs->cluster_size - offset % FS.ntfs->cluster_size;
+	size = ntfs->cluster_size - offset % ntfs->cluster_size;
 
-	for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
+	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 	{
-		fill_buffer (j, buf, (size_t) size, selected, FS);	/* buf OK */
+		fill_buffer (j, buf, (size_t) size, selected, wfs_fs);	/* buf OK */
 		if ( sig_recvd != 0 )
 		{
 	       		break;
 		}
 
 #  ifndef HAVE_LIBNTFS_3G
-		ret = ntfs_rl_pwrite (FS.ntfs, na->rl, offset, size, buf);
+		ret = ntfs_rl_pwrite (ntfs, na->rl, offset, size, buf);
 #  else
-		ret = ntfs_rl_pwrite (FS.ntfs, na->rl, s64zero, offset, size, buf);
+		ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, buf);
 #  endif
 		if ( (ret != size) || (sig_recvd != 0) )
 		{
+			if ( error_ret != NULL )
+			{
+				*error_ret = WFS_BLKWR;
+			}
 			return -1;
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (FS.npasses > 1) && (sig_recvd == 0) )
+		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 		{
 			/*ntfs_inode_mark_dirty(na->ni);*/
 			ntfs_inode_sync (na->ni);
-			error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+			gerror = wfs_ntfs_flush_fs (wfs_fs);
 		}
 	}
 
-	if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
 #  ifdef HAVE_MEMSET
@@ -698,25 +698,33 @@ wipe_attribute (
 		if ( sig_recvd == 0 )
 		{
 #  ifndef HAVE_LIBNTFS_3G
-			ret = ntfs_rl_pwrite (FS.ntfs, na->rl, offset, size, buf);
+			ret = ntfs_rl_pwrite (ntfs, na->rl, offset, size, buf);
 #  else
-			ret = ntfs_rl_pwrite (FS.ntfs, na->rl, s64zero, offset, size, buf);
+			ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, buf);
 #  endif
 			if ( (ret != size) || (sig_recvd!=0) )
 			{
+				if ( error_ret != NULL )
+				{
+					*error_ret = WFS_BLKWR;
+				}
 				return -1;
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (FS.npasses > 1) && (sig_recvd == 0) )
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
 				/*ntfs_inode_mark_dirty(na->ni);*/
 				ntfs_inode_sync (na->ni);
-				error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+				gerror = wfs_ntfs_flush_fs (wfs_fs);
 			}
 		}
 	}
 
+	if ( error_ret != NULL )
+	{
+		*error_ret = gerror;
+	}
 	if ( sig_recvd != 0 )
 	{
 		return -1;
@@ -729,7 +737,7 @@ wipe_attribute (
 
 # if (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM)
 #  ifndef WFS_ANSIC
-static int WFS_ATTR ((warn_unused_result)) utils_cluster_in_use WFS_PARAMS ((
+static int GCC_WARN_UNUSED_RESULT utils_cluster_in_use WFS_PARAMS ((
 	const ntfs_volume * const vol, const long long int lcn));
 #  endif
 
@@ -753,7 +761,7 @@ static int WFS_ATTR ((warn_unused_result)) utils_cluster_in_use WFS_PARAMS ((
  *	    0  Cluster is free space
  *	   -1  Error occurred
  */
-static int WFS_ATTR ((warn_unused_result))
+static int GCC_WARN_UNUSED_RESULT
 #  ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #  endif
@@ -867,11 +875,7 @@ free_file (
 	struct ufile * file;
 #  endif
 {
-#  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	struct ntfs_list_head *item = NULL, *tmp = NULL;
-#  else
-	struct list_head *item = NULL, *tmp = NULL;
-#  endif
+	struct wfs_ntfs_list_head *item = NULL, *tmp = NULL;
 	struct filename *f = NULL;
 	struct data *d = NULL;
 
@@ -880,86 +884,76 @@ free_file (
 		return;
 	}
 
-#  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	ntfs_list_for_each_safe (item, tmp, &(file->name))
-#  else
-	list_for_each_safe (item, tmp, &(file->name))
-#  endif
+	WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->name))
 	{ /* List of filenames */
 
-#  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-		f = ntfs_list_entry (item, struct filename, list);
-#  else
-		f = list_entry (item, struct filename, list);
-#  endif
-		if (f->name != NULL)
+		f = WFS_NTFS_LIST_ENTRY (item, struct filename, list);
+		if (f != NULL)
 		{
-			free (f->name);
-		}
-		if (f->parent_name != NULL)
-		{
-			free (f->parent_name);
+			if (f->name != NULL)
+			{
+				free (f->name);
+			}
+			if (f->parent_name != NULL)
+			{
+				free (f->parent_name);
+			}
 		}
 		free (f);
 	}
 
-#  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	ntfs_list_for_each_safe (item, tmp, &(file->data))
-#  else
-	list_for_each_safe (item, tmp, &(file->data))
-#  endif
+	WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->data))
 	{ /* List of data streams */
 
-#  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-		d = ntfs_list_entry (item, struct data, list);
-#  else
-		d = list_entry (item, struct data, list);
-#  endif
-		if (d->name != NULL)
+		d = WFS_NTFS_LIST_ENTRY (item, struct data, list);
+		if (d != NULL)
 		{
-			free (d->name);
-		}
-		if (d->runlist != NULL)
-		{
-			free (d->runlist);
+			if (d->name != NULL)
+			{
+				free (d->name);
+			}
+			if (d->runlist != NULL)
+			{
+				free (d->runlist);
+			}
 		}
 		free (d);
 	}
-	free (file->mft);
+	if (file->mft != NULL)
+	{
+		free (file->mft);
+	}
 	free (file);
 }
 
 /* ======================================================================== */
 
 #  ifndef WFS_ANSIC
-static wfs_errcode_t WFS_ATTR ((warn_unused_result)) destroy_record WFS_PARAMS ((
-	const wfs_fsid_t FS, const s64 record, unsigned char * const buf,
-	wfs_error_type_t * const error_ret));
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT destroy_record WFS_PARAMS ((
+	const wfs_fsid_t wfs_fs, const s64 record, unsigned char * const buf));
 #  endif
 
 /**
  * Destroys the specified record's filenames and data.
  *
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param record The record (i-node number), which filenames & data to destroy.
  * \param buf Buffer for wipe data.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-static wfs_errcode_t WFS_ATTR ((warn_unused_result))
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #  ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #  endif
 destroy_record (
 #  ifdef WFS_ANSIC
-	const wfs_fsid_t FS, const s64 record_no, unsigned char * const buf,
-	wfs_error_type_t * const error_ret)
+	const wfs_fsid_t wfs_fs, const s64 record_no, unsigned char * const buf)
 #  else
-	FS, record_no, buf, error_ret)
-	const wfs_fsid_t FS;
+	wfs_fs, record_no, buf)
+	const wfs_fsid_t wfs_fs;
 	const s64 record_no;
 	unsigned char * const buf;
-	wfs_error_type_t * const error_ret;
 #  endif
 {
 	struct ufile *file = NULL;
@@ -969,16 +963,19 @@ destroy_record (
 	runlist_element *rl = NULL;
 #  endif
 	ntfs_attr *mft = NULL;
-
 	ntfs_attr_search_ctx *ctx = NULL;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned long int pass, i;
 	s64 j;
 	unsigned char * a_offset;
-	int selected[WFS_NPAT];
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	int selected[WFS_NPAT] = {0};
+	ntfs_volume * ntfs;
+	wfs_errcode_t * error_ret;
+	wfs_errcode_t error = 0;
 
-	if ( (FS.ntfs == NULL) || (buf == NULL) )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( (ntfs == NULL) || (buf == NULL) )
 	{
 		if ( error_ret != NULL )
 		{
@@ -994,9 +991,9 @@ destroy_record (
 	if ( file == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
 		if ( error_ret != NULL )
 		{
@@ -1005,29 +1002,24 @@ destroy_record (
 		return WFS_MALLOC;
 	}
 
-#  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	NTFS_INIT_LIST_HEAD (&(file->name));
-	NTFS_INIT_LIST_HEAD (&(file->data));
-#  else
-	INIT_LIST_HEAD (&(file->name));
-	INIT_LIST_HEAD (&(file->data));
-#  endif
+	WFS_NTFS_INIT_LIST_HEAD (&(file->name));
+	WFS_NTFS_INIT_LIST_HEAD (&(file->data));
 	file->inode = record_no;
 
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	file->mft = (NTFS_MFT_RECORD *) malloc (FS.ntfs->mft_record_size);
+	file->mft = (NTFS_MFT_RECORD *) malloc (ntfs->mft_record_size);
 #  else
-	file->mft = (MFT_RECORD *) malloc (FS.ntfs->mft_record_size);
+	file->mft = (MFT_RECORD *) malloc (ntfs->mft_record_size);
 #  endif
 	if ( file->mft == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
 		free_file (file);
 		if ( error_ret != NULL )
@@ -1038,9 +1030,9 @@ destroy_record (
 	}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	mft = ntfs_attr_open (FS.ntfs->mft_ni, NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
+	mft = ntfs_attr_open (ntfs->mft_ni, NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
 #  else
-	mft = ntfs_attr_open (FS.ntfs->mft_ni, AT_DATA, AT_UNNAMED, 0);
+	mft = ntfs_attr_open (ntfs->mft_ni, AT_DATA, AT_UNNAMED, 0);
 #  endif
 	if ( mft == NULL )
 	{
@@ -1053,8 +1045,8 @@ destroy_record (
 	}
 
 	/* Read the MFT reocrd of the i-node */
-	if ( ntfs_attr_mst_pread (mft, FS.ntfs->mft_record_size * record_no, 1LL,
-		FS.ntfs->mft_record_size, file->mft) < 1 )
+	if ( ntfs_attr_mst_pread (mft, ntfs->mft_record_size * record_no, 1LL,
+		ntfs->mft_record_size, file->mft) < 1 )
 	{
 		ntfs_attr_close (mft);
 		free_file (file);
@@ -1081,7 +1073,6 @@ destroy_record (
 	/* Wiping file names */
 	while ( sig_recvd == 0 )
 	{
-
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
         	if (ntfs_attr_lookup (NTFS_AT_FILE_NAME, NULL, 0, 0, 0LL, NULL, 0, ctx) != 0)
 #  else
@@ -1099,21 +1090,21 @@ destroy_record (
 		   Find the offset of the data, including the MFT record. */
 		a_offset = ((unsigned char *) ctx->attr + le16_to_cpu (ctx->attr->value_offset) );
 
-		for ( pass = 0; (pass < FS.npasses) && (sig_recvd == 0); pass++ )
+		for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 		{
 
 			fill_buffer (pass, a_offset, le32_to_cpu(ctx->attr->value_length),
-				selected, FS);
+				selected, wfs_fs);
 			if ( sig_recvd != 0 )
 			{
 		       		break;
 			}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  else
-			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  endif
 			{
@@ -1123,12 +1114,12 @@ destroy_record (
 
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (FS.npasses > 1) && (sig_recvd == 0) )
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
-				error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+				error = wfs_ntfs_flush_fs (wfs_fs);
 			}
 		}
-		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
 #  ifdef HAVE_MEMSET
@@ -1142,10 +1133,10 @@ destroy_record (
 			if ( sig_recvd == 0 )
 			{
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  else
-				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  endif
 				{
@@ -1155,28 +1146,28 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
 			}
 		}
 		/* Wiping file name length */
-		for ( pass = 0; (pass < FS.npasses) && (sig_recvd == 0); pass++ )
+		for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 		{
 
-			fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length), sizeof(u32),
-				selected, FS);
+			fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length),
+				sizeof(u32), selected, wfs_fs);
 			if ( sig_recvd != 0 )
 			{
 		       		break;
 			}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  else
-			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  endif
 			{
@@ -1186,17 +1177,17 @@ destroy_record (
 
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (FS.npasses > 1) && (sig_recvd == 0) )
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
-				error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+				error = wfs_ntfs_flush_fs (wfs_fs);
 			}
 		}
 		ctx->attr->value_length = 0;
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-		if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+		if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 				1LL, ctx->mrec) != 0 )
 #  else
-		if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+		if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 				1LL, ctx->mrec) != 0 )
 #  endif
 		{
@@ -1230,20 +1221,20 @@ destroy_record (
 			/* find the offset of the data, including the MFT record */
 			a_offset = ((unsigned char *) ctx->attr + le16_to_cpu (ctx->attr->value_offset) );
 			/* Wiping the data itself */
-			for ( pass = 0; (pass < FS.npasses) && (sig_recvd == 0); pass++ )
+			for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 			{
 				fill_buffer (pass, a_offset, le32_to_cpu(ctx->attr->value_length),
-					selected, FS);
+					selected, wfs_fs);
 				if ( sig_recvd != 0 )
 				{
 			       		break;
 				}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  else
-				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  endif
 				{
@@ -1253,12 +1244,12 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
 			}
-			if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 			{
 				/* last pass with zeros: */
 #  ifdef HAVE_MEMSET
@@ -1272,10 +1263,10 @@ destroy_record (
 				if ( sig_recvd == 0 )
 				{
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+					if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 							1LL, ctx->mrec) != 0 )
 #  else
-					if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+					if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 							1LL, ctx->mrec) != 0 )
 #  endif
 					{
@@ -1286,28 +1277,28 @@ destroy_record (
 					/* Flush after each writing, if more than 1 overwriting needs
 					   to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (FS.npasses > 1) && (sig_recvd == 0) )
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
-						error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+						error = wfs_ntfs_flush_fs (wfs_fs);
 					}
 				}
 			}
 			/* Wiping data length */
-			for ( pass = 0; (pass < FS.npasses) && (sig_recvd == 0); pass++ )
+			for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 			{
 
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length),
-					sizeof(u32), selected, FS);
+					sizeof(u32), selected, wfs_fs);
 				if ( sig_recvd != 0 )
 				{
 			       		break;
 				}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  else
-				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  endif
 				{
@@ -1317,17 +1308,17 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
 			}
 			ctx->attr->value_length = 0;
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  else
-			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  endif
 			{
@@ -1339,7 +1330,7 @@ destroy_record (
 		else
 		{
 			/* Non-resident here */
-			rl = ntfs_mapping_pairs_decompress (FS.ntfs, ctx->attr, NULL);
+			rl = ntfs_mapping_pairs_decompress (ntfs, ctx->attr, NULL);
 			if (rl == NULL)
 			{
 				continue;
@@ -1363,19 +1354,19 @@ destroy_record (
 				for (j = rl[i].lcn; (j < rl[i].lcn + rl[i].length) &&
 					(sig_recvd == 0) && (ret_wfs == WFS_SUCCESS); j++)
 				{
-					if (utils_cluster_in_use (FS.ntfs, j) == 0 )
+					if (utils_cluster_in_use (ntfs, j) == 0 )
 					{
-						for ( pass = 0; (pass < FS.npasses)
+						for ( pass = 0; (pass < wfs_fs.npasses)
 							&& (sig_recvd == 0); pass++ )
 						{
 							fill_buffer (pass, buf /* buf OK */,
-								(size_t) wfs_ntfs_get_block_size (FS),
-								selected, FS);
+								(size_t) wfs_ntfs_get_block_size (wfs_fs),
+								selected, wfs_fs);
 							if ( sig_recvd != 0 )
 							{
 			       					break;
 							}
-							if (ntfs_cluster_write (FS.ntfs, j,
+							if (ntfs_cluster_write (ntfs, j,
 								1LL, buf) < 1)
 							{
 								ret_wfs = WFS_BLKWR;
@@ -1386,28 +1377,28 @@ destroy_record (
 							   overwriting needs to be done.
 							   Allow I/O bufferring (efficiency), if just
 							   one pass is needed. */
-							if ( (FS.npasses > 1) && (sig_recvd == 0) )
+							if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 							{
-								error.errcode.gerror =
-									wfs_ntfs_flush_fs (FS, &error);
+								error =
+									wfs_ntfs_flush_fs (wfs_fs);
 							}
 						}
-						if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+						if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 						{
 							/* last pass with zeros: */
 #  ifdef HAVE_MEMSET
 							memset (buf, 0,
-								(size_t) wfs_ntfs_get_block_size (FS));
+								(size_t) wfs_ntfs_get_block_size (wfs_fs));
 #  else
 							for ( j=0; j < (size_t)
-								wfs_ntfs_get_block_size (FS); j++ )
+								wfs_ntfs_get_block_size (wfs_fs); j++ )
 							{
 								buf[j] = '\0';
 							}
 #  endif
 							if ( sig_recvd == 0 )
 							{
-								if (ntfs_cluster_write (FS.ntfs, j,
+								if (ntfs_cluster_write (ntfs, j,
 									1LL, buf) < 1)
 								{
 									ret_wfs = WFS_BLKWR;
@@ -1419,7 +1410,7 @@ destroy_record (
 				}
 			}
 			/* Wipe the data length here */
-			for ( pass = 0; (pass < FS.npasses) && (sig_recvd == 0); pass++ )
+			for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 			{
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->lowest_vcn),
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
@@ -1427,52 +1418,52 @@ destroy_record (
 #  else
 					sizeof(VCN),
 #  endif
-					selected, FS);
+					selected, wfs_fs);
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->highest_vcn),
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 #  else
 					sizeof(VCN),
 #  endif
-					selected, FS);
+					selected, wfs_fs);
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->allocated_size),
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 #  else
 					sizeof(VCN),
 #  endif
-					selected, FS);
+					selected, wfs_fs);
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->data_size),
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 #  else
 					sizeof(VCN),
 #  endif
-					selected, FS);
+					selected, wfs_fs);
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->initialized_size),
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 #  else
 					sizeof(VCN),
 #  endif
-					selected, FS);
+					selected, wfs_fs);
 				fill_buffer (pass, (unsigned char *) &(ctx->attr->compressed_size),
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 #  else
 					sizeof(VCN),
 #  endif
-					selected, FS);
+					selected, wfs_fs);
 				if ( sig_recvd != 0 )
 				{
 			       		break;
 				}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  else
-				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+				if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 						1LL, ctx->mrec) != 0 )
 #  endif
 				{
@@ -1482,9 +1473,9 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
 			}
 			ctx->attr->lowest_vcn = 0;
@@ -1494,10 +1485,10 @@ destroy_record (
 			ctx->attr->initialized_size = 0;
 			ctx->attr->compressed_size = 0;
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, NTFS_MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  else
-			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record_no, 0),
+			if ( ntfs_mft_records_write (ntfs, MK_MREF (record_no, 0),
 					1LL, ctx->mrec) != 0 )
 #  endif
 			{
@@ -1527,14 +1518,14 @@ destroy_record (
 /* ======================================================================== */
 
 #  ifndef WFS_ANSIC
-static wfs_errcode_t wfs_ntfs_wipe_journal WFS_PARAMS ((wfs_fsid_t FS, wfs_error_type_t * const error_ret));
+static wfs_errcode_t wfs_ntfs_wipe_journal WFS_PARAMS ((wfs_fsid_t wfs_fs));
 #  endif
 
 /**
  * Wipes the journal (logfile) on an NTFS filesystem. Taken from ntfswipe.c. Changes:
  *	removed message printing, using own patterns instead of just 0xFF, flushing the
  *	journal.
- * \param FS The NTFS filesystem.
+ * \param wfs_fs The NTFS filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -1544,11 +1535,10 @@ WFS_ATTR ((nonnull))
 #  endif
 wfs_ntfs_wipe_journal (
 #  ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	wfs_fsid_t wfs_fs)
 #  else
-	FS, error_ret)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #  endif
 {
 	wfs_errcode_t ret_journ = WFS_SUCCESS;
@@ -1556,23 +1546,27 @@ wfs_ntfs_wipe_journal (
 	ntfs_attr *na = NULL;
 	s64 len, pos, count;
 	unsigned long int j;
-	int selected[WFS_NPAT];
+	int selected[WFS_NPAT] = {0};
 	unsigned char * buf = NULL;
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	NTFS_MFT_REF log_ino;
 #  else
 	MFT_REF log_ino;
 #  endif
-	const s64 blocksize = wfs_ntfs_get_block_size (FS);
+	const s64 blocksize = wfs_ntfs_get_block_size (wfs_fs);
 #  ifndef HAVE_MEMSET
 	unsigned int i;
 #  endif
 	unsigned int prev_percent = 50;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	ntfs_volume * ntfs;
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( FS.ntfs == NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( ntfs == NULL )
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1585,10 +1579,10 @@ wfs_ntfs_wipe_journal (
 #  else
 	log_ino = FILE_LogFile;
 #  endif
-	ni = ntfs_inode_open (FS.ntfs, log_ino);
+	ni = ntfs_inode_open (ntfs, log_ino);
 	if (ni == NULL)
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1605,7 +1599,7 @@ wfs_ntfs_wipe_journal (
 	if (na == NULL)
 	{
 		ntfs_inode_close (ni);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1620,7 +1614,7 @@ wfs_ntfs_wipe_journal (
 	{
 		ntfs_attr_close (na);
 		ntfs_inode_close (ni);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1635,7 +1629,7 @@ wfs_ntfs_wipe_journal (
 		/* nothing to do. */
 		ntfs_attr_close (na);
 		ntfs_inode_close (ni);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1646,17 +1640,17 @@ wfs_ntfs_wipe_journal (
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (FS));
+	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (wfs_fs));
 	if ( buf == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
 		ntfs_attr_close (na);
 		ntfs_inode_close (ni);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1676,7 +1670,7 @@ wfs_ntfs_wipe_journal (
 	if ( sig_recvd != 0 )
 	{
 		free (buf);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1690,28 +1684,28 @@ wfs_ntfs_wipe_journal (
 		free (buf);
 		ntfs_attr_close (na);
 		ntfs_inode_close (ni);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_ATTROPEN;
 	}
-	for ( j = 0; (j < FS.npasses+1) && (sig_recvd == 0)
+	for ( j = 0; (j < (unsigned long int)(wfs_fs.npasses+1)) && (sig_recvd == 0)
 		/*&& (ret_journ == WFS_SUCCESS)*/; j++ )
 	{
-		if ( j < FS.npasses )
+		if ( j < wfs_fs.npasses )
 		{
-			fill_buffer (j, buf, (size_t) wfs_ntfs_get_block_size (FS),
-				selected, FS);/* buf OK */
+			fill_buffer (j, buf, (size_t) wfs_ntfs_get_block_size (wfs_fs),
+				selected, wfs_fs);/* buf OK */
 		}
 		else
 		{
 			/* last pass with 0xff */
 #  ifdef HAVE_MEMSET
-			memset (buf, 0xff, (size_t) wfs_ntfs_get_block_size (FS));
+			memset (buf, 0xff, (size_t) wfs_ntfs_get_block_size (wfs_fs));
 #  else
-			for ( i=0; i < wfs_ntfs_get_block_size (FS); i++ )
+			for ( i=0; i < wfs_ntfs_get_block_size (wfs_fs); i++ )
 			{
 				buf[i] = '\xff';
 			}
@@ -1726,9 +1720,9 @@ wfs_ntfs_wipe_journal (
 		pos = 0;
 		while ( ((count = len - pos) > 0) && (ret_journ == WFS_SUCCESS) && (sig_recvd == 0))
 		{
-			if (count > wfs_ntfs_get_block_size (FS))
+			if (count > (s64)wfs_ntfs_get_block_size (wfs_fs))
 			{
-				count = wfs_ntfs_get_block_size (FS);
+				count = wfs_ntfs_get_block_size (wfs_fs);
 			}
 
 			count = ntfs_attr_pwrite (na, pos, count, buf);
@@ -1744,17 +1738,17 @@ wfs_ntfs_wipe_journal (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (FS.npasses > 1) && (sig_recvd == 0) )
+		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 		{
-			error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+			error = wfs_ntfs_flush_fs (wfs_fs);
 		}
-		show_progress (WFS_PROGRESS_UNRM, (unsigned int) (j/(FS.npasses+1)), &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, (unsigned int) (j/(wfs_fs.npasses+1)), &prev_percent);
 	}
 	free (buf);
 	ntfs_attr_close(na);
 	ntfs_inode_close(ni);
 
-	show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -1774,41 +1768,40 @@ wfs_ntfs_wipe_journal (
 #ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given NTFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 wfs_ntfs_wipe_part (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 # ifdef USE_NTFSWIPE
-	/* ntfswipe --tails --count FS.npasses --bytes */
+	/* ntfswipe --tails --count wfs_fs.npasses --bytes */
 	char * args_ntfswipe[] = { "ntfswipe", "--tails", "--count                      ",
 		"--bytes 0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
-	struct child_id child_ntfswipe;
+	child_id_t child_ntfswipe;
 	size_t namelen;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	wfs_errcode_t error = 0;
 
-	if ( FS.fsname == NULL )
+	if ( wfs_fs.fsname == NULL )
 	{
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_BADPARAM;
 	}
-	namelen = strlen (FS.fsname) + 1;
+	namelen = strlen (wfs_fs.fsname) + 1;
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
@@ -1816,26 +1809,27 @@ wfs_ntfs_wipe_part (
 	if ( args_ntfswipe[4] == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
-		/*args_ntfswipe[4] = FS.fsname;*/
+		/*args_ntfswipe[4] = wfs_fs.fsname;*/
 	}
 	else
 	{
-		strncpy (args_ntfswipe[4], FS.fsname, namelen);
+		strncpy (args_ntfswipe[4], wfs_fs.fsname, namelen);
 	}
 #  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #  endif
-	sprintf (&args_ntfswipe[2][8], "%lu", FS.npasses);
+	sprintf (&args_ntfswipe[2][8], "%lu", wfs_fs.npasses);
+	args_ntfswipe[2][28] = '\0';
 	child_ntfswipe.program_name = args_ntfswipe[0];
 	child_ntfswipe.args = args_ntfswipe;
 	child_ntfswipe.stdin_fd = -1;
@@ -1849,12 +1843,12 @@ wfs_ntfs_wipe_part (
 	{
 		/* error */
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 1L;
+		error = 1L;
 #  endif
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
-		if ( args_ntfswipe[4] != FS.fsname )
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		if ( args_ntfswipe[4] != wfs_fs.fsname )
 		{
 			free (args_ntfswipe[4]);
 		}
@@ -1866,11 +1860,11 @@ wfs_ntfs_wipe_part (
 	}
 	/* parent */
 	wfs_wait_for_child (&child_ntfswipe);
-	if ( args_ntfswipe[4] != FS.fsname )
+	if ( args_ntfswipe[4] != wfs_fs.fsname )
 	{
 		free (args_ntfswipe[4]);
 	}
-	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 # else /* !USE_NTFSWIPE */
 	u64 nr_mft_records;
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
@@ -1881,29 +1875,33 @@ wfs_ntfs_wipe_part (
 	ntfs_inode *ni = NULL;
 	ntfs_attr *na = NULL;
 	unsigned char * buf;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	ntfs_volume * ntfs;
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( FS.ntfs == NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( ntfs == NULL )
 	{
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_NOTHING;
 	}
-	if ( FS.ntfs->mft_na == NULL )
+	if ( ntfs->mft_na == NULL )
 	{
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_NOTHING;
 	}
-	if ( FS.ntfs->mft_na->initialized_size <= 0 )
+	if ( ntfs->mft_na->initialized_size <= 0 )
 	{
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1911,21 +1909,21 @@ wfs_ntfs_wipe_part (
 		return WFS_NOTHING;
 	}
 
-	nr_mft_records = ((u64)FS.ntfs->mft_na->initialized_size) >>
-			FS.ntfs->mft_record_size_bits;
+	nr_mft_records = ((u64)ntfs->mft_na->initialized_size) >>
+			ntfs->mft_record_size_bits;
 
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (FS));
+	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (wfs_fs));
 	if ( buf == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1937,7 +1935,7 @@ wfs_ntfs_wipe_part (
 		/*&& (ret_wfs == WFS_SUCCESS)*/; inode_num++ )
 	{
 		ret_wfs = WFS_SUCCESS;
-		ni = ntfs_inode_open (FS.ntfs, inode_num);
+		ni = ntfs_inode_open (ntfs, inode_num);
 		if ( ni == NULL )
 		{
 			ret_wfs = WFS_INOREAD;
@@ -1979,14 +1977,18 @@ wfs_ntfs_wipe_part (
 						ntfs_inode_close (ni);
 					}
 
-					if ( (ret_wfs == WFS_SUCCESS) && (NAttrCompressed (na) != 0) )
+					if ( ret_wfs == WFS_SUCCESS )
 					{
-						/*wiped = */wipe_compressed_attribute
-							(na, buf, FS);
-					}
-					else
-					{
-						/*wiped = */wipe_attribute (na, buf, FS);
+						if ( NAttrCompressed (na) != 0 )
+						{
+							/*wiped = */wipe_compressed_attribute
+								(na, buf, wfs_fs);
+						}
+						else
+						{
+							/*wiped = */wipe_attribute
+								(na, buf, wfs_fs);
+						}
 					}
 				}
 				ntfs_attr_close (na);
@@ -1997,9 +1999,11 @@ wfs_ntfs_wipe_part (
 			}
 		}
 		ntfs_inode_close (ni);
-		show_progress (WFS_PROGRESS_PART, (unsigned int) (inode_num/nr_mft_records), &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART,
+			(unsigned int) (inode_num/nr_mft_records),
+			&prev_percent);
 	}
-	show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 	free (buf);
 # endif /* USE_NTFSWIPE */
 	if ( error_ret != NULL )
@@ -2019,44 +2023,43 @@ wfs_ntfs_wipe_part (
 #ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given NTFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_ntfs_wipe_fs (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 # endif
 {
 	unsigned int prev_percent = 0;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 # ifdef USE_NTFSWIPE
-	/* ntfswipe --unused --count FS.npasses --bytes */
+	/* ntfswipe --unused --count wfs_fs.npasses --bytes */
 	char * args_ntfswipe[] = { "ntfswipe", "--unused", "--count                      ",
 		"--bytes 0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
-	struct child_id child_ntfswipe;
+	child_id_t child_ntfswipe;
 	size_t namelen;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	wfs_errcode_t error = 0;
 
-	if ( FS.fsname == NULL )
+	if ( wfs_fs.fsname == NULL )
 	{
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_BADPARAM;
 	}
-	namelen = strlen (FS.fsname) + 1;
+	namelen = strlen (wfs_fs.fsname) + 1;
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
@@ -2064,26 +2067,27 @@ wfs_ntfs_wipe_fs (
 	if ( args_ntfswipe[4] == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
-		/*args_ntfswipe[4] = FS.fsname;*/
+		/*args_ntfswipe[4] = wfs_fs.fsname;*/
 	}
 	else
 	{
-		strncpy (args_ntfswipe[4], FS.fsname, namelen);
+		strncpy (args_ntfswipe[4], wfs_fs.fsname, namelen);
 	}
 #  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #  endif
-	sprintf (&args_ntfswipe[2][8], "%lu", FS.npasses);
+	sprintf (&args_ntfswipe[2][8], "%lu", wfs_fs.npasses);
+	args_ntfswipe[2][28] = '\0';
 	child_ntfswipe.program_name = args_ntfswipe[0];
 	child_ntfswipe.args = args_ntfswipe;
 	child_ntfswipe.stdin_fd = -1;
@@ -2097,13 +2101,13 @@ wfs_ntfs_wipe_fs (
 	{
 		/* error */
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 1L;
+		error = 1L;
 #  endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		/* yes, compare pointers */
-		if ( args_ntfswipe[4] != FS.fsname )
+		if ( args_ntfswipe[4] != wfs_fs.fsname )
 		{
 			free (args_ntfswipe[4]);
 		}
@@ -2115,21 +2119,25 @@ wfs_ntfs_wipe_fs (
 	}
 	/* parent */
 	wfs_wait_for_child (&child_ntfswipe);
-	if ( args_ntfswipe[4] != FS.fsname )
+	if ( args_ntfswipe[4] != wfs_fs.fsname )
 	{
 		free (args_ntfswipe[4]);
 	}
-	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 # else /* !USE_NTFSWIPE */
 	s64 i, size, result;
 	unsigned long int j;
-	int selected[WFS_NPAT];
+	int selected[WFS_NPAT] = {0};
 	unsigned char * buf;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	ntfs_volume * ntfs;
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( FS.ntfs == NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( ntfs == NULL )
 	{
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2140,15 +2148,15 @@ wfs_ntfs_wipe_fs (
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (FS));
+	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (wfs_fs));
 	if ( buf == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2156,32 +2164,33 @@ wfs_ntfs_wipe_fs (
 		return WFS_MALLOC;
 	}
 
-	for (i = 0; (i < FS.ntfs->nr_clusters) && (sig_recvd==0); i++)
+	for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
 	{
 		/* check if cluster in use */
-		if (utils_cluster_in_use (FS.ntfs, i) != 0)
+		if (utils_cluster_in_use (ntfs, i) != 0)
 		{
-			show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/FS.ntfs->nr_clusters), &prev_percent);
+			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters),
+				&prev_percent);
 			continue;
 		}
 
 		/* cluster is unused - wipe it */
-		for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
+		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			fill_buffer (j, buf, (size_t) wfs_ntfs_get_block_size (FS),
-				selected, FS);/* buf OK */
+			fill_buffer (j, buf, (size_t) wfs_ntfs_get_block_size (wfs_fs),
+				selected, wfs_fs);/* buf OK */
 			if ( sig_recvd != 0 )
 			{
 		       		break;
 			}
 
-			size = FS.ntfs->cluster_size;
+			size = ntfs->cluster_size;
 			/* writing modified cluster here: */
-			result = ntfs_pwrite (FS.ntfs->dev, FS.ntfs->cluster_size * i, size, buf);
+			result = ntfs_pwrite (ntfs->dev, ntfs->cluster_size * i, size, buf);
 			if (result != size)
 			{
 				free (buf);
-				show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+				wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;
@@ -2190,31 +2199,32 @@ wfs_ntfs_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (FS.npasses > 1) && (sig_recvd == 0) )
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
-				error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+				error = wfs_ntfs_flush_fs (wfs_fs);
 			}
 		}
-		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
 #  ifdef HAVE_MEMSET
-			memset (buf, 0, (size_t) wfs_ntfs_get_block_size (FS));
+			memset (buf, 0, (size_t) wfs_ntfs_get_block_size (wfs_fs));
 #  else
-			for ( j=0; j < (size_t) wfs_ntfs_get_block_size (FS); j++ )
+			for ( j=0; j < (size_t) wfs_ntfs_get_block_size (wfs_fs); j++ )
 			{
 				buf[j] = '\0';
 			}
 #  endif
 			if ( sig_recvd == 0 )
 			{
-				size = FS.ntfs->cluster_size;
+				size = ntfs->cluster_size;
 				/* writing modified cluster here: */
-				result = ntfs_pwrite (FS.ntfs->dev, FS.ntfs->cluster_size * i, size, buf);
+				result = ntfs_pwrite (ntfs->dev,
+					ntfs->cluster_size * i, size, buf);
 				if (result != size)
 				{
 					free (buf);
-					show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+					wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 					if ( error_ret != NULL )
 					{
 						*error_ret = error;
@@ -2223,15 +2233,15 @@ wfs_ntfs_wipe_fs (
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ntfs_flush_fs (FS, &error);
+					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
 			}
 		}
-		show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/FS.ntfs->nr_clusters), &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters), &prev_percent);
 	}
-	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	free (buf);
 # endif /* USE_NTFSWIPE */
 	if ( error_ret != NULL )
@@ -2251,45 +2261,40 @@ wfs_ntfs_wipe_fs (
 #ifdef WFS_WANT_UNRM
 /**
  * Starts search for deleted inodes and undelete data on the given NTFS filesystem.
- * \param FS The filesystem.
- * \param node Directory i-node (unused, probably due to the nature of the NTFS).
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 wfs_ntfs_wipe_unrm (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, const wfs_fselem_t node WFS_ATTR ((unused)),
-	wfs_error_type_t * const error_ret )
+	const wfs_fsid_t wfs_fs)
 # else
-	FS, node, error_ret )
-	const wfs_fsid_t FS;
-	const wfs_fselem_t node WFS_ATTR ((unused));
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 # endif
 {
 	unsigned int prev_percent = 0;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 # ifdef USE_NTFSWIPE
-	/* ntfswipe --directory --logfile --mft --pagefile --undel --count FS.npasses --bytes */
+	/* ntfswipe --directory --logfile --mft --pagefile --undel --count wfs_fs.npasses --bytes */
 	char * args_ntfswipe[] = { "ntfswipe", "--directory", "--logfile", "--pagefile",
 		"--undel", "--count                      ",
 		"--bytes 0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
-	struct child_id child_ntfswipe;
+	child_id_t child_ntfswipe;
 	size_t namelen;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
 
-	if ( FS.fsname == NULL )
+	if ( wfs_fs.fsname == NULL )
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_BADPARAM;
 	}
-	namelen = strlen (FS.fsname) + 1;
+	namelen = strlen (wfs_fs.fsname) + 1;
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
@@ -2297,26 +2302,27 @@ wfs_ntfs_wipe_unrm (
 	if ( args_ntfswipe[4] == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
-		/*args_ntfswipe[4] = FS.fsname;*/
+		/*args_ntfswipe[4] = wfs_fs.fsname;*/
 	}
 	else
 	{
-		strncpy (args_ntfswipe[4], FS.fsname, namelen);
+		strncpy (args_ntfswipe[4], wfs_fs.fsname, namelen);
 	}
 #  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #  endif
-	sprintf (&args_ntfswipe[5][8], "%lu", FS.npasses);
+	sprintf (&args_ntfswipe[5][8], "%lu", wfs_fs.npasses);
+	args_ntfswipe[5][28] = '\0';
 	child_ntfswipe.program_name = args_ntfswipe[0];
 	child_ntfswipe.args = args_ntfswipe;
 	child_ntfswipe.stdin_fd = -1;
@@ -2330,12 +2336,12 @@ wfs_ntfs_wipe_unrm (
 	{
 		/* error */
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 1L;
+		error = 1L;
 #  endif
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
-		if ( args_ntfswipe[4] != FS.fsname )
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		if ( args_ntfswipe[4] != wfs_fs.fsname )
 		{
 			free (args_ntfswipe[4]);
 		}
@@ -2347,11 +2353,11 @@ wfs_ntfs_wipe_unrm (
 	}
 	/* parent */
 	wfs_wait_for_child (&child_ntfswipe);
-	if ( args_ntfswipe[4] != FS.fsname )
+	if ( args_ntfswipe[4] != wfs_fs.fsname )
 	{
 		free (args_ntfswipe[4]);
 	}
-	show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 # else /* !USE_NTFSWIPE */
 	int ret;
 	ntfs_attr *bitmapattr = NULL;
@@ -2361,11 +2367,15 @@ wfs_ntfs_wipe_unrm (
 #  define MYBUF_SIZE 8192
 	unsigned char *mybuf;
 #  define MINIM(x, y) ( ((x)<(y))?(x):(y) )
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	ntfs_volume * ntfs;
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( FS.ntfs == NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( ntfs == NULL )
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2379,12 +2389,12 @@ wfs_ntfs_wipe_unrm (
 	if (mybuf == NULL)
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
-		wfs_ntfs_wipe_journal (FS, &error);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_ntfs_wipe_journal (wfs_fs);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2395,17 +2405,17 @@ wfs_ntfs_wipe_unrm (
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (FS));
+	buf = (unsigned char *) malloc (wfs_ntfs_get_block_size (wfs_fs));
 	if ( buf == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 #  else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 #  endif
 		free (mybuf);
-		wfs_ntfs_wipe_journal (FS, &error);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_ntfs_wipe_journal (wfs_fs);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2414,16 +2424,16 @@ wfs_ntfs_wipe_unrm (
 	}
 
 #  if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	bitmapattr = ntfs_attr_open (FS.ntfs->mft_ni, NTFS_AT_BITMAP, NTFS_AT_UNNAMED, 0);
+	bitmapattr = ntfs_attr_open (ntfs->mft_ni, NTFS_AT_BITMAP, NTFS_AT_UNNAMED, 0);
 #  else
-	bitmapattr = ntfs_attr_open (FS.ntfs->mft_ni, AT_BITMAP, AT_UNNAMED, 0);
+	bitmapattr = ntfs_attr_open (ntfs->mft_ni, AT_BITMAP, AT_UNNAMED, 0);
 #  endif
 	if (bitmapattr == NULL)
 	{
 		free (buf);
 		free (mybuf);
-		wfs_ntfs_wipe_journal (FS, &error);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_ntfs_wipe_journal (wfs_fs);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2432,15 +2442,15 @@ wfs_ntfs_wipe_unrm (
 	}
 	bmpsize = bitmapattr->initialized_size;
 
-	nr_mft_records = FS.ntfs->mft_na->initialized_size >> FS.ntfs->mft_record_size_bits;
+	nr_mft_records = ntfs->mft_na->initialized_size >> ntfs->mft_record_size_bits;
 
 	if ( sig_recvd != 0 )
 	{
 		ntfs_attr_close (bitmapattr);
 		free (buf);
 		free (mybuf);
-		wfs_ntfs_wipe_journal (FS, &error);
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_ntfs_wipe_journal (wfs_fs);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2479,32 +2489,32 @@ wfs_ntfs_wipe_unrm (
 					break;
 				}
 				/* wiping the i-node here: */
-				ret = destroy_record (FS, (i+j)*CHAR_BIT+k, buf, &error);
+				ret = destroy_record (wfs_fs, (i+j)*CHAR_BIT+k, buf);
 				if ( ret != WFS_SUCCESS )
 				{
 					ret_wfs = ret;
 				}
 			}
 		}
-		show_progress (WFS_PROGRESS_UNRM, (unsigned int) ((i * 50) / (bmpsize * 8)), &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, (unsigned int) ((i * 50) / (bmpsize * 8)), &prev_percent);
 	}
 done:
 	ntfs_attr_close (bitmapattr);
 	free (buf);
 	free (mybuf);
 
-	show_progress (WFS_PROGRESS_UNRM, 50, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_UNRM, 50, &prev_percent);
 	if ( ret_wfs == WFS_SUCCESS )
 	{
-		ret_wfs = wfs_ntfs_wipe_journal (FS, &error);
+		ret_wfs = wfs_ntfs_wipe_journal (wfs_fs);
 	}
 	else if ( ret_wfs == WFS_SIGNAL )
 	{
-		wfs_ntfs_wipe_journal (FS, &error);
+		wfs_ntfs_wipe_journal (wfs_fs);
 	}
 	else
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 	}
 
 # endif /* USE_NTFSWIPE */
@@ -2525,69 +2535,69 @@ done:
 /**
  * Opens an NTFS filesystem on the given device.
  * \param devname Device name, like /dev/hdXY
- * \param FS Pointer to where the result will be put.
+ * \param wfs_fs Pointer to where the result will be put.
  * \param whichfs Pointer to an int saying which fs is curently in use.
  * \param data Pointer to wfs_fsdata_t structure containing information which may be needed to
  *	open the filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_ntfs_open_fs (
 #ifdef WFS_ANSIC
-	const char * const dev_name,
-	wfs_fsid_t * const FS,
-	wfs_curr_fs_t * const which_fs,
-	const wfs_fsdata_t * const data WFS_ATTR ((unused)),
-	wfs_error_type_t * const error_ret)
+	wfs_fsid_t * const wfs_fs,
+	const wfs_fsdata_t * const data WFS_ATTR ((unused)))
 #else
-	dev_name, FS, which_fs, data, error_ret)
-	const char * const dev_name;
-	wfs_fsid_t * const FS;
-	wfs_curr_fs_t * const which_fs;
+	wfs_fs, data)
+	wfs_fsid_t * const wfs_fs;
 	const wfs_fsdata_t * const data WFS_ATTR ((unused));
-	wfs_error_type_t * const error_ret;
 #endif
 {
 
 	wfs_errcode_t ret = WFS_SUCCESS;
 	int res = 0;
 	ntfs_volume *nv = NULL;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	wfs_errcode_t * error_ret;
+	wfs_errcode_t error = 0;
 
-	if ( (dev_name == NULL) || (FS == NULL) || (which_fs == NULL) )
+	if ( wfs_fs == NULL )
 	{
 		return WFS_BADPARAM;
 	}
-	*which_fs = CURR_NONE;
+	if ( wfs_fs->fsname == NULL )
+	{
+		return WFS_BADPARAM;
+	}
+	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
+	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	nv = ntfs_mount (dev_name, 0);
+	nv = ntfs_mount (wfs_fs->fsname, 0);
 	if ( (nv == NULL) && (sig_recvd == 0) )
 	{
 #ifdef HAVE_ERRNO_H
 		if ( errno != 0 )
 		{
-			error.errcode.gerror = errno;
+			error = errno;
 		}
 #endif
 		ret = WFS_OPENFS;
 #ifdef HAVE_SYS_MOUNT_H
-		res = umount ( dev_name );
+		res = umount (wfs_fs->fsname);
 		if ( (res == 0) && (sig_recvd == 0) )
 		{
-			nv = ntfs_mount (dev_name, 0);
+			nv = ntfs_mount (wfs_fs->fsname, 0);
 			if ( nv != NULL )
 			{
-				*which_fs = CURR_NTFS;
-				FS->ntfs = nv;
+				wfs_fs->whichfs = WFS_CURR_FS_NTFS;
+				wfs_fs->fs_backend = nv;
 # ifdef HAVE_MEMCPY
-/*				memcpy(&(FS->ntfs), nv, sizeof(ntfs_volume));*/
+/*				memcpy(&(wfs_fs->ntfs), nv, sizeof(ntfs_volume));*/
 # endif
 				ret = WFS_SUCCESS;
 			}
@@ -2596,10 +2606,10 @@ wfs_ntfs_open_fs (
 	}
 	else if ( nv != NULL )
 	{
-		*which_fs = CURR_NTFS;
-		FS->ntfs = nv;
+		wfs_fs->whichfs = WFS_CURR_FS_NTFS;
+		wfs_fs->fs_backend = nv;
 #ifdef HAVE_MEMCPY
-/*		memcpy(&(FS->ntfs), nv, sizeof(ntfs_volume));*/
+/*		memcpy(&(wfs_fs->ntfs), nv, sizeof(ntfs_volume));*/
 #endif
 		ret = WFS_SUCCESS;
 	}
@@ -2623,24 +2633,25 @@ wfs_ntfs_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_ntfs_chk_mount (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_error_type_t * const error_ret )
+	const wfs_fsid_t wfs_fs)
 #else
-	dev_name, error_ret )
-	const char * const dev_name;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	unsigned long int mt_flags = 0;		/* Mount flags */
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( dev_name == NULL )
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( wfs_fs.fsname == NULL )
 	{
 		if ( error_ret != NULL )
 		{
@@ -2650,10 +2661,9 @@ wfs_ntfs_chk_mount (
 	}
 
 	/* reject if mounted for read and write (when we can't go on with our work) */
-	error.errcode.gerror = ntfs_check_if_mounted (dev_name, &mt_flags);
-	if ( error.errcode.gerror != 0 )
+	error = ntfs_check_if_mounted (wfs_fs.fsname, &mt_flags);
+	if ( error != 0 )
 	{
-
 		ret = WFS_MNTCHK;
 	}
 
@@ -2662,7 +2672,7 @@ wfs_ntfs_chk_mount (
 		((mt_flags & NTFS_MF_READONLY) == 0)
 	   )
 	{
-		error.errcode.gerror = 1L;
+		error = 1L;
 		ret = WFS_MNTRW;
 	}
 
@@ -2677,7 +2687,7 @@ wfs_ntfs_chk_mount (
 
 /**
  * Closes the NTFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -2687,33 +2697,37 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_ntfs_close_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error)
+	wfs_fsid_t wfs_fs)
 #else
-	FS, error)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	int wfs_err;
+	ntfs_volume * ntfs;
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( FS.ntfs != NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( ntfs != NULL )
 	{
-		wfs_err = ntfs_umount (FS.ntfs, FALSE);
+		wfs_err = ntfs_umount (ntfs, FALSE);
 		if ( wfs_err != 0 )
 		{
 			ret = WFS_FSCLOSE;
-			if ( error != NULL )
-			{
-				error->errcode.gerror = wfs_err;
-			}
+			error = wfs_err;
 		}
 	}
 	else
 	{
 		ret = WFS_BADPARAM;
 	}
-	FS.ntfs = NULL;
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret;
 }
 
@@ -2721,27 +2735,30 @@ wfs_ntfs_close_fs (
 
 /**
  * Checks if the NTFS filesystem has errors.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 wfs_ntfs_check_err (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS )
+	const wfs_fsid_t wfs_fs )
 #else
-	FS )
-	const wfs_fsid_t FS;
+	wfs_fs )
+	const wfs_fsid_t wfs_fs;
 #endif
 {
-	if ( FS.ntfs == NULL )
+	ntfs_volume * ntfs;
+
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	if ( ntfs == NULL )
 	{
 		return 1;
 	}
 	/* better than nothing... */
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	return (FS.ntfs->flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK);
+	return (ntfs->flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK);
 #else
-	return (FS.ntfs->flags & VOLUME_MODIFIED_BY_CHKDSK);
+	return (ntfs->flags & VOLUME_MODIFIED_BY_CHKDSK);
 #endif
 }
 
@@ -2749,39 +2766,41 @@ wfs_ntfs_check_err (
 
 /**
  * Checks if the NTFS filesystem is dirty (has unsaved changes).
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 if clean, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 wfs_ntfs_is_dirty (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS )
+	const wfs_fsid_t wfs_fs )
 #else
-	FS )
-	const wfs_fsid_t FS;
+	wfs_fs )
+	const wfs_fsid_t wfs_fs;
 #endif
 {
 	int is_dirty = 0;
+	ntfs_volume * ntfs;
 
-	if ( FS.ntfs == NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	if ( ntfs == NULL )
 	{
 		return 1;
 	}
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	if ( ((FS.ntfs->flags & NTFS_VOLUME_IS_DIRTY) != 0)
-		|| ((FS.ntfs->flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK) != 0)
+	if ( ((ntfs->flags & NTFS_VOLUME_IS_DIRTY) != 0)
+		|| ((ntfs->flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK) != 0)
 # ifdef NVolWasDirty
-		|| (NVolWasDirty (FS.ntfs) != 0)
+		|| (NVolWasDirty (ntfs) != 0)
 # endif
 		)
 	{
 		is_dirty = 1;
 	}
 #else
-	if ( ((FS.ntfs->flags & VOLUME_IS_DIRTY) != 0)
-		|| ((FS.ntfs->flags & VOLUME_MODIFIED_BY_CHKDSK) != 0)
+	if ( ((ntfs->flags & VOLUME_IS_DIRTY) != 0)
+		|| ((ntfs->flags & VOLUME_MODIFIED_BY_CHKDSK) != 0)
 # ifdef NVolWasDirty
-		|| (NVolWasDirty (FS.ntfs) != 0)
+		|| (NVolWasDirty (ntfs) != 0)
 # endif
 		)
 	{
@@ -2795,7 +2814,7 @@ wfs_ntfs_is_dirty (
 
 /**
  * Flushes the NTFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -2805,17 +2824,20 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_ntfs_flush_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret)
+	wfs_fsid_t wfs_fs)
 #else
-	FS, error_ret)
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
-	wfs_error_type_t error = {CURR_NTFS, {0}};
+	ntfs_volume * ntfs;
+	wfs_errcode_t error = 0;
+	wfs_errcode_t * error_ret;
 
-	if ( FS.ntfs == NULL )
+	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
+	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+	if ( ntfs == NULL )
 	{
 		if ( error_ret != NULL )
 		{
@@ -2824,14 +2846,14 @@ wfs_ntfs_flush_fs (
 		return WFS_BADPARAM;
 	}
 #ifdef NTFS_RICH
-	error.errcode.gerror = ntfs_volume_commit (FS.ntfs);
-	if (error.errcode.gerror < 0)
+	error = ntfs_volume_commit (ntfs);
+	if (error < 0)
 	{
 		ret = WFS_FLUSHFS;
 	}
 #endif
-	error.errcode.gerror = FS.ntfs->dev->d_ops->sync (FS.ntfs->dev);
-	if (error.errcode.gerror != 0)
+	error = ntfs->dev->d_ops->sync (ntfs->dev);
+	if (error != 0)
 	{
 		ret = WFS_FLUSHFS;
 	}
@@ -2844,3 +2866,94 @@ wfs_ntfs_flush_fs (
 	}
 	return ret;
 }
+
+/* ======================================================================== */
+
+/**
+ * Print the version of the current library, if applicable.
+ */
+void wfs_ntfs_print_version (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+#ifndef HAVE_LIBNTFS_3G
+	const char *lib_ver = NULL;
+
+	lib_ver = ntfs_libntfs_version ();
+	printf ( "LibNTFS %s, http://www.linux-ntfs.org\n",
+		(lib_ver != NULL)? lib_ver : "<?>" );
+#else
+	printf ( "NTFS-3G: <?>\n");
+#endif
+}
+
+/* ======================================================================== */
+
+/**
+ * Get the preferred size of the error variable.
+ * \return the preferred size of the error variable.
+ */
+size_t wfs_ntfs_get_err_size (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	return sizeof (wfs_errcode_t);
+}
+
+/* ======================================================================== */
+
+/**
+ * Initialize the library.
+ */
+void wfs_ntfs_init (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+}
+
+/* ======================================================================== */
+
+/**
+ * De-initialize the library.
+ */
+void wfs_ntfs_deinit (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+}
+
+/* ======================================================================== */
+
+/**
+ * Displays an error message.
+ * \param msg The message.
+ * \param extra Last element of the error message (fsname or signal).
+ * \param wfs_fs The filesystem this message refers to.
+ */
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_ntfs_show_error (
+#ifdef WFS_ANSIC
+	const char * const	msg,
+	const char * const	extra,
+	const wfs_fsid_t	wfs_fs )
+#else
+	msg, extra, wfs_fs )
+	const char * const	msg;
+	const char * const	extra;
+	const wfs_fsid_t	wfs_fs;
+#endif
+{
+	wfs_show_fs_error_gen (msg, extra, wfs_fs);
+}
+

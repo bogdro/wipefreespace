@@ -50,9 +50,26 @@
 # include <string.h>
 #endif
 
-/* redefine the inline sig function from hfsp, each time with a different name */
-#define sig(a,b,c,d) wfs_ocfs_sig(a,b,c,d)
+#ifdef HAVE_LIBINTL_H
+# include <libintl.h>	/* translation stuff */
+#endif
+
+#ifdef HAVE_LOCALE_H
+# include <locale.h>
+#endif
+
+#ifdef HAVE_COM_ERR_H
+# include <com_err.h>
+#else
+# if defined HAVE_ET_COM_ERR_H
+#  include <et/com_err.h>
+# endif
+#endif
+
 #include "wipefreespace.h"
+
+/* fix conflict with <string.h>: */
+#define index ocfs_index
 
 #if (defined HAVE_OCFS2_OCFS2_H) && (defined HAVE_LIBOCFS2)
 # include <ocfs2/ocfs2.h>
@@ -79,29 +96,32 @@ struct wfs_ocfs_block_data
 /* ============================================================= */
 
 #ifndef WFS_ANSIC
-static size_t WFS_ATTR ((warn_unused_result)) wfs_ocfs_get_block_size WFS_PARAMS ((const wfs_fsid_t FS));
+static size_t GCC_WARN_UNUSED_RESULT wfs_ocfs_get_block_size WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 #endif
 
 /**
  * Returns the buffer size needed to work on the
  *	smallest physical unit on a OCFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return Block size on the filesystem.
  */
-static size_t WFS_ATTR ((warn_unused_result))
+static size_t GCC_WARN_UNUSED_RESULT
 wfs_ocfs_get_block_size (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS )
+	const wfs_fsid_t wfs_fs )
 #else
-	FS)
-	const wfs_fsid_t FS;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
-	if ( FS.ocfs2 == NULL )
+	ocfs2_filesys * ocfs2;
+
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	if ( ocfs2 == NULL )
 	{
 		return 0;
 	}
-	return (size_t)FS.ocfs2->fs_clustersize;
+	return (size_t)ocfs2->fs_clustersize;
 }
 
 /* ============================================================= */
@@ -129,12 +149,14 @@ static int wfs_ocfs_wipe_part_blocks (
 	wfs_errcode_t ret_part = WFS_SUCCESS;
 	errcode_t err;
 	struct wfs_ocfs_block_data * bd = (struct wfs_ocfs_block_data *)priv_data;
-	wfs_error_type_t error;
+	errcode_t error = 0;
 	int changed = 0;
-	int selected[WFS_NPAT];
+	int selected[WFS_NPAT] = {0};
 	size_t to_wipe;
 	unsigned int offset;
 	unsigned int j;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
 	if ( (fs == NULL) || (bd == NULL) )
 	{
@@ -142,34 +164,38 @@ static int wfs_ocfs_wipe_part_blocks (
 		return 0;
 	}
 
-	if ( (bd->wd.filesys.ocfs2 == NULL) || (bd->inode == NULL) )
+	ocfs2 = (ocfs2_filesys *) bd->wd.filesys.fs_backend;
+	error_ret = (errcode_t *) bd->wd.filesys.fs_error;
+	if ( (ocfs2 == NULL) || (bd->inode == NULL) )
 	{
 		/* proceed with the next element */
 		return 0;
 	}
 	if ( (bd->total < bd->inode->i_size)
-		&& (bd->total + bd->wd.filesys.ocfs2->fs_blocksize >= bd->inode->i_size) )
+		&& (bd->total + ocfs2->fs_blocksize >= bd->inode->i_size) )
 	{
 		/* this is the last block */
-		to_wipe = (size_t)((bd->total + bd->wd.filesys.ocfs2->fs_blocksize
+		to_wipe = (size_t)((bd->total + ocfs2->fs_blocksize
 			- bd->inode->i_size) & 0x0FFFFFFFF);
-		offset = (unsigned int)((bd->inode->i_size % bd->wd.filesys.ocfs2->fs_blocksize) & 0x0FFFFFFFF);
-		if ( (to_wipe != 0) && (offset != bd->wd.filesys.ocfs2->fs_blocksize) )
+		offset = (unsigned int)((bd->inode->i_size % ocfs2->fs_blocksize) & 0x0FFFFFFFF);
+		if ( (to_wipe != 0) && (offset != ocfs2->fs_blocksize) )
 		{
-			err = io_read_block_nocache(bd->wd.filesys.ocfs2->fs_io, (int64_t)blkno, 1,
+			err = io_read_block_nocache(ocfs2->fs_io,
+				(int64_t)blkno, 1,
 				(char *)bd->wd.buf);
 			if ( err == 0 )
 			{
-				for ( j = 0; (j < bd->wd.filesys.npasses) && (sig_recvd == 0); j++ )
+				for ( j = 0; (j < bd->wd.filesys.npasses)
+					&& (sig_recvd == 0); j++ )
 				{
-					fill_buffer ( j, &bd->wd.buf[offset], to_wipe,
+					fill_buffer ( j, &(bd->wd.buf[offset]), to_wipe,
 						selected, bd->wd.filesys );/* buf OK */
 					if ( sig_recvd != 0 )
 					{
 						break;
 					}
 					/* writing modified cluster here: */
-					err = io_write_block_nocache (bd->wd.filesys.ocfs2->fs_io,
+					err = io_write_block_nocache (ocfs2->fs_io,
 						/* blkno */ (int64_t)blkno,
 						/* count */ 1,
 						(char *)bd->wd.buf);
@@ -179,12 +205,15 @@ static int wfs_ocfs_wipe_part_blocks (
 					}
 					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
+					if ( (bd->wd.filesys.npasses > 1)
+						&& (sig_recvd == 0) )
 					{
-						error.errcode.gerror = wfs_ocfs_flush_fs ( bd->wd.filesys, &error );
+						error = wfs_ocfs_flush_fs (
+							bd->wd.filesys);
 					}
 				}
-				if ( (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
+				if ( (bd->wd.filesys.zero_pass != 0)
+					&& (sig_recvd == 0) )
 				{
 					/* last pass with zeros: */
 # ifdef HAVE_MEMSET
@@ -198,7 +227,7 @@ static int wfs_ocfs_wipe_part_blocks (
 					if ( sig_recvd == 0 )
 					{
 						/* writing modified cluster here: */
-						err = io_write_block_nocache (bd->wd.filesys.ocfs2->fs_io,
+						err = io_write_block_nocache (ocfs2->fs_io,
 							(int64_t)blkno,
 							1, (char *)bd->wd.buf);
 						if ( err != 0 )
@@ -207,10 +236,11 @@ static int wfs_ocfs_wipe_part_blocks (
 						}
 						/* Flush after each writing, if more than 1 overwriting needs to be done.
 						Allow I/O bufferring (efficiency), if just one pass is needed. */
-						if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
+						if ( (bd->wd.filesys.npasses > 1)
+							&& (sig_recvd == 0) )
 						{
-							error.errcode.e2error = wfs_ocfs_flush_fs ( bd->wd.filesys,
-								&error );
+							error = wfs_ocfs_flush_fs (
+								bd->wd.filesys);
 						}
 					}
 				}
@@ -218,7 +248,11 @@ static int wfs_ocfs_wipe_part_blocks (
 			}
 		}
 	}
-	bd->total += bd->wd.filesys.ocfs2->fs_blocksize;
+	bd->total += ocfs2->fs_blocksize;
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	if ( (ret_part != WFS_SUCCESS) || (sig_recvd != 0) )
 	{
 		return OCFS2_BLOCK_ABORT;
@@ -238,21 +272,20 @@ static int wfs_ocfs_wipe_part_blocks (
 
 /**
  * Wipes the free space in partially used blocks on the given OCFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_ocfs_wipe_part (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret )
+	wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret )
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 # endif
 {
 	wfs_errcode_t ret_part = WFS_SUCCESS;
@@ -270,18 +303,22 @@ wfs_ocfs_wipe_part (
 	int selected[WFS_NPAT] = {0};
 	size_t to_wipe;
 	unsigned int offset;
-	wfs_error_type_t error = {CURR_OCFS, {0}};
+	errcode_t error = 0;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
-	if ( FS.ocfs2 == NULL )
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( ocfs2 == NULL )
 	{
-		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_BADPARAM;
 	}
-	/*err = ocfs2_dir_iterate2(FS.ocfs2, FS.ocfs2->fs_root_blkno,
+	/*err = ocfs2_dir_iterate2(ocfs2, ocfs2->fs_root_blkno,
 		OCFS2_DIRENT_FLAG_INCLUDE_EMPTY,
 		NULL, &wfs_ocfs_wipe_unrm_dir, &wd);* /
 	if ( err != 0 )
@@ -289,16 +326,16 @@ wfs_ocfs_wipe_part (
 		ret_part = WFS_DIRITER;
 		if ( error != NULL )
 		{
-			error->errcode.e2error = err;
+			error = err;
 		}
 	}
 	*/
 
-	err = ocfs2_open_inode_scan (FS.ocfs2, &iscan);
+	err = ocfs2_open_inode_scan (ocfs2, &iscan);
 	if ( err != 0 )
 	{
-		error.errcode.e2error = err;
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		error = err;
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -306,7 +343,7 @@ wfs_ocfs_wipe_part (
 		return WFS_INOSCAN;
 	}
 
-	cluster_size = wfs_ocfs_get_block_size (FS);
+	cluster_size = wfs_ocfs_get_block_size (wfs_fs);
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
@@ -314,11 +351,11 @@ wfs_ocfs_wipe_part (
 	if ( inode_buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -332,11 +369,11 @@ wfs_ocfs_wipe_part (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		free (inode_buf);
 		if ( error_ret != NULL )
 		{
@@ -347,7 +384,7 @@ wfs_ocfs_wipe_part (
 
 	dinode = (struct ocfs2_dinode *)inode_buf;
 	bd.wd.passno = 0;
-	bd.wd.filesys = FS;
+	bd.wd.filesys = wfs_fs;
 	bd.wd.total_fs = 0;
 	bd.wd.ret_val = 0;
 	bd.wd.buf = buf;
@@ -357,6 +394,7 @@ wfs_ocfs_wipe_part (
 		if ( err != 0 )
 		{
 			ret_part = WFS_INOSCAN;
+			error = err;
 			continue;
 		}
 		if ( blkno == 0 )
@@ -369,49 +407,59 @@ wfs_ocfs_wipe_part (
 		{
 			continue;
 		}
-		ocfs2_swap_inode_to_cpu (FS.ocfs2, dinode);
+		ocfs2_swap_inode_to_cpu (ocfs2, dinode);
+
+		/* invalid? skip */
+		if ( (dinode->i_flags & OCFS2_VALID_FL) == 0 )
+		{
+			continue;
+		}
+
 		/* not a regular file? skip */
-		if ( ! S_ISREG (dinode->i_mode))
+		if ( ! S_ISREG (dinode->i_mode) )
 		{
 			continue;
 		}
 		if ((dinode->i_dyn_features & OCFS2_INLINE_DATA_FL) != 0)
 		{
-			to_wipe = (size_t)(ocfs2_max_inline_data_with_xattr ((int)FS.ocfs2->fs_blocksize,
+			to_wipe = (size_t)(ocfs2_max_inline_data_with_xattr (
+				(int)ocfs2->fs_blocksize,
 				dinode) - (int)((dinode->i_size) & 0x0FFFFFFFF));
 			offset = (unsigned int)((dinode->i_size) & 0x0FFFFFFFF);
-			if ( (to_wipe != 0) && (offset != FS.ocfs2->fs_blocksize) )
+			if ( (to_wipe != 0) && (offset != ocfs2->fs_blocksize) )
 			{
-				for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
+				for ( j = 0; (j < wfs_fs.npasses)
+					&& (sig_recvd == 0); j++ )
 				{
-					fill_buffer ( j, &dinode->id2.i_data.id_data[offset], to_wipe,
-						selected, FS );/* buf OK */
+					fill_buffer ( j, &(dinode->id2.i_data.id_data[offset]),
+						to_wipe, selected, wfs_fs );/* buf OK */
 					if ( sig_recvd != 0 )
 					{
 						break;
 					}
 					/* writing modified inode here: */
-					err = ocfs2_write_inode (FS.ocfs2, dinode->i_blkno, inode_buf);
+					err = ocfs2_write_inode (ocfs2,
+						dinode->i_blkno, inode_buf);
 					if ( err != 0 )
 					{
-						error.errcode.e2error = err;
-					}
-					if ( err != 0 )
-					{
+						error = err;
 						ret_part = WFS_BLKWR;
 					}
 					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (FS.npasses > 1) && (sig_recvd == 0) )
+					if ( (wfs_fs.npasses > 1)
+						&& (sig_recvd == 0) )
 					{
-						error.errcode.gerror = wfs_ocfs_flush_fs ( FS, &error );
+						error = wfs_ocfs_flush_fs (wfs_fs);
 					}
 				}
-				if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+				if ( (wfs_fs.zero_pass != 0)
+					&& (sig_recvd == 0) )
 				{
 					/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-					memset ( &dinode->id2.i_data.id_data[offset], 0, to_wipe );
+					memset ( &(dinode->id2.i_data.id_data[offset]),
+						0, to_wipe );
 # else
 					for ( j = 0; j < to_wipe; j++ )
 					{
@@ -421,16 +469,20 @@ wfs_ocfs_wipe_part (
 					if ( sig_recvd == 0 )
 					{
 						/* writing modified inode here: */
-						err = ocfs2_write_inode (FS.ocfs2, dinode->i_blkno, inode_buf);
+						err = ocfs2_write_inode (ocfs2,
+							dinode->i_blkno, inode_buf);
 						if ( err != 0 )
 						{
 							ret_part = WFS_BLKWR;
+							error = err;
 						}
 						/* Flush after each writing, if more than 1 overwriting needs to be done.
 						Allow I/O bufferring (efficiency), if just one pass is needed. */
-						if ( (FS.npasses > 1) && (sig_recvd == 0) )
+						if ( (wfs_fs.npasses > 1)
+							&& (sig_recvd == 0) )
 						{
-							error.errcode.gerror = wfs_ocfs_flush_fs ( FS, &error );
+							error = wfs_ocfs_flush_fs (
+								wfs_fs);
 						}
 					}
 				}
@@ -440,12 +492,20 @@ wfs_ocfs_wipe_part (
 		{
 			bd.total = 0;
 			bd.inode = dinode;
-			err = ocfs2_block_iterate_inode (FS.ocfs2, dinode, 0,
+			err = ocfs2_block_iterate_inode (ocfs2, dinode, 0,
 				&wfs_ocfs_wipe_part_blocks, &bd);
+			if ( err == OCFS2_ET_INODE_CANNOT_BE_ITERATED )
+			{
+				/* i-node does neither contain inline data
+				or extents - can't be iterated over. Skip it. */
+				err = 0;
+				continue;
+			}
 		}
 		if ( err != 0 )
 		{
 			ret_part = WFS_INOSCAN;
+			error = err;
 			continue;
 		}
 
@@ -455,7 +515,7 @@ wfs_ocfs_wipe_part (
 	free (buf);
 	free (inode_buf);
 
-	show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -473,38 +533,41 @@ wfs_ocfs_wipe_part (
 #ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given OCFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_ocfs_wipe_fs (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error_ret )
+	wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret )
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	uint32_t curr_cluster;
 	unsigned long int j;
-	int selected[WFS_NPAT]= {0};
+	int selected[WFS_NPAT] = {0};
 	unsigned char * buf;
 	errcode_t err;
 	int is_alloc;
 	size_t cluster_size;
 	unsigned int blocks_per_cluster;
-	wfs_error_type_t error = {CURR_OCFS, {0}};
+	errcode_t error = 0;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
-	if ( FS.ocfs2 == NULL )
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( ocfs2 == NULL )
 	{
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -512,8 +575,9 @@ wfs_ocfs_wipe_fs (
 		return WFS_BADPARAM;
 	}
 
-	cluster_size = wfs_ocfs_get_block_size (FS);
-	blocks_per_cluster = (unsigned int)(ocfs2_clusters_to_blocks (FS.ocfs2, 1) & 0x0FFFFFFFF);
+	cluster_size = wfs_ocfs_get_block_size (wfs_fs);
+	blocks_per_cluster = (unsigned int)(ocfs2_clusters_to_blocks (
+		ocfs2, 1) & 0x0FFFFFFFF);
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -522,11 +586,11 @@ wfs_ocfs_wipe_fs (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -535,42 +599,47 @@ wfs_ocfs_wipe_fs (
 	}
 
 	for ( curr_cluster = 0;
-		(curr_cluster < FS.ocfs2->fs_clusters) && (sig_recvd == 0); curr_cluster++ )
+		(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
+		curr_cluster++ )
 	{
 		is_alloc = 1;
-		err = ocfs2_test_cluster_allocated (FS.ocfs2, curr_cluster, &is_alloc);
+		err = ocfs2_test_cluster_allocated (ocfs2, curr_cluster,
+			&is_alloc);
 		if ( err != 0 )
 		{
 			ret_wfs = WFS_BLBITMAPREAD;
-			show_progress (WFS_PROGRESS_WFS, (unsigned int) (curr_cluster/FS.ocfs2->fs_clusters),
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int) (curr_cluster/ocfs2->fs_clusters),
 				&prev_percent);
 			continue;
 		}
 		if ( is_alloc != 0 )
 		{
-			show_progress (WFS_PROGRESS_WFS, (unsigned int) (curr_cluster/FS.ocfs2->fs_clusters),
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int) (curr_cluster/ocfs2->fs_clusters),
 				&prev_percent);
 			continue;
 		}
 
 		/* cluster is unused - wipe it */
-		for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
+		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-
-			fill_buffer ( j, buf, cluster_size, selected, FS );/* buf OK */
+			fill_buffer ( j, buf, cluster_size,
+				selected, wfs_fs );/* buf OK */
 			if ( sig_recvd != 0 )
 			{
 		       		break;
 			}
 			/* writing modified cluster here: */
-			err = io_write_block_nocache (FS.ocfs2->fs_io,
+			err = io_write_block_nocache (ocfs2->fs_io,
 				/* blkno */ curr_cluster * blocks_per_cluster,
 				/* count */ (int)blocks_per_cluster,
 				(char *)buf);
 			if ( err != 0 )
 			{
 				free (buf);
-				show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+				wfs_show_progress (WFS_PROGRESS_WFS, 100,
+					&prev_percent);
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;
@@ -579,12 +648,12 @@ wfs_ocfs_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (FS.npasses > 1) && (sig_recvd == 0) )
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
-				error.errcode.gerror = wfs_ocfs_flush_fs ( FS, &error );
+				error = wfs_ocfs_flush_fs (wfs_fs);
 			}
 		}
-		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
 # ifdef HAVE_MEMSET
@@ -598,13 +667,13 @@ wfs_ocfs_wipe_fs (
 			if ( sig_recvd == 0 )
 			{
 				/* writing modified cluster here: */
-				err = io_write_block_nocache (FS.ocfs2->fs_io,
+				err = io_write_block_nocache (ocfs2->fs_io,
 					curr_cluster * blocks_per_cluster,
 					(int)blocks_per_cluster, (char *)buf);
 				if ( err != 0 )
 				{
 					free (buf);
-					show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+					wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 					if ( error_ret != NULL )
 					{
 						*error_ret = error;
@@ -613,19 +682,21 @@ wfs_ocfs_wipe_fs (
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ocfs_flush_fs ( FS, &error );
+					error = wfs_ocfs_flush_fs (
+						wfs_fs);
 				}
 			}
 		}
-		show_progress (WFS_PROGRESS_WFS, (unsigned int) ((100*curr_cluster)/FS.ocfs2->fs_clusters),
+		wfs_show_progress (WFS_PROGRESS_WFS,
+			(unsigned int) ((100*curr_cluster)/ocfs2->fs_clusters),
 			&prev_percent);
 	}
 
 	free (buf);
 
-	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -643,8 +714,10 @@ wfs_ocfs_wipe_fs (
 #ifdef WFS_WANT_UNRM
 
 # ifndef WFS_ANSIC
-static int wfs_ocfs_wipe_unrm_dir WFS_PARAMS ((uint64_t dir, int entry, struct ocfs2_dir_entry *dirent,
-	uint64_t blocknr, int offset, int blocksize, char *buf, void *priv_data));
+static int wfs_ocfs_wipe_unrm_dir WFS_PARAMS ((uint64_t dir,
+	int entry, struct ocfs2_dir_entry *dirent,
+	uint64_t blocknr, int offset, int blocksize,
+	char *buf, void *priv_data));
 # endif
 
 static int wfs_ocfs_wipe_unrm_dir (
@@ -667,12 +740,12 @@ static int wfs_ocfs_wipe_unrm_dir (
 	wfs_errcode_t ret_unrm = WFS_SUCCESS;
 	errcode_t err;
 	wfs_wipedata_t * wd = (wfs_wipedata_t *)priv_data;
-	wfs_error_type_t error;
 	int changed = 0;
-	int selected[WFS_NPAT];
+	int selected[WFS_NPAT] = {0};
 # ifndef HAVE_MEMSET
 	size_t j;
 # endif
+	ocfs2_filesys * ocfs2;
 
 	if ( (dirent == NULL) || (wd == NULL) )
 	{
@@ -680,6 +753,12 @@ static int wfs_ocfs_wipe_unrm_dir (
 		return 0;
 	}
 
+	ocfs2 = (ocfs2_filesys *) wd->filesys.fs_backend;
+	if ( ocfs2 == NULL )
+	{
+		/* proceed with the next element */
+		return 0;
+	}
 	if ( (dirent->file_type == OCFS2_FT_DIR) && (dirent->name != NULL) )
 	{
 		if ( (strncmp (dirent->name, "..", OCFS2_MAX_FILENAME_LEN) != 0) &&
@@ -687,12 +766,12 @@ static int wfs_ocfs_wipe_unrm_dir (
 			(entry != OCFS2_DIRENT_DOT_FILE) &&
 			(entry != OCFS2_DIRENT_DOT_DOT_FILE) )
 		{
-			err = ocfs2_dir_iterate2(wd->filesys.ocfs2, dirent->inode,
-				OCFS2_DIRENT_FLAG_INCLUDE_REMOVED, NULL, &wfs_ocfs_wipe_unrm_dir, &wd);
+			err = ocfs2_dir_iterate2 (ocfs2, dirent->inode,
+				OCFS2_DIRENT_FLAG_INCLUDE_REMOVED, NULL,
+				&wfs_ocfs_wipe_unrm_dir, &wd);
 			if ( err != 0 )
 			{
 				ret_unrm = WFS_DIRITER;
-				error.errcode.e2error = err;
 			}
 		}
 	}
@@ -711,7 +790,9 @@ static int wfs_ocfs_wipe_unrm_dir (
 		}
 		else
 		{
-			fill_buffer ( wd->passno, (unsigned char *)dirent->name, OCFS2_MAX_FILENAME_LEN,
+			fill_buffer ( wd->passno,
+				(unsigned char *)dirent->name,
+				OCFS2_MAX_FILENAME_LEN,
 				selected, wd->filesys );
 		}
 
@@ -738,23 +819,21 @@ static int wfs_ocfs_wipe_unrm_dir (
 /**
  * Starts recursive directory search for deleted inodes
  *	and undelete data on the given OCFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param node Filesystem element at which to start.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_ocfs_wipe_unrm (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS,
-	wfs_error_type_t * const error_ret )
+	wfs_fsid_t wfs_fs)
 # else
-	FS, error_ret )
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error_ret;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 # endif
 {
 	wfs_errcode_t ret_unrm = WFS_SUCCESS;
@@ -777,11 +856,15 @@ wfs_ocfs_wipe_unrm (
 	uint64_t contig;
 	size_t name_index;
 	int si_name_percents;
-	wfs_error_type_t error = {CURR_OCFS, {0}};
+	errcode_t error = 0;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
-	if ( FS.ocfs2 == NULL )
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( ocfs2 == NULL )
 	{
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -790,18 +873,19 @@ wfs_ocfs_wipe_unrm (
 	}
 
 	wd.passno = 0;
-	wd.filesys = FS;
+	wd.filesys = wfs_fs;
 	wd.total_fs = 0;
 	wd.ret_val = 0;
-	err = ocfs2_dir_iterate2(FS.ocfs2, FS.ocfs2->fs_root_blkno,
-		OCFS2_DIRENT_FLAG_INCLUDE_REMOVED, NULL, &wfs_ocfs_wipe_unrm_dir, &wd);
+	err = ocfs2_dir_iterate2(ocfs2, ocfs2->fs_root_blkno,
+		OCFS2_DIRENT_FLAG_INCLUDE_REMOVED, NULL,
+		&wfs_ocfs_wipe_unrm_dir, &wd);
 	if ( err != 0 )
 	{
 		ret_unrm = WFS_DIRITER;
-		error.errcode.e2error = err;
+		error = err;
 	}
 	/* journal: */
-	cluster_size = wfs_ocfs_get_block_size (FS);
+	cluster_size = wfs_ocfs_get_block_size (wfs_fs);
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -810,11 +894,11 @@ wfs_ocfs_wipe_unrm (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error.errcode.gerror = errno;
+		error = errno;
 # else
-		error.errcode.gerror = 12L;	/* ENOMEM */
+		error = 12L;	/* ENOMEM */
 # endif
-		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -822,7 +906,7 @@ wfs_ocfs_wipe_unrm (
 		return WFS_MALLOC;
 	}
 
-	for ( i = 0; i < OCFS2_RAW_SB(FS.ocfs2->fs_super)->s_max_slots; i++ )
+	for ( i = 0; i < OCFS2_RAW_SB(ocfs2->fs_super)->s_max_slots; i++ )
 	{
 		if ( ocfs2_system_inodes[JOURNAL_SYSTEM_INODE].si_name == NULL )
 		{
@@ -855,27 +939,31 @@ wfs_ocfs_wipe_unrm (
 			ocfs2_system_inodes[JOURNAL_SYSTEM_INODE].si_name, i);
 # endif
 		jorunal_object_name[sizeof(jorunal_object_name)-1] = '\0';
-		err = ocfs2_lookup (FS.ocfs2, FS.ocfs2->fs_sysdir_blkno, jorunal_object_name,
-			(int)strlen (jorunal_object_name), NULL, &journal_block_numer);
+		err = ocfs2_lookup (ocfs2, ocfs2->fs_sysdir_blkno,
+			jorunal_object_name, (int)strlen (jorunal_object_name),
+			NULL, &journal_block_numer);
 		if ( err != 0 )
 		{
 			continue;
 		}
 
-		err = ocfs2_read_cached_inode (FS.ocfs2, journal_block_numer, &ci);
+		err = ocfs2_read_cached_inode (ocfs2,
+			journal_block_numer, &ci);
 		if ( err != 0 )
 		{
 			continue;
 		}
 
-		err = ocfs2_extent_map_get_blocks(ci, 0, 1, &journal_block_numer, &contig, NULL);
+		err = ocfs2_extent_map_get_blocks(ci, 0, 1,
+			&journal_block_numer, &contig, NULL);
 		if ( err != 0 )
 		{
 			continue;
 		}
 
-		/*err = ocfs2_read_blocks (FS.ocfs2, (int64_t)journal_block_numer, 1, (char *)buf);*/
-		err = ocfs2_read_journal_superblock (FS.ocfs2, journal_block_numer, (char *)buf);
+		/*err = ocfs2_read_blocks (ocfs2, (int64_t)journal_block_numer, 1, (char *)buf);*/
+		err = ocfs2_read_journal_superblock (ocfs2,
+			journal_block_numer, (char *)buf);
 		if ( err != 0 )
 		{
 			continue;
@@ -898,27 +986,31 @@ wfs_ocfs_wipe_unrm (
 		if ( jbuf == NULL )
 		{
 # ifdef HAVE_ERRNO_H
-			error.errcode.gerror = errno;
+			error = errno;
 # else
-			error.errcode.gerror = 12L;	/* ENOMEM */
+			error = 12L;	/* ENOMEM */
 # endif
 			break;
 		}
 		/*journal_size_in_clusters = (jsb->s_blocksize * jsb->s_maxlen) >>
-			OCFS2_RAW_SB(FS.ocfs2->fs_super)->s_clustersize_bits;*/
+			OCFS2_RAW_SB(ocfs2->fs_super)->s_clustersize_bits;*/
 
 		for ( curr_block = journal_block_numer+1;
-			(curr_block < journal_block_numer + jsb->s_maxlen) && (sig_recvd == 0); curr_block++ )
+			(curr_block < journal_block_numer + jsb->s_maxlen)
+			&& (sig_recvd == 0); curr_block++ )
 		{
-			for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
+			for ( j = 0; (j < wfs_fs.npasses)
+				&& (sig_recvd == 0); j++ )
 			{
-				fill_buffer ( j, jbuf, (size_t)jsb->s_blocksize, selected, FS );/* buf OK */
+				fill_buffer ( j, jbuf,
+					(size_t)jsb->s_blocksize, selected,
+					wfs_fs );/* buf OK */
 				if ( sig_recvd != 0 )
 				{
 					break;
 				}
 				/* writing modified cluster here: */
-				err = io_write_block_nocache (FS.ocfs2->fs_io,
+				err = io_write_block_nocache (ocfs2->fs_io,
 					/* blkno */ (int64_t)curr_block,
 					/* count */ 1,
 					(char *)jbuf);
@@ -926,21 +1018,23 @@ wfs_ocfs_wipe_unrm (
 				{
 					free (jbuf);
 					free (buf);
-					show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+					wfs_show_progress (WFS_PROGRESS_UNRM, 100,
+						&prev_percent);
 					if ( error_ret != NULL )
 					{
-						*error_ret = error;
+						*error_ret = err;
 					}
 					return WFS_BLKWR;
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (FS.npasses > 1) && (sig_recvd == 0) )
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					error.errcode.gerror = wfs_ocfs_flush_fs ( FS, &error );
+					err = wfs_ocfs_flush_fs (
+						wfs_fs);
 				}
 			}
-			if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 			{
 				/* last pass with zeros: */
 # ifdef HAVE_MEMSET
@@ -954,30 +1048,33 @@ wfs_ocfs_wipe_unrm (
 				if ( sig_recvd == 0 )
 				{
 					/* writing modified cluster here: */
-					err = io_write_block_nocache (FS.ocfs2->fs_io,
+					err = io_write_block_nocache (ocfs2->fs_io,
 						(int64_t)curr_block,
 						1, (char *)jbuf);
 					if ( err != 0 )
 					{
 						free (jbuf);
 						free (buf);
-						show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+						wfs_show_progress (WFS_PROGRESS_UNRM,
+							100, &prev_percent);
 						if ( error_ret != NULL )
 						{
-							*error_ret = error;
+							*error_ret = err;
 						}
 						return WFS_BLKWR;
 					}
 					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (FS.npasses > 1) && (sig_recvd == 0) )
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
-						error.errcode.gerror = wfs_ocfs_flush_fs ( FS, &error );
+						err = wfs_ocfs_flush_fs (
+							wfs_fs);
 					}
 				}
 			}
-			show_progress (WFS_PROGRESS_UNRM,
-				(unsigned int) (50+((curr_block - (journal_block_numer+1))*50)/jsb->s_maxlen),
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int) (50+((curr_block -
+					(journal_block_numer+1))*50)/jsb->s_maxlen),
 				&prev_percent);
 		}
 
@@ -996,30 +1093,31 @@ wfs_ocfs_wipe_unrm (
 		journal_features.opt_incompat = jsb->s_feature_incompat;
 		journal_features.opt_ro_compat = jsb->s_feature_ro_compat;
 
-		err = ocfs2_make_journal (FS.ocfs2, journal_block_numer,
+		err = ocfs2_make_journal (ocfs2, journal_block_numer,
 			journal_size_in_clusters, &journal_features);
 		if ( (error != NULL) && (err != 0) )
 		{
-			error.errcode.e2error = err;
+			err = err;
 		}
 		*/
 		/*ocfs2_swap_journal_superblock (jsb);*/
-		err = ocfs2_write_journal_superblock (FS.ocfs2, journal_block_numer, (char *)buf);
+		err = ocfs2_write_journal_superblock (ocfs2,
+			journal_block_numer, (char *)buf);
 		if ( err != 0 )
 		{
-			error.errcode.e2error = err;
+			error = err;
 		}
 
-		err = ocfs2_write_cached_inode (FS.ocfs2, ci);
+		err = ocfs2_write_cached_inode (ocfs2, ci);
 		if ( err != 0 )
 		{
-			error.errcode.e2error = err;
+			error = err;
 		}
-		ocfs2_free_cached_inode (FS.ocfs2, ci);
+		ocfs2_free_cached_inode (ocfs2, ci);
 	}
 
 	free (buf);
-	show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+	wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -1038,53 +1136,59 @@ wfs_ocfs_wipe_unrm (
 /**
  * Opens a OCFS filesystem on the given device.
  * \param dev_name Device name, like /dev/hdXY
- * \param FS Pointer to where the result will be put.
+ * \param wfs_fs Pointer to where the result will be put.
  * \param whichfs Pointer to an int saying which fs is curently in use.
  * \param data Pointer to wfs_fsdata_t structure containing information
  *	which may be needed to open the filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_ocfs_open_fs (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_fsid_t * const FS, wfs_curr_fs_t * const whichfs,
-	const wfs_fsdata_t * const data WFS_ATTR ((unused)), wfs_error_type_t * const error )
+	wfs_fsid_t * const wfs_fs,
+	const wfs_fsdata_t * const data WFS_ATTR ((unused)))
 #else
-	dev_name, FS, whichfs, data, error )
-	const char * const dev_name;
-	wfs_fsid_t * const FS;
-	wfs_curr_fs_t * const whichfs;
+	wfs_fs, data)
+	wfs_fsid_t * const wfs_fs;
 	const wfs_fsdata_t * const data WFS_ATTR ((unused));
-	wfs_error_type_t * const error;
 #endif
 {
 	wfs_errcode_t ret = WFS_OPENFS;
 	errcode_t err;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
-	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL))
+	if ( wfs_fs == NULL )
+	{
+		return WFS_BADPARAM;
+	}
+	if ( wfs_fs->fsname == NULL )
 	{
 		return WFS_BADPARAM;
 	}
 
-	*whichfs = CURR_NONE;
-	FS->ocfs2 = NULL;
-	err = ocfs2_open (dev_name, OCFS2_FLAG_RW | OCFS2_FLAG_BUFFERED, 0, 0, &(FS->ocfs2));
-	if ( (err != 0) || (FS->ocfs2 == NULL) )
+	error_ret = (errcode_t *) wfs_fs->fs_error;
+	wfs_fs->whichfs = WFS_CURR_FS_NONE;
+	ocfs2 = NULL;
+	err = ocfs2_open (wfs_fs->fsname, OCFS2_FLAG_RW | OCFS2_FLAG_BUFFERED,
+		0, 0, &ocfs2);
+	if ( (err != 0) || (ocfs2 == NULL) )
 	{
-		if ( error != NULL )
+		if ( error_ret != NULL )
 		{
-			error->errcode.e2error = err;
+			*error_ret = err;
 		}
 		ret = WFS_OPENFS;
 	}
 	else
 	{
-		*whichfs = CURR_OCFS;
+		wfs_fs->whichfs = WFS_CURR_FS_OCFS;
 		ret = WFS_SUCCESS;
+		wfs_fs->fs_backend = ocfs2;
 	}
 
 	return ret;
@@ -1098,29 +1202,39 @@ wfs_ocfs_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_ocfs_chk_mount (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_error_type_t * const error )
+	const wfs_fsid_t wfs_fs)
 #else
-	dev_name, error )
-	const char * const dev_name;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	int flags = 0;
-	errcode_t err;
+	errcode_t err = 0;
+	errcode_t * error_ret;
 
-	err = ocfs2_check_if_mounted (dev_name, &flags);
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( wfs_fs.fsname == NULL )
+	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = (wfs_errcode_t)err;
+		}
+		return WFS_BADPARAM;
+	}
+
+	err = ocfs2_check_if_mounted (wfs_fs.fsname, &flags);
 	if ( err != 0 )
 	{
-		if ( error != NULL )
+		if ( error_ret != NULL )
 		{
-			error->errcode.e2error = err;
+			*error_ret = (wfs_errcode_t)err;
 		}
 		ret = WFS_MNTRW;
 	}
@@ -1146,7 +1260,7 @@ wfs_ocfs_chk_mount (
 
 /**
  * Closes the OCFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
@@ -1156,27 +1270,30 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_ocfs_close_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error )
+	wfs_fsid_t wfs_fs)
 #else
-	FS, error )
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	errcode_t err;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
-	if ( FS.ocfs2 == NULL )
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( ocfs2 == NULL )
 	{
 		return WFS_BADPARAM;
 	}
-	err = ocfs2_close (FS.ocfs2);
+	err = ocfs2_close (ocfs2);
 	if ( err != 0 )
 	{
 		ret = WFS_FSCLOSE;
-		if ( error != NULL )
+		if ( error_ret != NULL )
 		{
-			error->errcode.e2error = err;
+			*error_ret = err;
 		}
 	}
 	return ret;
@@ -1186,16 +1303,16 @@ wfs_ocfs_close_fs (
 
 /**
  * Checks if the OCFS filesystem has errors.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 wfs_ocfs_check_err (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS WFS_ATTR ((unused)) )
+	wfs_fsid_t wfs_fs WFS_ATTR ((unused)) )
 #else
-	FS )
-	wfs_fsid_t FS WFS_ATTR ((unused));
+	wfs_fs )
+	wfs_fsid_t wfs_fs WFS_ATTR ((unused));
 #endif
 {
 	/* Don't know how to get this information. */
@@ -1206,30 +1323,33 @@ wfs_ocfs_check_err (
 
 /**
  * Checks if the OCFS filesystem is dirty (has unsaved changes).
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 if clean, other values otherwise.
  */
-int WFS_ATTR ((warn_unused_result))
+int GCC_WARN_UNUSED_RESULT
 wfs_ocfs_is_dirty (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS )
+	wfs_fsid_t wfs_fs )
 #else
-	FS )
-	wfs_fsid_t FS;
+	wfs_fs )
+	wfs_fsid_t wfs_fs;
 #endif
 {
-	if ( FS.ocfs2 == NULL )
+	ocfs2_filesys * ocfs2;
+
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	if ( ocfs2 == NULL )
 	{
 		return 1;
 	}
-	return ((FS.ocfs2->fs_flags & OCFS2_FLAG_DIRTY) != 0) ? 1 : 0;
+	return ((ocfs2->fs_flags & OCFS2_FLAG_DIRTY) != 0) ? 1 : 0;
 }
 
 /* ============================================================= */
 
 /**
  * Flushes the OCFS filesystem.
- * \param FS The filesystem.
+ * \param wfs_fs The filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
@@ -1238,27 +1358,30 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_ocfs_flush_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, wfs_error_type_t * const error)
+	wfs_fsid_t wfs_fs)
 #else
-	FS, error )
-	wfs_fsid_t FS;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	errcode_t err;
+	ocfs2_filesys * ocfs2;
+	errcode_t * error_ret;
 
-	if ( FS.ocfs2 == NULL )
+	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
+	error_ret = (errcode_t *) wfs_fs.fs_error;
+	if ( ocfs2 == NULL )
 	{
 		return WFS_BADPARAM;
 	}
-	err = ocfs2_flush (FS.ocfs2);
+	err = ocfs2_flush (ocfs2);
 	if ( err != 0 )
 	{
 		ret = WFS_FLUSHFS;
-		if ( error != NULL )
+		if ( error_ret != NULL )
 		{
-			error->errcode.e2error = err;
+			*error_ret = err;
 		}
 	}
 
@@ -1267,3 +1390,121 @@ wfs_ocfs_flush_fs (
 #endif
 	return ret;
 }
+
+/* ======================================================================== */
+
+/**
+ * Print the version of the current library, if applicable.
+ */
+void wfs_ocfs_print_version (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	printf ( "OCFS: <?>\n");
+}
+
+/* ======================================================================== */
+
+/**
+ * Get the preferred size of the error variable.
+ * \return the preferred size of the error variable.
+ */
+size_t wfs_ocfs_get_err_size (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	return sizeof (errcode_t);
+}
+
+/* ======================================================================== */
+
+/**
+ * Initialize the library.
+ */
+void wfs_ocfs_init (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+	/*initialize_o2cb_error_table ();*/
+	/*initialize_o2dl_error_table ();*/
+	initialize_ocfs_error_table ();
+}
+
+/* ======================================================================== */
+
+/**
+ * De-initialize the library.
+ */
+void wfs_ocfs_deinit (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+#if (defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)
+	/*remove_error_table (&et_o2cb_error_table);*/
+	/*remove_error_table (&et_o2dl_error_table);*/
+	remove_error_table (&et_ocfs_error_table);
+#endif
+}
+
+/* ======================================================================== */
+
+/**
+ * Displays an error message.
+ * \param msg The message.
+ * \param extra Last element of the error message (fsname or signal).
+ * \param wfs_fs The filesystem this message refers to.
+ */
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_ocfs_show_error (
+#ifdef WFS_ANSIC
+	const char * const	msg,
+	const char * const	extra,
+	const wfs_fsid_t	wfs_fs )
+#else
+	msg, extra, wfs_fs )
+	const char * const	msg;
+	const char * const	extra;
+	const wfs_fsid_t	wfs_fs;
+#endif
+{
+#if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
+	errcode_t e = 0;
+	const char * progname;
+#endif
+
+	if ( (wfs_is_stderr_open() == 0) || (msg == NULL) )
+	{
+		return;
+	}
+#if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
+	if ( wfs_fs.fs_error != NULL )
+	{
+		e = *(errcode_t *)(wfs_fs.fs_error);
+	}
+
+	progname = wfs_get_program_name();
+	com_err ((progname != NULL)? progname : "",
+		e,
+		WFS_ERR_MSG_FORMATL,
+		_(wfs_err_msg),
+		e,
+		_(msg),
+		(extra != NULL)? extra : "",
+		(wfs_fs.fsname != NULL)? wfs_fs.fsname : "");
+#else
+	wfs_show_fs_error_gen (msg, extra, wfs_fs);
+#endif
+	fflush (stderr);
+}
+

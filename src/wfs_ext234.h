@@ -28,32 +28,51 @@
 
 # include "wipefreespace.h"
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_e234_wipe_unrm WFS_PARAMS(( const wfs_fsid_t FS, const wfs_fselem_t node, wfs_error_type_t * const error ));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_e234_wipe_unrm WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_e234_wipe_fs WFS_PARAMS(( const wfs_fsid_t FS, wfs_error_type_t * const error ));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_e234_wipe_fs WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_e234_wipe_part WFS_PARAMS(( const wfs_fsid_t FS,	wfs_error_type_t * const error ));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_e234_wipe_part WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern int WFS_ATTR ((warn_unused_result))
-	wfs_e234_check_err WFS_PARAMS(( const wfs_fsid_t FS ));
+extern int GCC_WARN_UNUSED_RESULT
+	wfs_e234_check_err WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern int WFS_ATTR ((warn_unused_result))
-	wfs_e234_is_dirty WFS_PARAMS(( const wfs_fsid_t FS ));
+extern int GCC_WARN_UNUSED_RESULT
+	wfs_e234_is_dirty WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_e234_chk_mount WFS_PARAMS(( const char * const dev_name, wfs_error_type_t * const error ));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_e234_chk_mount WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_e234_open_fs WFS_PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
-		wfs_curr_fs_t * const whichfs, const wfs_fsdata_t * const data, wfs_error_type_t * const error ));
-
-extern wfs_errcode_t WFS_ATTR ((nonnull))
-	wfs_e234_close_fs	WFS_PARAMS(( const wfs_fsid_t FS, wfs_error_type_t *const error ));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_e234_open_fs WFS_PARAMS ((wfs_fsid_t* const wfs_fs,
+		const wfs_fsdata_t * const data));
 
 extern wfs_errcode_t WFS_ATTR ((nonnull))
-	wfs_e234_flush_fs	WFS_PARAMS(( const wfs_fsid_t FS, wfs_error_type_t *const error ));
+	wfs_e234_close_fs WFS_PARAMS ((const wfs_fsid_t wfs_fs));
+
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	wfs_e234_flush_fs WFS_PARAMS ((const wfs_fsid_t wfs_fs));
+
+extern void
+	wfs_e234_print_version WFS_PARAMS ((void));
+
+extern size_t GCC_WARN_UNUSED_RESULT
+	wfs_e234_get_err_size WFS_PARAMS ((void));
+
+extern void
+	wfs_e234_init WFS_PARAMS ((void));
+
+extern void
+	wfs_e234_deinit WFS_PARAMS ((void));
+
+extern void WFS_ATTR ((nonnull))
+	wfs_e234_show_error WFS_PARAMS ((
+		const char * const	msg,
+		const char * const	extra,
+		const wfs_fsid_t	wfs_fs));
+
 
 #endif	/* WFS_HEADER_EXT234 */

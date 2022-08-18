@@ -28,14 +28,17 @@
 
 # include "wipefreespace.h"
 
-extern int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
-	wfs_clear_cap WFS_PARAMS((wfs_error_type_t * const error));
-extern int WFS_ATTR ((warn_unused_result))
-	wfs_check_suid WFS_PARAMS((void));
+extern int GCC_WARN_UNUSED_RESULT
+	wfs_clear_cap WFS_PARAMS ((void));
+
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
+	wfs_check_suid WFS_PARAMS ((void));
+
 extern void WFS_ATTR ((nonnull))
-	wfs_check_stds WFS_PARAMS((int *stdout_open, int *stderr_open));
+	wfs_check_stds WFS_PARAMS ((int *stdout_open, int *stderr_open));
+
 extern void
-	wfs_clear_env WFS_PARAMS((void));
+	wfs_clear_env WFS_PARAMS ((void));
 
 #endif /* WFS_HEADER_SEC */
 

@@ -45,10 +45,13 @@ struct child_id
 	} chld_id;
 	char * program_name;
 	char ** args;
+	char * const * child_env;
 	int stdin_fd;
 	int stdout_fd;
 	int stderr_fd;
 };
+
+typedef struct child_id child_id_t;
 
 /* This structure helps to run ioctl()s once per device */
 struct fs_ioctl
@@ -57,35 +60,48 @@ struct fs_ioctl
 				   on begin, decremented on fs close. When reaches zero,
 				   caching is brought back to its previous state. */
 	int was_enabled;
-	char fs_name[WFS_MNTBUFLEN];	/* space for "/dev/hda" */
+	char fs_name[WFS_MNTBUFLEN];	/* space for "/dev/hda" etc. */
 };
 
-typedef struct fs_ioctl fs_ioctl;
+typedef struct fs_ioctl fs_ioctl_t;
 
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_check_mounted WFS_PARAMS ((const char * const dev_name, wfs_error_type_t * const error));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_check_mounted WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_get_mnt_point WFS_PARAMS ((const char * const dev_name, wfs_error_type_t * const error,
-				char * const mnt_point, const size_t mnt_point_len, int * const is_rw));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_get_mnt_point WFS_PARAMS ((const char * const dev_name,
+		wfs_errcode_t * const error,
+		char * const mnt_point,
+		const size_t mnt_point_len,
+		int * const is_rw));
 
-extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_create_child WFS_PARAMS ((struct child_id * const id));
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_create_child WFS_PARAMS ((child_id_t * const id));
 
 extern void WFS_ATTR ((nonnull))
-	wfs_wait_for_child WFS_PARAMS ((const struct child_id * const id));
+	wfs_wait_for_child WFS_PARAMS ((const child_id_t * const id));
 
 extern int WFS_ATTR ((nonnull))
-	wfs_has_child_exited WFS_PARAMS ((const struct child_id * const id));
+	wfs_has_child_exited WFS_PARAMS ((const child_id_t * const id));
 
-extern const char * convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
+extern const char *
+	convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
 
-extern void WFS_ATTR ((nonnull)) enable_drive_cache WFS_PARAMS ((const char dev_name[],
-	const int total_fs, fs_ioctl ioctls[]));
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	enable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
+		const int total_fs, fs_ioctl_t ioctls[]));
 
-extern void WFS_ATTR ((nonnull)) disable_drive_cache WFS_PARAMS ((const char dev_name[],
-	const int total_fs, fs_ioctl ioctls[]));
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	disable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
+		const int total_fs, fs_ioctl_t ioctls[]));
+
+extern void WFS_ATTR ((nonnull))
+	wfs_show_fs_error_gen WFS_PARAMS ((
+		const char * const	msg,
+		const char * const	extra,
+		const wfs_fsid_t	wfs_fs));
+
 
 #endif	/* WFS_UTIL_H */
 

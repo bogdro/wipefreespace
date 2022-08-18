@@ -28,11 +28,16 @@
 
 # include "wipefreespace.h"
 
-extern unsigned long int init_wiping WFS_PARAMS ((unsigned long int number_of_passes,
-	const int verbose, const int allzero, const char * const method));
+extern unsigned long int init_wiping WFS_PARAMS ((
+	unsigned long int number_of_passes,
+	const int verbose, const int allzero,
+	const char * const method));
 
 extern void WFS_ATTR ((nonnull))
-	fill_buffer WFS_PARAMS ((unsigned long int pat_no, unsigned char * const buffer,
-		const size_t buflen, int * const selected, const wfs_fsid_t FS ));
+	fill_buffer WFS_PARAMS ((unsigned long int pat_no,
+		unsigned char * const buffer,
+		const size_t buflen,
+		int * const selected,
+		const wfs_fsid_t wfs_fs));
 
 #endif /* WFS_WIPING_H */

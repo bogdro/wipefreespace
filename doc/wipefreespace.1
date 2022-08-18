@@ -165,10 +165,11 @@ Block reading failed.
 A signal was caught and the program was forced to exit.
 
 .SH NOTES
-The error code is reset after each file system. If the last file system was wiped successfully,
-but the previous weren't, their errors are currently lost.
+Only the last error is returned. If the last file system was wiped successfully,
+but the previous weren't, the last error will be returned, but not the previous ones.
 
-It is best to use this program on un-mounted file systems, which makes sure the journal is committed.
+It is best to use this program on un-mounted file systems, which makes sure
+the journal is committed and there aren't any concurrent modifications.
 
 .SH AUTHOR
 Bogdan 'bogdro' Drozdowski,

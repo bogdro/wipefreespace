@@ -4,11 +4,18 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* most gcc compilers know a function __attribute__((__warn_unused_result__))
+   */
+#undef GCC_WARN_UNUSED_RESULT
+
 /* Define to 1 if you have the `access' function. */
 #undef HAVE_ACCESS
 
 /* Define to 1 if you have the <asm/types.h> header file. */
 #undef HAVE_ASM_TYPES_H
+
+/* Define to 1 if you have the `basename' function. */
+#undef HAVE_BASENAME
 
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
@@ -59,6 +66,9 @@
 
 /* Whether you have the execvp function. */
 #undef HAVE_EXECVP
+
+/* Whether you have the execvpe function. */
+#undef HAVE_EXECVPE
 
 /* Whether you have the exit function. */
 #undef HAVE_EXIT
@@ -210,9 +220,6 @@
 /* Define to 1 if you have the <linux/hdreg.h> header file. */
 #undef HAVE_LINUX_HDREG_H
 
-/* Whether you have the list.h header. */
-#undef HAVE_LIST_H
-
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
@@ -243,23 +250,11 @@
 /* Define to 1 if you have the <mntent.h> header file. */
 #undef HAVE_MNTENT_H
 
-/* Whether you have the ntfs-3g/list.h header. */
-#undef HAVE_NTFS_3G_LIST_H
-
-/* Whether you have the ntfs-3g/ntfs_list.h header. */
-#undef HAVE_NTFS_3G_NTFS_LIST_H
-
 /* Whether you have the ntfs-3g/ntfs_volume.h header. */
 #undef HAVE_NTFS_3G_NTFS_VOLUME_H
 
 /* Whether you have the ntfs-3g/volume.h header. */
 #undef HAVE_NTFS_3G_VOLUME_H
-
-/* Whether you have the ntfs/list.h header. */
-#undef HAVE_NTFS_LIST_H
-
-/* Whether you have the ntfs/ntfs_list.h header. */
-#undef HAVE_NTFS_NTFS_LIST_H
 
 /* Whether you have the ntfs/ntfs_volume.h header. */
 #undef HAVE_NTFS_NTFS_VOLUME_H
@@ -282,6 +277,9 @@
 /* Whether you have the pipe function. */
 #undef HAVE_PIPE
 
+/* Whether you have the putenv function. */
+#undef HAVE_PUTENV
+
 /* Define to 1 if you have the `random' function. */
 #undef HAVE_RANDOM
 
@@ -299,6 +297,9 @@
 
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
+
+/* Whether you have the setenv function. */
+#undef HAVE_SETENV
 
 /* Define to 1 if you have the `setlocale' function. */
 #undef HAVE_SETLOCALE

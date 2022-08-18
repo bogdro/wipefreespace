@@ -40,8 +40,16 @@
 #  define WFS_ATTR(x)
 # endif
 
-# undef		WFS_WFS_ERR_MSG_FORMATL
-# define 	WFS_WFS_ERR_MSG_FORMATL		"(%s %ld) %s '%s', FS='%s'"
+# ifndef GCC_WARN_UNUSED_RESULT
+/*
+ if the compiler doesn't support this, define this to an empty value,
+ so that everything compiles (just in case)
+ */
+#  define GCC_WARN_UNUSED_RESULT /*WFS_ATTR((warn_unused_result))*/
+# endif
+
+# undef		WFS_ERR_MSG_FORMATL
+# define 	WFS_ERR_MSG_FORMATL		"(%s %ld) %s '%s', FS='%s'"
 # undef		WFS_ERR_MSG_FORMAT
 # define 	WFS_ERR_MSG_FORMAT		"(%s %d) %s '%s', FS='%s'"
 
@@ -52,7 +60,7 @@
 
 # define	WFS_MNTBUFLEN 4096
 
-enum wfs_errcode_t
+enum wfs_errcode
 {
 	WFS_SUCCESS		= 0,
 	WFS_NOTHING		= 1,
@@ -81,27 +89,28 @@ enum wfs_errcode_t
 	WFS_EXECERR		= -23,
 	WFS_SEEKERR		= -24,
 	WFS_BLKRD		= -25,
+	WFS_IOCTL		= -26,
 	WFS_SIGNAL		= -100
 };
 
-typedef enum wfs_errcode_t wfs_errcode_t;
+typedef enum wfs_errcode wfs_errcode_t;
 
-enum wfs_curr_fs_t
+enum wfs_curr_fs
 {
-	CURR_NONE	= 0,
-	CURR_EXT234FS,
-	CURR_NTFS,
-	CURR_XFS,
-	CURR_REISERFS,
-	CURR_REISER4,
-	CURR_FATFS,
-	CURR_MINIXFS,
-	CURR_JFS,
-	CURR_HFSP,
-	CURR_OCFS
+	WFS_CURR_FS_NONE	= 0,
+	WFS_CURR_FS_EXT234FS,
+	WFS_CURR_FS_NTFS,
+	WFS_CURR_FS_XFS,
+	WFS_CURR_FS_REISERFS,
+	WFS_CURR_FS_REISER4,
+	WFS_CURR_FS_FATFS,
+	WFS_CURR_FS_MINIXFS,
+	WFS_CURR_FS_JFS,
+	WFS_CURR_FS_HFSP,
+	WFS_CURR_FS_OCFS
 };
 
-typedef enum wfs_curr_fs_t wfs_curr_fs_t;
+typedef enum wfs_curr_fs wfs_curr_fs_t;
 
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -128,87 +137,31 @@ typedef long int off64_t;
 
 /* ================ Beginning of filesystem includes ================ */
 
-/* fix e2fsprogs inline functions - some linkers saw double definitions and
-   failed with an error message */
-# if (defined HAVE_LIBEXT2FS) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
-#  ifndef _EXT2_USE_C_VERSIONS_
-#   define _EXT2_USE_C_VERSIONS_	1
-#  endif
-#  ifndef NO_INLINE_FUNCS
-#   define NO_INLINE_FUNCS	1
-#  endif
-# endif
-
 # if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS) && (defined HAVE_DEV_T)
-#  include <ext2fs/ext2fs.h>
 #  define	WFS_EXT234	1
 # elif (defined HAVE_EXT2FS_H) && (defined HAVE_LIBEXT2FS) && (defined HAVE_DEV_T)
-#  include <ext2fs.h>
 #  define	WFS_EXT234	1
 # else
 #  undef	WFS_EXT234
 # endif
 
-/* fix symbol collision with ReiserFSv3 header files: */
-# define ROUND_UP NTFS_ROUND_UP
-
 # if ((defined HAVE_NTFS_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_NTFS_VOLUME_H)) \
 	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
-#  ifdef HAVE_NTFS_NTFS_VOLUME_H
-#   include <ntfs/ntfs_volume.h>
-#   include <ntfs/ntfs_version.h>
-#   define	WFS_NTFS	1
-#  else
-#   include <ntfs-3g/ntfs_volume.h>
-/*#   include <ntfs-3g/ntfs_version.h> missing */
-#   define	WFS_NTFS	1
-#   if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
-/* fix compatibility with MinixFS: */
-#    define u8 u8_minix
-#    define u16 u16_minix
-#    define u32 u32_minix
-#   endif
-#  endif
+#  define	WFS_NTFS	1
 # else
 #  if ((defined HAVE_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_VOLUME_H)) \
 	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
-#   ifdef HAVE_NTFS_VOLUME_H
-#    include <ntfs/volume.h>
-#    include <ntfs/version.h>
-#    define	WFS_NTFS	1
-#   else
-#    include <ntfs-3g/volume.h>
-/*#    include <ntfs-3g/version.h> missing */
-#    define	WFS_NTFS	1
-#    if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
-/* fix compatibility with MinixFS: */
-#     define u8 u8_minix
-#     define u16 u16_minix
-#     define u32 u32_minix
-#    endif
-#   endif
+#   define	WFS_NTFS	1
 #  else
-#   if (defined HAVE_VOLUME_H) && ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
-#    include <volume.h>
-#    ifndef HAVE_LIBNTFS_3G
-#     include <version.h>
-#    else
-#     if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
-/* fix compatibility with MinixFS: */
-#      define u8 u8_minix
-#      define u16 u16_minix
-#      define u32 u32_minix
-#     endif
-#    endif
-#    define	WFS_NTFS	1
-#   else
-#    undef	WFS_NTFS
-#   endif
+#   undef	WFS_NTFS
 #  endif
 # endif
 
 # if (defined HAVE_LONG_LONG) && (defined HAVE_UNISTD_H)	\
-	&& (defined HAVE_FORK) && (defined HAVE_EXECVP)		\
+	&& (defined HAVE_FORK) && (				\
+		(defined HAVE_EXECVP)				\
+		|| (defined HAVE_EXECVPE)			\
+	)							\
 	&& (defined HAVE_DUP2) && (defined HAVE_PIPE)		\
 	&& (defined HAVE_CLOSE) && (defined HAVE_FCNTL_H)	\
 	&& (							\
@@ -233,21 +186,6 @@ typedef unsigned int __u32;
 typedef unsigned short int __u16;
 #  endif
 
-/* fix symbol collision with NTFS header files: */
-/*# define ROUND_UP REISER_ROUND_UP*/
-# undef ROUND_UP
-
-/* Avoid some Reiser3 header files' name conflicts:
- reiserfs_lib.h uses the same name for a function and a variable,
- so let's redefine one to avoid name conflicts */
-#  define div reiser_div
-#  define index reiser_index
-#  define key_format(x) key_format0 (x)
-#  include <stdio.h>	/* FILE for reiserfs_fs.h */
-#  include <reiserfs_lib.h>
-#  undef div
-#  undef index
-#  undef key_format
 #  define	WFS_REISER	1
 # else
 #  undef	WFS_REISER
@@ -255,22 +193,6 @@ typedef unsigned short int __u16;
 
 # if (defined HAVE_REISER4_LIBREISER4_H) && (defined HAVE_LIBREISER4)	\
 	&& (defined HAVE_LIBREISER4MISC) && (defined HAVE_LIBAAL)
-#  undef get_unaligned
-#  undef put_unaligned
-/* Avoid some Reiser4 header files' name conflicts: */
-#  define div reiser4_div
-#  define index reiser4_index
-
-/* fix conflict between libext2fs and reiser4. This gets #undef'd in the source files. */
-#  define blk_t reiser4_blk_t
-/* we're not using these headers, so let's pretend they're already included,
-   to avoid warnings caused by them. */
-#  define AAL_EXCEPTION_H 1
-#  define AAL_DEBUG_H 1
-#  define AAL_BITOPS_H 1
-#  define REISER4_FAKE_H 1
-
-#  include <reiser4/libreiser4.h>
 #  define	WFS_REISER4	1
 # else
 #  undef	WFS_REISER4
@@ -280,73 +202,21 @@ typedef unsigned short int __u16;
 # undef index
 
 # if (defined HAVE_TFFS_H) && (defined HAVE_LIBTFFS)
-#  include <tffs.h>
 #  define	WFS_FATFS	1
 # else
 #  undef	WFS_FATFS
 # endif
 
 # if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
-#  include <stdio.h>	/* FILE for minix_fs.h */
-#  undef BLOCK_SIZE	/* fix conflict with NTFS. Unused in NTFS anyway. */
-#  include <minix_fs.h>
 #  define	WFS_MINIXFS	1
 # else
 #  undef	WFS_MINIXFS
 # endif
 
 # if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
-#  include <stdio.h>	/* FILE */
-#  ifndef HAVE_SYS_BYTEORDER_H
-#   define WFS_ADDED_HAVE_SYS_BYTEORDER_H
-#   define HAVE_SYS_BYTEORDER_H 0
-#  endif
-#  ifndef HAVE_MACHINE_ENDIAN_H
-#   define WFS_ADDED_HAVE_MACHINE_ENDIAN_H
-#   define HAVE_MACHINE_ENDIAN_H 0
-#  endif
-#  ifndef HAVE_ENDIAN_H
-#   define WFS_ADDED_HAVE_ENDIAN_H
-#   define HAVE_ENDIAN_H 0
-#  endif
-#  include <jfs/jfs_types.h>
-#  include <jfs/jfs_superblock.h>
-#  ifdef WFS_ADDED_HAVE_SYS_BYTEORDER_H
-#   undef HAVE_SYS_BYTEORDER_H
-#  endif
-#  ifdef WFS_ADDED_HAVE_MACHINE_ENDIAN_H
-#   undef HAVE_MACHINE_ENDIAN_H
-#  endif
-#  ifdef WFS_ADDED_HAVE_ENDIAN_H
-#   undef HAVE_ENDIAN_H
-#  endif
 #  define	WFS_JFS		1
 # else
 #  if (defined HAVE_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
-#   include <stdio.h>	/* FILE  */
-#   ifndef HAVE_SYS_BYTEORDER_H
-#    define WFS_ADDED_
-#    define HAVE_SYS_BYTEORDER_H 0
-#   endif
-#   ifndef HAVE_MACHINE_ENDIAN_H
-#    define WFS_ADDED_
-#    define HAVE_MACHINE_ENDIAN_H 0
-#   endif
-#   ifndef HAVE_ENDIAN_H
-#    define WFS_ADDED_HAVE_ENDIAN_H
-#    define HAVE_ENDIAN_H 0
-#   endif
-#   include <jfs_types.h>
-#   include <jfs_superblock.h>
-#   ifdef WFS_ADDED_HAVE_SYS_BYTEORDER_H
-#    undef HAVE_SYS_BYTEORDER_H
-#   endif
-#   ifdef WFS_ADDED_HAVE_MACHINE_ENDIAN_H
-#    undef HAVE_MACHINE_ENDIAN_H
-#   endif
-#   ifdef WFS_ADDED_HAVE_ENDIAN_H
-#    undef HAVE_ENDIAN_H
-#   endif
 #   define	WFS_JFS		1
 #  else
 #   undef	WFS_JFS
@@ -354,13 +224,9 @@ typedef unsigned short int __u16;
 # endif
 
 # if (defined HAVE_HFSPLUS_LIBHFSP_H) && (defined HAVE_LIBHFSP)
-#  include <hfsplus/libhfsp.h>
-#  include <hfsplus/record.h>
 #  define	WFS_HFSP	1
 # else
 #  if (defined HAVE_LIBHFSP_H) && (defined HAVE_LIBHFSP)
-#   include <libhfsp.h>
-#   include <record.h>
 #   define	WFS_HFSP	1
 #  else
 #   undef	WFS_HFSP
@@ -368,53 +234,9 @@ typedef unsigned short int __u16;
 # endif
 
 # if (defined HAVE_OCFS2_OCFS2_H) && (defined HAVE_LIBOCFS2)
-/* fix incompatibility with NTFS: */
-#  define list_head ocfs_list_head
-#  define __list_add __ocfs_list_add
-#  define list_add ocfs_list_add
-#  define list_add_tail ocfs_list_add_tail
-#  define __list_del __ocfs_list_del
-#  define list_del ocfs_list_del
-#  define list_empty ocfs_list_empty
-#  define list_splice ocfs_list_splice
-/*
-#  define LIST_HEAD_INIT OCFS_LIST_HEAD_INIT
-#  define LIST_HEAD OCFS_LIST_HEAD
-#  define INIT_LIST_HEAD OCFS_INIT_LIST_HEAD
-#  define list_entry ocfs_list_entry
-#  define list_for_each ocfs_list_for_each
-#  define list_for_each_safe ocfs_list_for_each_safe
-*/
-/* fix incomaptibility with ext2_fs.h: */
-#  undef i_reserved2
-/* fix incomaptibility with ext2_io.h: */
-#  define io_channel ocfs_io_channel
-#  include <ocfs2/ocfs2.h>
 #  define	WFS_OCFS	1
 # else
 #  if (defined HAVE_OCFS2_H) && (defined HAVE_LIBOCFS2)
-/* fix incompatibility with NTFS: */
-#   define list_head ocfs_list_head
-#   define __list_add __ocfs_list_add
-#   define list_add ocfs_list_add
-#   define list_add_tail ocfs_list_add_tail
-#   define __list_del __ocfs_list_del
-#   define list_del ocfs_list_del
-#   define list_empty ocfs_list_empty
-#   define list_splice ocfs_list_splice
-/*
-#   define LIST_HEAD_INIT OCFS_LIST_HEAD_INIT
-#   define LIST_HEAD OCFS_LIST_HEAD
-#   define INIT_LIST_HEAD OCFS_INIT_LIST_HEAD
-#   define list_entry ocfs_list_entry
-#   define list_for_each ocfs_list_for_each
-#   define list_for_each_safe ocfs_list_for_each_safe
-*/
-/* fix incomaptibility with ext2_fs.h: */
-#   undef i_reserved2
-/* fix incomaptibility with ext2_io.h: */
-#   define io_channel ocfs_io_channel
-#   include <ocfs2.h>
 #   define	WFS_OCFS	1
 #  else
 #   undef	WFS_OCFS
@@ -453,84 +275,28 @@ typedef unsigned short int __u16;
 typedef int sig_atomic_t;
 # endif
 
-struct wfs_error_type_t
+struct wfs_fsid
 {
-	wfs_curr_fs_t whichfs;
-
-	union wfs_errcode_union
-	{
-		/* general error, if more specific type unavailable */
-		wfs_errcode_t	gerror;
-# if (defined WFS_EXT234) || (defined WFS_OCFS)
-		errcode_t	e2error;
-# endif
-# ifdef		WFS_REISER4
-		errno_t		r4error;
-# endif
-	/* TODO: to be expanded, when other FS come into the program */
-	} errcode;
-};
-
-typedef struct wfs_error_type_t wfs_error_type_t;
-
-struct wfs_fsid_t
-{
-	const char * fsname;	/* filesystem name, for informational purposes */
+		/* filesystem name, for informational purposes: */
+	const char * fsname;
+		/* the number of wiping passes: */
 	unsigned long int npasses;
-	int zero_pass;	/* whether to perform an additional wiping with zeros on this filesystem */
-
-# ifdef 	WFS_EXT234
-	ext2_filsys e2fs;
-# endif
-# ifdef		WFS_NTFS
-	ntfs_volume * ntfs;
-# endif
-# ifdef		WFS_XFS
-	struct wfs_xfs
-	{
-		/* size of 1 block is from sector size to 65536. Max is system page size */
-		size_t wfs_xfs_blocksize;
-		unsigned long long int wfs_xfs_agblocks;
-		char * dev_name;
-		char * mnt_point;
-		unsigned long long int inodes_used;
-		unsigned long long int free_blocks;
-	} xxfs;
-# endif
-# ifdef		WFS_REISER
-	reiserfs_filsys_t * rfs;
-# endif
-# ifdef		WFS_REISER4
-	reiser4_fs_t * r4;
-# endif
-# ifdef		WFS_FATFS
-	tffs_handle_t fat;
-# endif
-# ifdef		WFS_MINIXFS
-	struct minix_fs_dat * minix;
-# endif
-# ifdef		WFS_JFS
-	struct wfs_jfs
-	{
-		FILE * fs;
-		struct superblock super;
-	} jfs;
-# endif
-# ifdef		WFS_HFSP
-	struct volume	hfsp_volume;
-# endif
-# ifdef		WFS_OCFS
-	ocfs2_filesys * ocfs2;
-# endif
-
-	/* TODO: to be expanded, when other FS come into the program */
+		/* whether to perform an additional wiping with
+		zeros on this filesystem: */
+	int zero_pass;
+		/* the filesystem backend: */
+	void * fs_backend;
+		/* holder for filesystem errors: */
+	void * fs_error;
+		/* the type of the current filesystem: */
+	wfs_curr_fs_t whichfs;
 };
 
-typedef struct wfs_fsid_t wfs_fsid_t;
+typedef struct wfs_fsid wfs_fsid_t;
 
 /* Additional data that may be useful when wiping a filesystem, for functions that
    have a strict interface that disallows passing these elements separately. */
-struct wfs_wipedata_t
+struct wfs_wipedata
 {
 	unsigned long int	passno;		/* current pass' number */
 	wfs_fsid_t		filesys;	/* filesystem being wiped */
@@ -540,57 +306,10 @@ struct wfs_wipedata_t
 	int			isjournal;	/* is the journal being wiped currently */
 };
 
-typedef struct wfs_wipedata_t wfs_wipedata_t;
-
-union wfs_fselem_t
-{
-# ifdef 	WFS_EXT234
-	ext2_ino_t	e2elem;
-# endif
-# ifdef		WFS_NTFS
-	ntfs_inode 	* ntfselem;
-# endif
-# ifdef		WFS_XFS
-	/* Nothing. XFS has no undelete capability. */
-# endif
-# ifdef		WFS_REISER
-	struct key	rfs_elem;
-# endif
-# ifdef		WFS_REISER4
-	reiser4_node_t	* r4node;
-# endif
-# ifdef		WFS_FATFS
-	tdir_handle_t	fatdir;
-# endif
-# ifdef		WFS_MINIXFS
-	int 		minix_ino;
-# endif
-# ifdef		WFS_JFS
-	/* Nothing. Undelete on JFS not supported. */
-# endif
-# ifdef		WFS_HFSP
-	record		hfsp_dirent;
-# endif
-# ifdef		WFS_OCFS
-	struct ocfs2_dir_entry * ocfs2dir;
-# endif
-
-	/* TODO: to be expanded, when other FS come into the program */
-
-
-
-
-# if (!defined WFS_EXT234) && (!defined WFS_NTFS) && (!defined WFS_REISER) \
-	&& (!defined WFS_REISER4) && (!defined WFS_FATFS) && (!defined WFS_MINIXFS) \
-	&& (!defined WFS_HFSP) && (!defined WFS_OCFS)
-	char dummy;	/* Make this union non-empty */
-# endif
-};
-
-typedef union wfs_fselem_t wfs_fselem_t;
+typedef struct wfs_wipedata wfs_wipedata_t;
 
 /* Additional data that may be useful when opening a filesystem */
-union wfs_fsdata_t
+union wfs_fsdata
 {
 	struct wfs_e2data
 	{
@@ -598,11 +317,11 @@ union wfs_fsdata_t
 		unsigned int blocksize;
 	} e2fs;
 
-	/* TODO: to be expanded, when other FS come into the program */
+	/* TODO: to be expanded, when other filesystems come into the program */
 
 };
 
-typedef union wfs_fsdata_t wfs_fsdata_t;
+typedef union wfs_fsdata wfs_fsdata_t;
 
 /* ========================= Common to all ================================ */
 /* autoconf: WFS_PARAMS is a macro used to wrap function prototypes, so that
@@ -619,44 +338,65 @@ typedef union wfs_fsdata_t wfs_fsdata_t;
 #  undef WFS_ANSIC
 # endif
 
-extern void WFS_ATTR ((nonnull))
-	show_error WFS_PARAMS((const wfs_error_type_t err, const char * const msg,
-		const char * const extra, const wfs_fsid_t FS ));
+extern int GCC_WARN_UNUSED_RESULT
+	wfs_is_stdout_open WFS_PARAMS ((void));
+
+extern int GCC_WARN_UNUSED_RESULT
+	wfs_is_stderr_open WFS_PARAMS ((void));
+
+extern const char * GCC_WARN_UNUSED_RESULT
+	wfs_get_program_name WFS_PARAMS ((void));
 
 extern void WFS_ATTR ((nonnull))
-	show_msg WFS_PARAMS((const int type, const char * const msg,
-		const char * const extra, const wfs_fsid_t FS ));
+	wfs_show_msg WFS_PARAMS ((const int type, const char * const msg,
+		const char * const extra, const wfs_fsid_t wfs_fs));
 
-# define WFS_PROGRESS_WFS	0
-# define WFS_PROGRESS_PART	1
-# define WFS_PROGRESS_UNRM	2
+enum wfs_progress_type
+{
+	WFS_PROGRESS_WFS,
+	WFS_PROGRESS_PART,
+	WFS_PROGRESS_UNRM
+};
+
+typedef enum wfs_progress_type wfs_progress_type_t;
+
 extern WFS_ATTR ((nonnull)) void
-	show_progress WFS_PARAMS((const unsigned int type, const unsigned int percent,
+	wfs_show_progress WFS_PARAMS ((const wfs_progress_type_t type,
+		const unsigned int percent,
 		unsigned int * const prev_percent));
 
-extern const char * const err_msg;
-extern const char * const err_msg_open;
-extern const char * const err_msg_flush;
-extern const char * const err_msg_close;
-extern const char * const err_msg_malloc;
-extern const char * const err_msg_checkmt;
-extern const char * const err_msg_mtrw;
-extern const char * const err_msg_rdblbm;
-extern const char * const err_msg_wrtblk;
-extern const char * const err_msg_rdblk;
-extern const char * const err_msg_rdino;
-extern const char * const err_msg_signal;
-extern const char * const err_msg_fserr;
-extern const char * const err_msg_openscan;
-extern const char * const err_msg_blkiter;
-extern const char * const err_msg_diriter;
-extern const char * const err_msg_nowork;
-extern const char * const err_msg_suid;
-extern const char * const err_msg_fork;
-extern const char * const err_msg_nocache;
-extern const char * const err_msg_cacheon;
+extern const char * const wfs_err_msg;
+extern const char * const wfs_err_msg_open;
+extern const char * const wfs_err_msg_flush;
+extern const char * const wfs_err_msg_close;
+extern const char * const wfs_err_msg_malloc;
+extern const char * const wfs_err_msg_checkmt;
+extern const char * const wfs_err_msg_mtrw;
+extern const char * const wfs_err_msg_rdblbm;
+extern const char * const wfs_err_msg_wrtblk;
+extern const char * const wfs_err_msg_rdblk;
+extern const char * const wfs_err_msg_rdino;
+extern const char * const wfs_err_msg_signal;
+extern const char * const wfs_err_msg_fserr;
+extern const char * const wfs_err_msg_openscan;
+extern const char * const wfs_err_msg_blkiter;
+extern const char * const wfs_err_msg_diriter;
+extern const char * const wfs_err_msg_nowork;
+extern const char * const wfs_err_msg_suid;
+extern const char * const wfs_err_msg_capset;
+extern const char * const wfs_err_msg_fork;
+extern const char * const wfs_err_msg_nocache;
+extern const char * const wfs_err_msg_cacheon;
+extern const char * const wfs_err_msg_attopen;
+extern const char * const wfs_err_msg_runlist;
+extern const char * const wfs_err_msg_srchctx;
+extern const char * const wfs_err_msg_param;
+extern const char * const wfs_err_msg_pipe;
+extern const char * const wfs_err_msg_exec;
+extern const char * const wfs_err_msg_seek;
+extern const char * const wfs_err_msg_ioctl;
 
-extern const char * const sig_unk;
+extern const char * const wfs_sig_unk;
 
 
 #endif	/* WFS_HEADER */

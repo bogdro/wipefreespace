@@ -112,5 +112,7 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 %doc AUTHORS
 %doc ChangeLog
 %{wfs_prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
+%{wfs_prefix}/share/locale/en@boldquot/LC_MESSAGES/wipefreespace.mo
+%{wfs_prefix}/share/locale/en@quot/LC_MESSAGES/wipefreespace.mo
 
 %changelog

@@ -30,6 +30,10 @@
 # define _GNU_SOURCE	1
 #endif
 
+#if (defined HAVE_PUTENV) || (defined HAVE_SETENV)
+# define _XOPEN_SOURCE 600
+#endif
+
 #include <stdio.h>	/* FILE */
 
 #ifdef HAVE_STRING_H
@@ -145,9 +149,13 @@
 # endif
 #endif
 
-/* redefine the inline sig function from hfsp, each time with a different name */
-extern unsigned long int wfs_util_sig(char c0, char c1, char c2, char c3);
-#define sig(a,b,c,d) wfs_util_sig(a,b,c,d)
+#ifdef HAVE_LIBINTL_H
+# include <libintl.h>	/* translation stuff */
+#endif
+
+#ifdef HAVE_LOCALE_H
+# include <locale.h>
+#endif
 
 #include "wipefreespace.h"
 #include "wfs_util.h"
@@ -183,7 +191,7 @@ extern unsigned long int wfs_util_sig(char c0, char c1, char c2, char c3);
  *	is mounted in read+write mode (=1 if yes).
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
@@ -194,7 +202,7 @@ wfs_get_mnt_point (
 	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
 		WFS_ATTR ((unused))
 # endif
-	, wfs_error_type_t * const error,
+	, wfs_errcode_t * const error,
 	char * const mnt_point, const size_t mnt_point_len
 # if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
 	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
@@ -214,7 +222,7 @@ wfs_get_mnt_point (
 # endif
 	, is_rw )
 	const char * const dev_name;
-	wfs_error_type_t * const error;
+	wfs_errcode_t * const error;
 	char * const mnt_point;
 	const size_t mnt_point_len;
 	int * const is_rw;
@@ -245,10 +253,13 @@ wfs_get_mnt_point (
 	errno = 0;
 # endif
 	mnt_f = setmntent (_PATH_MOUNTED, "r");
-	if (mnt_f == NULL)
+	if ( mnt_f == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		if ( error != NULL )
+		{
+			*error = (wfs_errcode_t)errno;
+		}
 # endif
 		return WFS_MNTCHK;
 	}
@@ -259,7 +270,7 @@ wfs_get_mnt_point (
 # endif
 # ifndef HAVE_GETMNTENT_R
 		mnt = getmntent (mnt_f);
-		memcpy ( &mnt_copy, mnt, sizeof (struct mntent) );
+		memcpy (&mnt_copy, mnt, sizeof (struct mntent));
 # else
 		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, WFS_MNTBUFLEN);
 # endif
@@ -287,14 +298,20 @@ wfs_get_mnt_point (
 # ifdef HAVE_HASMNTOPT
 	if (hasmntopt (mnt, MNTOPT_RW) != NULL)
 	{
-		error->errcode.gerror = 1L;
+		if ( error != NULL )
+		{
+			*error = (wfs_errcode_t)1L;
+		}
 		*is_rw = 1;
 		strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
 		mnt_point[mnt_point_len] = '\0';
 		return WFS_MNTRW;
 	}
 # else
-	error->errcode.gerror = 1L;
+	if ( error != NULL )
+	{
+		*error = (wfs_errcode_t)1L;
+	}
 	*is_rw = 1;
 	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
 	mnt_point[mnt_point_len] = '\0';
@@ -309,7 +326,10 @@ wfs_get_mnt_point (
 	count = getmntinfo (&filesystems, 0);
 	if ( (count <= 0) || (filesystems == NULL) )
 	{
-		error->errcode.gerror = 1L;
+		if ( error != NULL )
+		{
+			*error = (wfs_errcode_t)1L;
+		}
 		return WFS_MNTCHK;	/* can't check, so don't do anything */
 	}
 	else
@@ -321,7 +341,10 @@ wfs_get_mnt_point (
 			if ( (strcmp (dev_name, filesystems[i].f_mntfromname) == 0)
 				&& ((filesystems[i].f_flags & MNT_RDONLY) != MNT_RDONLY) )
 			{
-				error->errcode.gerror = 1L;
+				if ( error != NULL )
+				{
+					*error = (wfs_errcode_t)1L;
+				}
 				*is_rw = 1;
 				strncpy (mnt_point, filesystems[i].f_mntonname, mnt_point_len);
 				mnt_point[mnt_point_len] = '\0';
@@ -332,12 +355,17 @@ wfs_get_mnt_point (
 		return WFS_SUCCESS;
 	}
 # else /* ! HAVE_SYS_MOUNT_H && ! HAVE_GETMNTINFO */
-	error->errcode.gerror = 1L;
+	if ( error != NULL )
+	{
+		*error = (wfs_errcode_t)1L;
+	}
 	return WFS_MNTCHK;	/* can't check, so don't do anything */
 # endif
 #endif	/* HAVE_MNTENT_H */
 }
 
+
+/* ======================================================================== */
 
 /**
  * Checks if the given filesystem is mounted in read-write mode.
@@ -345,29 +373,24 @@ wfs_get_mnt_point (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_check_mounted (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_error_type_t * const error )
+	const wfs_fsid_t wfs_fs)
 #else
-	dev_name, error )
-	const char * const dev_name;
-	wfs_error_type_t * const error;
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
 #endif
 {
 	wfs_errcode_t res;
 	int is_rw;
 	char buffer[WFS_MNTBUFLEN];
 
-	if ( error == NULL )
-	{
-		return WFS_BADPARAM;
-	}
-
-	res = wfs_get_mnt_point (dev_name, error, buffer, sizeof (buffer), &is_rw);
+	res = wfs_get_mnt_point (wfs_fs.fsname, wfs_fs.fs_error, buffer,
+		sizeof (buffer), &is_rw);
 	buffer[WFS_MNTBUFLEN-1] = '\0';
 	if ( res != WFS_SUCCESS )
 	{
@@ -386,6 +409,8 @@ wfs_check_mounted (
 	}
 }
 
+/* ======================================================================== */
+
 #ifndef WFS_ANSIC
 static void * child_function WFS_PARAMS ((void * p));
 #endif
@@ -397,27 +422,34 @@ static void *
 child_function (
 #ifdef WFS_ANSIC
 	void * p
-# if ! ((defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2))
-		WFS_ATTR ((unused))
-# endif
 	)
 #else
 	p)
-	void * p
-# if ! ((defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2))
-		WFS_ATTR ((unused))
-# endif
-	;
+	void * p;
 #endif
 {
-#if (defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2)
-	const struct child_id * const id = (struct child_id *) p;
+#if (!defined HAVE_EXECVPE) && ((defined HAVE_PUTENV) || (defined HAVE_SETENV))
+	int envi;
+# if (!defined HAVE_PUTENV) && (defined HAVE_SETENV)
+	int equindex;
+	char * equpos;
+# endif
+#endif
+	const child_id_t * const id = (child_id_t *) p;
 	int res;
-	if ( p != NULL )
+#ifdef HAVE_EXECVPE
+	char * null_env[] = { NULL };
+#endif
+
+	if ( id != NULL )
 	{
+#if (defined HAVE_CLOSE)
 		close (STDIN_FILENO);
 		close (STDOUT_FILENO);
 		close (STDERR_FILENO);
+#endif
+
+#if (defined HAVE_DUP2)
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
@@ -469,9 +501,56 @@ child_function (
 				}
 			}
 		}
-		execvp ( id->program_name, id->args );
+#endif /* HAVE_DUP2 */
+
+#ifdef HAVE_EXECVPE
+		if ( id->child_env != NULL )
+		{
+			execvpe (id->program_name, id->args, id->child_env);
+		}
+		else
+		{
+			execvpe (id->program_name, id->args, null_env);
+		}
+#else /* ! HAVE_EXECVPE */
+		/* Debian 5 seems to be missing execvpe(), so we must rewrite
+		the environment by hand and run the program with execvp() */
+# ifdef HAVE_EXECVP
+		if ( id->child_env != NULL )
+		{
+#  ifdef HAVE_PUTENV
+			envi = 0;
+			while (id->child_env[envi] != NULL)
+			{
+				putenv (id->child_env[envi]);
+				envi++;
+			}
+#  else /* ! HAVE_PUTENV */
+#   ifdef HAVE_SETENV
+			envi = 0;
+			while (id->child_env[envi] != NULL)
+			{
+				equpos = strchr (id->child_env[envi], '=');
+				if ( equpos == NULL )
+				{
+					setenv (id->child_env[envi], "", 1);
+				}
+				else
+				{
+					equindex = equpos - id->child_env[envi];
+					id->child_env[envi][equindex] = '\0';
+					setenv (id->child_env[envi],
+						&(id->child_env[envi][equindex+1]), 1);
+				}
+				envi++;
+			}
+#   endif /* HAVE_SETENV */
+#  endif /* HAVE_PUTENV */
+		}
+		execvp (id->program_name, id->args);
+# endif /* HAVE_EXECVP */
+#endif /* HAVE_EXECVPE */
 	}
-#endif /* HAVE_EXECVP */
 	/* if we got here, exec() failed or is unavailable and there's nothing to do. */
 	/* NOTE: exit() is needed or the parent will wait forever */
 	exit (EXIT_FAILURE);
@@ -490,22 +569,24 @@ child_function (
 	*return WFS_EXECERR;*/
 }
 
+/* ======================================================================== */
+
 /**
  * Launches a child process that runs the given program with the given arguments,
  * redirecting its input, output and error output to the given file descriptors.
  * \param id A structure describing the child process to create and containing its data after creation.
  * \return WFS_SUCCESS on success, other values otherwise.
  */
-wfs_errcode_t WFS_ATTR ((warn_unused_result))
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_create_child (
 #ifdef WFS_ANSIC
-	struct child_id * const id)
+	child_id_t * const id)
 #else
 	id )
-	struct child_id * const id;
+	child_id_t * const id;
 #endif
 {
 	if ( id == NULL )
@@ -541,6 +622,8 @@ wfs_create_child (
 #endif
 }
 
+/* ======================================================================== */
+
 /**
  * Waits for the specified child process to finish working.
  * \param id A structure describing the child process to wait for.
@@ -551,10 +634,10 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_wait_for_child (
 #ifdef WFS_ANSIC
-	const struct child_id * const id)
+	const child_id_t * const id)
 #else
 	id )
-	const struct child_id * const id;
+	const child_id_t * const id;
 #endif
 {
 	if ( id == NULL )
@@ -592,6 +675,8 @@ wfs_wait_for_child (
 	}
 }
 
+/* ======================================================================== */
+
 /**
  * Tells if the specified child process finished working.
  * \param id A structure describing the child process to check.
@@ -603,10 +688,10 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_has_child_exited (
 #ifdef WFS_ANSIC
-	const struct child_id * const id)
+	const child_id_t * const id)
 #else
 	id )
-	const struct child_id * const id;
+	const child_id_t * const id;
 #endif
 {
 #ifdef HAVE_WAITPID
@@ -654,6 +739,8 @@ wfs_has_child_exited (
 	return 0;
 }
 
+/* ======================================================================== */
+
 #ifdef malloc
 
 # define rpl_malloc 1
@@ -681,6 +768,8 @@ rpl_malloc (
 # undef rpl_malloc
 #endif /* malloc */
 
+/* ======================================================================== */
+
 /**
  * Converts the filesystem type (enum) to filesystem name.
  * \param fs The filesystem to convert.
@@ -695,64 +784,68 @@ convert_fs_to_name (
 	const wfs_curr_fs_t fs;
 #endif
 {
-	if ( fs == CURR_NONE )
+	if ( fs == WFS_CURR_FS_NONE )
 	{
 		return "<none>";
 	}
-	else if ( fs == CURR_EXT234FS )
+	else if ( fs == WFS_CURR_FS_EXT234FS )
 	{
 		return "ext2/3/4";
 	}
-	else if ( fs == CURR_NTFS )
+	else if ( fs == WFS_CURR_FS_NTFS )
 	{
 		return "NTFS";
 	}
-	else if ( fs == CURR_XFS )
+	else if ( fs == WFS_CURR_FS_XFS )
 	{
 		return "XFS";
 	}
-	else if ( fs == CURR_REISERFS )
+	else if ( fs == WFS_CURR_FS_REISERFS )
 	{
 		return "ReiserFSv3";
 	}
-	else if ( fs == CURR_REISER4 )
+	else if ( fs == WFS_CURR_FS_REISER4 )
 	{
 		return "Reiser4";
 	}
-	else if ( fs == CURR_FATFS )
+	else if ( fs == WFS_CURR_FS_FATFS )
 	{
 		return "FAT12/16/32";
 	}
-	else if ( fs == CURR_MINIXFS )
+	else if ( fs == WFS_CURR_FS_MINIXFS )
 	{
 		return "MinixFSv1/2";
 	}
-	else if ( fs == CURR_JFS )
+	else if ( fs == WFS_CURR_FS_JFS )
 	{
 		return "JFS";
 	}
-	else if ( fs == CURR_HFSP )
+	else if ( fs == WFS_CURR_FS_HFSP )
 	{
 		return "HFS+";
 	}
-	else if ( fs == CURR_OCFS )
+	else if ( fs == WFS_CURR_FS_OCFS )
 	{
 		return "OCFS";
 	}
 	return "<unknown>";
 }
 
+/* ======================================================================== */
+
 /**
  * Re-enables drive cache when the wiping function is about to finish.
- * \param drive_no The number of the device in the ioctls array.
+ * \param dev_name The name of the device.
+ * \param total_fs The total number of filesystems in the ioctls array.
+ * \param ioctls The array of filesystems.
  */
-void
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 enable_drive_cache (
 #ifdef WFS_ANSIC
-	const char dev_name[]
+	wfs_fsid_t wfs_fs
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
@@ -760,13 +853,13 @@ enable_drive_cache (
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
-	, fs_ioctl ioctls[]
+	, fs_ioctl_t ioctls[]
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
 	)
 #else
-	dev_name
+	wfs_fs
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
@@ -779,23 +872,26 @@ enable_drive_cache (
 		WFS_ATTR ((unused))
 #endif
 	)
-	const char dev_name[];
+	wfs_fsid_t wfs_fs;
 	const int total_fs;
-	fs_ioctl ioctls[];
+	fs_ioctl_t ioctls[];
 #endif
 {
+	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned */
 #ifdef HAVE_IOCTL
 	int j;
 	int curr_ioctl = -1;
 	int ioctl_fd;
 	unsigned char hd_cmd[4];
+	wfs_errcode_t * error_ret = NULL;
 
-	if ( (ioctls != NULL) && (dev_name != NULL) )
+	if ( (ioctls != NULL) && (wfs_fs.fsname != NULL) )
 	{
 		for ( j = 0; j < total_fs; j++ )
 		{
 			/* ioctls[j].fs_name can't be NULL, it's an array */
-			if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
+			if ( strncmp (ioctls[j].fs_name, wfs_fs.fsname,
+				sizeof (ioctls[j].fs_name) - 1) == 0 )
 			{
 				curr_ioctl = j;
 				break;
@@ -803,11 +899,12 @@ enable_drive_cache (
 		}
 		if ( (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
 		{
-			ioctls[curr_ioctl].how_many--;
 			if ( (ioctls[curr_ioctl].how_many == 0)
 				&& (ioctls[curr_ioctl].was_enabled != 0) )
 			{
-				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
+				error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+				ioctl_fd = open (ioctls[curr_ioctl].fs_name,
+						 O_RDWR | O_EXCL);
 				if ( ioctl_fd >= 0 )
 				{
 					/* enable cache: */
@@ -815,26 +912,63 @@ enable_drive_cache (
 					hd_cmd[1] = 0;
 					hd_cmd[2] = 0x02;
 					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+					j = ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+					if ( j != 0 )
+					{
+# ifdef HAVE_ERRNO_H
+						if ( error_ret != NULL )
+						{
+							*error_ret = (wfs_errcode_t)errno;
+						}
+# endif
+						ret = WFS_IOCTL;
+					}
+					else
+					{
+						ioctls[curr_ioctl].how_many--;
+					}
 					close (ioctl_fd);
+				}
+				else
+				{
+# ifdef HAVE_ERRNO_H
+					if ( error_ret != NULL )
+					{
+						*error_ret = (wfs_errcode_t)errno;
+					}
+# endif
+					ret = WFS_OPENFS;
 				}
 			}
 		}
+		else
+		{
+			ret = WFS_BADPARAM;
+		}
+	}
+	else
+	{
+		ret = WFS_BADPARAM;
 	}
 #endif
+	return ret;
 }
 
+/* ======================================================================== */
+
 /**
- * Re-enables drive cache when the wiping function is about to finish.
- * \param drive_no The number of the device in the ioctls array.
+ * Disables drive cache when the wiping function is about to finish.
+ * \param dev_name The name of the device.
+ * \param total_fs The total number of filesystems in the ioctls array.
+ * \param ioctls The array of filesystems.
  */
-void
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 disable_drive_cache (
 #ifdef WFS_ANSIC
-	const char dev_name[]
+	wfs_fsid_t wfs_fs
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
@@ -842,13 +976,13 @@ disable_drive_cache (
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
-	, fs_ioctl ioctls[]
+	, fs_ioctl_t ioctls[]
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
 	)
 #else
-	dev_name
+	wfs_fs
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif
@@ -861,22 +995,25 @@ disable_drive_cache (
 		WFS_ATTR ((unused))
 #endif
 	)
-	const char dev_name[];
+	wfs_fsid_t wfs_fs;
 	const int total_fs;
-	fs_ioctl ioctls[];
+	fs_ioctl_t ioctls[];
 #endif
 {
+	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned */
 #ifdef HAVE_IOCTL
 	int j;
 	int curr_ioctl = -1;
 	int ioctl_fd;
 	unsigned char hd_cmd[4];
+	wfs_errcode_t * error_ret = NULL;
 
-	if ( ioctls != NULL && dev_name != NULL )
+	if ( (ioctls != NULL) && (wfs_fs.fsname != NULL) )
 	{
 		for ( j = 0; j < total_fs; j++ )
 		{
-			if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
+			if ( strncmp (ioctls[j].fs_name, wfs_fs.fsname,
+				sizeof (ioctls[j].fs_name) - 1) == 0 )
 			{
 				curr_ioctl = j;
 				break;
@@ -884,13 +1021,15 @@ disable_drive_cache (
 		}
 		if ( (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
 		{
-			ioctls[curr_ioctl].how_many++;
-			ioctls[curr_ioctl].was_enabled = 0;
-			ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
+			error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
+			ioctl_fd = open (ioctls[curr_ioctl].fs_name,
+				O_RDWR | O_EXCL);
 			if ( ioctl_fd >= 0 )
 			{
+				ioctls[curr_ioctl].was_enabled = 0;
 				/* check if caching was enabled */
-				ioctl (ioctl_fd, HDIO_GET_WCACHE, &ioctls[curr_ioctl].was_enabled);
+				ioctl (ioctl_fd, HDIO_GET_WCACHE,
+					&ioctls[curr_ioctl].was_enabled);
 				/* flush the drive's caches: */
 				hd_cmd[0] = 0xe7;	/* ATA_OP_FLUSHCACHE */
 				hd_cmd[1] = 0;
@@ -907,10 +1046,93 @@ disable_drive_cache (
 				hd_cmd[1] = 0;
 				hd_cmd[2] = 0x82;
 				hd_cmd[3] = 0;
-				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+				j = ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+				if ( j != 0 )
+				{
+# ifdef HAVE_ERRNO_H
+					if ( error_ret != NULL )
+					{
+						*error_ret = (wfs_errcode_t)errno;
+					}
+# endif
+					ret = WFS_IOCTL;
+				}
+				else
+				{
+					ioctls[curr_ioctl].how_many++;
+				}
 				close (ioctl_fd);
 			}
+			else
+			{
+# ifdef HAVE_ERRNO_H
+				if ( error_ret != NULL )
+				{
+					*error_ret = (wfs_errcode_t)errno;
+				}
+# endif
+				ret = WFS_OPENFS;
+			}
+		}
+		else
+		{
+			ret = WFS_BADPARAM;
 		}
 	}
+	else
+	{
+		ret = WFS_BADPARAM;
+	}
 #endif
+	return ret;
 }
+
+/* ======================================================================== */
+
+/**
+ * Displays an error message.
+ * \param msg The message.
+ * \param extra Last element of the error message (fsname or signal).
+ * \param wfs_fs The filesystem this message refers to.
+ */
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_show_fs_error_gen (
+#ifdef WFS_ANSIC
+	const char * const	msg,
+	const char * const	extra,
+	const wfs_fsid_t	wfs_fs )
+#else
+	msg, extra, wfs_fs )
+	const char * const	msg;
+	const char * const	extra;
+	const wfs_fsid_t	wfs_fs;
+#endif
+{
+	wfs_errcode_t err = 0;
+	const char * progname;
+
+	if ( (wfs_is_stderr_open() == 0) || (msg == NULL) )
+	{
+		return;
+	}
+	if ( wfs_fs.fs_error != NULL )
+	{
+		err = *(wfs_errcode_t *)(wfs_fs.fs_error);
+	}
+
+	progname = wfs_get_program_name();
+	fprintf (stderr, "%s:%s: %s " WFS_ERR_MSG_FORMAT "\n",
+		(progname != NULL)? progname : "",
+		(wfs_fs.fsname != NULL)? wfs_fs.fsname : "",
+		_(wfs_err_msg),
+		_(wfs_err_msg),
+		err,
+		_(msg),
+		(extra != NULL)? extra : "",
+		(wfs_fs.fsname != NULL)? wfs_fs.fsname : "");
+	fflush (stderr);
+}
+

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.7.2, bogdandr@op.pl)
+AC_INIT(wipefreespace, 2.0, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -435,33 +435,6 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 				#endif
 				]]
 				)
-			if ( test "x$has_ntfs_h" = "xyes" ); then
-				AC_CHECK_HEADER([ntfs/ntfs_list.h],
-						[AC_DEFINE([HAVE_NTFS_NTFS_LIST_H],[1],
-							[Whether you have the ntfs/ntfs_list.h header.])],
-						[AC_CHECK_HEADER([ntfs/list.h],
-							AC_DEFINE([HAVE_NTFS_LIST_H],[1],
-								[Whether you have the ntfs/list.h header.]),
-							[AC_CHECK_HEADER([list.h],
-								AC_DEFINE([HAVE_LIST_H],[1],
-									[Whether you have the list.h header.]),
-								[has_ntfs_h=no],
-							[[#ifdef HAVE_STDARG_H
-							# include <stdarg.h>
-							#endif
-							]]
-							)],
-						[[#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
-						]]
-						)],
-					[[#ifdef HAVE_STDARG_H
-					# include <stdarg.h>
-					#endif
-					]]
-					)
-			fi
 		else
 			AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
 					[AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
@@ -488,33 +461,6 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 				#endif
 				]]
 				)
-			if ( test "x$has_ntfs_h" = "xyes" ); then
-				AC_CHECK_HEADER([ntfs-3g/ntfs_list.h],
-						[AC_DEFINE([HAVE_NTFS_3G_NTFS_LIST_H],[1],
-							[Whether you have the ntfs-3g/ntfs_list.h header.])],
-						[AC_CHECK_HEADER([ntfs-3g/list.h],
-							AC_DEFINE([HAVE_NTFS_3G_LIST_H],[1],
-								[Whether you have the ntfs-3g/list.h header.]),
-							[AC_CHECK_HEADER([list.h],
-								AC_DEFINE([HAVE_LIST_H],[1],
-									[Whether you have the list.h header.]),
-								[has_ntfs_h=no],
-							[[#ifdef HAVE_STDARG_H
-							# include <stdarg.h>
-							#endif
-							]]
-							)],
-						[[#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
-						]]
-						)],
-					[[#ifdef HAVE_STDARG_H
-					# include <stdarg.h>
-					#endif
-					]]
-					)
-			fi
 		fi
 	fi
 fi
@@ -818,20 +764,37 @@ AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([memset memcpy setlocale strtoul random srandom clearenv \
 	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
 	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl \
-	getmntinfo fopen64])
+	getmntinfo fopen64 basename])
 
+# NOTE: Debian 5 does not support execvpe(), so it requires execvp()
+# along with setenv() or putenv()
+has_execvpe=no
 has_execvp=no
 has_kill=no
+has_setenv=no
+has_putenv=no
 if ( test "x$feat_xfs" = "xyes" ); then
 
+	has_execvpe=yes
 	has_execvp=yes
 	has_kill=yes
+	has_setenv=yes
+	has_putenv=yes
+	AC_CHECK_FUNC([execvpe],
+		AC_DEFINE([HAVE_EXECVPE],[1],[Whether you have the execvpe function.]),
+		[has_execvpe=no])
 	AC_CHECK_FUNC([execvp],
 		AC_DEFINE([HAVE_EXECVP],[1],[Whether you have the execvp function.]),
 		[has_execvp=no])
 	AC_CHECK_FUNC([kill],
 		AC_DEFINE([HAVE_KILL],[1],[Whether you have the kill function.]),
 		[has_kill=no])
+	AC_CHECK_FUNC([setenv],
+		AC_DEFINE([HAVE_SETENV],[1],[Whether you have the setenv function.]),
+		[has_setenv=no])
+	AC_CHECK_FUNC([putenv],
+		AC_DEFINE([HAVE_PUTENV],[1],[Whether you have the putenv function.]),
+		[has_putenv=no])
 fi
 
 has_malloc=yes
@@ -881,11 +844,12 @@ AC_CHECK_FUNC([exit],
 
 
 if ( \
-	   test "x$have_ll"  = "xyes"	\
-	&& test "x$has_uni_h" = "xyes"	\
-	&& test "x$has_fcntl_h"  = "xyes"	\
+	   test "x$have_ll"        = "xyes"	\
+	&& test "x$has_uni_h"      = "xyes"	\
+	&& test "x$has_fcntl_h"    = "xyes"	\
 	&& test "x$has_fork"       = "xyes"	\
-	&& test "x$has_execvp"     = "xyes"	\
+	&& (  test "x$has_execvpe" = "xyes"	\
+	   || test "x$has_execvp"  = "xyes" )	\
 	&& test "x$has_dup2"       = "xyes"	\
 	&& test "x$has_close"      = "xyes"	\
 	&& test "x$has_pipe"       = "xyes"	\
@@ -942,6 +906,8 @@ AM_GNU_GETTEXT([external])
 AC_CHECK_HEADERS([libintl.h])
 
 if (test "x$GCC" = "xyes" ); then
+
+	AX_GCC_WARN_UNUSED_RESULT()
 
 	AX_C_CHECK_FLAG([-Wall], [CFLAGS="$CFLAGS -Wall"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wextra], [CFLAGS="$CFLAGS -Wextra"], [CFLAGS="$CFLAGS"])
@@ -1050,8 +1016,8 @@ else
 	elif (test "x$has_fork" != "xyes"); then
 		echo " *	XFS: no (fork() missing)"
 
-	elif (test "x$has_execvp" != "xyes"); then
-		echo " *	XFS: no (execvp() missing)"
+	elif (test "x$has_execvpe" != "xyes" && test "x$has_execvp" != "xyes"); then
+		echo " *	XFS: no (execvpe() and execvp() missing)"
 
 	elif (test "x$has_dup2" != "xyes"); then
 		echo " *	XFS: no (dup2() missing)"

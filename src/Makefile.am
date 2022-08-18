@@ -2,7 +2,7 @@ bin_PROGRAMS = wipefreespace
 datadir = @datadir@
 wipefreespace_SOURCES = wipefreespace.c wipefreespace.h wfs_wrappers.c wfs_wrappers.h	\
 	wfs_secure.c wfs_secure.h wfs_signal.c wfs_signal.h wfs_util.c wfs_util.h	\
-	wfs_wiping.c wfs_wiping.h list.h ntfs/list.h ntfs-3g/list.h
+	wfs_wiping.c wfs_wiping.h
 
 wipefreespace_LDADD = $(INTLLIBS)
 localedir = $(datadir)/locale
