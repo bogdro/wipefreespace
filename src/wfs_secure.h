@@ -1,6 +1,6 @@
 /*
  * A program for secure cleaning of free space on filesystems.
- *	-- signal-related functions, header file.
+ *	-- security-related procedures, header file.
  *
  * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
@@ -21,17 +21,21 @@
  *		51 Franklin Street, Fifth Floor
  *		Boston, MA 02110-1301
  *		USA
- *
  */
 
-#ifndef WFS_SIG_H
-# define WFS_SIG_H 1
+#ifndef WFS_HEADER_SEC
+# define WFS_HEADER_SEC 1
 
 # include "wipefreespace.h"
 
-extern volatile sig_atomic_t sig_recvd;
-extern volatile sig_atomic_t sigchld_recvd;
+extern int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
+	wfs_clear_cap PARAMS((error_type * const error));
+extern int WFS_ATTR ((warn_unused_result))
+	wfs_check_suid PARAMS((void));
+extern void WFS_ATTR ((nonnull))
+	wfs_check_stds PARAMS((int *stdout_open, int *stderr_open));
+extern void
+	wfs_clear_env PARAMS((void));
 
-extern void wfs_set_sigh PARAMS((error_type * const error, const int opt_verbose));
+#endif /* WFS_HEADER_SEC */
 
-#endif	/* WFS_SIG_H */

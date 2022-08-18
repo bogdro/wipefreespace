@@ -1,6 +1,6 @@
 /*
  * A program for secure cleaning of free space on filesystems.
- *	-- ReiserFS file system-specific functions, header file.
+ *	-- ReiserFSv4 file system-specific functions, header file.
  *
  * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
@@ -23,37 +23,37 @@
  *		USA
  */
 
-#ifndef WFS_HEADER_REISER
-# define WFS_HEADER_REISER 1
+#ifndef WFS_HEADER_REISER4
+# define WFS_HEADER_REISER4 1
 
 # include "wipefreespace.h"
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_reiser_wipe_unrm PARAMS(( wfs_fsid_t FS, const fselem_t node, error_type * const error ));
+	wfs_r4_wipe_unrm PARAMS(( wfs_fsid_t FS, const fselem_t node, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_reiser_wipe_fs PARAMS(( wfs_fsid_t FS, error_type * const error ));
+	wfs_r4_wipe_fs PARAMS(( wfs_fsid_t FS, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_reiser_wipe_part PARAMS(( const wfs_fsid_t FS, error_type * const error ));
+	wfs_r4_wipe_part PARAMS(( const wfs_fsid_t FS, error_type * const error ));
 
 extern int WFS_ATTR ((warn_unused_result))
-	wfs_reiser_check_err PARAMS(( wfs_fsid_t FS ));
+	wfs_r4_check_err PARAMS(( wfs_fsid_t FS ));
 
 extern int WFS_ATTR ((warn_unused_result))
-	wfs_reiser_is_dirty PARAMS(( wfs_fsid_t FS ));
+	wfs_r4_is_dirty PARAMS(( wfs_fsid_t FS ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_reiser_chk_mount PARAMS(( const char * const dev_name, error_type * const error ));
+	wfs_r4_chk_mount PARAMS(( const char * const dev_name, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_reiser_open_fs PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
+	wfs_r4_open_fs PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
 		CURR_FS * const whichfs, const fsdata * const data, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_reiser_close_fs PARAMS(( const wfs_fsid_t FS, error_type *const error ));
+	wfs_r4_close_fs PARAMS(( const wfs_fsid_t FS, error_type *const error ));
 
 extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_reiser_flush_fs PARAMS(( wfs_fsid_t FS ));
+	wfs_r4_flush_fs PARAMS(( wfs_fsid_t FS ));
 
-#endif	/* WFS_HEADER_REISER */
+#endif	/* WFS_HEADER_REISER4 */

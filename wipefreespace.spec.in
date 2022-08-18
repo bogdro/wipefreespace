@@ -1,0 +1,80 @@
+# Special names here like %{__make} come from /usr/lib/rpm/macros
+
+%define version @VERSION@
+%define name wipefreespace
+
+Summary:	Program for secure cleaning of free space.
+Name:		%{name}
+Version:	%{version}
+Release:	1
+URL:		http://wipefreespace.sf.net
+License:	GPL
+Group:		System Utilities
+Packager:	Bogdan Drozdowski <bogdandr@op.pl>
+Prefix:		/usr/local
+Source:		%{name}-%{version}.tar.gz
+BuildRoot:	%{_tmppath}/%{name}-build
+Requires:	xfsprogs
+BuildRequires:	gcc, glibc, glibc-devel, glibc-headers, make
+Obsoletes:	e2wipefreespace
+
+%description
+
+The wipefreespace is a program which securely cleans free space on given
+filesystems, making confidential removed data recovery impossible. It also
+removes deleted files' names, so that no trace is left. Supported filesystems
+are: ext2/3/4, NTFS, XFS, ReiserFSv3 and ReiserFSv4.
+
+%prep
+%{__rm} -rf $RPM_BUILD_ROOT
+%setup -q
+
+%build
+
+CFLAGS='-march=i386' ./configure --prefix=%{prefix}
+	#--mandir=$RPM_BUILD_ROOT/usr/local/man
+#prefix=$RPM_BUILD_ROOT/usr/local
+%{__make} 2>/dev/null
+
+%install
+
+%{__mkdir_p} $RPM_BUILD_ROOT/usr/share/info
+#prefix=$RPM_BUILD_ROOT/usr/local
+%{__make} DESTDIR="$RPM_BUILD_ROOT" install-strip
+#%{__mv} -f $RPM_BUILD_ROOT/usr/share/locale/pl/LC_MESSAGES/wipefreespace.mo \
+#	$RPM_BUILD_ROOT%{prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
+%{__rm} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace*
+%{__rm} -f $RPM_BUILD_ROOT%{prefix}/info/wipefreespace.info*
+%{__rm} -f $RPM_BUILD_ROOT%{prefix}/man/man1/wipefreespace.1*
+%{__rm} -f $RPM_BUILD_ROOT%{prefix}/share/info/wipefreespace.info*
+%{__rm} -f $RPM_BUILD_ROOT%{prefix}/share/man/man1/wipefreespace.1*
+#%{__rm} -f $RPM_BUILD_ROOT%{prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/e2wipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/e3wipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/e4wipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/ntfswipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/xfswipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/reiserwipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/reiser4wipefreespace
+#%{__mv} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace $RPM_BUILD_ROOT%{prefix}/bin/wipefreespace
+#%{makeinstall}
+
+%clean
+
+%{__rm} -rf $RPM_BUILD_ROOT
+
+%define _unpackaged_files_terminate_build 0
+%files
+
+%defattr(-,root,root)
+%{prefix}/bin/wipefreespace
+%{prefix}/bin/e2wipefreespace
+%{prefix}/bin/e3wipefreespace
+%{prefix}/bin/e4wipefreespace
+%{prefix}/bin/ntfswipefreespace
+%{prefix}/bin/xfswipefreespace
+%{prefix}/bin/reiserwipefreespace
+%{prefix}/bin/reiser4wipefreespace
+%doc /usr/share/info/wipefreespace.info.gz
+%doc /usr/share/man/man1/wipefreespace.1.gz
+%{prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo

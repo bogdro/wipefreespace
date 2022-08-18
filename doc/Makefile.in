@@ -37,7 +37,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = doc
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(wipefreespace_TEXINFOS) texinfo.tex
+	$(srcdir)/wipefreespace.texi.in texinfo.tex
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c_check_flag.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -49,7 +49,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = wipefreespace.texi
 SOURCES =
 DIST_SOURCES =
 INFO_DEPS = $(srcdir)/wipefreespace.info
@@ -93,8 +93,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
-EXT2FS_FALSE = @EXT2FS_FALSE@
-EXT2FS_TRUE = @EXT2FS_TRUE@
+EXT234FS_FALSE = @EXT234FS_FALSE@
+EXT234FS_TRUE = @EXT234FS_TRUE@
 GMSGFMT = @GMSGFMT@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -129,6 +129,8 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 POSUB = @POSUB@
 RANLIB = @RANLIB@
+REISER4_FALSE = @REISER4_FALSE@
+REISER4_TRUE = @REISER4_TRUE@
 REISERFS_FALSE = @REISERFS_FALSE@
 REISERFS_TRUE = @REISERFS_TRUE@
 SED = @SED@
@@ -182,8 +184,8 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 info_TEXINFOS = wipefreespace.texi
-wipefreespace_TEXINFOS = wipefreespace.texi
 man_MANS = wipefreespace.1
+EXTRA_DIST = $(man_MANS) wipefreespace.texi.in
 all: all-am
 
 .SUFFIXES:
@@ -217,6 +219,8 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+wipefreespace.texi: $(top_builddir)/config.status $(srcdir)/wipefreespace.texi.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 .texi.info:
 	restore=: && backupdir="$(am__leading_dot)am$$$$" && \
@@ -261,10 +265,10 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	    rm -rf $(@:.html=); else rm -Rf $(@:.html=.htp) $@; fi; \
 	  exit 1; \
 	fi
-$(srcdir)/wipefreespace.info: wipefreespace.texi $(wipefreespace_TEXINFOS)
-wipefreespace.dvi: wipefreespace.texi $(wipefreespace_TEXINFOS)
-wipefreespace.pdf: wipefreespace.texi $(wipefreespace_TEXINFOS)
-wipefreespace.html: wipefreespace.texi $(wipefreespace_TEXINFOS)
+$(srcdir)/wipefreespace.info: wipefreespace.texi 
+wipefreespace.dvi: wipefreespace.texi 
+wipefreespace.pdf: wipefreespace.texi 
+wipefreespace.html: wipefreespace.texi 
 .dvi.ps:
 	$(DVIPS) -o $@ $<
 

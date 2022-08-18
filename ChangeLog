@@ -1,3 +1,59 @@
+2008-09-28	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.0
+	  All files prefixed with "wfs_". Gutmann method as default. Fixed
+	  some possibilities for wiping to be finished too early for some
+	  blocks. ReiserFSv4 support. License reverted to GPLv2+, because of
+	  linking with ReiserFSv3/4 libraries, which are GPLv2-only (read
+	  http://www.gnu.org/licenses/gpl-faq.html#AllCompatibility). New
+	  command-line option, --use-ioctl, allows to disable the device's
+	  cache prior to wiping and bring it back to the previous state after
+	  wiping. This can be dangerous (hdparm says so), so it's disabled by
+	  default. Checked to compile against e2fsprogs-1.41.1. Works on the
+	  ext4 filesystem. Changed the verbose mode output to include the
+	  current filesystem in the second field.
+	* configure.ac: portability - not relying on autoconf's variables
+	  anymore. Automatically changing the version number in TeXinfo docs,
+	  spec file and sources.
+	* wfs_util.c: a new file for utility functions. Currently contains
+	  functions used when checking if a filesystem is mounted.
+	* docs: added a note about wiping damaged blocks. Added a note saying
+	  that mntent.h is required for ReiserFSv3 and ReiserFSv4.
+	* wipefreespace.h: turned wfs_fsid_t into a structure and put the
+	  current filesystem name in it.
+	* wfs_reiser.c (wfs_reiser_chk_mount): using wfs_check_mounted ()
+	  instead of misc_dev_mounted() to avoid conflicts with reiser4.
+	* wipefreespace.c (wfs_wipe_filesytem): zeroing out each used
+	  structure before starting. Added the code to disable caches before
+	  wiping. Forking before opening, so that ReiserFSv3 code can't
+	  kill the whole program even during opening (when the filesystem type
+	  is yet unknown) and errors in the old ntfsprogs-1.13 won't kill the
+	  program on ntfs_unmount.
+	* wfs_reiser.c (wfs_reiser_close_fs): setting the filesystem pointer
+	  to NULL.
+	* wfs_reiser.c: checking for NULL filesystem pointer in every function
+	* src/Makefile.am: cleanup - not using separate libraries anymore.
+	* wfs_reiser4.{c,h}: ReiserFSv4 support.
+	* wfs_wrappers.c (wipe_unrm): fixed a problem where "elem" could be
+	  used, but wasn't defined.
+	* README: added a list of command-line options.
+	* doc/wipefreespace.{1,texi}: updated error list, web addresses and
+	  other corrections. New command line option added.
+	* wipefreespace.c (main): removing dulpicate command-line parameters
+	  (for thread safety).
+	* wfs_xfs.c: now using select(), if available, to specify a waiting
+	  time for input from child processes. If the child died, the program
+	  will know it and leave instead of hanging waiting for data which
+	  will never arrive.
+	* wfs_cfg.h: separate glibc stuff from non-glibc.
+	* wipefreespace.c, wfs_signal.c: the "verbose" option can now be
+	  passed more than once. If one is given, only the operations will be
+	  displayed. If two or more, both operatios and patterns used will be
+	  displayed.
+	* doc/wipefreespace.texi: Added a "Thanks" chapter.
+	* wipefreespace.spec: Changed the URL, added more symbolic links,
+	  added '-march=i386' to CFLAGS and fixed a few minor things.
+
 2008-06-22	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Wipefreespace version 0.9
@@ -43,7 +99,7 @@
 
 	* Wipefreespace version 0.8
 	  Big portability corrections. The program now compiles on OpenBSD.
-	  Added ReiserFSv3.
+	  Added ReiserFSv3+.
 	* wfs_xfs.c: using exit() in child processes. If waitpid() and wait()
 	  not available, using SIGCHLD to wait for child processes (if
 	  signals are enabled) and the old sleep+kill method (if signals
@@ -57,7 +113,7 @@
 	* wfs_ext23.{c,h}: new names for ext23.{c,h}.
 	* wfs_ext23.c (e2_do_block): Better badblock list checking.
 	* wfs_xfs.c (wfs_xfs_get_mnt_point): Slightly better portability.
-	* wfs_reiser.{c,h}: ReiserFSv3 support. Docs updated with this info.
+	* wfs_reiser.{c,h}: ReiserFSv3+ support. Docs updated with this info.
 	* wrappers.c (wfs_open_fs): corrected NTFS part which had EXT2/3
 	  elements.
 

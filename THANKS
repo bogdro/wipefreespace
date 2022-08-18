@@ -2,4 +2,5 @@ Theodore Ts'o, for the great ext2fs library and e2fsprogs.
 The linux-ntfs team for their research on NTFS and a great programming library.
 Colin Plumb, for the great 'shred' program, parts of which are used here.
 Patrick R. McDonald 'marlowe' (www.antagonism.org) - for bug reports, testing and promoting wipefreespace.
+Mark Lord (mlord@pobox.com) for the gread hdparm utility.
 

@@ -1,13 +1,13 @@
 /*
  * A program for secure cleaning of free space on filesystems.
- *	-- ReiserFSv3 file system-specific functions.
+ *	-- ReiserFSv3+ file system-specific functions.
  *
- * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v3+
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 3
+ * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -83,27 +83,9 @@ typedef short int __u16;
 # include <string.h>
 #endif
 
-#ifdef HAVE_MNTENT_H
-# include <mntent.h>
-#endif
-
-#ifdef HAVE_PATHS_H
-# include <paths.h>
-#endif
-
-#ifndef _PATH_MOUNTED
-# ifdef MNT_MNTTAB
-#  define	_PATH_MOUNTED	MNT_MNTTAB
-# else
-#  define	_PATH_MOUNTED	"/etc/mtab"
-# endif
-#endif
-
 #ifdef HAVE_FCNTL_H
-# include <fcntl.h>
+# include <fcntl.h>	/* O_EXCL, O_RDWR */
 #endif
-
-#define MNTBUFLEN 4096
 
 #ifndef O_EXCL
 # define O_EXCL		0200
@@ -115,6 +97,7 @@ typedef short int __u16;
 #include "wipefreespace.h"
 #include "wfs_reiser.h"
 #include "wfs_signal.h"
+#include "wfs_util.h"
 
 /* Fix the sizes. */
 static const unsigned long long bh_dirty = BH_Dirty;
@@ -139,6 +122,7 @@ wfs_reiser_get_block_size (
 	const wfs_fsid_t FS;
 #endif
 {
+	if ( FS.rfs == NULL ) return 0;
 	return FS.rfs->fs_blocksize;
 }
 
@@ -173,7 +157,7 @@ wfs_reiser_wipe_part (
 	char * offset;
 	int length;
 
-	if ( error == NULL )
+	if ( (error == NULL) || (FS.rfs == NULL) )
 	{
 		return WFS_BADPARAM;
 	}
@@ -243,7 +227,7 @@ wfs_reiser_wipe_part (
 		}
 
 		for (i = get_item_pos (&elem_path), head = get_ih (&elem_path);
-			(i < B_NR_ITEMS (bh)) && (sig_recvd == 0) && (ret_part == WFS_SUCCESS);
+			(i < B_NR_ITEMS (bh)) && (sig_recvd == 0) /*&& (ret_part == WFS_SUCCESS)*/;
 			i++, head++)
 		{
 			next_key = reiserfs_next_key (&elem_path);
@@ -270,7 +254,8 @@ wfs_reiser_wipe_part (
 			if ( (bh->b_data == NULL)
 				|| (head->ih2_item_len >= wfs_reiser_get_block_size (FS))
 				|| (head->ih2_item_location >= wfs_reiser_get_block_size (FS))
-				|| (head->ih2_item_location + head->ih2_item_len >= wfs_reiser_get_block_size (FS))
+				|| (head->ih2_item_location + head->ih2_item_len >=
+					wfs_reiser_get_block_size (FS))
 				|| (head->ih2_item_location + head->ih2_item_len >= bh->b_size)
 				)
 			{
@@ -279,9 +264,11 @@ wfs_reiser_wipe_part (
 			offset = &(bh->b_data[head->ih2_item_location + head->ih2_item_len]);
 			length = bh->b_size - (head->ih2_item_location + head->ih2_item_len);
 
-			for ( j = 0; (j < npasses) && (sig_recvd == 0) && (ret_part == WFS_SUCCESS); j++ )
+			for ( j = 0; (j < npasses) && (sig_recvd == 0)
+				/*&& (ret_part == WFS_SUCCESS)*/; j++ )
 			{
-				fill_buffer ( j, (unsigned char *) offset, (size_t) length, selected );
+				fill_buffer ( j, (unsigned char *) offset,
+					(size_t) length, selected, FS );
 
 				if ( sig_recvd != 0 )
 				{
@@ -299,20 +286,22 @@ wfs_reiser_wipe_part (
 					   then print the error. */
 					if (FS.rfs->fs_badblocks_bm == NULL)
 					{
-						show_error ( *error, err_msg_wrtblk, fsname );
+						show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 						ret_part = WFS_BLKWR;
+						break;
 					}
 					else if (reiserfs_bitmap_test_bit (FS.rfs->fs_badblocks_bm,
 						bh->b_blocknr) == 0)
 					{
-						show_error ( *error, err_msg_wrtblk, fsname );
+						show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 						ret_part = WFS_BLKWR;
+						break;
 					}
 				}
 				/* Flush after each writing, if more than 1 overwriting needs
 				   to be done. Allow I/O bufferring (efficiency), if just one
 				   pass is needed. */
-				if ((npasses > 1) && (sig_recvd == 0) && (ret_part == WFS_SUCCESS))
+				if ((npasses > 1) && (sig_recvd == 0))
 				{
 					error->errcode.gerror = wfs_reiser_flush_fs ( FS );
 				}
@@ -383,7 +372,7 @@ wfs_reiser_wipe_fs (
 	unsigned char *buf;
 	unsigned long int j;
 
-	if ( error == NULL )
+	if ( (error == NULL) || (FS.rfs == NULL) )
 	{
 		return WFS_BADPARAM;
 	}
@@ -410,7 +399,7 @@ wfs_reiser_wipe_fs (
 
 	/*blk_no < FS.rfs.fs_ondisk_sb->s_v1.sb_block_count*/
 	for ( blk_no = 0; (blk_no < get_sb_block_count (FS.rfs->fs_ondisk_sb))
-		&& (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS); blk_no++ )
+		&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 	{
 		if (       (not_data_block   ( FS.rfs, blk_no ) != 0)
 			|| (block_of_bitmap  ( FS.rfs, blk_no ) != 0)
@@ -428,11 +417,11 @@ wfs_reiser_wipe_fs (
 		}
 
 		/* write the block here. */
-		for ( j = 0; (j < npasses) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS); j++ )
+		for ( j = 0; (j < npasses) && (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; j++ )
 		{
 
 			fill_buffer ( j, (unsigned char *) bh->b_data,
-				wfs_reiser_get_block_size (FS), selected );
+				wfs_reiser_get_block_size (FS), selected, FS );
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;
@@ -447,18 +436,20 @@ wfs_reiser_wipe_fs (
 				   or the block is marked OK, then print the error. */
 				if (FS.rfs->fs_badblocks_bm == NULL)
 				{
-					show_error ( *error, err_msg_wrtblk, fsname );
+					show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 					ret_wfs = WFS_BLKWR;
+					break;
 				}
 				else if (reiserfs_bitmap_test_bit (FS.rfs->fs_badblocks_bm, blk_no) == 0)
 				{
-					show_error ( *error, err_msg_wrtblk, fsname );
+					show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 					ret_wfs = WFS_BLKWR;
+					break;
 				}
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (npasses > 1) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS) )
+			if ( (npasses > 1) && (sig_recvd == 0) )
 			{
 				error->errcode.gerror = wfs_reiser_flush_fs ( FS );
 			}
@@ -505,7 +496,7 @@ wfs_reiser_wipe_unrm (
 	struct reiserfs_de_head * deh;
 	unsigned long blk_no;
 
-	if ( error == NULL )
+	if ( (error == NULL) || (FS.rfs == NULL) )
 	{
 		return WFS_BADPARAM;
 	}
@@ -552,7 +543,8 @@ wfs_reiser_wipe_unrm (
 			}
 
 			/* write the block here. */
-			for (j = 0; (j < npasses+1) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS); j++)
+			for (j = 0; (j < npasses+1) && (sig_recvd == 0)
+				/*&& (ret_wfs == WFS_SUCCESS)*/; j++)
 			{
 				/* Last pass has to be with zeros */
 				if ( j == npasses )
@@ -569,7 +561,7 @@ wfs_reiser_wipe_unrm (
 				else
 				{
 					fill_buffer ( j, (unsigned char *) bh->b_data,
-						wfs_reiser_get_block_size (FS), selected );
+						wfs_reiser_get_block_size (FS), selected, FS );
 				}
 				if ( sig_recvd != 0 )
 				{
@@ -585,18 +577,21 @@ wfs_reiser_wipe_unrm (
 					   list or the block is marked OK, then print the error. */
 					if (FS.rfs->fs_badblocks_bm == NULL)
 					{
-						show_error ( *error, err_msg_wrtblk, fsname );
+						show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 						ret_wfs = WFS_BLKWR;
+						break;
 					}
-					else if (reiserfs_bitmap_test_bit (FS.rfs->fs_badblocks_bm, blk_no) == 0)
+					else if (reiserfs_bitmap_test_bit
+						(FS.rfs->fs_badblocks_bm, blk_no) == 0)
 					{
-						show_error ( *error, err_msg_wrtblk, fsname );
+						show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 						ret_wfs = WFS_BLKWR;
+						break;
 					}
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (npasses > 1) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS) )
+				if ( (npasses > 1) && (sig_recvd == 0) )
 				{
 					error->errcode.gerror = wfs_reiser_flush_fs ( FS );
 				}
@@ -612,8 +607,8 @@ wfs_reiser_wipe_unrm (
 	elem_key = node.rfs_elem;
 	elem_path.path_length = ILLEGAL_PATH_ELEMENT_OFFSET;
 
-	while ( (ret_wfs == WFS_SUCCESS)
-		&& (reiserfs_search_by_key_4 ( FS.rfs, &elem_key, &elem_path ) == ITEM_FOUND)
+	while ( /*(ret_wfs == WFS_SUCCESS)
+		&&*/ (reiserfs_search_by_key_4 ( FS.rfs, &elem_key, &elem_path ) == ITEM_FOUND)
 		&& (sig_recvd == 0)
 	)
 	{
@@ -642,7 +637,7 @@ wfs_reiser_wipe_unrm (
 		}
 
 		for (i = get_item_pos (&elem_path), head = get_ih (&elem_path);
-			(i < B_NR_ITEMS (bh)) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS);
+			(i < B_NR_ITEMS (bh)) && (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/;
 			i++, head++)
 		{
 			if (ih_reachable (head) == 0)
@@ -672,7 +667,7 @@ wfs_reiser_wipe_unrm (
 				{
 					bh->b_state = 0;
 					for ( j = 0; (j < npasses) && (sig_recvd == 0)
-						&& (ret_wfs == WFS_SUCCESS); j++ )
+						/*&& (ret_wfs == WFS_SUCCESS)*/; j++ )
 					{
 						for (count = elem_path.pos_in_item;
 						     count < get_ih_entry_count (head); count ++, deh ++)
@@ -680,9 +675,11 @@ wfs_reiser_wipe_unrm (
 							if ( name_in_entry_length (head, deh, count) > 0 )
 							{
 								fill_buffer ( j,
-									(unsigned char *) name_in_entry (deh, count),
-									(size_t) name_in_entry_length (head, deh, count),
-									selected );
+									(unsigned char *)
+									 name_in_entry (deh, count),
+									(size_t) name_in_entry_length
+										(head, deh, count),
+									selected, FS );
 							}
 						}
 						if ( sig_recvd != 0 )
@@ -695,27 +692,37 @@ wfs_reiser_wipe_unrm (
 	 					error->errcode.gerror = bwrite (bh);
 						if ( error->errcode.gerror != 0 )
 						{
-							/* check if block is marked as bad. If there is no
-							   'badblocks' list or the block is marked OK,
+							/* check if block is marked as bad. If
+							   there is no 'badblocks' list or the
+							   block is marked OK,
 							   then print the error. */
 							if (FS.rfs->fs_badblocks_bm == NULL)
 							{
-								show_error ( *error, err_msg_wrtblk, fsname );
+								show_error ( *error,
+									err_msg_wrtblk,
+									FS.fsname, FS );
 								ret_wfs = WFS_BLKWR;
+								break;
 							}
-							else if (reiserfs_bitmap_test_bit (FS.rfs->fs_badblocks_bm,
+							else if (reiserfs_bitmap_test_bit
+								(FS.rfs->fs_badblocks_bm,
 								bh->b_blocknr) == 0)
 							{
-								show_error ( *error, err_msg_wrtblk, fsname );
+								show_error ( *error,
+									err_msg_wrtblk,
+									FS.fsname, FS );
 								ret_wfs = WFS_BLKWR;
+								break;
 							}
 						}
-						/* Flush after each writing, if more than 1 overwriting needs
-						   to be done. Allow I/O bufferring (efficiency), if just one
+						/* Flush after each writing, if more than 1
+						   overwriting needs to be done. Allow I/O
+						   bufferring (efficiency), if just one
 						   pass is needed. */
-						if ((npasses > 1) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS))
+						if ((npasses > 1) && (sig_recvd == 0))
 						{
-							error->errcode.gerror = wfs_reiser_flush_fs ( FS );
+							error->errcode.gerror =
+								wfs_reiser_flush_fs ( FS );
 						}
 						if ( sig_recvd != 0 )
 						{
@@ -878,38 +885,7 @@ wfs_reiser_chk_mount (
 	error_type * const error;
 #endif
 {
-	int res;
-	char * new_name;
-
-        if ( dev_name == NULL ) return WFS_BADPARAM;
-
-        new_name = (char *) malloc ( strlen (dev_name) + 1 );
-        if ( new_name == NULL )
-        {
-		if ( error != NULL )
-		{
-			error->errcode.gerror = 1L;
-		}
-        	return WFS_MALLOC;
-        }
-        strncpy (new_name, dev_name, strlen (dev_name)+1 );
-
-	res = misc_device_mounted (new_name);
-	if ( (res == MF_NOT_MOUNTED) || (res == MF_RO) )
-	{
-		if ( error != NULL )
-		{
-			error->errcode.gerror = 0L;
-		}
-		free (new_name);
-		return WFS_SUCCESS;
-	}
-	if ( error != NULL )
-	{
-		error->errcode.gerror = 1L;
-	}
-	free (new_name);
-	return WFS_MNTRW;
+	return wfs_check_mounted (dev_name, error);
 }
 
 /**
@@ -930,8 +906,10 @@ wfs_reiser_close_fs (
 	error_type * const error;
 #endif
 {
+	if ( FS.rfs == NULL ) return WFS_BADPARAM;
 	reiserfs_close_ondisk_bitmap ( FS.rfs );
 	reiserfs_close ( FS.rfs );
+	FS.rfs = NULL;
 	return WFS_SUCCESS;
 }
 
@@ -954,6 +932,7 @@ wfs_reiser_check_err (
 	int state;
 	int res;
 
+	if ( FS.rfs == NULL ) return 1;
 	res = reiserfs_is_fs_consistent (FS.rfs);
 	if ( res == 0 ) res = 1;
 	else res = 0;
@@ -993,6 +972,7 @@ wfs_reiser_is_dirty (
 	wfs_fsid_t FS;
 #endif
 {
+	if ( FS.rfs == NULL ) return 1;
 	/* Declared, but not implemented and not used by anything in ReiserFSprogs...
 	return filesystem_dirty (&(FS.rfs));
 	*/
@@ -1015,6 +995,7 @@ wfs_reiser_flush_fs (
 	wfs_fsid_t FS;
 #endif
 {
+	if ( FS.rfs == NULL ) return WFS_BADPARAM;
 	reiserfs_flush (FS.rfs);
 
 #if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)

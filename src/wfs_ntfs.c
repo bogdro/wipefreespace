@@ -2,8 +2,8 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v3+
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
  * Copyright (c) 2002-2005 Richard Russon
@@ -13,7 +13,7 @@
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 3
+ * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -229,12 +229,16 @@ wipe_compressed_attribute (
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
 	|| defined(WIN32) || defined(__cplusplus)
 	const ntfs_volume * const vol,
-	ntfs_attr * const na, unsigned char * const buf)
+	ntfs_attr * const na,
+	unsigned char * const buf,
+	wfs_fsid_t FS
+	)
 #else
-	vol, na, buf)
+	vol, na, buf, FS)
 	const ntfs_volume * const vol;
 	ntfs_attr * const na;
 	unsigned char * const buf;
+	wfs_fsid_t FS;
 #endif
 {
 	unsigned char *mybuf = NULL;
@@ -252,7 +256,7 @@ wipe_compressed_attribute (
 	size_t bufsize = 0;
 	unsigned long int j;
 	s64 two = 2;
-	wfs_fsid_t FS;
+	/*wfs_fsid_t FS;*/
 	int go_back;
 	int selected[NPAT];
 	error_type error;
@@ -360,11 +364,11 @@ wipe_compressed_attribute (
 
 			if ( mybuf != NULL )
 			{
-				fill_buffer ( j, mybuf, bufsize, selected );	/* buf OK */
+				fill_buffer ( j, mybuf, bufsize, selected, FS );	/* buf OK */
 			}
 			else
 			{
-				fill_buffer ( j, buf, (size_t) size, selected );	/* buf OK */
+				fill_buffer ( j, buf, (size_t) size, selected, FS );	/* buf OK */
 			}
 			if ( sig_recvd != 0 )
 			{
@@ -426,18 +430,23 @@ wipe_attribute (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
 	|| defined(WIN32) || defined(__cplusplus)
-	const ntfs_volume * const vol, ntfs_attr * const na, unsigned char * const buf)
+	const ntfs_volume * const vol,
+	ntfs_attr * const na,
+	unsigned char * const buf,
+	wfs_fsid_t FS
+	)
 #else
-	vol, na, buf)
+	vol, na, buf, FS)
 	const ntfs_volume * const vol;
 	ntfs_attr * const na;
 	unsigned char * const buf;
+	wfs_fsid_t FS;
 #endif
 {
 	s64 size, ret = 0;
 	unsigned long int j;
 	s64 offset = na->data_size;
-	wfs_fsid_t FS;
+	/*wfs_fsid_t FS;*/
 	int selected[NPAT];
 	error_type error;
 
@@ -456,7 +465,7 @@ wipe_attribute (
 	for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
 	{
 
-		fill_buffer ( j, buf, (size_t) size, selected );	/* buf OK */
+		fill_buffer ( j, buf, (size_t) size, selected, FS );	/* buf OK */
 		if ( sig_recvd != 0 )
 		{
 	       		break;
@@ -783,7 +792,7 @@ destroy_record (
 		{
 
 			fill_buffer ( pass, (unsigned char *) a_offset, ctx->attr->value_length,
-				selected );
+				selected, FS );
 			if ( sig_recvd != 0 )
 			{
 		       		break;
@@ -813,7 +822,7 @@ destroy_record (
 		{
 
 			fill_buffer ( pass, (unsigned char *) ctx->attr->value_length, sizeof(u32),
-				selected );
+				selected, FS );
 			if ( sig_recvd != 0 )
 			{
 		       		break;
@@ -879,7 +888,7 @@ destroy_record (
 			{
 
 				fill_buffer ( pass, (unsigned char *) a_offset, ctx->attr->value_length,
-					selected );
+					selected, FS );
 				if ( sig_recvd != 0 )
 				{
 			       		break;
@@ -909,7 +918,7 @@ destroy_record (
 			{
 
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->value_length),
-					sizeof(u32), selected );
+					sizeof(u32), selected, FS );
 				if ( sig_recvd != 0 )
 				{
 			       		break;
@@ -962,7 +971,8 @@ destroy_record (
 				continue;
 			}
 
-			for (i = 0; (rl[i].length > 0) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS); i++)
+			for (i = 0; (rl[i].length > 0) && (sig_recvd == 0)
+				&& (ret_wfs == WFS_SUCCESS); i++)
 			{
 
 				for (j = rl[i].lcn; (j < rl[i].lcn + rl[i].length) &&
@@ -971,24 +981,28 @@ destroy_record (
 
 					if (utils_cluster_in_use (&(FS.ntfs), j) == 0 )
 					{
-						for ( pass = 0; (pass < npasses) && (sig_recvd == 0); pass++ )
+						for ( pass = 0; (pass < npasses)
+							&& (sig_recvd == 0); pass++ )
 						{
 
 							fill_buffer ( pass, buf /* buf OK */,
 								(size_t) wfs_ntfs_get_block_size (FS),
-								selected );
+								selected, FS );
 							if ( sig_recvd != 0 )
 							{
 			       					break;
 							}
-							if (ntfs_cluster_write (&(FS.ntfs), j, 1LL, buf) < 1)
+							if (ntfs_cluster_write (&(FS.ntfs), j,
+								1LL, buf) < 1)
 							{
 								ret_wfs = WFS_BLKWR;
 								break;
 							}
 
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					   Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* Flush after each writing, if more than 1
+					   overwriting needs to be done.
+					   Allow I/O bufferring (efficiency), if just
+					   one pass is needed. */
 							if ( (npasses > 1) && (sig_recvd == 0) )
 							{
 								error->errcode.gerror =
@@ -1004,40 +1018,46 @@ destroy_record (
 
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->lowest_vcn),
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					sizeof(NTFS_VCN), selected );
+					sizeof(NTFS_VCN),
 #else
-					sizeof(VCN), selected );
+					sizeof(VCN),
 #endif
+					selected, FS );
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->highest_vcn),
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					sizeof(NTFS_VCN), selected );
+					sizeof(NTFS_VCN),
 #else
-					sizeof(VCN), selected );
+					sizeof(VCN),
 #endif
+					selected, FS );
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->allocated_size),
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					sizeof(NTFS_VCN), selected );
+					sizeof(NTFS_VCN),
 #else
-					sizeof(VCN), selected );
+					sizeof(VCN),
 #endif
+					selected, FS );
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->data_size),
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					sizeof(NTFS_VCN), selected );
+					sizeof(NTFS_VCN),
 #else
-					sizeof(VCN), selected );
+					sizeof(VCN),
 #endif
+					selected, FS );
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->initialized_size),
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					sizeof(NTFS_VCN), selected );
+					sizeof(NTFS_VCN),
 #else
-					sizeof(VCN), selected );
+					sizeof(VCN),
 #endif
+					selected, FS );
 				fill_buffer ( pass, (unsigned char *) &(ctx->attr->compressed_size),
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					sizeof(NTFS_VCN), selected );
+					sizeof(NTFS_VCN),
 #else
-					sizeof(VCN), selected );
+					sizeof(VCN),
 #endif
+					selected, FS );
 				if ( sig_recvd != 0 )
 				{
 			       		break;
@@ -1146,7 +1166,7 @@ wfs_ntfs_wipe_part (
 	}
 	/* 16 is the first i-node for user use. */
 	for (inode_num = 16; (inode_num < nr_mft_records) && (sig_recvd==0)
-		&& (ret_wfs == WFS_SUCCESS); inode_num++ )
+		/*&& (ret_wfs == WFS_SUCCESS)*/; inode_num++ )
 	{
 
 		ret_wfs = WFS_SUCCESS;
@@ -1193,11 +1213,12 @@ wfs_ntfs_wipe_part (
 
 					if ( (ret_wfs == WFS_SUCCESS) && (NAttrCompressed (na) != 0) )
 					{
-						/*wiped = */wipe_compressed_attribute (&(FS.ntfs), na, buf);
+						/*wiped = */wipe_compressed_attribute
+							(&(FS.ntfs), na, buf, FS);
 					}
 					else
 					{
-						/*wiped = */wipe_attribute (&(FS.ntfs), na, buf);
+						/*wiped = */wipe_attribute (&(FS.ntfs), na, buf, FS);
 					}
 				}
 				ntfs_attr_close (na);
@@ -1271,7 +1292,8 @@ wfs_ntfs_wipe_fs (
 		for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
 		{
 
-			fill_buffer ( j, buf, (size_t) wfs_ntfs_get_block_size (FS), selected );/* buf OK */
+			fill_buffer ( j, buf, (size_t) wfs_ntfs_get_block_size (FS),
+				selected, FS );/* buf OK */
 			if ( sig_recvd != 0 )
 			{
 		       		break;
@@ -1420,12 +1442,12 @@ wfs_ntfs_wipe_journal (
 		return WFS_ATTROPEN;
 	}
 	for ( j = 0; (j < npasses+1) && (sig_recvd == 0)
-		&& (ret_journ == WFS_SUCCESS); j++ )
+		/*&& (ret_journ == WFS_SUCCESS)*/; j++ )
 	{
 		if ( j < npasses )
 		{
 			fill_buffer ( j, buf, (size_t) wfs_ntfs_get_block_size (FS),
-				selected );/* buf OK */
+				selected, FS );/* buf OK */
 		}
 		else
 		{
@@ -1560,8 +1582,7 @@ wfs_ntfs_wipe_unrm (
 		return WFS_SIGNAL;
 	}
 
-	/* just like ntfsundelete; detects i-node numbers fine */
-	for (i = 0; (i < bmpsize) && (sig_recvd==0) && (ret_wfs==WFS_SUCCESS); i += MYBUF_SIZE)
+	for (i = 0; (i < bmpsize) && (sig_recvd==0) /*&& (ret_wfs==WFS_SUCCESS)*/; i += MYBUF_SIZE)
 	{
 
 		/* read a part of the file bitmap */
@@ -1569,11 +1590,12 @@ wfs_ntfs_wipe_unrm (
 		if (size < 0) break;
 
 		/* parse each byte of the just-read part of the bitmap */
-		for (j = 0; (j < size) && (sig_recvd==0) && (ret_wfs==WFS_SUCCESS); j++)
+		for (j = 0; (j < size) && (sig_recvd==0) /*&& (ret_wfs==WFS_SUCCESS)*/; j++)
 		{
 			b = mybuf[j];
 			/* parse each bit of the byte Bit 1 means 'in use'. */
-			for (k = 0; (k < CHAR_BIT) && (sig_recvd==0) && (ret_wfs==WFS_SUCCESS); k++, b>>=1)
+			for (k = 0; (k < CHAR_BIT) && (sig_recvd==0) /*&& (ret_wfs==WFS_SUCCESS)*/;
+				k++, b>>=1)
 			{
 				/* (i+j)*8+k is the i-node bit number */
 				if (((i+j)*CHAR_BIT+k) >= nr_mft_records)
@@ -1763,7 +1785,7 @@ wfs_ntfs_close_fs (
 	error->errcode.gerror = ntfs_umount (&(FS.ntfs), FALSE);
 	if ( error->errcode.gerror != 0 )
 	{
-		show_error ( *error, err_msg_close, fsname );
+		show_error ( *error, err_msg_close, FS.fsname, FS );
 		ret = WFS_FSCLOSE;
 	}
 
@@ -1873,7 +1895,7 @@ wfs_ntfs_flush_fs (
 	}
 	if ( ret != WFS_SUCCESS )
 	{
-		show_error ( *error, err_msg_flush, fsname );
+		show_error ( *error, err_msg_flush, FS.fsname, FS );
 	}
 #if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
 	sync ();

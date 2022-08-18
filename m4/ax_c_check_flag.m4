@@ -6,7 +6,7 @@
 #
 # DESCRIPTION
 #
-#   This macro tests if the C++ compiler supports the flag FLAG-TO-CHECK
+#   This macro tests if the C compiler supports the flag FLAG-TO-CHECK
 #   If successfull execute ACTION-IF-SUCCESS otherwise ACTION-IF-FAILURE
 #
 #   Thanks to Bogdan Drozdowski <bogdandr@op.pl> for testing and bug-fixes

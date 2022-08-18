@@ -2,12 +2,12 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions, header file.
  *
- * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v3+
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 3
+ * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -28,32 +28,7 @@
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE64_SOURCE 1
 
-#ifdef HAVE_GETMNTENT_R
-	/* getmntent_r() */
-# define _GNU_SOURCE	1
-#endif
-
-#include <stdio.h>	/* sscanf(), FILE */
-
-#ifdef HAVE_MNTENT_H
-# include <mntent.h>
-#endif
-
-#ifdef HAVE_PATHS_H
-# include <paths.h>
-#endif
-
-#ifndef _PATH_DEVNULL
-# define	_PATH_DEVNULL	"/dev/null"
-#endif
-
-#ifndef _PATH_MOUNTED
-# ifdef MNT_MNTTAB
-#  define	_PATH_MOUNTED	MNT_MNTTAB
-# else
-#  define	_PATH_MOUNTED	"/etc/mtab"
-# endif
-#endif
+#include <stdio.h>	/* sscanf() */
 
 #if (!defined __USE_FILE_OFFSET64) && (!defined __USE_LARGEFILE64)
 # ifndef lseek64
@@ -78,6 +53,29 @@
 #endif
 */
 
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>	/* S_ISREG */
+#endif
+
+/* time headers for select() (the old way) */
+#if TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  ifdef HAVE_TIME_H
+#   include <time.h>
+#  endif
+# endif
+#endif
+
+/* select () - the new way */
+#ifdef HAVE_SYS_SELECT_H
+# include <sys/select.h>
+#endif
+
 #ifdef HAVE_STRING_H
 # if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
 #  include <memory.h>
@@ -87,7 +85,7 @@
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>	/* access(), close(), dup2(), fork(), sync(), STDIN_FILENO,
-			   STDOUT_FILENO, STDERR_FILENO */
+			   STDOUT_FILENO, STDERR_FILENO, select () (the old way) */
 #endif
 
 #ifdef HAVE_FCNTL_H
@@ -123,11 +121,11 @@
 #include "wipefreespace.h"
 #include "wfs_xfs.h"
 #include "wfs_signal.h"
+#include "wfs_util.h"
 
 #define PIPE_R 0
 #define PIPE_W 1
 #define XFSBUFSIZE 240
-#define MNTBUFLEN 4096
 
 #ifndef STDIN_FILENO
 # define STDIN_FILENO	0
@@ -146,10 +144,6 @@
 #endif
 #ifndef O_EXCL
 # define O_EXCL		0200
-#endif
-
-#ifndef MNTOPT_RW
-# define MNTOPT_RW	"rw"
 #endif
 
 #ifndef PIPE_BUF
@@ -231,7 +225,11 @@ wfs_xfs_wipe_unrm (
 	const wfs_fsid_t FS;
 #endif
 {
-	/* The XFS has no undelete capability. */
+	/*
+	 * The XFS has no undelete capability.
+	 * Directories' sizes are multiples of block size, so can't wipe
+	 *  unused space in these blocks.
+	 */
 	return WFS_SUCCESS;
 }
 
@@ -255,114 +253,6 @@ wfs_xfs_get_block_size (
 	return FS.xxfs.wfs_xfs_blocksize;
 }
 
-
-
-/**
- * Gets the mount point of the given device (if mounted).
- * \param dev_name Device to check.
- * \param error Pointer to error variable.
- * \param mnt_point Array for the mount point.
- * \param is_rw Pointer to a variavle which will tell if the filesystem
- *	is mounted in read+write mode (=1 if yes).
- * \return 0 in case of no errors, other values otherwise.
- */
-static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_xfs_get_mnt_point (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
-	const char * const dev_name
-# ifndef HAVE_MNTENT_H
-	WFS_ATTR ((unused))
-# endif
-	, error_type * const error,
-	char * const mnt_point, int * const is_rw )
-#else
-	dev_name
-# ifndef HAVE_MNTENT_H
-	WFS_ATTR ((unused))
-# endif
-	, error, mnt_point, is_rw )
-	const char * const dev_name;
-	error_type * const error;
-	char * const mnt_point;
-	int * const is_rw;
-#endif
-{
-#ifdef HAVE_MNTENT_H
-	FILE *mnt_f;
-	struct mntent *mnt, mnt_copy;
-# ifdef HAVE_GETMNTENT_R
-	char buffer[MNTBUFLEN];
-# endif
-#endif
-/*
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL) || (is_rw == NULL) )
-		return WFS_BADPARAM;
-*/
-	*is_rw = 1;
-	strcpy (mnt_point, "");
-
-#ifdef HAVE_MNTENT_H
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
-	mnt_f = setmntent (_PATH_MOUNTED, "r");
-	if (mnt_f == NULL)
-	{
-# ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
-# endif
-		return WFS_MNTCHK;
-	}
-	do
-	{
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
-# ifndef HAVE_GETMNTENT_R
-		mnt = getmntent (mnt_f);
-		memcpy ( &mnt_copy, mnt, sizeof (struct mntent) );
-# else
-		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, MNTBUFLEN);
-# endif
-		if ( mnt == NULL ) break;
-		if ( strcmp (dev_name, mnt->mnt_fsname) == 0 ) break;
-
-	} while ( 1==1 );
-
-	endmntent (mnt_f);
-	if ( (mnt == NULL)
-# ifdef HAVE_ERRNO_H
-/*		&& (errno == 0)*/
-# endif
-	   )
-	{
-		*is_rw = 0;
-		return WFS_SUCCESS;	/* seems not to be mounted */
-	}
-# ifdef HAVE_HASMNTOPT
-	if (hasmntopt (mnt, MNTOPT_RW) != NULL)
-	{
-		error->errcode.gerror = 1L;
-		*is_rw = 1;
-		strcpy (mnt_point, mnt->mnt_dir);
-		return WFS_MNTRW;
-	}
-# else
-	error->errcode.gerror = 1L;
-	*is_rw = 1;
-	strcpy (mnt_point, mnt->mnt_dir);
-	return WFS_MNTRW;	/* can't check for r/w, so don't do anything */
-# endif
-	*is_rw = 0;
-	strcpy (mnt_point, mnt->mnt_dir);
-	return WFS_SUCCESS;
-#else	/* ! HAVE_MNTENT_H */
-	error->errcode.gerror = 1L;
-	return WFS_MNTCHK;	/* can't check, so don't do anything */
-#endif	/* HAVE_MNTENT_H */
-}
 
 /**
  * Wipes the free space on the given XFS filesystem.
@@ -400,6 +290,12 @@ wfs_xfs_wipe_fs	(
 	int selected[NPAT];
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	int bytes_read;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+	struct timeval tv;
+	fd_set set;
+#endif
 
 	if ( error == NULL ) return WFS_BADPARAM;
 
@@ -682,17 +578,49 @@ wfs_xfs_wipe_fs	(
 			/* can't return from here - have to un-freeze first */
 			ret_wfs = WFS_OPENFS;
 		}
-		while ( (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS) )
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+		FD_ZERO ( &set );
+		FD_SET ( pipe_fd[PIPE_R], &set );
+#endif
+		while ( (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/ )
 		{
 			/* read just 1 line */
 			res = 0;
 			do
 			{
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				tv.tv_sec = 10;
+				tv.tv_usec = 0;
+#endif
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
-				bytes_read = read (pipe_fd[PIPE_R], &(read_buffer[res]), 1);
-				res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
+				{
+#endif
+					bytes_read = read (pipe_fd[PIPE_R], &(read_buffer[res]), 1);
+					res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				}
+				else
+				{
+					bytes_read = 1;	/* just a marker */
+					if ( sigchld_recvd != 0 )
+					{
+						res = -1;
+						break;
+					}
+				}
+#endif
 			}
 			while (     (read_buffer[res-1] != '\n')
 				 && (read_buffer[res-1] != '\r')
@@ -752,17 +680,19 @@ wfs_xfs_wipe_fs	(
 				{
 					break;
 				}
-				fill_buffer ( i, buffer, wfs_xfs_get_block_size (FS), selected );
+				fill_buffer ( i, buffer, wfs_xfs_get_block_size (FS), selected, FS );
 				for ( j=0; (j < length) && (sig_recvd == 0); j++ )
 				{
 					if ( write (fs_fd, buffer, wfs_xfs_get_block_size (FS))
 						!= (ssize_t) wfs_xfs_get_block_size (FS)
 					   )
 					{
+						ret_wfs = WFS_BLKWR;
 						break;
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					   Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* Flush after each writing, if more than 1 overwriting
+					   needs to be done. Allow I/O bufferring (efficiency),
+					   if just one pass is needed. */
 					if ( (npasses > 1) && (sig_recvd == 0) )
 					{
 						error->errcode.gerror = wfs_xfs_flush_fs (FS);
@@ -973,6 +903,12 @@ wfs_xfs_wipe_part (
 	unsigned int offset;
 	char inode_cmd[40];
 	int bytes_read;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+	fd_set set;
+	struct timeval tv;
+#endif
 
 	if ( error == NULL ) return WFS_BADPARAM;
 
@@ -1299,17 +1235,49 @@ wfs_xfs_wipe_part (
 	{
 		ret_part = WFS_OPENFS;
 	}
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+	FD_ZERO ( &set );
+	FD_SET ( pipe_from_ino_db[PIPE_R], &set );
+#endif
 	while ( (sig_recvd == 0) && (ret_part == WFS_SUCCESS) )
 	{
 		/* read just 1 line with inode-file pair */
 		res = 0;
 		do
 		{
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+			tv.tv_sec = 10;
+			tv.tv_usec = 0;
+#endif
 # ifdef HAVE_ERRNO_H
 			errno = 0;
 # endif
-			bytes_read = read (pipe_from_ino_db[PIPE_R], &(read_buffer[res]), 1);
-			res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+			if ( select ( pipe_from_ino_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
+			{
+#endif
+				bytes_read = read (pipe_from_ino_db[PIPE_R], &(read_buffer[res]), 1);
+				res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+			}
+			else
+			{
+				bytes_read = 1;	/* just a marker */
+				if ( sigchld_recvd != 0 )
+				{
+					res = -1;
+					break;
+				}
+			}
+#endif
 		}
 		while (     (read_buffer[res-1] != '\n')
 			 && (read_buffer[res-1] != '\r')
@@ -1352,17 +1320,50 @@ wfs_xfs_wipe_part (
 		got_size_line = 0;
 		mode = 0;
 		inode_size = 0;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+		FD_ZERO ( &set );
+		FD_SET ( pipe_from_blk_db[PIPE_R], &set );
+#endif
 		while (((got_mode_line == 0) || (got_size_line == 0)) && (sig_recvd == 0))
 		{
 			/* read just 1 line */
 			res = 0;
 			do
 			{
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				tv.tv_sec = 10;
+				tv.tv_usec = 0;
+#endif
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
-				bytes_read = read (pipe_from_blk_db[PIPE_R], &(read_buffer[res]), 1);
-				res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				if ( select ( pipe_from_ino_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
+				{
+#endif
+					bytes_read = read (pipe_from_blk_db[PIPE_R],
+						&(read_buffer[res]), 1);
+					res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				}
+				else
+				{
+					bytes_read = 1;	/* just a marker */
+					if ( sigchld_recvd != 0 )
+					{
+						res = -1;
+						break;
+					}
+				}
+#endif
 			}
 			while (    (read_buffer[res-1] != '\n')
 			 	&& (read_buffer[res-1] != '\r')
@@ -1386,14 +1387,10 @@ wfs_xfs_wipe_part (
 			read_buffer[XFSBUFSIZE-1] = '\0';
 			pos1 = strstr (read_buffer, modeline);
 			pos2 = strstr (read_buffer, sizeline);
-			if ( (pos1 == NULL) && (pos2 == NULL) )
-			{
-				continue;
-			}
 			/* get inode mode */
-			else if ( pos1 != NULL )
+			if ( pos1 != NULL )
 			{
-				res = sscanf (pos1, modeline "%o", &mode );
+				res = sscanf (pos1, modeline "%o", &mode);
 				if ( res != 1 )
 				{
 					/* line found, but cannot be parsed */
@@ -1404,7 +1401,7 @@ wfs_xfs_wipe_part (
 			/* get inode size */
 			else if ( pos2 != NULL )
 			{
-				res = sscanf (pos2, sizeline "%llu", &inode_size );
+				res = sscanf (pos2, sizeline "%llu", &inode_size);
 				if ( res != 1 )
 				{
 					/* line found, but cannot be parsed */
@@ -1433,15 +1430,48 @@ wfs_xfs_wipe_part (
 		flush_pipe_output (pipe_to_blk_db[PIPE_W]);
 		/* read just 1 line */
 		res = 0;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+		FD_ZERO ( &set );
+		FD_SET ( pipe_from_blk_db[PIPE_R], &set );
+#endif
 		do
 		{
 			do
 			{
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				tv.tv_sec = 10;
+				tv.tv_usec = 0;
+#endif
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
-				bytes_read = read (pipe_from_blk_db[PIPE_R], &(read_buffer[res]), 1);
-				res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				if ( select ( pipe_from_ino_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
+				{
+#endif
+					bytes_read = read (pipe_from_blk_db[PIPE_R],
+						&(read_buffer[res]), 1);
+					res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				}
+				else
+				{
+					bytes_read = 1;	/* just a marker */
+					if ( sigchld_recvd != 0 )
+					{
+						res = -1;
+						break;
+					}
+				}
+#endif
 			}
 			while (    (read_buffer[res-1] != '\n')
 			 	&& (read_buffer[res-1] != '\r')
@@ -1485,7 +1515,8 @@ wfs_xfs_wipe_part (
 				continue;
 			}
 			res = 0;
-			res = sscanf (pos1, "data offset %u startblock %llu (%llu/%llu) count %llu flag %u",
+			res = sscanf (pos1,
+				"data offset %u startblock %llu (%llu/%llu) count %llu flag %u",
 				&offset, &start_block, &trash, &trash, &number_of_blocks, &mode );
 			/* flush input to get rid of the rest of inode info and 'xfs_db>' trash */
 			flush_pipe_input (pipe_from_blk_db[PIPE_R]);
@@ -1509,14 +1540,16 @@ wfs_xfs_wipe_part (
 			{
 				/* NOTE: this must be instde! */
 				if ( lseek64 (fs_fd,
-					(off64_t) (start_block * wfs_xfs_get_block_size (FS) + inode_size),
+					(off64_t) (start_block * wfs_xfs_get_block_size (FS)
+						+ inode_size),
 					SEEK_SET )
-					!= (off64_t) (start_block * wfs_xfs_get_block_size (FS) + inode_size)
+					!= (off64_t) (start_block * wfs_xfs_get_block_size (FS)
+						+ inode_size)
 				   )
 				{
 					break;
 				}
-				fill_buffer ( i, buffer, wfs_xfs_get_block_size (FS), selected );
+				fill_buffer ( i, buffer, wfs_xfs_get_block_size (FS), selected, FS );
 				if ( write (fs_fd, buffer, (size_t)length_to_wipe) != length_to_wipe )
 				{
 					ret_part = WFS_BLKWR;
@@ -1635,13 +1668,20 @@ wfs_xfs_check_err (
 	char * args[] = { "xfs_check", "  ", NULL, NULL }; /* xfs_check [-f] dev/file */
 	char buffer[XFSBUFSIZE];
 	int bytes_read;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+	fd_set set;
+	struct timeval tv;
+#endif
+
 
 #ifdef HAVE_STAT_H
 	struct stat s;
 
 	if ( stat (FS.xxfs.dev_name, &s) >= 0 )
 	{
-		if ( S_ISREG(s.st_mode) )
+		if ( S_ISREG (s.st_mode) )
 		{
 			strcpy (args[1], "-f");
 		}
@@ -1764,13 +1804,45 @@ wfs_xfs_check_err (
 		/* any output means error. */
 		res = 0;
 		/* read just 1 line */
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+		FD_ZERO ( &set );
+		FD_SET ( pipe_fd[PIPE_R], &set );
+#endif
 		do
 		{
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+			tv.tv_sec = 10;
+			tv.tv_usec = 0;
+#endif
 # ifdef HAVE_ERRNO_H
 			errno = 0;
 # endif
-			bytes_read = read (pipe_fd[PIPE_R], &(buffer[res]), 1);
-			res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+			if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
+			{
+#endif
+				bytes_read = read (pipe_fd[PIPE_R], &(buffer[res]), 1);
+				res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+			}
+			else
+			{
+				bytes_read = 1;	/* just a marker */
+				if ( sigchld_recvd != 0 )
+				{
+					res = -1;
+					break;
+				}
+			}
+#endif
 		}
 		while (    (buffer[res-1] != '\n')
 			&& (buffer[res-1] != '\r')
@@ -1847,6 +1919,33 @@ wfs_xfs_is_dirty (
 }
 
 /**
+ * Gets the mount point of the given device (if mounted).
+ * \param dev_name Device to check.
+ * \param error Pointer to error variable.
+ * \param mnt_point Array for the mount point.
+ * \param is_rw Pointer to a variavle which will tell if the filesystem
+ *	is mounted in read+write mode (=1 if yes).
+ * \return 0 in case of no errors, other values otherwise.
+ */
+static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+wfs_xfs_get_mnt_point (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const dev_name, error_type * const error,
+	char * const mnt_point, int * const is_rw )
+#else
+	dev_name, error, mnt_point, is_rw )
+	const char * const dev_name;
+	error_type * const error;
+	char * const mnt_point;
+	int * const is_rw;
+#endif
+{
+	return wfs_get_mnt_point ( dev_name, error, mnt_point, is_rw );
+}
+
+/**
  * Checks if the given XFS filesystem is mounted in read-write mode.
  * \param devname Device name, like /dev/hdXY
  * \param error Pointer to error variable.
@@ -1864,31 +1963,7 @@ wfs_xfs_chk_mount (
 	error_type * const error;
 #endif
 {
-	errcode_enum res;
-	int is_rw;
-	char buffer[MNTBUFLEN];
-
-	if ( error == NULL )
-	{
-		return WFS_BADPARAM;
-	}
-
-	res = wfs_xfs_get_mnt_point (dev_name, error, buffer, &is_rw);
-	if ( res != WFS_SUCCESS )
-	{
-		return res;
-	}
-	/*
-	else if ( is_rw != 0 )
-	{
-		* impossible to get here right now *
-		return WFS_MNTRW;
-	}
-	*/
-	else
-	{
-		return WFS_SUCCESS;
-	}
+	return wfs_check_mounted (dev_name, error);
 }
 
 /**
@@ -1930,6 +2005,13 @@ wfs_xfs_open_fs (
 	int is_rw;
 	unsigned long long int inprogress;
 	int bytes_read;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+	struct timeval tv;
+	fd_set set;
+#endif
+
 
 	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL) || (error == NULL))
 	{
@@ -2115,6 +2197,12 @@ wfs_xfs_open_fs (
 #  endif	/* HAVE_SIGNAL_H */
 # endif
 #endif
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+		FD_ZERO ( &set );
+		FD_SET ( pipe_fd[PIPE_R], &set );
+#endif
 		while ( ((blocksize_set == 0) || (agblocks_set == 0)
 			|| (inprogress_found == 0)) && (sig_recvd == 0) )
 		{
@@ -2133,11 +2221,37 @@ wfs_xfs_open_fs (
 			res = 0;
 			do
 			{
-# ifdef HAVE_ERRNO_H
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				tv.tv_sec = 10;
+				tv.tv_usec = 0;
+#endif
+#ifdef HAVE_ERRNO_H
 				errno = 0;
-# endif
-				bytes_read = read (pipe_fd[PIPE_R], &(buffer[res]), 1);
-				res++;
+#endif
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
+				{
+#endif
+					bytes_read = read (pipe_fd[PIPE_R], &(buffer[res]), 1);
+					res++;
+#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
+	&& (defined HAVE_SELECT)
+				}
+				else
+				{
+					bytes_read = 1;	/* just a marker */
+					if ( sigchld_recvd != 0 )
+					{
+						res = -1;
+						break;
+					}
+				}
+#endif
 			}
 			while (    (buffer[res-1] != '\n')
 				&& (buffer[res-1] != '\r')

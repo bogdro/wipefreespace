@@ -2,12 +2,12 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v3+
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 3
+ * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -89,7 +89,6 @@ volatile sig_atomic_t sigchld_recvd = 0;	/* non-zero after SIGCHLD signal receiv
 
 # ifndef RETSIGTYPE
 #  define RETSIGTYPE void
-#  undef RETSIG_ISINT
 # endif
 /**
  * Signal handler - Sets a flag which will stop further program operations, when a
@@ -108,9 +107,13 @@ term_signal_received (
 #endif
 {
 	sig_recvd = signum;
-# ifdef RETSIG_ISINT
+# define void 1
+# define int 2
+# if RETSIGTYPE != void
 	return 0;
 # endif
+# undef int
+# undef void
 }
 
 static RETSIGTYPE
@@ -154,7 +157,9 @@ void wfs_set_sigh (
 	typedef void (*sighandler_t) (int);
 	sighandler_t shndlr;
 #endif
+	wfs_fsid_t wf_gen;
 
+	wf_gen.fsname = "-";
 	/*
 	 * Setting signal handlers. We need to catch signals in order to close (and flush)
 	 * an opened file system, to prevent unconsistencies.
@@ -167,7 +172,7 @@ void wfs_set_sigh (
 #  ifdef HAVE_ERRNO_H
 		errno = 0;
 #  endif
-		shndlr = signal ( signals[s], &term_signal_received );
+		shndlr = signal ( signals[s], &term_signal_received, wf_gen );
 		if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
 /*			|| (errno != 0)*/
@@ -182,9 +187,9 @@ void wfs_set_sigh (
 			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s] );
 			tmp[TMPSIZE-1] = '\0';
 			if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
-			if ( opt_verbose == 1 )
+			if ( opt_verbose > 0 )
 			{
-				show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk) );
+				show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
 			}
 		}
 	}
@@ -206,9 +211,9 @@ void wfs_set_sigh (
 		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD );
 		tmp[TMPSIZE-1] = '\0';
 		if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
-		if ( opt_verbose == 1 )
+		if ( opt_verbose > 0 )
 		{
-			show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk) );
+			show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
 		}
 	}
 
@@ -248,9 +253,9 @@ void wfs_set_sigh (
 #  endif
 			tmp[TMPSIZE-1] = '\0';
 			if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
-			if ( opt_verbose == 1 )
+			if ( opt_verbose > 0 )
 			{
-				show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk) );
+				show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
 			}
 		}
 	}
@@ -278,9 +283,9 @@ void wfs_set_sigh (
 #  endif
 		tmp[TMPSIZE-1] = '\0';
 		if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
-		if ( opt_verbose == 1 )
+		if ( opt_verbose > 0 )
 		{
-			show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk) );
+			show_error ( *error, err_msg_signal, (res>0)? tmp : _(sig_unk), wf_gen );
 		}
 	}
 # endif		/* ! ANSI C */

@@ -12,13 +12,18 @@ wipefreespace \- Secure cleaning of free space on filesystems.
 
 .SH DESCRIPTION
 The wipefreespace program securely cleans the free space and undelete data
-on the given ext2/3, NTFS, XFS and ReiserFSv3 file systems. Write permissions
+on the given ext2/3, NTFS, XFS, ReiserFSv3+ and ReiserFSv4 file systems. Write permissions
 are required for the devices
 (or regular files containing the file system), but the program
 .B MUST NOT
 be setuid(root).
 
+Each given filesystem is wiped ONLY ONCE, no matter how many times it appears on the command line.
+WipeFreeSpace also works for file systems created inside regular files on any host file system.
+
 .SH OPTIONS
+Any option affects all filesystems given on the command line, not just the ones following it.
+
 .IP "--background"
 Continue work in the background, if possible. If succeded, no messages will be displayed.
 .IP "-b|--superblock OFFSET"
@@ -39,6 +44,8 @@ Do NOT wipe free space in partially used blocks.
 Do NOT wipe undelete information
 .IP --nowfs
 Do NOT wipe free space on file system
+.IP --use-ioctl
+Disable device caching during work (can be DANGEROUS)
 .IP -v|--verbose
 Verbose output
 .IP -V|--version
@@ -80,6 +87,28 @@ undelete data.
 .IP \-13:
 The program found out that it has the suid permission bit set and the owner
 is root. Read the first chapter of the info documentation for an explanation and a solution.
+.IP \-14:
+Flushing the changes to the filesystem failed.
+.IP \-15:
+Block writing failed.
+.IP \-16:
+Failed to open an attribute (mostly on NTFS).
+.IP \-17:
+Failed runlist on NTFS.
+.IP \-18:
+Getting name failed.
+.IP \-19:
+Context error (NTFS).
+.IP \-20:
+Bad parameter was passed to one of the functions.
+.IP \-21:
+Pipe error (mostly XFS).
+.IP \-22:
+Fork error (XFS or ReiserFSv3+).
+.IP \-23:
+Exec error (XFS).
+.IP \-24:
+Seek error (mostly ReiserFSv4).
 .IP \-100:
 A signal was caught and the program was forced to exit.
 
@@ -94,6 +123,10 @@ Bogdan 'bogdro' Drozdowski,
 bogdandr /AT/ op . pl
 
 bogdro /AT/ rudy . mif . pg . gda . pl
+
+[EN] http://wipefreespace.sf.net
+
+[PL] http://wipefreespace.sf.net/index-pl.php
 
 [EN] http://rudy.mif.pg.gda.pl/~bogdro/soft/
 

@@ -2,12 +2,12 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2 and ext3 file system-specific functions.
  *
- * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v3+
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 3
+ * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -36,6 +36,10 @@
 #  endif
 # endif
 #endif
+
+#include "wipefreespace.h"
+/* fix conflict with reiser4: */
+#undef blk_t
 
 /* fix e2fsprogs inline functions - some linkers saw double definitions and
    failed with an error message */
@@ -78,7 +82,6 @@
 # include <string.h>	/* memset() */
 #endif
 
-#include "wipefreespace.h"
 #include "wfs_ext23.h"
 #include "wfs_signal.h"
 
@@ -87,6 +90,7 @@ struct wfs_e2_block_data
 	struct ext2_inode *ino;
 	unsigned char * buf;
 	int isjournal;
+	const char * fsname;
 };
 
 /**
@@ -142,11 +146,13 @@ e2_do_block (
 	error_type error;
 	struct wfs_e2_block_data *bd;
 	static int first_journ = 1;
+	wfs_fsid_t wf;
 
 	if ( (BLOCKNR == NULL) || (PRIVATE == NULL) ) return BLOCK_ABORT;
 
 	FSID.e2fs = FS;
 	bd = (struct wfs_e2_block_data *)PRIVATE;
+	wf.fsname = bd->fsname;
 
 	/* for partial wiping: */
 	if ( (bd->ino != NULL) && (sig_recvd == 0) )
@@ -157,7 +163,7 @@ e2_do_block (
 		error.errcode.e2error = io_channel_read_blk (FS->io, *BLOCKNR, 1, bd->buf);
 		if ( error.errcode.e2error != 0 )
 		{
-			show_error ( error, err_msg_rdblk, fsname );
+			show_error ( error, err_msg_rdblk, bd->fsname, wf );
 			return BLOCK_ABORT;
 		}
 	}
@@ -179,7 +185,7 @@ e2_do_block (
 	for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer ( j, bd->buf + buf_start /* buf OK */,
-			wfs_e2_get_block_size (FSID) - buf_start, selected );
+			wfs_e2_get_block_size (FSID) - buf_start, selected, wf );
 		if ( sig_recvd != 0 )
 		{
 			returns = BLOCK_ABORT;
@@ -197,13 +203,15 @@ e2_do_block (
 			   or the block is marked OK, then print the error. */
 			if (FS->badblocks == NULL)
 			{
-				show_error ( error, err_msg_wrtblk, fsname );
+				show_error ( error, err_msg_wrtblk, bd->fsname, wf );
 				returns = BLOCK_ABORT;
+				break;
 			}
 			else if (ext2fs_badblocks_list_test (FS->badblocks, *BLOCKNR) == 0)
 			{
-				show_error ( error, err_msg_wrtblk, fsname );
+				show_error ( error, err_msg_wrtblk, bd->fsname, wf );
 				returns = BLOCK_ABORT;
+				break;
 			}
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
@@ -213,6 +221,7 @@ e2_do_block (
 			error.errcode.gerror = wfs_e2_flush_fs ( FSID, &error );
 		}
 	}
+	/* zero-out the journal after wiping */
 	if ( bd->isjournal != 0 )
 	{
 		/* skip the first block of the journal */
@@ -241,12 +250,12 @@ e2_do_block (
 				   or the block is marked OK, then print the error. */
 				if (FS->badblocks == NULL)
 				{
-					show_error ( error, err_msg_wrtblk, fsname );
+					show_error ( error, err_msg_wrtblk, bd->fsname, wf );
 					returns = BLOCK_ABORT;
 				}
 				else if (ext2fs_badblocks_list_test (FS->badblocks, *BLOCKNR) == 0)
 				{
-					show_error ( error, err_msg_wrtblk, fsname );
+					show_error ( error, err_msg_wrtblk, bd->fsname, wf );
 					returns = BLOCK_ABORT;
 				}
 			}
@@ -369,7 +378,7 @@ e2_wipe_unrm_dir (
 	{
 
 		fill_buffer ( j, (unsigned char *)filename /* buf OK */,
-			(size_t) (DIRENT->name_len & 0xFF), selected );
+			(size_t) (DIRENT->name_len & 0xFF), selected, wd->filesys );
 		changed = 1;
 		if ( j == npasses-1 )
 		{
@@ -389,7 +398,7 @@ e2_wipe_unrm_dir (
 		error.errcode.e2error = ext2fs_read_inode ( wd->filesys.e2fs, DIRENT->inode, &unrm_ino );
 		if ( error.errcode.e2error != 0 )
 		{
-			show_error ( error, err_msg_rdino, fsname );
+			show_error ( error, err_msg_rdino, wd->filesys.fsname, wd->filesys );
 			ret_unrm = WFS_INOREAD;
 		}
 
@@ -404,7 +413,7 @@ e2_wipe_unrm_dir (
 				&e2_wipe_unrm_dir, PRIVATE );
 			if ( error.errcode.e2error != 0 )
 			{
-				show_error ( error, err_msg_diriter, fsname );
+				show_error ( error, err_msg_diriter, wd->filesys.fsname, wd->filesys );
 				ret_unrm = WFS_DIRITER;
 			}
 		}
@@ -469,11 +478,12 @@ wfs_e2_wipe_part (
 		return WFS_MALLOC;
 	}
 	block_data.isjournal = 0;
+	block_data.fsname = FS.fsname;
 
 	error->errcode.e2error = ext2fs_open_inode_scan ( FS.e2fs, 0, &ino_scan );
 	if ( error->errcode.e2error != 0 )
 	{
-		show_error ( *error, err_msg_openscan, fsname );
+		show_error ( *error, err_msg_openscan, FS.fsname, FS );
 		free (block_data.buf);
 		return WFS_INOSCAN;
 	}
@@ -513,7 +523,7 @@ wfs_e2_wipe_part (
 				BLOCK_FLAG_DATA_ONLY, NULL, &e2_count_blocks, &last_block_no);
 			if ( error->errcode.e2error != 0 )
 			{
-				show_error ( *error, err_msg_blkiter, fsname );
+				show_error ( *error, err_msg_blkiter, FS.fsname, FS );
 				ret_part = WFS_BLKITER;
 			}
 	        	if ( sig_recvd != 0 ) break;
@@ -580,16 +590,17 @@ wfs_e2_wipe_fs (
 	}
 	block_data.ino = NULL;
 	block_data.isjournal = 0;
+	block_data.fsname = FS.fsname;
 
 	/* read the bitmap of blocks */
 	error->errcode.e2error = ext2fs_read_block_bitmap ( FS.e2fs );
 	if ( error->errcode.e2error != 0 )
 	{
-		show_error ( *error, err_msg_rdblbm, fsname );
+		show_error ( *error, err_msg_rdblbm, FS.fsname, FS );
 		error->errcode.e2error = ext2fs_close ( FS.e2fs );
 		if ( error->errcode.e2error != 0 )
 		{
-			show_error ( *error, err_msg_close, fsname );
+			show_error ( *error, err_msg_close, FS.fsname, FS );
 		}
 		free (block_data.buf);
 		return WFS_BLBITMAPREAD;
@@ -664,13 +675,14 @@ wfs_e2_wipe_journal (
 	}
 	block_data.ino = NULL;
 	block_data.isjournal = 1;
+	block_data.fsname = FS.fsname;
 
 	error->errcode.e2error = ext2fs_block_iterate (FS.e2fs,
 		FS.e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
 		BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
 	if ( error->errcode.e2error != 0 )
 	{
-		show_error ( *error, err_msg_blkiter, fsname );
+		show_error ( *error, err_msg_blkiter, FS.fsname, FS );
 		ret_journ = WFS_BLKITER;
 	}
 
@@ -709,7 +721,7 @@ wfs_e2_wipe_unrm (
 	}
 
 	wd.filesys = FS;
-	for ( j = 0; (j < npasses) && (sig_recvd == 0) && (ret == WFS_SUCCESS); j++ )
+	for ( j = 0; (j < npasses) && (sig_recvd == 0) /*&& (ret == WFS_SUCCESS)*/; j++ )
 	{
 
 		wd.passno = j;
@@ -718,15 +730,17 @@ wfs_e2_wipe_unrm (
 			&e2_wipe_unrm_dir, &wd );
 		if ( error->errcode.e2error != 0 )
 		{
-			show_error ( *error, err_msg_diriter, fsname );
+			show_error ( *error, err_msg_diriter, FS.fsname, FS );
 			ret = WFS_DIRITER;
+			break;
 		}
-		if ( (npasses > 1) && (sig_recvd == 0) && (ret == WFS_SUCCESS) )
+		if ( (npasses > 1) && (sig_recvd == 0) )
 		{
 			error->errcode.gerror = wfs_e2_flush_fs ( FS, error );
 		}
 	}
 	if ( ret == WFS_SUCCESS ) ret = wfs_e2_wipe_journal (FS, error);
+	else wfs_e2_wipe_journal (FS, error);
 
 	return ret;
 }
@@ -857,7 +871,7 @@ wfs_e2_close_fs (
 	error->errcode.e2error = ext2fs_close ( FS.e2fs );
 	if ( error->errcode.e2error != 0 )
 	{
-		show_error ( *error, err_msg_close, fsname );
+		show_error ( *error, err_msg_close, FS.fsname, FS );
 		ret = WFS_FSCLOSE;
 	}
 	return ret;
@@ -933,7 +947,7 @@ wfs_e2_flush_fs (
 	error->errcode.e2error = ext2fs_flush ( FS.e2fs );
 	if ( error->errcode.e2error != 0 )
 	{
-		show_error ( *error, err_msg_flush, fsname );
+		show_error ( *error, err_msg_flush, FS.fsname, FS );
 		ret = WFS_FLUSHFS;
 	}
 #if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)

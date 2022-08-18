@@ -1,0 +1,135 @@
+/*
+ * A program for secure cleaning of free space on filesystems.
+ *	-- configuration header file.
+ *
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foudation:
+ *		Free Software Foundation
+ *		51 Franklin Street, Fifth Floor
+ *		Boston, MA 02110-1301
+ *		USA
+ */
+
+#ifndef WFS_CFG_H
+# define WFS_CFG_H 1
+
+# ifdef HAVE_CONFIG_H
+#  include <config.h>
+# else
+	/* be optimisitc - glibc has all of these, except the filesystem-specific, of course */
+#  define ENABLE_NLS		1
+#  define HAVE_ACCESS		1
+#  define HAVE_ASM_TYPES_H	1
+#  define HAVE_CLEARENV		1
+#  define HAVE_CLOSE		1
+#  define HAVE_DAEMON		1
+#  define HAVE_DECL_ENVIRON	1
+#  define HAVE_DECL___ENVIRON	1
+#  define HAVE_DUP2		1
+#  define HAVE_ERRNO_H		1
+#  define HAVE_ET_COM_ERR_H	1
+#  define HAVE_EXECVP		1
+#  define HAVE_FCNTL_H		1
+#  define HAVE_FORK		1
+#  define HAVE_FSYNC		1
+#  define HAVE_GETEUID		1
+#  define HAVE_GETMNTENT	1
+#  define HAVE_GETMNTENT_R	1
+#  define HAVE_GETOPT_H		1
+#  define HAVE_GETOPT_LONG	1
+#  define HAVE_GETPID		1
+#  define HAVE_GETTEXT		1
+#  define HAVE_GETUID		1
+#  define HAVE_IOCTL		1
+#  define HAVE_KILL		1
+#  define HAVE_LIBCOM_ERR	1
+#  define HAVE_LIBGEN_H		1
+#  define HAVE_LIBINTL_H	1
+#  define HAVE_LIBUUID		1
+#  define HAVE_LINUX_HDREG_H	1
+#  define HAVE_LIMITS_H		1
+#  define HAVE_LOCALE_H		1
+#  define HAVE_LONG_LONG	1
+#  define HAVE_MALLOC		1
+#  define HAVE_MALLOC_H		1
+#  define HAVE_MEMCPY		1
+#  define HAVE_MEMMOVE		1
+#  define HAVE_MEMORY_H		1
+#  define HAVE_MEMSET		1
+#  define HAVE_MNTENT_H		1
+#  define HAVE_HASMNTOPT	1
+#  define HAVE_PATHS_H		1
+#  define HAVE_PIPE		1
+#  define HAVE_RANDOM		1
+#  define HAVE_SCHED_H		1
+#  define HAVE_SCHED_YIELD	1
+#  define HAVE_SELECT		1
+#  define HAVE_SETLOCALE	1
+#  define HAVE_SIG_ATOMIC_T	1
+#  define HAVE_SIGACTION	1
+#  define HAVE_SIGNAL_H		1
+#  define HAVE_SIZE_T		1
+#  define HAVE_SLEEP		1
+#  define HAVE_SNPRINTF		1
+#  define HAVE_SRANDOM		1
+#  define HAVE_STDARG_H		1
+#  define HAVE_STDINT_H		1
+#  define HAVE_STDLIB_H		1
+#  define HAVE_STRING_H		1
+#  define HAVE_STRTOUL		1
+#  define HAVE_SYNC		1
+#  define HAVE_SYS_MOUNT_H	1
+#  define HAVE_SYS_PARAM_H	1
+#  define HAVE_SYS_SELECT_H	1
+#  define HAVE_SYS_STAT_H	1
+#  define HAVE_SYS_SYSMACROS_H	1
+#  define HAVE_SYS_TYPES_H	1
+#  define HAVE_SYS_WAIT_H	1
+#  define HAVE_TIME_H		1
+#  define HAVE_UNISTD_H		1
+#  define HAVE_WAIT		1
+#  define HAVE_WAIT_H		1
+#  define HAVE_WAITPID		1
+
+#  undef LSR_WANT_RANDOM
+
+/* Non-glibc stuff: */
+#  define HAVE_EXT2FS_EXT2FS_H	1
+#  define HAVE_LIBAAL		1
+#  define HAVE_LIBCAP		1
+#  define HAVE_LIBCORE		1	/* ReiserFS */
+#  define HAVE_LIBEXT2FS	1
+#  define HAVE_LIBNTFS		1
+#  define HAVE_LIBREISER4	1
+#  define HAVE_LIBREISER4MISC	1
+#  define HAVE_NTFS_VOLUME_H	1
+#  define HAVE_REISERFS_LIB_H	1
+#  define HAVE_SYS_CAPABILITY_H	1
+
+#  undef size_t
+#  undef ssize_t
+
+#  define STDC_HEADERS		1
+
+#  define PACKAGE_NAME "wipefreespace"
+#  define PACKAGE PACKAGE_NAME
+#  define PACKAGE_VERSION "@VERSION@"
+#  define VERSION PACKAGE_VERSION
+#  define LOCALEDIR "/usr/share/locale"
+#  define RETSIGTYPE void
+# endif /* HAVE_CONFIG_H */
+
+#endif	/* WFS_CFG_H */

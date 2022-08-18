@@ -4,49 +4,83 @@ This is the README file for wipefreespace, a program for secure wiping
 NOTE: it is best to use this program on un-mounted file systems, which
  makes sure the journal is committed.
 
+NOTE: if a block is damaged, it is only wiped until the first error. There is
+ no guarantee that it will be fully wiped.
+
 Read the info documentation (type 'info doc/wipefreespace.info') to get more
  information.
 
 Author: Bogdan Drozdowski, bogdandr @ op . pl
-License: GPLv3+
+License: GPLv2+
 
 Requirements for compiling the full version:
 
 - a non-root account. Please, NEVER compile or 'make' anything as root.
 
-- a working C compiler. XFS, ReiserFS and NTFS support require the 'long long'
-  data type.
+- a working C compiler. XFS, ReiserFS, Reiser4 and NTFS support require the
+  'long long' data type. NTFS support may require the gcc compiler.
 
 - development package for the C library (like glibc-devel and glibc-headers)
-  XFS support reuires the following headers: unistd.h, fcntl.h, mntent.h
+  XFS support requires the following headers: unistd.h, fcntl.h, mntent.h
   (but sys/wait.h, sched.h and paths.h can be useful, too) and the following
   functions: fork(), execvp(), dup2(), close(), pipe(), kill() and
   waitpid() or wait() (sleep() can be useful, too).
 
-- development package for the ext2 file system library, libext2fs (usually
-  included in something like e2fsprogs-devel). If you don't have anything
-  like this installed or available (check twice), then go to
-  	http://e2fsprogs.sf.net/
-  Then compile and install that package.
+- the 'make' program
 
-- development package for the NTFS file system library, libntfs (usually
+- Ext2/3/4: development package for the ext2 file system library, libext2fs
+  (usually included in something like e2fsprogs-devel). If you don't have
+  anything like this installed or available (check twice), then go to
+  	http://e2fsprogs.sf.net/
+  Then compile and install that package. Ext4 support requires new versions,
+  like 1.41.
+
+- NTFS: development package for the NTFS file system library, libntfs (usually
   included in something like ntfsprogs-devel). If you don't have anything
   like this installed or available (check twice), then go to
   	http://www.linux-ntfs.org/
   Then compile and install that package.
 
-- the 'make' program
-
-- xfsprogs installed and in your PATH variable, if you want XFS support.
+- XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/
 
-- development package for reiserfsprogs (header files and compiled static
-  libraries from the package). ReiserFS requires the fork() function
-  (unistd.h) and one of: waitpid(), wait() (sys/wait.h).
+- ReiserFSv3+:development package for reiserfsprogs (header files and
+  compiled static libraries from the package). ReiserFS requires the
+  fork() function (unistd.h), the mntent.h header file (with at least one of
+  its functions - getmntent() or getmntent_r()) and one of the
+  waitpid(), wait() functions (sys/wait.h).
+
+- Reiser4: development package for reiser4progs, libuuid (e2fsprogs or
+  e2fsprogs-libs), libaal and the mntent.h header file. Go to
+  	http://www.kernel.org/pub/linux/utils/fs/reiser4/
+  and
+  	http://e2fsprogs.sf.net/
+  to get the libraries. After installing, libmisc.a needs to be copied
+  in the same place as libreiser4.a, but under a different name,
+  libreiser4misc.a:
+
+  cp reiser4progs-XX/libmisc/.libs/libmisc.a /dst/path/libreiser4misc.a
+
+  Libmisc.a is in reiser4progs, of course. Nobody thought it would be
+  needed, but libreiser4.a is useless without it.
+
+WARNING: If both ReiserFSv3+ and ReiserFSv4 are enabled, the program may
+ refuse to link if the compiler doesn't support the command line option
+ "-Wl,-z -Wl,muldefs" that make the linker accept multiple references. If
+ you have this problem, disable the support for either of these filesystems.
+ Don't complain to me, complain to the guys that made reiserfsprogs and
+ reiser4progs.
+ You can fix either of these libraries yourself, by running
+	find . -type f -exec sed -i 's/misc_mntent/new_misc_mntent/g' '{}' \;
+ in the root directory of either reiserfsprogs or reiser4progs (but
+ NOT both, because this would bring back the same problem, but with a
+ different name). Type the command as above, just without the leading
+ and trailing apostrophes. The command must be run BEFORE compiling
+ the reiserfs programs.
 
 Type './configure' to configure the program for your system.  If you do not
 wish support for a filesystem, give the '--enable-FS=no' to ./configure
-(FS=EXT23, NTFS, XFS, REISERFS). Run './configure --help' for details.
+(FS=EXT234, NTFS, XFS, REISERFS, REISER4). Run './configure --help' for details.
 
 Type 'make' to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program
@@ -56,6 +90,39 @@ Translations will be compiled, if you have the 'gettext' package.
 Type 'make install' to install the program.
 
 Type 'info wipefreespace' to get help.
+
+Syntax:
+
+	wipefreespace [options] /dev/XY [...]
+
+Command line options:
+
+--background		Continue work in the background, if possible
+-b|--superblock <off>	Superblock offset on the given filesystems
+-B|--blocksize <size>	Block size on the given filesystems
+-f|--force		Wipe even if the file system has errors
+-h|--help		Print help
+-l|--license		Print license information
+-n|--iterations NNN	Number of passes (>0, default: 25)
+--nopart		Do NOT wipe free space in partially used blocks
+--nounrm		Do NOT wipe undelete information
+--nowfs			Do NOT wipe free space on file system
+--use-ioctl		Disable device caching during work (can be DANGEROUS)
+-v|--verbose		Verbose output
+-V|--version		Print version number
+
+The '/dev/XY' part stands for a device with a supported file system.
+ Examples: /dev/hda1, /dev/fd0. More than one device can be given on the
+ command line, but they will be wiped sequentially, NOT in
+ multiple threads. WipeFreeSpace is not multi-threaded and probably
+ won't be, because the libraries used can be not thread-safe.
+Each given filesystem is wiped ONLY ONCE, no matter how many times it
+ appears on the command line.
+WipeFreeSpace also works for file systems created inside regular
+ files on any host file system.
+
+Any option affects all filesystems given on the command line, not just
+ the ones following it.
 
 =======================================================
 
@@ -102,5 +169,5 @@ them all and send me the resulting XX.po file.
 
 Translating the documentation:
 - info: simply change the wipefreespace.texi file
-- man: Unpack the page using @command{gunzip wipefreespace.1.gz} and
+- man: Unpack the page using 'gunzip wipefreespace.1.gz' and
   translate the resulting wipefreespace.1 file.

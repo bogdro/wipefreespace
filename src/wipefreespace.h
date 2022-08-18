@@ -2,12 +2,12 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v3+
+ * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 3
+ * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -41,14 +41,22 @@
 # endif
 
 # undef		ERR_MSG_FORMATL
-# define 	ERR_MSG_FORMATL			"(%s %ld) %s '%s'"
+# define 	ERR_MSG_FORMATL			"(%s %ld) %s '%s', FS='%s'"
 # undef		ERR_MSG_FORMAT
-# define 	ERR_MSG_FORMAT			"(%s %d) %s '%s'"
+# define 	ERR_MSG_FORMAT			"(%s %d) %s '%s', FS='%s'"
 
-enum patterns
-{
-	NPAT = 22
-};
+# undef		NPAT
+# undef		PASSES
+
+# ifdef	LSR_WANT_RANDOM
+	/* shred-like method: 22 patterns and 3 random passes */
+#  define NPAT 22
+#  define PASSES (NPAT+3)
+# else
+	/* Gutmann method: 5 more patterns and 9 random passes */
+#  define NPAT (22+5)
+#  define PASSES (NPAT+9)
+# endif
 
 enum errcode_enum
 {
@@ -77,6 +85,7 @@ enum errcode_enum
 	WFS_PIPEERR		= -21,
 	WFS_FORKERR		= -22,
 	WFS_EXECERR		= -23,
+	WFS_SEEKERR		= -24,
 	WFS_SIGNAL		= -100
 };
 
@@ -88,7 +97,8 @@ enum CURR_FS
 	CURR_EXT2FS,
 	CURR_NTFS,
 	CURR_XFS,
-	CURR_REISERFS
+	CURR_REISERFS,
+	CURR_REISER4
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -173,7 +183,7 @@ typedef long off64_t;
 #   include <asm/types.h>
 #  else
 typedef unsigned int __u32;
-typedef short int __u16;
+typedef unsigned short int __u16;
 #  endif
 
 #  include <reiserfs_lib.h>
@@ -182,6 +192,16 @@ typedef short int __u16;
 #  undef	WFS_REISER
 # endif
 
+/* fix conflict between libext2fs and reiser4. This gets #undef'd in the source files. */
+# define blk_t reiser4_blk_t
+
+# if (defined HAVE_REISER4_LIBREISER4_H) && (defined HAVE_LIBREISER4)	\
+	&& (defined HAVE_LIBREISER4MISC) && (defined HAVE_LIBAAL)
+#  include <reiser4/libreiser4.h>
+#  define	WFS_REISER4	1
+# else
+#  undef	WFS_REISER4
+# endif
 
 
 # ifdef HAVE_GETTEXT
@@ -212,6 +232,9 @@ struct error_type
 # ifdef 	WFS_EXT2
 		errcode_t	e2error;
 # endif
+# ifdef		WFS_REISER4
+		errno_t		r4error;
+# endif
 	/* TODO: to be expanded, when other FS come into the program */
 	} errcode;
 
@@ -219,8 +242,10 @@ struct error_type
 
 typedef struct error_type error_type;
 
-union wfs_fsid_t
+struct wfs_fsid_t
 {
+	const char * fsname;
+
 # ifdef 	WFS_EXT2
 	ext2_filsys	e2fs;
 # endif
@@ -240,18 +265,16 @@ union wfs_fsid_t
 # ifdef		WFS_REISER
 	reiserfs_filsys_t * rfs;
 # endif
+# ifdef		WFS_REISER4
+	reiser4_fs_t * r4;
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
 
 
-
-
-# if (!defined WFS_EXT2) && (!defined WFS_NTFS) && (!defined WFS_REISER)
-	char dummy;	/* Make this union non-empty */
-# endif
 };
 
-typedef union wfs_fsid_t wfs_fsid_t;
+typedef struct wfs_fsid_t wfs_fsid_t;
 
 struct wipedata
 {
@@ -267,7 +290,7 @@ union fselem_t
 	ext2_ino_t	e2elem;
 # endif
 # ifdef		WFS_NTFS
-	ntfs_inode 	*ntfselem;
+	ntfs_inode 	* ntfselem;
 # endif
 # ifdef		WFS_XFS
 	/* Nothing. XFS has no undelete capability. */
@@ -275,13 +298,16 @@ union fselem_t
 # ifdef		WFS_REISER
 	struct key	rfs_elem;
 # endif
+# ifdef		WFS_REISER4
+	reiser4_node_t * r4node;
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
 
 
 
 
-# if (!defined WFS_EXT2) && (!defined WFS_NTFS) && (!defined WFS_REISER)
+# if (!defined WFS_EXT2) && (!defined WFS_NTFS) && (!defined WFS_REISER) && (!defined WFS_REISER4)
 	char dummy;	/* Make this union non-empty */
 # endif
 };
@@ -315,21 +341,19 @@ typedef union fsdata fsdata;
 #  define PARAMS(protos) ()
 # endif
 
-extern void WFS_ATTR ((nonnull)) 	show_error PARAMS((
-						const error_type	err,
-						const char * const	msg,
-						const char * const	extra ));
+extern void WFS_ATTR ((nonnull))
+	show_error PARAMS((const error_type err, const char * const msg,
+		const char * const extra, const wfs_fsid_t FS ));
 
-extern void WFS_ATTR ((nonnull)) 	show_msg PARAMS((
-						const int		type,
-						const char * const	msg,
-						const char * const	extra ));
+extern void WFS_ATTR ((nonnull))
+	show_msg PARAMS((const int type, const char * const msg,
+		const char * const extra, const wfs_fsid_t FS ));
 
-extern void WFS_ATTR ((nonnull)) 	fill_buffer PARAMS((
-						unsigned long int 	pat_no,
-						unsigned char * const 	buffer,
-						const size_t 		buflen,
-						int * const		selected ));
+extern void WFS_ATTR ((nonnull))
+	fill_buffer PARAMS((unsigned long int pat_no, unsigned char * const buffer,
+		const size_t buflen, int * const selected, const wfs_fsid_t FS ));
+
+extern unsigned long int npasses;
 
 extern const char * const err_msg;
 extern const char * const err_msg_open;
@@ -350,11 +374,10 @@ extern const char * const err_msg_diriter;
 extern const char * const err_msg_nowork;
 extern const char * const err_msg_suid;
 extern const char * const err_msg_fork;
+extern const char * const err_msg_nocache;
+extern const char * const err_msg_cacheon;
 
-extern const char * fsname;
 extern const char * const sig_unk;
-
-extern unsigned long int npasses;
 
 
 #endif	/* WFS_HEADER */
