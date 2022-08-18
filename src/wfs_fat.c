@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2017 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -89,10 +89,10 @@
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 
-static byte wfs_fat_cur_dir[] = ".";
-static byte wfs_fat_parent_dir[] = "..";
-static byte wfs_fat_fopen_mode[] = "a";
+#define WFS_IS_NAME_CURRENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '\0')
+#define WFS_IS_NAME_PARENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '.' && ((x)[2]) == '\0')
 
+/*#define WFS_DEBUG 1*/
 /* ============================================================= */
 
 #ifdef WFS_WANT_WFS
@@ -173,7 +173,8 @@ _get_fat_entry (
 		return 0;
 	}
 
-	pclus = pfat->secbuf + ((clus * _get_fat_entry_len (pfat)) / 8) % ptffs->pbs->byts_per_sec;
+	pclus = pfat->secbuf +
+		((clus * _get_fat_entry_len (pfat)) / 8) % ptffs->pbs->byts_per_sec;
 
 	if (ptffs->fat_type == FT_FAT12)
 	{
@@ -296,15 +297,15 @@ _write_fat_sector (
 	{
 		return 0;
 	}
-	if (HAI_writesector (ptffs->hdev, fat_sec, pfat->secbuf) != HAI_OK)
+	if ( HAI_writesector (ptffs->hdev, fat_sec, pfat->secbuf) != HAI_OK )
 	{
 		return FALSE;
 	}
 
-	if ((ptffs->fat_type == FT_FAT12) && (ptffs->pbs != NULL))
+	if ( (ptffs->fat_type == FT_FAT12) && (ptffs->pbs != NULL) )
 	{
-		if (HAI_writesector (ptffs->hdev, fat_sec + 1,
-			pfat->secbuf + ptffs->pbs->byts_per_sec) != HAI_OK)
+		if ( HAI_writesector (ptffs->hdev, fat_sec + 1,
+			pfat->secbuf + ptffs->pbs->byts_per_sec) != HAI_OK )
 		{
 			return FALSE;
 		}
@@ -641,6 +642,7 @@ wfs_fat_dirent_find (
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
+	unsigned char * fname;
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -664,6 +666,10 @@ wfs_fat_dirent_find (
 	pdir->cur_clus = pdir->start_clus;
 	pdir->cur_sec = 0;
 	pdir->cur_dir_entry = 0;
+#ifdef WFS_DEBUG
+	printf("wfs_fat_dirent_find: read sector\n");
+	fflush(stdout);
+#endif
 	if (dir_read_sector (pdir) != DIR_OK)
 	{
 		if ( error_ret != NULL )
@@ -676,9 +682,22 @@ wfs_fat_dirent_find (
 	ret = DIRENTRY_OK;
 	while (sig_recvd == 0)
 	{
+#ifdef WFS_DEBUG
+		printf("wfs_fat_dirent_find: get dir entry\n");
+		fflush(stdout);
+#endif
 		ret = _get_dirent (pdir, &dirent);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_dirent_find: get dir entry done, result=%d, should be %d\n", ret, DIRENTRY_OK);
+		fflush(stdout);
+#endif
 		if (ret == DIRENTRY_OK)
 		{
+#ifdef WFS_DEBUG
+			printf("wfs_fat_dirent_find: got dir entry name: '%s', first byte=0x%x\n",
+				dirent.dir_name, dirent.dir_name[0]);
+			fflush(stdout);
+#endif
 			if (dirent.dir_name[0] == 0x00)
 			{
 				ret = ERR_DIRENTRY_NOT_FOUND;
@@ -686,30 +705,56 @@ wfs_fat_dirent_find (
 			}
 			else if (dirent.dir_name[0] == 0xE5)
 			{
+				/* Pointer to the filename. Skip the first byte
+				- it can't be 0, because that's the end-of-dir marker */
+				fname = (unsigned char *)
+					((dir_entry_t *)pdir->secbuf
+					+ pdir->cur_dir_entry - 1) + 1;
+#ifdef WFS_DEBUG
+				printf("wfs_fat_dirent_find: found deleted entry with name '%s'\n",
+					fname);
+				fflush(stdout);
+#endif
 				/* wipe the name here */
 				for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 				{
-					if ( dirent.dir_attr == ATTR_LONG_NAME )
+					if ( (dirent.dir_attr & ATTR_LONG_NAME) == ATTR_LONG_NAME )
 					{
-						fill_buffer ( j, (unsigned char *)(
-							(dir_entry_t *)pdir->secbuf
-							+ pdir->cur_dir_entry-1),
+#ifdef WFS_DEBUG
+						printf("wfs_fat_dirent_find: deleted entry has long name\n");
+						fflush(stdout);
+#endif
+						fill_buffer ( j, fname,
 							13 /*dirent.h->long_dir_entry_t*/
-							* 2 /*sizeof UTF-16 character */, selected, wfs_fs );
+							/* 2 / *sizeof UTF-16 character */
+							-1 /* the first marker byte */,
+							selected, wfs_fs );
 					}
 					else
 					{
-						fill_buffer ( j, (unsigned char *)(
-							(dir_entry_t *)pdir->secbuf
-							+ pdir->cur_dir_entry-1),
-							sizeof (dirent.dir_name), selected, wfs_fs );
+#ifdef WFS_DEBUG
+						printf("wfs_fat_dirent_find: deleted entry has short name\n");
+						fflush(stdout);
+#endif
+						fill_buffer ( j, fname,
+							sizeof (dirent.dir_name) - 1 /* the first marker byte */,
+							selected, wfs_fs );
 					}
 					if ( sig_recvd != 0 )
 					{
 						break;
 					}
 					/* write the wiped name: */
+#ifdef WFS_DEBUG
+					printf("wfs_fat_dirent_find: writing new sector contents\n");
+					fflush(stdout);
+#endif
 					error = dir_write_sector (pdir);
+#ifdef WFS_DEBUG
+					printf("wfs_fat_dirent_find: writing new sector contents, result=%d, should be %d\n",
+						error, DIR_OK);
+					fflush(stdout);
+#endif
 					if ( error != DIR_OK )
 					{
 						break;
@@ -723,31 +768,40 @@ wfs_fat_dirent_find (
 					}
 				}
 				/* last pass with zeros: */
-				if ( dirent.dir_attr == ATTR_LONG_NAME )
+				if ( (dirent.dir_attr & ATTR_LONG_NAME) == ATTR_LONG_NAME )
 				{
+#ifdef WFS_DEBUG
+					printf("wfs_fat_dirent_find: wiping long name with zeros\n");
+					fflush(stdout);
+#endif
 # ifdef HAVE_MEMSET
-					memset ((dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry-1,
+					memset (fname,
 						'\0', 13 /*dirent.h->long_dir_entry_t*/
-							* 2 /*sizeof UTF-16 character */);
+							/* 2 / *sizeof UTF-16 character */
+							-1 /* the first marker byte */
+							);
 # else
-					for ( j=0; j < 13 /*dirent.h->long_dir_entry_t*/
-							* 2 /*sizeof UTF-16 character */; j++ )
+					for ( j = 0; j < 13 /*dirent.h->long_dir_entry_t*/
+							/* 2 / *sizeof UTF-16 character */
+							-1 /* the first marker byte */
+							; j++ )
 					{
-						((char *)((dir_entry_t *)pdir->secbuf
-							+pdir->cur_dir_entry-1))[j] = '\0';
+						fname[j] = '\0';
 					}
 # endif
 				}
 				else
 				{
+#ifdef WFS_DEBUG
+					printf("wfs_fat_dirent_find: wiping short name with zeros\n");
+					fflush(stdout);
+#endif
 # ifdef HAVE_MEMSET
-					memset ((dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry-1,
-						'\0', sizeof (dirent.dir_name));
+					memset (fname, '\0', sizeof (dirent.dir_name) - 1);
 # else
-					for ( j=0; j < sizeof (dirent.dir_name); j++ )
+					for ( j = 0; j < sizeof (dirent.dir_name) - 1; j++ )
 					{
-						((char *)((dir_entry_t *)pdir->secbuf
-							+pdir->cur_dir_entry-1))[j] = '\0';
+						fname[j] = '\0';
 					}
 # endif
 				}
@@ -756,7 +810,16 @@ wfs_fat_dirent_find (
 					break;
 				}
 				/* write the wiped name: */
+#ifdef WFS_DEBUG
+				printf("wfs_fat_dirent_find: writing new sector contents (2)\n");
+				fflush(stdout);
+#endif
 				error = dir_write_sector (pdir);
+#ifdef WFS_DEBUG
+				printf("wfs_fat_dirent_find: writing new sector contents (2), result=%d, should be %d\n",
+					error, DIR_OK);
+				fflush(stdout);
+#endif
 				if ( error != DIR_OK )
 				{
 					break;
@@ -784,6 +847,10 @@ wfs_fat_dirent_find (
 	{
 		*error_ret = error;
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_dirent_find: return %d\n", ret);
+	fflush(stdout);
+#endif
 	return ret;
 }
 #endif /* WFS_WANT_UNRM */
@@ -877,7 +944,15 @@ wfs_fat_wipe_file_tail (
 		return WFS_BADPARAM;
 	}
 
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: get file size\n");
+	fflush(stdout);
+#endif
 	file_len = dirent_get_file_size (fh->pdir_entry);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: got file size: %u\n", file_len);
+	fflush(stdout);
+#endif
 	if ( ((int)file_len < 0) || (file_len >= (unsigned int)0x80000000) )
 	{
 		if ( error_ret != NULL )
@@ -893,8 +968,17 @@ wfs_fat_wipe_file_tail (
 		return WFS_BADPARAM;
 	}
 
+	if ( file_len % fs_block_size == 0 )
+	{
+		/* file fills the whole block - nothing to do */
+		return WFS_SUCCESS;
+	}
 	bufsize = fs_block_size -
 		(file_len % fs_block_size);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: size to wipe: %u\n", bufsize);
+	fflush(stdout);
+#endif
 	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer ( j, buf, bufsize, selected, wfs_fs );
@@ -904,8 +988,20 @@ wfs_fat_wipe_file_tail (
 			break;
 		}
 		/* wipe the space after the file */
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tail: seek to size\n");
+		fflush(stdout);
+#endif
 		_file_seek (fh, (int)file_len);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tail: seek to size done. writing\n");
+		fflush(stdout);
+#endif
 		written = TFFS_fwrite (file, bufsize, buf);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tail: writing done, size: %d\n", written);
+		fflush(stdout);
+#endif
 		if ( written != (int)bufsize )
 		{
 			ret_tail = WFS_BLKWR;
@@ -923,13 +1019,17 @@ wfs_fat_wipe_file_tail (
 			error = wfs_fat_flush_fs (wfs_fs);
 		}
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: marker 1\n");
+	fflush(stdout);
+#endif
 	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
 # ifdef HAVE_MEMSET
 		memset (buf, 0, bufsize);
 # else
-		for ( j=0; j < bufsize; j++ )
+		for ( j = 0; j < bufsize; j++ )
 		{
 			buf[j] = '\0';
 		}
@@ -956,8 +1056,16 @@ wfs_fat_wipe_file_tail (
 			}
 		}
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: restore file size\n");
+	fflush(stdout);
+#endif
 	/* restore file's original size */
 	dirent_set_file_size (fh->pdir_entry, file_len);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: restore file size done\n");
+	fflush(stdout);
+#endif
 
 	if ( error_ret != NULL )
 	{
@@ -967,6 +1075,10 @@ wfs_fat_wipe_file_tail (
 	{
 		return WFS_SIGNAL;
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tail: return %d\n", ret_tail);
+	fflush(stdout);
+#endif
 	return ret_tail;
 }
 
@@ -974,7 +1086,7 @@ wfs_fat_wipe_file_tail (
 
 # ifndef WFS_ANSIC
 static wfs_errcode_t wfs_fat_wipe_file_tails_in_dir WFS_PARAMS ((wfs_fsid_t wfs_fs,
-	tdir_handle_t dir, unsigned char * buf));
+	byte dirname[], unsigned char * buf));
 # endif
 
 /**
@@ -990,11 +1102,11 @@ WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_file_tails_in_dir (
 # ifdef WFS_ANSIC
-	wfs_fsid_t wfs_fs, tdir_handle_t dir, unsigned char * buf)
+	wfs_fsid_t wfs_fs, byte dirname[], unsigned char * buf)
 # else
-	wfs_fs, dir, buf)
+	wfs_fs, dirname, buf)
 	wfs_fsid_t wfs_fs;
-	tdir_handle_t dir;
+	byte dirname[];
 	unsigned char * buf;
 # endif
 {
@@ -1007,10 +1119,16 @@ wfs_fat_wipe_file_tails_in_dir (
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
+	tdir_handle_t dirh;
+	byte wfs_fat_parent_dir[] = ".."; /* use a local copy, even if constant */
+	byte wfs_fat_fopen_mode[] = "a"; /* use a local copy, even if constant */
+# ifndef HAVE_MEMSET
+	unsigned int j;
+# endif
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
-	if ( (fat == NULL) || (dir == NULL) || (buf == NULL) )
+	if ( (fat == NULL) || (dirname == NULL) || (buf == NULL) )
 	{
 		if ( error_ret != NULL )
 		{
@@ -1019,75 +1137,207 @@ wfs_fat_wipe_file_tails_in_dir (
 		return WFS_BADPARAM;
 	}
 
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tails_in_dir: open directory '%s'\n", dirname);
+	fflush(stdout);
+#endif
+	/* init dirh */
+	dir_res = TFFS_opendir (fat, dirname, &dirh);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tails_in_dir: open directory '%s': result=%d, should be %d\n",
+		dirname, dir_res, TFFS_OK);
+	fflush(stdout);
+#endif
+	/*dirh = (tdir_handle_t) ((tffs_t *)fat)->root_dir;
+	if ( dirh == NULL )*/
+	if ( dir_res != TFFS_OK )
+	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_DIRITER;
+	}
+
 	do
 	{
-		dir_res = TFFS_readdir (dir, &entry);
+# ifdef HAVE_MEMSET
+		memset (&entry, '\0', sizeof (dirent_t));
+# else
+		for ( j = 0; j < sizeof (dirent_t); j++ )
+		{
+			((char*)&entry)[j] = '\0';
+		}
+# endif
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tails_in_dir: read directory\n");
+		fflush(stdout);
+#endif
+		dir_res = TFFS_readdir (dirh, &entry);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tails_in_dir: read directory '%s': result=%d, got name '%s'\n",
+			dirname, dir_res, entry.d_name);
+		fflush(stdout);
+#endif
 		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) )
 		{
 			break;
 		}
 
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tails_in_dir: marker 1\n");
+		fflush(stdout);
+#endif
 		if ( ((unsigned char)(entry.d_name[0]) == 0xE5)
-			|| ((unsigned char)(entry.d_name_short[0]) == 0xE5) )
+			|| ((unsigned char)(entry.d_name_short[0]) == 0xE5)
+			|| (entry.d_name[0] == 0x2E)
+			|| (entry.d_name_short[0] == 0x2E) )
 		{
 			/* deleted element - don't wipe */
+			/* update progress bar */
+			if ( (dirh == (tdir_handle_t) ((tffs_t *)fat)->root_dir)
+				&& (((tffs_t *)fat)->pbs != NULL) )
+			{
+				curr_direlem++;
+				wfs_show_progress (WFS_PROGRESS_PART,
+					curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+					&prev_percent);
+			}
 			continue;
 		}
 
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tails_in_dir: marker 2\n");
+		fflush(stdout);
+#endif
 		/* skip 'current dir' and 'parent dir' */
-		if ( (entry.d_name[0] == 0x2E) || (entry.d_name_short[0] == 0x2E) )
-		{
-			/* deleted element - don't wipe */
-			continue;
-		}
-
-		if ( (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
-			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
-			|| (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
-			|| (strncmp (entry.d_name_short, wfs_fat_parent_dir, 2) == 0)
+		if ( WFS_IS_NAME_PARENT_DIR (entry.d_name)
+			|| WFS_IS_NAME_PARENT_DIR (entry.d_name_short)
+			|| WFS_IS_NAME_CURRENT_DIR (entry.d_name)
+			|| WFS_IS_NAME_CURRENT_DIR (entry.d_name_short)
 		)
 		{
 			continue;
 		}
 
-		if ( entry.dir_attr == DIR_ATTR_DIRECTORY )
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tails_in_dir: marker 3\n");
+		fflush(stdout);
+#endif
+		if ( (entry.dir_attr & DIR_ATTR_DIRECTORY) == DIR_ATTR_DIRECTORY )
 		{
-			/* recurse into the directory */
-			dir_res = TFFS_chdir (fat, entry.d_name);
-			if ( dir_res != TFFS_OK )
+			/* recurse into THIS directory, so that
+			subdirectories can be opened inside the
+			called function */
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_file_tails_in_dir: change to directory '%s'\n", dirname);
+			fflush(stdout);
+#endif
+			dir_res = TFFS_chdir (fat, dirname);
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_file_tails_in_dir: change to directory '%s': result=%d, should be %d\n",
+				dirname, dir_res, TFFS_OK);
+			fflush(stdout);
+#endif
+			if ( dir_res == TFFS_OK )
+			{
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: descending into directory '%s'\n",
+					 entry.d_name);
+				fflush(stdout);
+#endif
+				ret_part_dir = wfs_fat_wipe_file_tails_in_dir
+					(wfs_fs, entry.d_name, buf);
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: descending into directory '%s': result=%d\n",
+					dirname, ret_part_dir);
+				fflush(stdout);
+#endif
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: change back to parent directory\n");
+				fflush(stdout);
+#endif
+				TFFS_chdir (fat, wfs_fat_parent_dir);
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: change back to parent directory done\n");
+				fflush(stdout);
+#endif
+			}
+			else
 			{
 				ret_part_dir = WFS_DIRITER;
 				error = dir_res;
-				continue;
 			}
-
-			ret_part_dir = wfs_fat_wipe_file_tails_in_dir
-				(wfs_fs, (tdir_handle_t) (((tffs_t *)fat)->cur_dir), buf);
-			TFFS_chdir (fat, wfs_fat_parent_dir);
 		}
 		else if ( (entry.dir_attr & DIR_ATTR_VOLUME_ID) != DIR_ATTR_VOLUME_ID )
 		{
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_file_tails_in_dir: opening file to wipe: '%s'\n", entry.d_name);
+			fflush(stdout);
+#endif
 			/* wipe this file's last sector's free space */
-			dir_res = TFFS_fopen (fat, entry.d_name, wfs_fat_fopen_mode, &fh);
-			if ( dir_res != TFFS_OK )
+			dir_res = TFFS_fopen (fat, entry.d_name,
+				wfs_fat_fopen_mode, &fh);
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_file_tails_in_dir: opening file '%s' result=%d\n",
+				entry.d_name, dir_res);
+			fflush(stdout);
+#endif
+			if ( dir_res == TFFS_OK )
+			{
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: starting to wipe file '%s'\n",
+					entry.d_name);
+				fflush(stdout);
+#endif
+				wfs_fat_wipe_file_tail (wfs_fs, fh, buf);
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: wiping file '%s' finished\n",
+					entry.d_name);
+				fflush(stdout);
+#endif
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: closing file '%s'\n",
+					entry.d_name);
+				fflush(stdout);
+#endif
+				TFFS_fclose (fh);
+#ifdef WFS_DEBUG
+				printf("wfs_fat_wipe_file_tails_in_dir: closing file '%s' done\n",
+					entry.d_name);
+				fflush(stdout);
+#endif
+			}
+			else
 			{
 				error = dir_res;
-				continue;
 			}
-
-			wfs_fat_wipe_file_tail (wfs_fs, fh, buf);
-			TFFS_fclose (fh);
 		}
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_file_tails_in_dir: marker 4\n");
+		fflush(stdout);
+#endif
 
-		if ( (dir == (tdir_handle_t) ((tffs_t *)fat)->root_dir)
+		if ( (dirh == (tdir_handle_t) ((tffs_t *)fat)->root_dir)
 			&& (((tffs_t *)fat)->pbs != NULL) )
 		{
 			curr_direlem++;
 			wfs_show_progress (WFS_PROGRESS_PART,
-				curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt, &prev_percent);
+				curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+				&prev_percent);
 		}
 	}
 	while ( sig_recvd == 0 );
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tails_in_dir: close directory '%s'\n", dirname);
+	fflush(stdout);
+#endif
+	TFFS_closedir (dirh);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tails_in_dir: close directory done\n");
+	fflush(stdout);
+#endif
+
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -1097,6 +1347,10 @@ wfs_fat_wipe_file_tails_in_dir (
 		ret_part_dir = WFS_DIRITER;
 	}
 
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_file_tails_in_dir: return %d\n", ret_part_dir);
+	fflush(stdout);
+#endif
 	return ret_part_dir;
 }
 
@@ -1118,19 +1372,15 @@ wfs_fat_wipe_part (
 # endif
 {
 	wfs_errcode_t ret_part = WFS_SUCCESS;
-	tdir_handle_t dirh;
 	unsigned char * buf = NULL;
 	unsigned int prev_percent = 0;
 	wfs_errcode_t error = 0;
-	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
-	int32 res;
-	char root_dir_name[] = "/";
+	byte root_dir_name[] = "/";
 	size_t fs_block_size;
 
-	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
-	if ( fat == NULL )
+	if ( wfs_fs.fs_backend == NULL )
 	{
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
@@ -1146,20 +1396,6 @@ wfs_fat_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-	/* init dirh */
-	res = TFFS_opendir (fat, root_dir_name, &dirh);
-	/*dirh = (tdir_handle_t) ((tffs_t *)fat)->root_dir;
-	if ( dirh == NULL )*/
-	if ( res != TFFS_OK )
-	{
-		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
-		if ( error_ret != NULL )
-		{
-			*error_ret = error;
-		}
-		return WFS_DIRITER;
-	}
-
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
@@ -1172,7 +1408,6 @@ wfs_fat_wipe_part (
 		error = 12L;	/* ENOMEM */
 # endif
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
-		TFFS_closedir (dirh);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1180,11 +1415,18 @@ wfs_fat_wipe_part (
 		return WFS_MALLOC;
 	}
 
-        ret_part = wfs_fat_wipe_file_tails_in_dir (wfs_fs, dirh, buf);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_part: descend into root directory\n");
+	fflush(stdout);
+#endif
+	ret_part = wfs_fat_wipe_file_tails_in_dir (wfs_fs, root_dir_name, buf);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_part: root directory done\n");
+	fflush(stdout);
+#endif
 
 	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 	free (buf);
-	TFFS_closedir (dirh);
 
 	if ( error_ret != NULL )
 	{
@@ -1214,6 +1456,7 @@ wfs_fat_wipe_fs (
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int cluster = 0;
+	unsigned int prev_cluster = 0;
 	unsigned long int j;
 	int selected[WFS_NPAT] = {0};
 	tfat_t * pfat;
@@ -1222,11 +1465,11 @@ wfs_fat_wipe_fs (
 	unsigned int bytes_per_sector = 512;
 	int sec_iter;
 	unsigned int prev_percent = 0;
-	unsigned int curr_sector = 0;
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
 	size_t fs_block_size;
+	int sec_num;
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1248,6 +1491,19 @@ wfs_fat_wipe_fs (
 
 	ptffs = (tffs_t *) fat;
 	pfat = ptffs->pfat;
+	if ( ptffs->total_clusters == 0 )
+	{
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		if ( sig_recvd != 0 )
+		{
+			return WFS_SIGNAL;
+		}
+		return WFS_SUCCESS;
+	}
 	if ( ptffs->pbs != NULL )
 	{
 		sec_per_clus = ptffs->pbs->sec_per_clus;
@@ -1263,25 +1519,42 @@ wfs_fat_wipe_fs (
 	}
 	pfat->last_free_clus = 0;
 	cluster = 0;
+	prev_cluster = 0;
+
 	while (sig_recvd == 0)
 	{
 		if ( _lookup_free_clus (pfat, &cluster) != FAT_OK )
 		{
 			break;
 		}
+		sec_num = (int)clus2sec (ptffs, cluster);
 		/* better not wipe anything before the first data sector, even if marked unused */
-		if ( clus2sec (ptffs, cluster) < ptffs->sec_first_data )
+		if ( (unsigned int)sec_num < ptffs->sec_first_data )
 		{
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(cluster * 100)/ptffs->total_clusters,
+				&prev_percent);
 			pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
 			cluster = (cluster+1) % (ptffs->total_clusters);
-			if ( cluster == 0 )
+			if ( (cluster == 0)
+				|| (pfat->last_free_clus == 0) )
 			{
 				break;
 			}
 			continue;
 		}
-		/* save the sector after the last wiped in a cluster (FAT12 reads/writes two at a time):*/
-		_read_fat_sector (pfat, (int)clus2sec (ptffs, cluster) + sec_per_clus-1);
+		if ( cluster < prev_cluster )
+		{
+			/* started from the beginning - means all clusters are done */
+			break;
+		}
+		prev_cluster = cluster;
+		if ( ptffs->fat_type == FT_FAT12 )
+		{
+			/* save the sector after the last wiped in a cluster
+			(FAT12 reads/writes two at a time): */
+			_read_fat_sector (pfat, sec_num + sec_per_clus-1);
+		}
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
 			fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, wfs_fs );
@@ -1297,7 +1570,7 @@ wfs_fat_wipe_fs (
 				if ( wfs_fs.no_wipe_zero_blocks != 0 )
 				{
 					error = _read_fat_sector (pfat,
-						(int)clus2sec (ptffs, cluster) + sec_iter);
+						sec_num + sec_iter);
 					if ( error == 0 )
 					{
 						ret_wfs = WFS_BLKRD;
@@ -1306,12 +1579,13 @@ wfs_fat_wipe_fs (
 					if ( wfs_is_block_zero (pfat->secbuf,
 						fs_block_size) != 0 )
 					{
-						/* this block is all-zeros - don't wipe, as requested */
+						/* this block is all-zeros -
+						don't wipe, as requested */
 						continue;
 					}
 				}
 				error = _write_fat_sector (pfat,
-					(int)clus2sec (ptffs, cluster) + sec_iter);
+					sec_num + sec_iter);
 				if ( error == 0 )
 				{
 					break;
@@ -1344,7 +1618,7 @@ wfs_fat_wipe_fs (
 				if ( wfs_fs.no_wipe_zero_blocks != 0 )
 				{
 					error = _read_fat_sector (pfat,
-						(int)clus2sec (ptffs, cluster) + sec_iter);
+						sec_num + sec_iter);
 					if ( error == 0 )
 					{
 						ret_wfs = WFS_BLKRD;
@@ -1353,20 +1627,21 @@ wfs_fat_wipe_fs (
 					if ( wfs_is_block_zero (pfat->secbuf,
 						fs_block_size) == 0 )
 					{
-						/* this block is all-zeros - don't wipe, as requested */
+						/* this block is all-zeros -
+						don't wipe, as requested */
 						continue;
 					}
 				}
 # ifdef HAVE_MEMSET
 				memset (pfat->secbuf, 0, bytes_per_sector);
 # else
-				for ( j=0; j < bytes_per_sector; j++ )
+				for ( j = 0; j < bytes_per_sector; j++ )
 				{
 					pfat->secbuf[j] = '\0';
 				}
 # endif
 				error = _write_fat_sector (pfat,
-					(int)clus2sec (ptffs, cluster) + sec_iter);
+					sec_num + sec_iter);
 				if ( error == 0 )
 				{
 					break;
@@ -1384,13 +1659,13 @@ wfs_fat_wipe_fs (
 				error = wfs_fat_flush_fs (wfs_fs);
 			}
 		}
-		curr_sector++;
 		wfs_show_progress (WFS_PROGRESS_WFS,
-			(curr_sector * 100)/ptffs->total_clusters,
+			(cluster * 100)/ptffs->total_clusters,
 			&prev_percent);
 		pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
 		cluster = (cluster+1) % (ptffs->total_clusters);
-		if ( cluster == 0 )
+		if ( (cluster == 0)
+			|| (pfat->last_free_clus == 0) )
 		{
 			break;
 		}
@@ -1413,7 +1688,7 @@ wfs_fat_wipe_fs (
 #ifdef WFS_WANT_UNRM
 # ifndef WFS_ANSIC
 static wfs_errcode_t wfs_fat_wipe_unrm_dir WFS_PARAMS ((wfs_fsid_t wfs_fs,
-	tdir_handle_t dir, unsigned char * buf));
+	byte dirname[], unsigned char * buf));
 # endif
 
 /**
@@ -1429,11 +1704,11 @@ WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_unrm_dir (
 # ifdef WFS_ANSIC
-	wfs_fsid_t wfs_fs, tdir_handle_t dir, unsigned char * buf)
+	wfs_fsid_t wfs_fs, byte dirname[], unsigned char * buf)
 # else
-	wfs_fs, dir, buf)
+	wfs_fs, dirname, buf)
 	wfs_fsid_t wfs_fs;
-	tdir_handle_t dir;
+	byte dirname[];
 	unsigned char * buf;
 # endif
 {
@@ -1445,10 +1720,15 @@ wfs_fat_wipe_unrm_dir (
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
+	tdir_handle_t dirh;
+	byte wfs_fat_parent_dir[] = ".."; /* use a local copy, even if constant */
+# ifndef HAVE_MEMSET
+	unsigned int j;
+# endif
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
-	if ( (fat == NULL) || (dir == NULL) || (buf == NULL) )
+	if ( (fat == NULL) || (dirname == NULL) || (buf == NULL) )
 	{
 		if ( error_ret != NULL )
 		{
@@ -1457,34 +1737,103 @@ wfs_fat_wipe_unrm_dir (
 		return WFS_BADPARAM;
 	}
 
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm_dir: open directory '%s'\n", dirname);
+	fflush(stdout);
+#endif
+	/* init dirh */
+	dir_res = TFFS_opendir (fat, dirname, &dirh);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm_dir: open directory '%s': result=%d, should be: %d\n",
+		dirname, dir_res, TFFS_OK);
+	fflush(stdout);
+#endif
+	/*dirh = (tdir_handle_t) ((tffs_t *)fat)->root_dir;
+	if ( dirh == NULL )*/
+	if ( dir_res != TFFS_OK )
+	{
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_DIRITER;
+	}
+
 	/* first recurse into subdirectories: */
 	while (sig_recvd == 0)
 	{
-		dir_res = TFFS_readdir (dir, &entry);
+# ifdef HAVE_MEMSET
+		memset (&entry, '\0', sizeof (dirent_t));
+# else
+		for ( j = 0; j < sizeof (dirent_t); j++ )
+		{
+			((char*)&entry)[j] = '\0';
+		}
+# endif
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_unrm_dir: read directory '%s'\n", dirname);
+		fflush(stdout);
+#endif
+		dir_res = TFFS_readdir (dirh, &entry);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_unrm_dir: read directory '%s': result=%d, got name '%s'\n",
+			dirname, dir_res, entry.d_name);
+		fflush(stdout);
+#endif
 		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) )
 		{
 			break;
 		}
-		if ( (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
-			|| (strncmp (entry.d_name_short, wfs_fat_parent_dir, 2) == 0)
-			|| (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
-			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
+		if ( WFS_IS_NAME_PARENT_DIR (entry.d_name)
+			|| WFS_IS_NAME_PARENT_DIR (entry.d_name_short)
+			|| WFS_IS_NAME_CURRENT_DIR (entry.d_name)
+			|| WFS_IS_NAME_CURRENT_DIR (entry.d_name_short)
 		)
 		{
 			continue;
 		}
-		if ( entry.dir_attr == DIR_ATTR_DIRECTORY )
+		if ( (entry.dir_attr & DIR_ATTR_DIRECTORY) == DIR_ATTR_DIRECTORY )
 		{
-			/* recurse into the directory */
-			dir_res = TFFS_chdir (fat, entry.d_name_short);
+			/* recurse into THIS directory, so that
+			subdirectories can be opened inside the
+			called function */
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_unrm_dir: change to directory '%s'\n", dirname);
+			fflush(stdout);
+#endif
+			dir_res = TFFS_chdir (fat, dirname);
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_unrm_dir: change to directory '%s': result=%d, should be %d\n",
+				dirname, dir_res, TFFS_OK);
+			fflush(stdout);
+#endif
 			if ( dir_res != TFFS_OK )
 			{
 				ret_unrm_dir = WFS_DIRITER;
 				continue;
 			}
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_unrm_dir: descending into directory '%s'\n",
+				 entry.d_name);
+			fflush(stdout);
+#endif
 			ret_unrm_dir = wfs_fat_wipe_unrm_dir
-				(wfs_fs, (tdir_handle_t) (((tffs_t *)fat)->cur_dir), buf);
+				(wfs_fs, entry.d_name, buf);
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_unrm_dir: descending into directory '%s': result=%d\n",
+				dirname, ret_unrm_dir);
+			fflush(stdout);
+#endif
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_unrm_dir: change back to parent directory\n");
+			fflush(stdout);
+#endif
 			TFFS_chdir (fat, wfs_fat_parent_dir);
+#ifdef WFS_DEBUG
+			printf("wfs_fat_wipe_unrm_dir: change back to parent directory done\n");
+			fflush(stdout);
+#endif
 		}
 	}
 
@@ -1492,15 +1841,27 @@ wfs_fat_wipe_unrm_dir (
 	{
 		ret_unrm_dir = WFS_DIRITER;
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm_dir: process this directory\n");
+	fflush(stdout);
+#endif
 	/* now take care of this directory: */
 	while (sig_recvd == 0)
 	{
-		dir_res = wfs_fat_dirent_find (wfs_fs, (tdir_t *)dir);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_unrm_dir: find & wipe next entry\n");
+		fflush(stdout);
+#endif
+		dir_res = wfs_fat_dirent_find (wfs_fs, (tdir_t *)dirh);
+#ifdef WFS_DEBUG
+		printf("wfs_fat_wipe_unrm_dir: find & wipe next entry: result=%d\n", dir_res);
+		fflush(stdout);
+#endif
 		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) )
 		{
 			break;
 		}
-		if ( (dir == (tdir_handle_t) ((tffs_t *)fat)->root_dir)
+		if ( (dirh == (tdir_handle_t) ((tffs_t *)fat)->root_dir)
 			&& (((tffs_t *)fat)->pbs != NULL) )
 		{
 			curr_direlem++;
@@ -1509,11 +1870,24 @@ wfs_fat_wipe_unrm_dir (
 				&prev_percent);
 		}
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm_dir: close this directory\n");
+	fflush(stdout);
+#endif
+	TFFS_closedir (dirh);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm_dir: close this directory done\n");
+	fflush(stdout);
+#endif
 
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
 	}
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm_dir: return %d\n", ret_unrm_dir);
+	fflush(stdout);
+#endif
 	return ret_unrm_dir;
 }
 
@@ -1535,19 +1909,15 @@ wfs_fat_wipe_unrm (
 # endif
 {
 	wfs_errcode_t ret_unrm = WFS_SUCCESS;
-	tdir_handle_t dirh;
 	unsigned char * buf = NULL;
 	unsigned int prev_percent = 0;
 	wfs_errcode_t error = 0;
-	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
-	int32 res;
-	char root_dir_name[] = "/";
+	byte root_dir_name[] = "/";
 	size_t fs_block_size;
 
-	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
-	if ( fat == NULL )
+	if ( wfs_fs.fs_backend == NULL )
 	{
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
@@ -1563,20 +1933,6 @@ wfs_fat_wipe_unrm (
 		return WFS_BADPARAM;
 	}
 
-	/* init dirh */
-	res = TFFS_opendir (fat, root_dir_name, &dirh);
-	/*dirh = (tdir_handle_t) ((tffs_t *)fat)->root_dir;
-	if ( dirh == NULL )*/
-	if ( res != TFFS_OK )
-	{
-		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
-		if ( error_ret != NULL )
-		{
-			*error_ret = error;
-		}
-		return WFS_DIRITER;
-	}
-
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
@@ -1589,17 +1945,23 @@ wfs_fat_wipe_unrm (
 		error = 12L;	/* ENOMEM */
 # endif
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
-		TFFS_closedir (dirh);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
 	}
-        ret_unrm = wfs_fat_wipe_unrm_dir (wfs_fs, dirh, buf);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm: descend into root directory\n");
+	fflush(stdout);
+#endif
+        ret_unrm = wfs_fat_wipe_unrm_dir (wfs_fs, root_dir_name, buf);
+#ifdef WFS_DEBUG
+	printf("wfs_fat_wipe_unrm: root directory done\n");
+	fflush(stdout);
+#endif
 	wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 	free (buf);
-	TFFS_closedir (dirh);
 
 	if ( error_ret != NULL )
 	{

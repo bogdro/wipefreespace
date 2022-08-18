@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2017 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -2731,7 +2731,7 @@ wfs_ntfs_open_fs (
 		}
 #endif
 		ret = WFS_OPENFS;
-#ifdef HAVE_SYS_MOUNT_H
+#if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_UMOUNT)
 		res = umount (wfs_fs->fsname);
 		if ( (res == 0) && (sig_recvd == 0) )
 		{
@@ -2746,7 +2746,7 @@ wfs_ntfs_open_fs (
 				ret = WFS_SUCCESS;
 			}
 		}
-#endif /* HAVE_SYS_MOUNT_H */
+#endif /* HAVE_SYS_MOUNT_H && HAVE_UMOUNT */
 	}
 	else if ( nv != NULL )
 	{

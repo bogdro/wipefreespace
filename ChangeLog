@@ -1,3 +1,62 @@
+2017-09-17	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 2.2.1
+	  FAT filesystem support improvements and fixes. Binary version linked
+	  against libtffs with fsync() removed for faster operation on FAT.
+	  Fixed buffer operations in wiping. Fixed compile errors and
+	  improved configuration. Other minor fixes.
+	* src/wfs_fat.c (wfs_fat_wipe_unrm_dir): simplified checking if the
+	  current entry is the current or parent directory marker. Fixed
+	  checking for entry's attributes. Using long name to TFFS_chdir().
+	* src/wfs_fat.c (wfs_fat_dirent_find): fixed wiping deleted files'
+	  names - the "deleted" marker is not wiped anymore. It doesn't
+	  contain any part of the filename anyway, but setting it to zero
+	  makes directory traversal stop on this entry.
+	* src/wfs_fat.c (wfs_fat_wipe_file_tails_in_dir): simplified checking
+	  if the current entry is the current or parent directory marker.
+	  Fixed checking for entry's attributes. Corrected updating the
+	  progress meter.
+	* src/wfs_fat.c (wfs_fat_wipe_file_tail): added checking if there is
+	  anything to wipe at the file end.
+	* src/wfs_fat.c (wfs_fat_wipe_part, wfs_fat_wipe_file_tails_in_dir,
+	  wfs_fat_wipe_unrm, wfs_fat_wipe_unrm_dir): move opening the
+	  directory to sub-functions instead of opening just the root
+	  directory once and only changing to subdirectories.
+	* patches/tffs-speed.diff: added a patch for the TFFS library to make
+	  WipeFreeSpace work faster (disable syncing in TFFS, use only in
+	  WipeFreeSpace).
+	* patches/tffs-free-fix.diff, patches/tffs-overflow-fix.diff: added
+	  patches for the TFFS library to attempt to fix some crashes on x64.
+	* doc/wipefreespace.texi.in: updated FAT filesystem support and notes.
+	  Added a note saying that various programs can delete data in an
+	  insecure manner.
+	* README, INSTALL, doc/wipefreespace.texi.in: Updated FAT library
+	  (TFFS) URL. Added applying the speed-improving and crash-fixing
+	  patches for FAT. Added a note that compiling with a C++ compiler
+	  won't work right now due to some variable casting constructs that
+	  are forbidden in C++.
+	* src/wfs_wiping.c (fill_buffer): if --all-zeros is given, don't
+	  display "(random)" - display zeros, as that is the correct pattern
+	  (only output was impacted, wiping was correct with zeros). Use
+	  "sizeof(tmp)" instead of hardcoded length. Fix filling the buffer
+	  when size is 1, 2 or some specific number (which made total_size -
+	  size_written exceed the remaining part of the buffer).
+	* src/wfs_fat.c (wfs_fat_wipe_fs): calculating constant expressions
+	  just once. Updating the progress bar also when skipping clusters and
+	  changed the method of calculating the progress. Reading the cluster
+	  that is about to be wiped now only for FAT12, because that's when it
+	  is needed to restore the remaining part of the cluster (FAT16 and
+	  FAT32 always read and write full clusters) - this greatly improved
+	  wiping speed on FAT16 and FAT32. Quit if total cluster count is 0.
+	* src/wfs_util.c: check also for loop.h, not only for linux/loop.h.
+	* src/wfs_util.c (wfs_check_loop_mounted): fix undeclared variables
+	  when loop.h and linux/loop.h are missing.
+	* configure.ac: checking for the umount (used in NTFS) and open (used
+	  in wfs_fat.c and wfs_util.c) functions unconditionally now. Checking
+	  for loop.h and linux/loop.h unconditionally now.
+	* src/wfs_ntfs.c (wfs_ntfs_open_fs): check if the umount() function is
+	  available before using, in addition to checking for sys/mount.h.
+
 2016-05-15	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 2.2

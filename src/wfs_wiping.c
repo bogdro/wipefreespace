@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wiping functions.
  *
- * Copyright (C) 2011-2016 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2017 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -480,31 +480,45 @@ fill_buffer (
 	{
 		return;
 	}
+
 	/* Taken from `shred' source and modified */
 	bits |= bits << 12;
 
-	buffer[0] = (unsigned char) ((bits >> 4) & 0xFF);
-	buffer[1] = (unsigned char) ((bits >> 8) & 0xFF);
-	buffer[2] = (unsigned char) (bits & 0xFF);
 	/* display the patterns when at least two '-v' command line options were given */
 	if ( opt_verbose > 1 )
 	{
-		if ( wfs_is_pass_random (pat_no, opt_method) == 1 )
+		if ( (wfs_is_pass_random (pat_no, opt_method) == 1)
+			&& (opt_allzero == 0) )
 		{
 			wfs_show_msg ( 1, msg_pattern, msg_random, wfs_fs );
 		}
 		else
 		{
 #if (!defined __STRICT_ANSI__) && (defined HAVE_SNPRINTF)
-			res = snprintf (tmp, 7, "%02x%02x%02x", buffer[0], buffer[1], buffer[2] );
+			res = snprintf (tmp, sizeof (tmp) - 1, "%02x%02x%02x",
+				(unsigned char) ((bits >> 4) & 0xFF),
+				(unsigned char) ((bits >> 8) & 0xFF),
+				(unsigned char) (bits & 0xFF) );
 #else
-			res = sprintf (tmp, "%02x%02x%02x", buffer[0], buffer[1], buffer[2] );
+			res = sprintf (tmp, "%02x%02x%02x",
+				(unsigned char) ((bits >> 4) & 0xFF),
+				(unsigned char) ((bits >> 8) & 0xFF),
+				(unsigned char) (bits & 0xFF) );
 #endif
-			tmp[7] = '\0';
+			tmp[sizeof (tmp) - 1] = '\0';
 			wfs_show_msg ( 1, msg_pattern, (res > 0)? tmp: "??????", wfs_fs );
 		}
 	}
-	for (i = 3; (i < buflen / 2) && (sig_recvd == 0); i *= 2)
+	buffer[0] = (unsigned char) ((bits >> 4) & 0xFF);
+	if ( buflen > 1 )
+	{
+		buffer[1] = (unsigned char) ((bits >> 8) & 0xFF);
+	}
+	if ( buflen > 2 )
+	{
+		buffer[2] = (unsigned char) (bits & 0xFF);
+	}
+	for (i = 3; ((i << 1) < buflen) && (sig_recvd == 0); i <<= 1)
 	{
 #ifdef HAVE_MEMCPY
 		memcpy (buffer + i, buffer, i);
@@ -512,7 +526,7 @@ fill_buffer (
 # if defined HAVE_STRING_H
 		strncpy ((char *) (buffer + i), (char *) buffer, i);
 # else
-		for ( j=0; j < i; j++ )
+		for ( j = 0; j < i; j++ )
 		{
 			buffer [ i + j ] = buffer[j];
 		}
@@ -531,7 +545,7 @@ fill_buffer (
 # if defined HAVE_STRING_H
 		strncpy ((char *) (buffer + i), (char *) buffer, buflen - i);
 # else
-		for ( j=0; j<buflen - i; j++ )
+		for ( j = 0; j < buflen - i; j++ )
 		{
 			buffer [ i + j ] = buffer[j];
 		}

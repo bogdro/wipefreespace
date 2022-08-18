@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 2.2, bogdandr@op.pl)
+AC_INIT(wipefreespace, 2.2.1, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])
@@ -694,7 +694,7 @@ AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h \
 	malloc.h libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
 	sys/sysmacros.h sys/mkdev.h hdreg.h linux/hdreg.h sys/ioctl.h \
 	sys/statfs.h sys/vfs.h sys/byteorder.h machine/endian.h endian.h \
-	stdbool.h])
+	stdbool.h loop.h linux/loop.h])
 
 if ( test "x$feat_xfs" = "xyes" ); then
 
@@ -765,7 +765,7 @@ AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([memset memcpy setlocale strtoul random srandom clearenv \
 	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
 	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl \
-	getmntinfo fopen64 basename])
+	getmntinfo fopen64 basename umount open])
 
 # NOTE: Debian 5 does not support execvpe(), so it requires execvp()
 # along with setenv() or putenv()
@@ -915,8 +915,7 @@ AM_CONDITIONAL([WFS_TESTS_ENABLED], [test "x$have_check" = "xyes"])
 
 if (test "x$have_check" = "xyes"); then
 
-	AC_CHECK_HEADERS([loop.h linux/loop.h])
-	AC_CHECK_FUNCS([mount umount open])
+	AC_CHECK_FUNCS([mount])
 fi
 
 # ==================== Checks for compiler options.

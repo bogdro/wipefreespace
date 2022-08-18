@@ -79,16 +79,16 @@ Normally, when you delete a file, only the information about where the file was 
 deleted, the file contents stays on the drive. If there's no writing to that
 area, the file can physically stay on the drive for a long time. The file contents
 can be found by e.g. dumping the whole drive with the @command{dd} program to a file
-and looking at the
-generated image. This may seem not so dangerous, but if you delete confidential information
-(files with passwords, credit card numbers, encryption keys), any person with phyical access
-to the drive can read that information and use it against you.
+and looking at the generated image. This may seem not so dangerous, but if you
+delete confidential information (files with passwords, credit card numbers,
+encryption keys), any person with phyical access to the drive can read that
+information and use it against you.
 
 ALWAYS USE THE @command{shred} (or similar) PROGRAM TO ERASE CONFIDENTIAL DATA.
 
-Sometimes you may delete confidential data
-the normal way by accident (or have no other choice). In such case normally you would have
-to shred the
+Sometimes you may delete confidential data the normal way by accident (or have
+no other choice, because programs like Internet browsers, mail clients, char clients
+delete data the normal way). In such case normally you would have to shred the
 whole partition, which may be a big problem. This is where @command{wipefreespace} comes in.
 This program works in a similar way to the @command{shred} program, but instead of shreding
 regular files,
@@ -133,8 +133,9 @@ device/file permissions. This is MUCH safer.
 Requirements for compiling the full version of the program:@*
 @itemize
 @item a non-root account. Please, @strong{NEVER} compile or 'make' anything as root.
-@item a working C compiler (with the 'long long' data type for XFS, NTFS, ReiserFSv3
-and Reiser4 support)
+@item a working C compiler. XFS, ReiserFS, Reiser4 and NTFS support require the
+'long long' data type. NTFS support may require the gcc compiler.
+C++ compilers won't work due to variable casts.
 @item development package for the C library (like glibc-devel and glibc-headers).
 @*@*
 
@@ -228,9 +229,21 @@ needed, but libreiser4.a is useless without it. Substitute the correct destinati
 path for your system in the above command.
 
 @item FAT12/16/32: tffs-lib, the Tiny FAT FS library. Go to@*
-	http://code.google.com/p/tffs-lib/@*
-to get the library. After compiling, install the library and ALL its
-header files (including the private ones, from the src directory).
+	https://github.com/likema/tffs-lib@*
+to get the library (former address: http://code.google.com/p/tffs-lib/).
+To make WipeFreeSpace work faster, apply the patch that removes synchronising
+the filesystem from TFFS (WipeFreeSpace does its own synchronising):
+
+	@command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-speed.diff}
+
+If you experience crashes (especially on x64), you may try to apply two more patches:
+
+     @command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-free-fix.diff}
+
+     @command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-overflow-fix.diff}
+
+After applying any patch, you need to recompile and install the library and
+ALL its header files (including the private ones, from the src directory).
 
 @item MinixFS: "mfstool", the MinixFS tool. Go to@*
 	http://mfstool.sourceforge.net/@*
@@ -272,7 +285,7 @@ to get it. Then compile and install that package.
 https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz@*
 to get it. Before compiling, apply the patch:
 
-	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff
+	@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff}
 
 After compiling, install all the libraries and ALL the header files
 from the libhfsp/src/ directory where the C compiler can find them (or
@@ -467,15 +480,20 @@ part of any official development package):
 @item wiping the free space
 @item wiping free space in partially used blocks (@strong{NOTE}: may crash on sparse files
 and other exotic objects)
-@item wiping deleted files' names
+@item wiping deleted files' names (at least the short ones)
 @item wiping deleted files' data (part of free space or partially used blocks)
 @end itemize
 
-@strong{NOTE}: the tffs library does its own data flushing (in the
+@strong{NOTE}: the original tffs library does its own data flushing (in the
 HAI_writesector() function), so even when WipeFreeSpace is told to
 perform just one wiping iteration (which uses the system/drive cache
 on other filesystems and doesn't flush the data immediately), the data
 is flushed after each sector, which makes FAT12/16/32 wiping really slow.
+
+@strong{NOTE}: filesystems with object names of length 64 or more may cause
+problems with traversal and thus may not be fully wiped (if a file can't be opened,
+its last block can't be wiped, if a directory can't be opened, objects inside
+it can't be wiped).
 
 @item MinixFS (using the mfstool program as a library):
 @itemize
@@ -1735,7 +1753,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2016 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2017 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*

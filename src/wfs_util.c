@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2017 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -155,8 +155,12 @@
 # include <locale.h>
 #endif
 
-#ifdef HAVE_LINUX_LOOP_H
-# include <linux/loop.h>
+#ifdef HAVE_LOOP_H
+# include <loop.h>
+#else
+# ifdef HAVE_LINUX_LOOP_H
+#  include <linux/loop.h>
+# endif
 #endif
 
 #include "wipefreespace.h"
@@ -212,7 +216,7 @@
 
 #if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H) \
 	&& (defined HAVE_IOCTL) && (defined HAVE_SYS_STAT_H) \
-	&& (defined HAVE_LINUX_LOOP_H)
+	&& ((defined HAVE_LOOP_H) || (defined HAVE_LINUX_LOOP_H))
 # define WFS_HAVE_IOCTL_LOOP 1
 # define WFS_USED_ONLY_WITH_LOOP WFS_ATTR ((unused))
 #else
@@ -415,7 +419,7 @@ wfs_get_mnt_point_mounts (
 # ifdef LOOP_GET_STATUS
 	struct loop_info li;
 # endif
-#endif
+#endif /* WFS_HAVE_IOCTL_LOOP */
 #ifndef HAVE_MEMSET
 	size_t j;
 #endif
@@ -563,7 +567,7 @@ wfs_get_mnt_point_mounts (
 					}
 				}
 			}
-#endif
+#endif /* WFS_HAVE_IOCTL_LOOP */
 		}
 	}
 	fclose (mounts_file);
@@ -816,14 +820,15 @@ wfs_check_loop_mounted (
 # ifdef LOOP_GET_STATUS
 	struct loop_info li;
 # endif
-#endif /* WFS_HAVE_IOCTL_LOOP */
 	int res;
 	int fd;
+#endif /* WFS_HAVE_IOCTL_LOOP */
 
 	if ( dev_name == NULL )
 	{
 		return 0;
 	}
+#ifdef WFS_HAVE_IOCTL_LOOP
 	res = stat (dev_name, &s);
 	if ( ((res >= 0) && (S_ISBLK(s.st_mode)) && (major(s.st_rdev) == LOOPMAJOR))
 		|| (strncmp (dev_name, "/dev/loop", 9) == 0) )
@@ -839,7 +844,6 @@ wfs_check_loop_mounted (
 			return 0;
 		}
 		res = -1;
-#ifdef WFS_HAVE_IOCTL_LOOP
 # ifdef LOOP_GET_STATUS64
 		res = ioctl (fd, LOOP_GET_STATUS64, &li64);
 		if ( res < 0 )
@@ -849,7 +853,6 @@ wfs_check_loop_mounted (
 			res = ioctl (fd, LOOP_GET_STATUS, &li);
 # endif
 		}
-#endif /* WFS_HAVE_IOCTL_LOOP */
 		close (fd);
 		if ( res < 0 )
 		{
@@ -857,6 +860,7 @@ wfs_check_loop_mounted (
 		}
 		return 1;
 	}
+#endif /* WFS_HAVE_IOCTL_LOOP */
 	/* either not a loop device or can't be checked by stat() */
 	return 1;
 }
