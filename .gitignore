@@ -3,7 +3,7 @@ autom4te.cache
 config.h
 config.log
 config.status
-Makefile
+# Makefile
 stamp-*
 
 TODO*

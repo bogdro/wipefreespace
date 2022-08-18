@@ -1,0 +1,190 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@setfilename e2wipefreespace.info
+@settitle e2wipefreedpace manual 0.1
+@c %**end of header
+
+@copying
+This manual is for e2wipefreespace, version 2007-03-26.
+@end copying
+
+@titlepage
+@title The e2wipefreespace program
+@author Bogdan 'bogdro' Drozdowski
+
+@c  The following two commands
+@c  start the copyright page.
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@c Published by ...
+@end titlepage
+
+@c So the toc is printed at the start.
+@contents
+
+@ifnottex
+@node Top, What is e2wipefreespace?, (dir), (dir)
+@top The e2wipefreespace program
+
+@insertcopying
+@end ifnottex
+
+@menu
+* What is e2wipefreespace?::		About the program.
+* Command line syntax and options::	Details of command line options.
+* Author::				How to contact me.
+* Copying::				License - your rights and freedoms.
+@end menu
+
+
+
+
+@node What is e2wipefreespace?, Command line syntax and options, Top, Top
+@comment  node-name, next,      previous,  up
+@chapter What is e2wipefreespace?
+
+This program is used for secure erasing of free space on ext2 or ext3 partitions.
+
+Normally, when you delete a file, only the information about where the file was is
+deleted, the file contents stays on the drive. If there's no writing to that
+area, the file can physically stay on the drive for a long time. The file contents
+can be found by e.g. dumping the whole drive with the @command{dd} program to a file and looking at the
+generated image. This may seem not so dangerous, but if you delete confidential information
+(files with passwords, credit card numbers, encryption keys), any person with phyical access
+to the drive can read that information and use it against you.
+
+ALWAYS USE THE @command{shred} (or similar) PROGRAM TO ERASE CONFIDENTIAL DATA.
+
+Sometimes you may delete confidential data
+the normal way by accident (or have no other choice). In such case normally you would have to shred the
+whole partition, which may be a big problem. This is where @command{e2wipefreespace} comes in.
+This program works in a similar way to the @command{shred} program, but instead of shreding regular files,
+it overwrites (just like @command{shred}) the free space on a ext2/3 partition, hopefully without
+doing any harm to existing files.
+
+THE PROGRAM HAS BEEN TESTED, BUT IT MAY NOW OR LATER CONTAIN ERRORS, WHICH MAY LEAD TO DATA LOSS.
+ALWAYS BACKUP YOUR DATA BEFORE USING THIS PROGRAM. READ THE LICENSE FOR A WARRANTY (THERE IS NONE).
+
+NOTE: Erased files may still be left on the drive, if their space was assigned to other files,
+but is not fully used by the new files. This program can not yet help in such cases. If the
+data was really confidential and someone else has access to the drive, backup all your data
+and shred the whole partition or drive.
+
+NOTE: Erased files' names will still be on the drive, this program can not yet remove them.
+
+@c @cindex first chapter
+
+
+
+
+
+@node Command line syntax and options, Author, What is e2wipefreespace?, Top
+@chapter Command line syntax and options
+
+Basic syntax is:
+
+ e2wipefreespace [options] /dev/XY [...]
+
+The '/dev/XY' part stands for a device with an ext2/3 file system. Examples: /dev/hda1, /dev/fd0.
+More than one device can be given on the command line.
+
+Options:
+
+@noindent @option{-V}@*@option{--version}@*
+@quotation
+Print version number
+@end quotation
+
+@noindent @option{-h}@*@option{--help}@*
+@quotation
+Print help
+@end quotation
+
+@noindent @option{-l}@*@option{--license}@*
+@quotation
+Print license information
+@end quotation
+
+@noindent @option{-n NNN}@*@option{--iterations NNN}@*
+@quotation
+Number of passes (must be greater than 0, default is 25). This is also the number of
+patterns (including random) used to wipe the free space.
+@end quotation
+
+@noindent @option{-B block_size}@*@option{--blocksize block_size}@*
+@quotation
+Block size on the given filesystems.
+@end quotation
+
+@noindent @option{-b superblock_offset}@*@option{--superblock superblock_offset}@*
+@quotation
+Superblock offset on the given filesystems.
+@end quotation
+
+
+
+@node Author, Copying, Command line syntax and options, Top
+@chapter Author
+
+To contact me, try one of these adresses: @*
+@quotation
+bogdandr (at) op . pl@*
+bogdro (at) rudy . mif . pg . gda . pl
+@end quotation
+
+
+or look at my website:@*
+[PL] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/}@*
+[EN] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/inne/}@*
+
+
+
+
+
+@node Copying, , Author, Top
+@chapter Copying
+
+See @indicateurl{http://www.gnu.org} to get the full texts of these licenses.
+
+========================
+
+License for e2wipefreespace:
+
+Copyright @copyright{} 2007 Bogdan 'bogdro' Drozdowski.
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software Foudation:@*
+		Free Software Foundation@*
+		51 Franklin Street, Fifth Floor@*
+		Boston, MA 02110-1301@*
+		USA
+
+========================
+
+License for this documentation:
+
+Copyright @copyright{} 2007 Bogdan 'bogdro' Drozdowski.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.1 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with the Front-Cover Texts being ``A GNU Manual,''
+and with the Back-Cover Texts as in (a) below.
+
+(a) The FSF's Back-Cover Text is: ``You have freedom to copy and modify
+this GNU Manual, like GNU software.  Copies published by the Free
+Software Foundation raise funds for GNU development.''
+
+@bye
