@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv3 file system-specific functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -113,10 +113,14 @@ typedef short int __u16;
 #include "wfs_util.h"
 
 /* Fix the sizes. */
-static const unsigned long long bh_dirty = BH_Dirty;
-static const unsigned long long bh_up2date = BH_Uptodate;
+static const unsigned long long int bh_dirty = BH_Dirty;
+static const unsigned long long int bh_up2date = BH_Uptodate;
 #define mark_buffer_dirty2(bh)    misc_set_bit (bh_dirty,   &(bh)->b_state)
 #define mark_buffer_uptodate2(bh) misc_set_bit (bh_up2date, &(bh)->b_state)
+
+#ifndef WFS_ANSIC
+static size_t WFS_ATTR ((warn_unused_result)) wfs_reiser_get_block_size PARAMS ((const wfs_fsid_t FS));
+#endif
 
 /**
  * Returns the buffer size needed to work on the
@@ -126,9 +130,7 @@ static const unsigned long long bh_up2date = BH_Uptodate;
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_reiser_get_block_size (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 #else
 	FS)
@@ -146,11 +148,12 @@ wfs_reiser_get_block_size (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_wipe_part (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -165,12 +168,12 @@ wfs_reiser_wipe_part (
 	struct item_head *head;
 	int i;
 	unsigned char * buf;
-	unsigned long j;
+	unsigned long int j;
 	int selected[NPAT];
 	char * offset;
-	int length;
+	unsigned long int length;
 	unsigned int prev_percent = 0;
-	unsigned long curr_direlem = 0;
+	unsigned long int curr_direlem = 0;
 
 	if ( (error == NULL) || (FS.rfs == NULL) )
 	{
@@ -289,7 +292,8 @@ wfs_reiser_wipe_part (
 				continue;
 			}
 			offset = &(bh->b_data[head->ih2_item_location + head->ih2_item_len]);
-			length = bh->b_size - (head->ih2_item_location + head->ih2_item_len);
+			length = bh->b_size - (unsigned long int)(head->ih2_item_location + head->ih2_item_len);
+			if ( (long int)length < 0 ) length = 0;
 
 			for ( j = 0; (j < npasses) && (sig_recvd == 0)
 				/*&& (ret_part == WFS_SUCCESS)*/; j++ )
@@ -430,11 +434,12 @@ wfs_reiser_wipe_part (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_wipe_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -443,13 +448,13 @@ wfs_reiser_wipe_fs (
 #endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
-	unsigned long blk_no;
+	unsigned long int blk_no;
 	struct buffer_head * bh;
 	int selected[NPAT];
 	unsigned char *buf;
 	unsigned long int j;
 	unsigned int prev_percent = 0;
-	unsigned long curr_sector = 0;
+	unsigned long int curr_sector = 0;
 
 	if ( (error == NULL) || (FS.rfs == NULL) )
 	{
@@ -596,11 +601,12 @@ wfs_reiser_wipe_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_wipe_unrm (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, const fselem_t node, error_type * const error )
 #else
 	FS, node, error )
@@ -615,14 +621,17 @@ wfs_reiser_wipe_unrm (
 	struct path elem_path;
 	struct item_head *head;
 	int i;
-	__u16 count;
+	unsigned int count;
 	unsigned char * buf;
-	unsigned long j;
+	unsigned long int j;
 	int selected[NPAT];
 	struct reiserfs_de_head * deh;
-	unsigned long blk_no;
+	unsigned long int blk_no;
 	unsigned int prev_percent = 0;
-	unsigned long curr_direlem = 0;
+	unsigned long int curr_direlem = 0;
+#if (defined HAVE_CLOSE)
+	int journ_fd;
+#endif
 
 	if ( (error == NULL) || (FS.rfs == NULL) )
 	{
@@ -649,8 +658,15 @@ wfs_reiser_wipe_unrm (
 
 	if ( reiserfs_open_journal (FS.rfs, NULL, 0) == 0 )
 	{
+#if (defined HAVE_CLOSE)
+		journ_fd = FS.rfs->fs_journal_dev;
+#endif
 		reiserfs_flush_journal (FS.rfs);
 		reiserfs_close_journal (FS.rfs);
+#if (defined HAVE_CLOSE)
+		/* clean up what reiserfs_close_journal() does not do */
+		if ( journ_fd >= 0 ) close (journ_fd);
+#endif
 		for ( blk_no = get_jp_journal_1st_block (sb_jp (FS.rfs->fs_ondisk_sb));
 			(blk_no < get_jp_journal_1st_block (sb_jp (FS.rfs->fs_ondisk_sb))
 				+ get_jp_journal_size (&(FS.rfs->fs_ondisk_sb->s_v1.sb_journal)))
@@ -861,13 +877,13 @@ wfs_reiser_wipe_unrm (
 						for (count = elem_path.pos_in_item;
 						     count < get_ih_entry_count (head); count ++, deh ++)
 						{
-							if ( name_in_entry_length (head, deh, count) > 0 )
+							if ( name_in_entry_length (head, deh, (int)count) > 0 )
 							{
 								fill_buffer ( j,
 									(unsigned char *)
-									 name_in_entry (deh, count),
+									 name_in_entry (deh, (int)count),
 									(size_t) name_in_entry_length
-										(head, deh, count),
+										(head, deh, (int)count),
 									selected, FS );
 							}
 						}
@@ -925,17 +941,17 @@ wfs_reiser_wipe_unrm (
 						for (count = elem_path.pos_in_item;
 						     count < get_ih_entry_count (head); count ++, deh ++)
 						{
-							if ( name_in_entry_length (head, deh, count) > 0 )
+							if ( name_in_entry_length (head, deh, (int)count) > 0 )
 							{
 #ifdef HAVE_MEMSET
 								memset ((unsigned char *)
-									name_in_entry (deh, count),
+									name_in_entry (deh, (int)count),
 									0, (size_t) name_in_entry_length
-									(head, deh, count));
+									(head, deh, (int)count));
 #else
 								for ( j=0; j < (size_t)
 									name_in_entry_length
-									(head, deh, count); j++ )
+									(head, deh, (int)count); j++ )
 								{
 									((unsigned char *)
 									name_in_entry (deh, count))[j]
@@ -1040,11 +1056,12 @@ wfs_reiser_wipe_unrm (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_open_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
 	const fsdata * const data, error_type * const error )
 #else
@@ -1059,9 +1076,6 @@ wfs_reiser_open_fs (
 	errcode_enum ret = WFS_SUCCESS;
 	reiserfs_filsys_t * res;
 	char * dev_name_copy;
-#if (!defined HAVE_MEMSET) || (!defined HAVE_MEMCPY)
-	unsigned int i;
-#endif
 
 	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL) || (data == NULL) || (error == NULL))
 	{
@@ -1069,6 +1083,7 @@ wfs_reiser_open_fs (
 	}
 
 	*whichfs = CURR_NONE;
+	FS->rfs = NULL;
 
 #ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -1084,14 +1099,9 @@ wfs_reiser_open_fs (
 		return WFS_MALLOC;
 	}
 
-#ifdef HAVE_MEMCPY
-	memcpy ( dev_name_copy, dev_name, strlen (dev_name) + 1 );
-#else
-	for ( i=0; i < strlen (dev_name) + 1; i++ )
-	{
-		dev_name_copy[i] = dev_name[i];
-	}
-#endif
+	strncpy ( dev_name_copy, dev_name, strlen (dev_name) + 1 );
+	dev_name_copy[strlen (dev_name)] = '\0';
+
 	res = reiserfs_open (dev_name_copy, O_RDWR | O_EXCL
 #ifdef O_BINARY
 		| O_BINARY
@@ -1103,27 +1113,28 @@ wfs_reiser_open_fs (
 		return WFS_OPENFS;
 	}
 
-	FS->rfs = res;
-
-	if (no_reiserfs_found (FS->rfs) != 0)
+	if (no_reiserfs_found (res) != 0)
 	{
-		/*reiserfs_close ( &(FS->rfs) );*/
+		/*reiserfs_close (res);*/
 		free (dev_name_copy);
 		return WFS_OPENFS;
 	}
 
-	if ( reiserfs_open_ondisk_bitmap ( FS->rfs ) != 0 )
+	if ( reiserfs_open_ondisk_bitmap (res) != 0 )
 	{
+		reiserfs_close (res);
 		free (dev_name_copy);
-		FS->rfs = NULL;
 		return WFS_BLBITMAPREAD;
 	}
-	if ( FS->rfs->fs_bitmap2 == NULL )
+
+	if ( res->fs_bitmap2 == NULL )
 	{
+		reiserfs_close (res);
 		free (dev_name_copy);
-		FS->rfs = NULL;
 		return WFS_BLBITMAPREAD;
 	}
+
+	FS->rfs = res;
 
 	*whichfs = CURR_REISERFS;
 	free (dev_name_copy);
@@ -1137,11 +1148,12 @@ wfs_reiser_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_chk_mount (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -1158,21 +1170,33 @@ wfs_reiser_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_close_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error WFS_ATTR ((unused)) )
 #else
-	FS, error WFS_ATTR ((unused)) )
+	FS, error )
 	wfs_fsid_t FS;
-	error_type * const error;
+	error_type * const error WFS_ATTR ((unused));
 #endif
 {
+#if (defined HAVE_CLOSE)
+	int fd;
+#endif
+
 	if ( FS.rfs == NULL ) return WFS_BADPARAM;
+#if (defined HAVE_CLOSE)
+	fd = FS.rfs->fs_dev;
+#endif
 	reiserfs_close_ondisk_bitmap ( FS.rfs );
 	reiserfs_close ( FS.rfs );
+#if (defined HAVE_CLOSE)
+	/* clean up what reiserfs_close() does not do */
+	if ( fd >= 0 ) close (fd);
+#endif
 	FS.rfs = NULL;
 	return WFS_SUCCESS;
 }
@@ -1184,9 +1208,7 @@ wfs_reiser_close_fs (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_reiser_check_err (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS )
 #else
 	FS )
@@ -1227,9 +1249,7 @@ wfs_reiser_check_err (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_reiser_is_dirty (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS )
 #else
 	FS )
@@ -1248,11 +1268,12 @@ wfs_reiser_is_dirty (
  * \param FS The ReiserFS filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_reiser_flush_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS )
 #else
 	FS )

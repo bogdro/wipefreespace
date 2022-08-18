@@ -36,3 +36,7 @@ if MINIXFS
 wipefreespace_SOURCES += wfs_minixfs.h wfs_minixfs.c
 endif
 
+if JFS
+wipefreespace_SOURCES += wfs_jfs.h wfs_jfs.c
+endif
+

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -136,9 +136,7 @@
  */
 static void
 flush_pipe_output (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const int fd)
 #else
 	fd )
@@ -161,9 +159,7 @@ flush_pipe_output (
  */
 static void
 flush_pipe_input (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const int fd)
 #else
 	fd )
@@ -197,13 +193,11 @@ flush_pipe_input (
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_xfs_wipe_unrm (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS WFS_ATTR ((unused)) )
 #else
-	FS WFS_ATTR ((unused)) )
-	const wfs_fsid_t FS;
+	FS )
+	const wfs_fsid_t FS WFS_ATTR ((unused));
 #endif
 {
 	unsigned int prev_percent = 0;
@@ -224,9 +218,7 @@ wfs_xfs_wipe_unrm (
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_xfs_get_block_size (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 #else
 	FS )
@@ -243,11 +235,12 @@ wfs_xfs_get_block_size (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_xfs_wipe_fs	(
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -271,9 +264,9 @@ wfs_xfs_wipe_fs	(
 	char *  args_db[] = { "xfs_db", "-i", "-c", "freesp -d", "-c", "quit", "--",
 		NULL, NULL };
 	char read_buffer[WFS_XFSBUFSIZE];
-	unsigned long long agno, agoff, length;
+	unsigned long long int agno, agoff, length;
 	unsigned char * buffer;
-	unsigned long long j;
+	unsigned long long int j;
 	int selected[NPAT];
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	int bytes_read;
@@ -725,9 +718,7 @@ wfs_xfs_wipe_fs	(
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_xfs_wipe_part (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS
 # ifdef XFS_HAS_SHARED_BLOCKS
 	WFS_ATTR ((unused))
@@ -736,19 +727,19 @@ wfs_xfs_wipe_part (
 # ifdef XFS_HAS_SHARED_BLOCKS
 	WFS_ATTR ((unused))
 # endif
-	 )
-#else
-	FS
-# ifdef XFS_HAS_SHARED_BLOCKS
-	WFS_ATTR ((unused))
-# endif
-	, error
-# ifdef XFS_HAS_SHARED_BLOCKS
-	WFS_ATTR ((unused))
-# endif
 	)
-	const wfs_fsid_t FS;
-	error_type * const error;
+#else
+	FS, error)
+	const wfs_fsid_t FS
+# ifdef XFS_HAS_SHARED_BLOCKS
+		WFS_ATTR ((unused))
+# endif
+	;
+	error_type * const error
+# ifdef XFS_HAS_SHARED_BLOCKS
+		WFS_ATTR ((unused))
+# endif
+	;
 #endif
 {
 	/*
@@ -790,9 +781,9 @@ wfs_xfs_wipe_part (
 	char * pos2 = NULL;
 	unsigned char * buffer;
 	int selected[NPAT];
-	unsigned long long inode, inode_size, start_block, number_of_blocks;
+	unsigned long long int inode, inode_size, start_block, number_of_blocks;
 	int length_to_wipe;
-	unsigned long long trash;
+	unsigned long long int trash;
 	int got_mode_line, got_size_line;
 	unsigned int mode;
 	unsigned int offset;
@@ -1116,6 +1107,7 @@ wfs_xfs_wipe_part (
 # else
 		sprintf (inode_cmd, "inode %llu\nprint\n", inode);
 # endif
+		inode_cmd[sizeof (inode_cmd)-1] = '\0';
 		res = write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd) );
 		if ( res <= 0 )
 		{
@@ -1185,7 +1177,7 @@ wfs_xfs_wipe_part (
 						break;
 					}
 					/* re-send the inode command */
-					if ( write (pipe_to_blk_db[PIPE_W],inode_cmd,strlen (inode_cmd))
+					if ( write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd))
 						<= 0 )
 					{
 						break;
@@ -1369,6 +1361,7 @@ wfs_xfs_wipe_part (
 				   with the next one */
 				strncpy (read_buffer, pos1, (size_t)(&read_buffer[WFS_XFSBUFSIZE] - pos1));
 				res = &read_buffer[WFS_XFSBUFSIZE] - pos1;
+				read_buffer[res] = '\0';
 				continue;
 			}
 			res = 0;
@@ -1390,7 +1383,7 @@ wfs_xfs_wipe_part (
 			 * block_size - [(inode_size+offset)%block_size] bytes
 			 */
 			/* NOTE: 'offset' is probably NOT the offset within a block at all */
-			length_to_wipe = wfs_xfs_get_block_size (FS)
+			length_to_wipe = (int)wfs_xfs_get_block_size (FS)
 				- (int)((inode_size/*+offset*/)%wfs_xfs_get_block_size (FS));
 			if ( length_to_wipe <= 0 ) continue;
 			for ( i=0; (i < npasses) && (sig_recvd == 0); i++ )
@@ -1501,9 +1494,7 @@ wfs_xfs_wipe_part (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_xfs_check_err (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -1666,17 +1657,16 @@ wfs_xfs_check_err (
 		&& (sig_recvd == 0)
 		);
 
+	close (pipe_fd[PIPE_R]);
+	close (pipe_fd[PIPE_W]);
 	wfs_wait_for_child (&child_xfschk);
+	free (args[FSNAME_POS_CHECK]);
 	if ( res > 0 )
 	{
 		/* something was read. Filesystem is inconsistent. */
-		close (pipe_fd[PIPE_R]);
-		close (pipe_fd[PIPE_W]);
-		free (args[FSNAME_POS_CHECK]);
 		return WFS_FSHASERROR;
 	}
 
-	free (args[FSNAME_POS_CHECK]);
 	if (sig_recvd != 0) return WFS_SIGNAL;
 	return WFS_SUCCESS;
 }
@@ -1688,9 +1678,7 @@ wfs_xfs_check_err (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_xfs_is_dirty (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -1712,11 +1700,12 @@ wfs_xfs_is_dirty (
  *	is mounted in read+write mode (=1 if yes).
  * \return 0 in case of no errors, other values otherwise.
  */
-static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+static errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_xfs_get_mnt_point (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error,
 	char * const mnt_point, const size_t mnt_point_len, int * const is_rw )
 #else
@@ -1737,11 +1726,12 @@ wfs_xfs_get_mnt_point (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_xfs_chk_mount (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -1762,19 +1752,20 @@ wfs_xfs_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_xfs_open_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
 	const fsdata * const data WFS_ATTR ((unused)), error_type * const error )
 #else
-	dev_name, FS, whichfs, data WFS_ATTR ((unused)), error )
+	dev_name, FS, whichfs, data, error )
 	const char * const dev_name;
 	wfs_fsid_t* const FS;
 	CURR_FS * const whichfs;
-	const fsdata * const data;
+	const fsdata * const data WFS_ATTR ((unused));
 	error_type * const error;
 #endif
 {
@@ -1831,6 +1822,11 @@ wfs_xfs_open_fs (
 #endif
 	   )
 	{
+#ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+#else
+		error->errcode.gerror = 12L;	/* ENOMEM */
+#endif
 		return WFS_OPENFS;
 	}
 	sig_read = read (fs_fd, xfs_sig, 4);
@@ -1871,6 +1867,7 @@ wfs_xfs_open_fs (
 		error->errcode.gerror = 12L;	/* ENOMEM */
 #endif
 		free (FS->xxfs.dev_name);
+		FS->xxfs.dev_name = NULL;
 		return WFS_MALLOC;
 	}
 	strncpy ( args[FSNAME_POS_OPEN], FS->xxfs.dev_name, strlen (FS->xxfs.dev_name) + 1 );
@@ -1888,6 +1885,7 @@ wfs_xfs_open_fs (
 # endif
 		free (args[FSNAME_POS_OPEN]);
 		free (FS->xxfs.dev_name);
+		FS->xxfs.dev_name = NULL;
 		return WFS_OPENFS;
 	}
 #endif
@@ -1909,6 +1907,7 @@ wfs_xfs_open_fs (
 #endif
 		free (args[FSNAME_POS_OPEN]);
 		free (FS->xxfs.dev_name);
+		FS->xxfs.dev_name = NULL;
 		return WFS_PIPEERR;
 	}
 	/* In case of child error the parent process
@@ -1943,6 +1942,7 @@ wfs_xfs_open_fs (
 #endif
 		free (args[FSNAME_POS_OPEN]);
 		free (FS->xxfs.dev_name);
+		FS->xxfs.dev_name = NULL;
 		return WFS_FORKERR;
 	}
 	/* parent */
@@ -2042,6 +2042,7 @@ wfs_xfs_open_fs (
 			close (pipe_fd[PIPE_W]);
 			free (args[FSNAME_POS_OPEN]);
 			free (FS->xxfs.dev_name);
+			FS->xxfs.dev_name = NULL;
 			return WFS_OPENFS;
 		}
 		if ( bytes_read < 0 )
@@ -2060,6 +2061,7 @@ wfs_xfs_open_fs (
 			close (pipe_fd[PIPE_W]);
 			free (args[FSNAME_POS_OPEN]);
 			free (FS->xxfs.dev_name);
+			FS->xxfs.dev_name = NULL;
 			return WFS_OPENFS;
 		}
 #define search1 "blocksize = "
@@ -2087,6 +2089,7 @@ wfs_xfs_open_fs (
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
 				free (FS->xxfs.dev_name);
+				FS->xxfs.dev_name = NULL;
 				return WFS_OPENFS;
 			}
 			blocksize_set = 1;
@@ -2101,6 +2104,7 @@ wfs_xfs_open_fs (
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
 				free (FS->xxfs.dev_name);
+				FS->xxfs.dev_name = NULL;
 				return WFS_OPENFS;
 			}
 			agblocks_set = 1;
@@ -2115,6 +2119,7 @@ wfs_xfs_open_fs (
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
 				free (FS->xxfs.dev_name);
+				FS->xxfs.dev_name = NULL;
 				return WFS_OPENFS;
 			}
 			if ( inprogress != 0 )
@@ -2124,6 +2129,7 @@ wfs_xfs_open_fs (
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
 				free (FS->xxfs.dev_name);
+				FS->xxfs.dev_name = NULL;
 				return WFS_OPENFS;
 			}
 			inprogress_found = 1;
@@ -2138,6 +2144,7 @@ wfs_xfs_open_fs (
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
 				free (FS->xxfs.dev_name);
+				FS->xxfs.dev_name = NULL;
 				return WFS_OPENFS;
 			}
 			used_inodes_set = 1;
@@ -2152,6 +2159,7 @@ wfs_xfs_open_fs (
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
 				free (FS->xxfs.dev_name);
+				FS->xxfs.dev_name = NULL;
 				return WFS_OPENFS;
 			}
 			free_blocks_set = 1;
@@ -2165,6 +2173,7 @@ wfs_xfs_open_fs (
 	{
 		free (args[FSNAME_POS_OPEN]);
 		free (FS->xxfs.dev_name);
+		FS->xxfs.dev_name = NULL;
 		return WFS_SIGNAL;
 	}
 	/* just in case, after execvp */
@@ -2188,14 +2197,17 @@ wfs_xfs_open_fs (
 			FS->xxfs.wfs_xfs_blocksize = 0;
 			free (args[FSNAME_POS_OPEN]);
 			free (FS->xxfs.dev_name);
+			FS->xxfs.dev_name = NULL;
 			return WFS_MALLOC;
 		}
 		strncpy ( FS->xxfs.mnt_point, buffer, strlen (buffer) + 1 );
 	}
 
+	free (args[FSNAME_POS_OPEN]);
 	if (sig_recvd != 0)
 	{
-		free (args[FSNAME_POS_OPEN]);
+		free (FS->xxfs.dev_name);
+		FS->xxfs.dev_name = NULL;
 		return WFS_SIGNAL;
 	}
 	*whichfs = CURR_XFS;
@@ -2210,9 +2222,7 @@ wfs_xfs_open_fs (
  */
 errcode_enum
 wfs_xfs_close_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error
 # ifndef HAVE_ERRNO_H
 	WFS_ATTR ((unused))
@@ -2220,12 +2230,13 @@ wfs_xfs_close_fs (
 	)
 #else
 	FS, error
-# ifndef HAVE_ERRNO_H
-	WFS_ATTR ((unused))
-# endif
 	)
 	wfs_fsid_t FS;
-	error_type * const error;
+	error_type * const error
+# ifndef HAVE_ERRNO_H
+		WFS_ATTR ((unused))
+# endif
+	;
 #endif
 {
 #ifdef HAVE_ERRNO_H
@@ -2254,13 +2265,11 @@ wfs_xfs_close_fs (
  */
 errcode_enum
 wfs_xfs_flush_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS WFS_ATTR ((unused)) )
 #else
-	FS WFS_ATTR ((unused)) )
-	const wfs_fsid_t FS;
+	FS )
+	const wfs_fsid_t FS WFS_ATTR ((unused));
 #endif
 {
 	/* Better than nothing */

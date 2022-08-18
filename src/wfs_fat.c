@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -78,11 +78,16 @@
 #include "wfs_signal.h"
 #include "wfs_util.h"
 
-static unsigned short WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static unsigned short int _get_fat_entry_len PARAMS ((const tfat_t * const pfat));
+#endif
+
+static unsigned short int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 _get_fat_entry_len (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const tfat_t * const pfat)
 #else
 	pfat)
@@ -110,11 +115,13 @@ _get_fat_entry_len (
 	return 0;
 }
 
+#ifndef WFS_ANSIC
+static unsigned int _get_fat_entry PARAMS ((const tfat_t * const pfat, const unsigned int clus));
+#endif
+
 static unsigned int
 _get_fat_entry (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const tfat_t * const pfat, const unsigned int clus)
 #else
 	pfat, clus)
@@ -125,7 +132,7 @@ _get_fat_entry (
 	tffs_t * ptffs;
 	void * pclus;
 	unsigned int entry_val = 0x0FFFFFFF;
-	unsigned short fat_entry;
+	unsigned short int fat_entry;
 
 	/*
 	if ( pfat == NULL )
@@ -147,7 +154,7 @@ _get_fat_entry (
 
 	if (ptffs->fat_type == FT_FAT12)
 	{
-		fat_entry = *((unsigned short *)pclus);
+		fat_entry = *((unsigned short int *)pclus);
 		if ((clus & 1) != 0)
 		{
 			entry_val = (fat_entry >> 4) & 0x0FFF;
@@ -159,7 +166,7 @@ _get_fat_entry (
 	}
 	else if (ptffs->fat_type == FT_FAT16)
 	{
-		entry_val = *((unsigned short *)pclus);
+		entry_val = *((unsigned short int *)pclus);
 	}
 	else if (ptffs->fat_type == FT_FAT32)
 	{
@@ -169,11 +176,16 @@ _get_fat_entry (
 	return entry_val;
 }
 
-static int WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static int _read_fat_sector PARAMS ((tfat_t * pfat, int fat_sec));
+#endif
+
+static int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 _read_fat_sector (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	tfat_t * pfat, int fat_sec)
 #else
 	pfat, fat_sec)
@@ -216,15 +228,20 @@ _read_fat_sector (
 			return FALSE;
 		}
 	}
-	pfat->cur_fat_sec = fat_sec;
+	pfat->cur_fat_sec = (uint32)fat_sec;
 	return TRUE;
 }
 
-static int WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static int _write_fat_sector PARAMS ((tfat_t * pfat, int fat_sec));
+#endif
+
+static int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 _write_fat_sector (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	tfat_t * pfat, int fat_sec)
 #else
 	pfat, fat_sec)
@@ -262,11 +279,13 @@ _write_fat_sector (
 	return TRUE;
 }
 
+#ifndef WFS_ANSIC
+static int _is_entry_free PARAMS ((const tfat_t * const pfat, const unsigned int entry_val));
+#endif
+
 static int
 _is_entry_free (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const tfat_t * const pfat, const unsigned int entry_val)
 #else
 	pfat, entry_val)
@@ -300,11 +319,16 @@ _is_entry_free (
 	return FALSE;
 }
 
-static int WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static int _clus2fatsec PARAMS ((tfat_t * pfat, unsigned int clus));
+#endif
+
+static int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 _clus2fatsec (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	tfat_t * pfat, unsigned int clus)
 #else
 	pfat, clus)
@@ -326,15 +350,20 @@ _clus2fatsec (
 	}
 	if ( pfat->ptffs->pbs->byts_per_sec == 0 ) return 0;
 
-	return (pfat->ptffs->sec_fat + ((clus * _get_fat_entry_len (pfat)) / 8)
+	return (int)(pfat->ptffs->sec_fat + ((clus * _get_fat_entry_len (pfat)) / 8)
 		/ pfat->ptffs->pbs->byts_per_sec);
 }
 
-static int WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static int _lookup_free_clus PARAMS ((tfat_t * pfat, unsigned int * pfree_clus));
+#endif
+
+static int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 _lookup_free_clus (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	tfat_t * pfat, unsigned int * pfree_clus)
 #else
 	pfat, pfree_clus)
@@ -397,11 +426,16 @@ _lookup_free_clus (
 	return ret;
 }
 
-static void WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static void _file_seek PARAMS ((tfile_t * pfile, unsigned int offset));
+#endif
+
+static void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 _file_seek (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	tfile_t * pfile, unsigned int offset)
 #else
 	pfile, offset)
@@ -409,7 +443,7 @@ _file_seek (
 	unsigned int offset;
 #endif
 {
-	int cur_offset = offset;
+	unsigned int cur_offset = offset;
 	if ( pfile == NULL )
 	{
 		return;
@@ -433,11 +467,13 @@ _file_seek (
 	pfile->cur_sec_offset = cur_offset;
 }
 
+#ifndef WFS_ANSIC
+static int _get_dirent PARAMS ((tdir_t * pdir, dir_entry_t * pdirent));
+#endif
+
 static int
 _get_dirent (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	tdir_t * pdir, dir_entry_t * pdirent)
 #else
 	pdir, pdirent)
@@ -514,11 +550,16 @@ _get_dirent (
 	return ret;
 }
 
-static int WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static int wfs_fat_dirent_find PARAMS ((const wfs_fsid_t FS, tdir_t * pdir, error_type * const error));
+#endif
+
+static int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_dirent_find (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, tdir_t * pdir, error_type * const error)
 #else
 	FS, pdir, error)
@@ -657,6 +698,10 @@ wfs_fat_dirent_find (
 }
 
 
+#ifndef WFS_ANSIC
+static size_t WFS_ATTR ((warn_unused_result)) wfs_fat_get_block_size PARAMS ((const wfs_fsid_t FS));
+#endif
+
 /**
  * Returns the buffer size needed to work on the smallest physical unit on a FAT filesystem.
  * \param FS The filesystem.
@@ -664,9 +709,7 @@ wfs_fat_dirent_find (
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_fat_get_block_size (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 #else
 	FS)
@@ -682,8 +725,13 @@ wfs_fat_get_block_size (
 		return 512;
 	}
 	/* this is required, because space for files is allocated in clusters, not in sectors */
-	return ((tffs_t *)(FS.fat))->pbs->byts_per_sec * ((tffs_t *)(FS.fat))->pbs->sec_per_clus;
+	return (size_t)(((tffs_t *)(FS.fat))->pbs->byts_per_sec * ((tffs_t *)(FS.fat))->pbs->sec_per_clus);
 }
+
+#ifndef WFS_ANSIC
+static errcode_enum wfs_fat_wipe_file_tail PARAMS ((wfs_fsid_t FS,
+	error_type * const error, tfile_handle_t file, unsigned char * buf));
+#endif
 
 /**
  * Wipes the free space after the given file's data.
@@ -692,11 +740,12 @@ wfs_fat_get_block_size (
  * \param file The file to wipe data after.
  * \param buf The buffer to use.
  */
-static errcode_enum WFS_ATTR ((nonnull))
+static errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_wipe_file_tail (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, tfile_handle_t file, unsigned char * buf)
 #else
 	FS, error, file, buf)
@@ -740,7 +789,7 @@ wfs_fat_wipe_file_tail (
 			break;
 		}
 		/* workaround a bug in tffs? */
-		if ( written > 0 ) fh->file_size -= written;
+		if ( written > 0 ) fh->file_size -= (uint32)written;
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
 		if ( (npasses > 1) && (sig_recvd == 0) )
@@ -770,7 +819,7 @@ wfs_fat_wipe_file_tail (
 				ret_tail = WFS_BLKWR;
 			}
 			/* workaround a bug in tffs? */
-			if ( written > 0 ) fh->file_size -= written;
+			if ( written > 0 ) fh->file_size -= (uint32)written;
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
 			if ( (npasses > 1) && (sig_recvd == 0) )
@@ -789,6 +838,11 @@ wfs_fat_wipe_file_tail (
 	return ret_tail;
 }
 
+#ifndef WFS_ANSIC
+static errcode_enum wfs_fat_wipe_file_tails_in_dir PARAMS ((wfs_fsid_t FS,
+	error_type * const error, tdir_handle_t dir, unsigned char * buf));
+#endif
+
 /**
  * Recurisvely wipes the free space after the files in the given directory.
  * \param FS The filesystem.
@@ -796,11 +850,12 @@ wfs_fat_wipe_file_tail (
  * \param dir The directory to browse for files.
  * \param buf The buffer to use.
  */
-static errcode_enum WFS_ATTR ((nonnull))
+static errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_wipe_file_tails_in_dir (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, tdir_handle_t dir, unsigned char * buf)
 #else
 	FS, error, dir, buf)
@@ -890,11 +945,12 @@ wfs_fat_wipe_file_tails_in_dir (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_wipe_part (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -947,11 +1003,12 @@ wfs_fat_wipe_part (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_wipe_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -1078,6 +1135,11 @@ wfs_fat_wipe_fs (
 	return ret_wfs;
 }
 
+#ifndef WFS_ANSIC
+static errcode_enum wfs_fat_wipe_unrm_dir PARAMS ((wfs_fsid_t FS,
+	error_type * const error, tdir_handle_t dir, unsigned char * buf));
+#endif
+
 /**
  * Recurisvely wipes the deleted files' names in the given directory.
  * \param FS The filesystem.
@@ -1085,11 +1147,12 @@ wfs_fat_wipe_fs (
  * \param dir The directory to browse for deleted files.
  * \param buf The buffer to use.
  */
-static errcode_enum WFS_ATTR ((nonnull))
+static errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_wipe_unrm_dir (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, tdir_handle_t dir, unsigned char * buf)
 #else
 	FS, error, dir, buf)
@@ -1162,11 +1225,12 @@ wfs_fat_wipe_unrm_dir (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_wipe_unrm (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -1224,19 +1288,20 @@ wfs_fat_wipe_unrm (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_open_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
 	const fsdata * const data WFS_ATTR ((unused)), error_type * const error )
 #else
-	dev_name, FS, whichfs, data WFS_ATTR ((unused)), error )
+	dev_name, FS, whichfs, data, error )
 	const char * const dev_name;
 	wfs_fsid_t * const FS;
 	CURR_FS * const whichfs;
-	const fsdata * const data;
+	const fsdata * const data WFS_ATTR ((unused));
 	error_type * const error;
 #endif
 {
@@ -1277,6 +1342,11 @@ wfs_fat_open_fs (
 # endif
 	   )
 	{
+#ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+#else
+		error->errcode.gerror = 1L;	/* EPERM */
+#endif
 		return WFS_OPENFS;
 	}
 	boot_read = read (fs_fd, &bsec, 512);
@@ -1336,11 +1406,12 @@ wfs_fat_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_chk_mount (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -1357,11 +1428,12 @@ wfs_fat_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_close_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -1397,13 +1469,11 @@ wfs_fat_close_fs (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_fat_check_err (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS WFS_ATTR ((unused)) )
 #else
-	FS WFS_ATTR ((unused)) )
-	const wfs_fsid_t FS;
+	FS )
+	const wfs_fsid_t FS WFS_ATTR ((unused));
 #endif
 {
 	/* The filesystem itself does not contain this information. */
@@ -1418,13 +1488,11 @@ wfs_fat_check_err (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_fat_is_dirty (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS WFS_ATTR ((unused)) )
 #else
-	FS WFS_ATTR ((unused)) )
-	const wfs_fsid_t FS;
+	FS )
+	const wfs_fsid_t FS WFS_ATTR ((unused));
 #endif
 {
 	/*
@@ -1440,11 +1508,12 @@ wfs_fat_is_dirty (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_fat_flush_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS
 # if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)
 		WFS_ATTR ((unused))
@@ -1456,18 +1525,18 @@ wfs_fat_flush_fs (
 # endif
 	)
 #else
-	FS
+	FS, error)
+	wfs_fsid_t FS
 # if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)
 		WFS_ATTR ((unused))
 # endif
-	, error
+	;
+	error_type * const error
 # if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)	\
 	|| (!defined HAVE_ERRNO_H)
 		WFS_ATTR ((unused))
 # endif
-	)
-	wfs_fsid_t FS;
-	error_type * const error;
+	;
 #endif
 {
 	errcode_enum ret = WFS_SUCCESS;

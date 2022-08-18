@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -39,8 +39,24 @@
 # include <string.h>	/* strncpy() */
 #endif
 
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>	/* required for sys/mount.h on some systems */
+#endif
+
 #ifdef HAVE_MNTENT_H
 # include <mntent.h>
+#endif
+
+#ifdef HAVE_SYS_STATFS_H
+# include <sys/statfs.h>
+#endif
+
+#ifdef HAVE_SYS_MOUNT_H
+# include <sys/mount.h>
+#endif
+
+#ifdef HAVE_SYS_VFS_H
+# include <sys/vfs.h>
 #endif
 
 #ifdef HAVE_PATHS_H
@@ -83,7 +99,7 @@
 # endif
 #endif
 #ifndef WEXITSTATUS
-# define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
+# define WEXITSTATUS(stat_val) ((unsigned int)(stat_val) >> 8)
 #endif
 #ifndef WIFEXITED
 # define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
@@ -119,8 +135,6 @@
 # define STDERR_FILENO	2
 #endif
 
-#define WFS_MNTBUFLEN 4096
-
 /**
  * Gets the mount point of the given device (if mounted).
  * \param dev_name Device to check.
@@ -130,28 +144,33 @@
  *	is mounted in read+write mode (=1 if yes).
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_get_mnt_point (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name
-# if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
+# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
+	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
 		WFS_ATTR ((unused))
 # endif
 	, error_type * const error,
 	char * const mnt_point, const size_t mnt_point_len
-# if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
+# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
+	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
 		WFS_ATTR ((unused))
 # endif
 	, int * const is_rw )
 #else
 	dev_name
-# if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
+# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
+	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
 		WFS_ATTR ((unused))
 # endif
 	, error, mnt_point, mnt_point_len
-# if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
+# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
+	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
 		WFS_ATTR ((unused))
 # endif
 	, is_rw )
@@ -167,6 +186,12 @@ wfs_get_mnt_point (
 	struct mntent *mnt, mnt_copy;
 # ifdef HAVE_GETMNTENT_R
 	char buffer[WFS_MNTBUFLEN];
+# endif
+#else	/* ! HAVE_MNTENT_H */
+# if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
+	struct statfs * filesystems = NULL;
+	int count;
+	int i;
 # endif
 #endif
 /*
@@ -220,20 +245,51 @@ wfs_get_mnt_point (
 		error->errcode.gerror = 1L;
 		*is_rw = 1;
 		strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
+		mnt_point[mnt_point_len] = '\0';
 		return WFS_MNTRW;
 	}
 # else
 	error->errcode.gerror = 1L;
 	*is_rw = 1;
 	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
+	mnt_point[mnt_point_len] = '\0';
 	return WFS_MNTRW;	/* can't check for r/w, so don't do anything */
 # endif
 	*is_rw = 0;
 	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
+	mnt_point[mnt_point_len] = '\0';
 	return WFS_SUCCESS;
 #else	/* ! HAVE_MNTENT_H */
+# if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
+	count = getmntinfo (&filesystems, 0);
+	if ( (count <= 0) || (filesystems == NULL) )
+	{
+		error->errcode.gerror = 1L;
+		return WFS_MNTCHK;	/* can't check, so don't do anything */
+	}
+	else
+	{
+		/* BSD systems have a 'u_int32_t f_flags' in "struct statfs". This
+		   field is a copy of the mount flags. */
+		for ( i = 0; i < count; i++ )
+		{
+			if ( (strcmp (dev_name, filesystems[i].f_mntfromname) == 0)
+				&& ((filesystems[i].f_flags & MNT_RDONLY) != MNT_RDONLY) )
+			{
+				error->errcode.gerror = 1L;
+				*is_rw = 1;
+				strncpy (mnt_point, filesystems[i].f_mntonname, mnt_point_len);
+				mnt_point[mnt_point_len] = '\0';
+				return WFS_MNTRW;
+			}
+		}
+		*is_rw = 0;
+		return WFS_SUCCESS;
+	}
+# else /* ! HAVE_MNTENT_H && ! HAVE_GETMNTINFO */
 	error->errcode.gerror = 1L;
 	return WFS_MNTCHK;	/* can't check, so don't do anything */
+# endif
 #endif	/* HAVE_MNTENT_H */
 }
 
@@ -244,11 +300,12 @@ wfs_get_mnt_point (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_check_mounted (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -266,6 +323,7 @@ wfs_check_mounted (
 	}
 
 	res = wfs_get_mnt_point (dev_name, error, buffer, sizeof (buffer), &is_rw);
+	buffer[WFS_MNTBUFLEN-1] = '\0';
 	if ( res != WFS_SUCCESS )
 	{
 		return res;
@@ -288,16 +346,22 @@ wfs_check_mounted (
  */
 static void *
 child_function (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
-	void * p)
+#ifdef WFS_ANSIC
+	void * p
+# if ! ((defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2))
+		WFS_ATTR ((unused))
+# endif
+	)
 #else
 	p)
-	void * p;
+	void * p
+# if ! ((defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2))
+		WFS_ATTR ((unused))
+# endif
+	;
 #endif
 {
-#if (defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2) && (defined HAVE_EXECVP)
+#if (defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2)
 	const struct child_id * const id = (struct child_id *) p;
 	int res;
 	if ( p != NULL )
@@ -374,11 +438,12 @@ child_function (
  * \param id A structure describing the child process to create and containing its data after creation.
  * \return WFS_SUCCESS on success, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_create_child (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	struct child_id * const id)
 #else
 	id )
@@ -416,11 +481,12 @@ wfs_create_child (
  * Waits for the specified child process to finish working.
  * \param id A structure describing the child process to wait for.
  */
-void WFS_ATTR ((nonnull))
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_wait_for_child (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const struct child_id * const id)
 #else
 	id )
@@ -464,11 +530,12 @@ wfs_wait_for_child (
  * \param id A structure describing the child process to check.
  * \return 0 if the child is still active.
  */
-int WFS_ATTR ((nonnull))
+int
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_has_child_exited (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const struct child_id * const id)
 #else
 	id )

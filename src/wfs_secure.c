@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- security-related procedures.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -55,11 +55,12 @@
  * Clears the (POSIX) capabilities of the program.
  * \return 0 on success, other values otherwise.
  */
-int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
+int WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_clear_cap (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	error_type * const error)
 #else
 	error)
@@ -78,6 +79,7 @@ wfs_clear_cap (
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
+	/* Valgring says this calls gapget(..., NULL), but there's nothing we can do about it. */
 	my_capab = cap_init ();
 	if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
@@ -175,11 +177,12 @@ wfs_clear_cap (
  * \param stdout_open Pointer to an int, which will get the value 0 if standard output is not open.
  * \param stderr_open Pointer to an int, which will get the value 0 if standard error output is not open.
  */
-void WFS_ATTR ((nonnull))
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_check_stds (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	int *stdout_open, int *stderr_open)
 #else
 	stdout_open, stderr_open)
@@ -249,9 +252,7 @@ wfs_check_stds (
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_check_suid (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	void)
 #else
 	)
@@ -274,9 +275,7 @@ wfs_check_suid (
  */
 void
 wfs_clear_env (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	void)
 #else
 	)

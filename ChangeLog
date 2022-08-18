@@ -1,3 +1,41 @@
+2010-09-12	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.3
+	  JFS filesystem now supported. Updated gettext version and related
+	  files. Compiled with new GCC. Corrected compiling for non-ANSI C
+	  compilers. Run flawfinder on the code and valgrind on the program.
+	* wipefreespace.c: fixed variable declarations and includes when
+	  ReiserFSv3 and Minix were enabled, but ReiserFSv3 wasn't compiled.
+	  Added a replacement function for malloc(), if required. Displaying
+	  the detected filesystem type before wiping (in verbose mode). A
+	  separate function for enabling the drive's cache on exit.
+	* wfs_minixfs.c: added more watching for signals.
+	* wipefreespace-kde4.desktop: A new desktop file, compatible with
+	  Dolphin and Konqueror in KDE4 and validated to be as compatible
+	  as possible.
+	* wipefreespace.h: define WFS_ANSIC if the C compiler is compatible
+	  with ANSI C. Fix name collision between NTFS and ReiserFSv3 header
+	  files. Including stdio.h for ReiserFSv3.
+	* wfs_util.c (wfs_get_mnt_point): now using getmntinfo() if
+	  getmntent() and getmntent_r() are unavailable.
+	* wfs_jfs.{c,h}: JFS filesystem support.
+	* README, wipefreespace.1, wipefreespace.texi.in, configure.ac,
+	  wipefreespace.spec.in, wfs_wrappers.c, INSTALL: updated for JFS.
+	* wfs_ext234.c (wfs_e234_wipe_unrm, wfs_e234_wipe_journal,
+	  wfs_e234_wipe_fs, wfs_e234_wipe_part): fixed last pass with zeros.
+	* wfs_xfs.c (wfs_xfs_open_fs): fixed memory leak
+	* wfs_xfs.c (wfs_xfs_check_err): fixed pipes left open
+	* wfs_minixfs.c (wfs_minixfs_close_fs): cleaning memory leaks from
+	  mfstool's filesystem closing.
+	* wfs_reiser.c (wfs_reiser_wipe_unrm, wfs_reiser_close_fs): releasing
+	  elements not freed by reiserfs library to prevent resource leaks.
+	* wfs_util.c (child_function): marked "unused" parameter with no XFS.
+	* README, INSTALL, wipefreespace.texi.in: added requirements for
+	  xfsprogs (XFS support).
+	* wfs_ntfs.c (wfs_ntfs_close_fs): fixed error on close.
+	* wfs_ntfs.c (wfs_ntfs_wipe_unrm): releasing unused resources.
+	* wipefreespace.spec.in: fixed rpmlint warnings and added docs.
+
 2009-11-28	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.2

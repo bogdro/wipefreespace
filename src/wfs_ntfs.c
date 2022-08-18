@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -120,9 +120,9 @@ struct filename
 #endif
 	ntfschar	*uname;		/* Filename in unicode */
 	int		 uname_len;	/* and its length */
-	long long	 size_alloc;	/* Allocated size (multiple of cluster size) */
-	long long	 size_data;	/* Actual size of data */
-	long long	 parent_mref;
+	long long int	 size_alloc;	/* Allocated size (multiple of cluster size) */
+	long long int	 size_data;	/* Actual size of data */
+	long long int	 parent_mref;
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	NTFS_FILE_ATTR_FLAGS	 flags;
 #else
@@ -154,10 +154,10 @@ struct data
 	int		 resident;	/* Stream is resident */
 	int		 compressed;	/* Stream is compressed */
 	int		 encrypted;	/* Stream is encrypted */
-	long long	 size_alloc;	/* Allocated size (multiple of cluster size) */
-	long long	 size_data;	/* Actual size of data */
-	long long	 size_init;	/* Initialised size, may be less than data size */
-	long long	 size_vcn;	/* Highest VCN in the data runs */
+	long long int	 size_alloc;	/* Allocated size (multiple of cluster size) */
+	long long int	 size_data;	/* Actual size of data */
+	long long int	 size_init;	/* Initialised size, may be less than data size */
+	long long int	 size_vcn;	/* Highest VCN in the data runs */
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	ntfs_runlist_element *runlist;	/* Decoded data runs */
 #else
@@ -170,7 +170,7 @@ struct data
 
 struct ufile
 {
-	long long	 inode;		/* MFT record number */
+	long long int	 inode;		/* MFT record number */
 	time_t		 date;		/* Last modification date/time */
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	struct ntfs_list_head name;	/* A list of filenames */
@@ -184,7 +184,7 @@ struct ufile
 #endif
 	char		*pref_name;	/* Preferred filename */
 	char		*pref_pname;	/*	     parent filename */
-	long long	 max_size;	/* Largest size we find */
+	long long int	 max_size;	/* Largest size we find */
 	int		 attr_list;	/* MFT record may be one of many */
 	int		 directory;	/* MFT record represents a directory */
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
@@ -196,6 +196,10 @@ struct ufile
 };
 
 #ifndef USE_NTFSWIPE
+# ifndef WFS_ANSIC
+static u32 WFS_ATTR ((warn_unused_result)) wfs_ntfs_get_block_size PARAMS ((const wfs_fsid_t FS));
+# endif
+
 /**
  * Returns the buffer size needed to work on the smallest physical unit on a NTFS filesystem.
  * \param FS The filesystem.
@@ -203,18 +207,21 @@ struct ufile
  */
 static u32 WFS_ATTR ((warn_unused_result))
 wfs_ntfs_get_block_size (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 # else
 	FS )
 	const wfs_fsid_t FS;
 # endif
 {
-	return FS.ntfs.cluster_size;
-	/* return ntfs_device_sector_size_get(&(FS.ntfs)); */
+	return FS.ntfs->cluster_size;
+	/* return ntfs_device_sector_size_get(FS.ntfs); */
 }
+
+# ifndef WFS_ANSIC
+static s64 wipe_compressed_attribute PARAMS((const ntfs_volume * const vol,
+	ntfs_attr * const na, unsigned char * const buf, wfs_fsid_t FS));
+# endif
 
 /**
  * Part of ntfsprogs.
@@ -228,19 +235,20 @@ wfs_ntfs_get_block_size (
  *          0  Nothing to wipe
  *         -1  Error, something went wrong
  */
-static s64 WFS_ATTR ((nonnull))
+static s64
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 wipe_compressed_attribute (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
-	const ntfs_volume * const vol,
+# ifdef WFS_ANSIC
+	ntfs_volume * const vol,
 	ntfs_attr * const na,
 	unsigned char * const buf,
 	wfs_fsid_t FS
 	)
 # else
 	vol, na, buf, FS)
-	const ntfs_volume * const vol;
+	ntfs_volume * const vol;
 	ntfs_attr * const na;
 	unsigned char * const buf;
 	wfs_fsid_t FS;
@@ -268,7 +276,7 @@ wipe_compressed_attribute (
 
 	if ( (vol == NULL) || (na == NULL) || (buf == NULL) ) return 0;
 
-	FS.ntfs = *vol;
+	FS.ntfs = vol;
 
 	while ( (rlc->length != 0) && (sig_recvd==0) )
 	{
@@ -466,6 +474,11 @@ wipe_compressed_attribute (
 	return wiped;
 }
 
+# ifndef WFS_ANSIC
+static s64 wipe_attribute PARAMS ((const ntfs_volume * const vol,
+	ntfs_attr * const na, unsigned char * const buf, wfs_fsid_t FS));
+# endif
+
 /**
  * Part of ntfsprogs.
  * Modified: removed logging, memset replaced by fill_buffer, signal handling.
@@ -478,19 +491,20 @@ wipe_compressed_attribute (
  *          0  Nothing to wipe
  *         -1  Error, something went wrong
  */
-static s64 WFS_ATTR ((nonnull))
+static s64
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 wipe_attribute (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
-	const ntfs_volume * const vol,
+# ifdef WFS_ANSIC
+	ntfs_volume * const vol,
 	ntfs_attr * const na,
 	unsigned char * const buf,
 	wfs_fsid_t FS
 	)
 # else
 	vol, na, buf, FS)
-	const ntfs_volume * const vol;
+	ntfs_volume * const vol;
 	ntfs_attr * const na;
 	unsigned char * const buf;
 	wfs_fsid_t FS;
@@ -505,7 +519,7 @@ wipe_attribute (
 
 	if ( (vol == NULL) || (na == NULL) || (buf == NULL) ) return 0;
 
-	FS.ntfs = *vol;
+	FS.ntfs = vol;
 
 	if (offset == 0) return 0;
 
@@ -570,6 +584,11 @@ wipe_attribute (
 	return ret;
 }
 
+# ifndef WFS_ANSIC
+static int WFS_ATTR ((warn_unused_result)) utils_cluster_in_use PARAMS ((
+	const ntfs_volume * const vol, const long long int lcn));
+# endif
+
 /**
  * Part of ntfsprogs.
  * Modified: removed logging, signal handling, check for memset, added "(ntfs_bmplcn < 0) ||".
@@ -590,23 +609,24 @@ wipe_attribute (
  *	    0  Cluster is free space
  *	   -1  Error occurred
  */
-static int WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+static int WFS_ATTR ((warn_unused_result))
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 utils_cluster_in_use (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
-	const ntfs_volume * const vol, const long long lcn)
+# ifdef WFS_ANSIC
+	const ntfs_volume * const vol, const long long int lcn)
 # else
 	vol, lcn)
 	const ntfs_volume * const vol;
-	const long long lcn;
+	const long long int lcn;
 # endif
 {
 
 # undef		BUFSIZE
 # define	BUFSIZE	512
 	static unsigned char ntfs_buffer[BUFSIZE];
-	static long long ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
+	static long long int ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
 
 	int cbyte, bit;
 	ntfs_attr *attr = NULL;
@@ -662,6 +682,10 @@ utils_cluster_in_use (
 	return (ntfs_buffer[cbyte] & bit);
 }
 
+# ifndef WFS_ANSIC
+static void free_file PARAMS ((struct ufile *file));
+# endif
+
 /**
  * Part of ntfsprogs.
  * Modified: removed logging, signal handling, removed data.
@@ -674,11 +698,12 @@ utils_cluster_in_use (
  *
  * \return  none
  */
-static void WFS_ATTR ((nonnull))
+static void
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 free_file (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+# ifdef WFS_ANSIC
 	struct ufile *file)
 # else
 	file)
@@ -738,6 +763,12 @@ free_file (
 	free (file);
 }
 
+# ifndef WFS_ANSIC
+static errcode_enum WFS_ATTR ((warn_unused_result)) destroy_record PARAMS ((
+	const wfs_fsid_t FS, const s64 record, unsigned char * const buf,
+	error_type * const error));
+# endif
+
 /**
  * Destroys the specified record's filenames and data.
  *
@@ -747,11 +778,12 @@ free_file (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+static errcode_enum WFS_ATTR ((warn_unused_result))
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 destroy_record (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const s64 record, unsigned char * const buf,
 	error_type * const error)
 # else
@@ -806,9 +838,9 @@ destroy_record (
 	errno = 0;
 # endif
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	file->mft = (NTFS_MFT_RECORD *) malloc (FS.ntfs.mft_record_size);
+	file->mft = (NTFS_MFT_RECORD *) malloc (FS.ntfs->mft_record_size);
 # else
-	file->mft = (MFT_RECORD *) malloc (FS.ntfs.mft_record_size);
+	file->mft = (MFT_RECORD *) malloc (FS.ntfs->mft_record_size);
 # endif
 	if (file->mft == NULL)
 	{
@@ -822,9 +854,9 @@ destroy_record (
 	}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	mft = ntfs_attr_open (FS.ntfs.mft_ni, NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
+	mft = ntfs_attr_open (FS.ntfs->mft_ni, NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
 # else
-	mft = ntfs_attr_open (FS.ntfs.mft_ni, AT_DATA, AT_UNNAMED, 0);
+	mft = ntfs_attr_open (FS.ntfs->mft_ni, AT_DATA, AT_UNNAMED, 0);
 # endif
 	if (mft == NULL)
 	{
@@ -833,8 +865,8 @@ destroy_record (
 	}
 
 	/* Read the MFT reocrd of the i-node */
-	if (ntfs_attr_mst_pread (mft, FS.ntfs.mft_record_size * record, 1LL,
-		FS.ntfs.mft_record_size, file->mft) < 1)
+	if (ntfs_attr_mst_pread (mft, FS.ntfs->mft_record_size * record, 1LL,
+		FS.ntfs->mft_record_size, file->mft) < 1)
 	{
 
 		ntfs_attr_close (mft);
@@ -880,10 +912,10 @@ destroy_record (
 			}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # else
-			if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # endif
 			{
@@ -912,10 +944,10 @@ destroy_record (
 			if ( sig_recvd == 0 )
 			{
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # else
-				if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # endif
 				{
@@ -943,10 +975,10 @@ destroy_record (
 			}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # else
-			if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # endif
 			{
@@ -963,10 +995,10 @@ destroy_record (
 		}
 		ctx->attr->value_length = 0;
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-		if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+		if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 				1LL, ctx->mrec) != 0 )
 # else
-		if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+		if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 				1LL, ctx->mrec) != 0 )
 # endif
 		{
@@ -1009,10 +1041,10 @@ destroy_record (
 				}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # else
-				if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # endif
 				{
@@ -1041,10 +1073,10 @@ destroy_record (
 				if ( sig_recvd == 0 )
 				{
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-					if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+					if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 							1LL, ctx->mrec) != 0 )
 # else
-					if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+					if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 							1LL, ctx->mrec) != 0 )
 # endif
 					{
@@ -1073,10 +1105,10 @@ destroy_record (
 				}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # else
-				if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # endif
 				{
@@ -1093,10 +1125,10 @@ destroy_record (
 			}
 			ctx->attr->value_length = 0;
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # else
-			if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # endif
 			{
@@ -1108,7 +1140,7 @@ destroy_record (
 		else
 		{	/* Non-resident here */
 
-			rl = ntfs_mapping_pairs_decompress (&(FS.ntfs), ctx->attr, NULL);
+			rl = ntfs_mapping_pairs_decompress (FS.ntfs, ctx->attr, NULL);
 			if (rl == NULL)
 			{
 				continue;
@@ -1116,6 +1148,7 @@ destroy_record (
 
 			if (rl[0].length <= 0)
 			{
+				free (rl);
 				continue;
 			}
 
@@ -1127,7 +1160,7 @@ destroy_record (
 					(sig_recvd == 0) && (ret_wfs == WFS_SUCCESS); j++)
 				{
 
-					if (utils_cluster_in_use (&(FS.ntfs), j) == 0 )
+					if (utils_cluster_in_use (FS.ntfs, j) == 0 )
 					{
 						for ( pass = 0; (pass < npasses)
 							&& (sig_recvd == 0); pass++ )
@@ -1140,7 +1173,7 @@ destroy_record (
 							{
 			       					break;
 							}
-							if (ntfs_cluster_write (&(FS.ntfs), j,
+							if (ntfs_cluster_write (FS.ntfs, j,
 								1LL, buf) < 1)
 							{
 								ret_wfs = WFS_BLKWR;
@@ -1172,7 +1205,7 @@ destroy_record (
 # endif
 							if ( sig_recvd == 0 )
 							{
-								if (ntfs_cluster_write (&(FS.ntfs), j,
+								if (ntfs_cluster_write (FS.ntfs, j,
 									1LL, buf) < 1)
 								{
 									ret_wfs = WFS_BLKWR;
@@ -1235,10 +1268,10 @@ destroy_record (
 				}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-				if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # else
-				if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+				if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 						1LL, ctx->mrec) != 0 )
 # endif
 				{
@@ -1260,16 +1293,18 @@ destroy_record (
 			ctx->attr->initialized_size = 0;
 			ctx->attr->compressed_size = 0;
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-			if ( ntfs_mft_records_write (&(FS.ntfs), NTFS_MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, NTFS_MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # else
-			if ( ntfs_mft_records_write (&(FS.ntfs), MK_MREF (record, 0),
+			if ( ntfs_mft_records_write (FS.ntfs, MK_MREF (record, 0),
 					1LL, ctx->mrec) != 0 )
 # endif
 			{
 				ret_wfs = WFS_BLKWR;
+				free (rl);
 				break;
 			}
+			free (rl);
 		}	/* end of resident check */
 	} /* end of 'wiping file data' loop */
 
@@ -1284,6 +1319,10 @@ destroy_record (
 	return ret_wfs;
 }
 
+# ifndef WFS_ANSIC
+static errcode_enum wfs_ntfs_wipe_journal PARAMS ((wfs_fsid_t FS, error_type * const error));
+# endif
+
 /**
  * Wipes the journal (logfile) on an NTFS filesystem. Taken from ntfswipe.c. Changes:
  *	removed message printing, using own patterns instead of just 0xFF, flushing the
@@ -1292,17 +1331,18 @@ destroy_record (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-static errcode_enum WFS_ATTR ((nonnull))
+static errcode_enum
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 wfs_ntfs_wipe_journal (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error)
-#else
+# else
 	FS, error)
 	wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_journ = WFS_SUCCESS;
 	ntfs_inode *ni = NULL;
@@ -1311,15 +1351,15 @@ wfs_ntfs_wipe_journal (
 	unsigned long int j;
 	int selected[NPAT];
 	unsigned char * buf = NULL;
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
+# if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	NTFS_MFT_REF log_ino;
-#else
+# else
 	MFT_REF log_ino;
-#endif
+# endif
 	const s64 blocksize = wfs_ntfs_get_block_size (FS);
-#ifndef HAVE_MEMSET
+# ifndef HAVE_MEMSET
 	unsigned int i;
-#endif
+# endif
 	unsigned int prev_percent = 50;
 
 	if ( error == NULL )
@@ -1328,12 +1368,12 @@ wfs_ntfs_wipe_journal (
 		return WFS_BADPARAM;
 	}
 
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
+# if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	log_ino = NTFS_FILE_LogFile;
-#else
+# else
 	log_ino = FILE_LogFile;
-#endif
-	ni = ntfs_inode_open (&(FS.ntfs), log_ino);
+# endif
+	ni = ntfs_inode_open (FS.ntfs, log_ino);
 	if (ni == NULL)
 	{
 		show_progress (PROGRESS_UNRM, 100, &prev_percent);
@@ -1341,11 +1381,11 @@ wfs_ntfs_wipe_journal (
 	}
 	ntfs_inode_sync (ni);
 
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
+# if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	na = ntfs_attr_open (ni, NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
-#else
+# else
 	na = ntfs_attr_open (ni, AT_DATA, AT_UNNAMED, 0);
-#endif
+# endif
 	if (na == NULL)
 	{
 		ntfs_inode_close (ni);
@@ -1375,17 +1415,17 @@ wfs_ntfs_wipe_journal (
 		return WFS_SUCCESS;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( wfs_ntfs_get_block_size (FS) );
 	if ( buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		ntfs_attr_close (na);
 		ntfs_inode_close (ni);
 		show_progress (PROGRESS_UNRM, 100, &prev_percent);
@@ -1422,14 +1462,14 @@ wfs_ntfs_wipe_journal (
 		else
 		{
 			/* last pass with 0xff */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset (buf, 0xff, (size_t) wfs_ntfs_get_block_size (FS));
-#else
+# else
 			for ( i=0; i < wfs_ntfs_get_block_size (FS); i++ )
 			{
 				buf[i] = '\xff';
 			}
-#endif
+# endif
 		}
 		if ( sig_recvd != 0 )
 		{
@@ -1438,7 +1478,7 @@ wfs_ntfs_wipe_journal (
 
 		/* writing modified cluster here: */
 		pos = 0;
-		while ( ((count = len - pos) > 0) && (ret_journ == WFS_SUCCESS))
+		while ( ((count = len - pos) > 0) && (ret_journ == WFS_SUCCESS) && (sig_recvd == 0))
 		{
 			if (count > wfs_ntfs_get_block_size (FS))
 				count = wfs_ntfs_get_block_size (FS);
@@ -1478,9 +1518,7 @@ wfs_ntfs_wipe_journal (
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_ntfs_wipe_part (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error)
 #else
 	FS, error)
@@ -1497,9 +1535,17 @@ wfs_ntfs_wipe_part (
 		NULL, NULL };
 	struct child_id child_ntfswipe;
 	if ( FS.fsname == NULL ) return WFS_BADPARAM;
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
 	args_ntfswipe[4] = (char *) malloc ( strlen (FS.fsname) + 1 );
 	if ( args_ntfswipe[4] == NULL )
 	{
+# ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+# else
+		error->errcode.gerror = 12L;	/* ENOMEM */
+# endif
 		return WFS_MALLOC;
 		/*args_ntfswipe[4] = FS.fsname;*/
 	}
@@ -1516,6 +1562,9 @@ wfs_ntfs_wipe_part (
 	child_ntfswipe.stdin_fd = -1;
 	child_ntfswipe.stdout_fd = -1;
 	child_ntfswipe.stderr_fd = -1;
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
 	ret_wfs = wfs_create_child (&child_ntfswipe);
 	if ( ret_wfs != WFS_SUCCESS )
 	{
@@ -1533,7 +1582,7 @@ wfs_ntfs_wipe_part (
 	wfs_wait_for_child (&child_ntfswipe);
 	if ( args_ntfswipe[4] != FS.fsname ) free (args_ntfswipe[4]);
 	show_progress (PROGRESS_WFS, 100, &prev_percent);
-#else
+#else /* USE_NTFSWIPE */
 	u64 nr_mft_records;
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	NTFS_MFT_REF inode_num;
@@ -1544,13 +1593,13 @@ wfs_ntfs_wipe_part (
 	ntfs_attr *na = NULL;
 	unsigned char * buf;
 
-	if ( FS.ntfs.mft_na->initialized_size <= 0 )
+	if ( FS.ntfs->mft_na->initialized_size <= 0 )
 	{
 		return WFS_NOTHING;
 	}
 
-	nr_mft_records = ((u64)FS.ntfs.mft_na->initialized_size) >>
-			FS.ntfs.mft_record_size_bits;
+	nr_mft_records = ((u64)FS.ntfs->mft_na->initialized_size) >>
+			FS.ntfs->mft_record_size_bits;
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -1571,7 +1620,7 @@ wfs_ntfs_wipe_part (
 	{
 
 		ret_wfs = WFS_SUCCESS;
-		ni = ntfs_inode_open (&(FS.ntfs), inode_num);
+		ni = ntfs_inode_open (FS.ntfs, inode_num);
 
 		if (ni == NULL)
 		{
@@ -1610,11 +1659,11 @@ wfs_ntfs_wipe_part (
 					if ( (ret_wfs == WFS_SUCCESS) && (NAttrCompressed (na) != 0) )
 					{
 						/*wiped = */wipe_compressed_attribute
-							(&(FS.ntfs), na, buf, FS);
+							(FS.ntfs, na, buf, FS);
 					}
 					else
 					{
-						/*wiped = */wipe_attribute (&(FS.ntfs), na, buf, FS);
+						/*wiped = */wipe_attribute (FS.ntfs, na, buf, FS);
 					}
 				}
 				ntfs_attr_close (na);
@@ -1640,11 +1689,12 @@ wfs_ntfs_wipe_part (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_ntfs_wipe_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error)
 #else
 	FS, error)
@@ -1661,9 +1711,17 @@ wfs_ntfs_wipe_fs (
 		NULL, NULL };
 	struct child_id child_ntfswipe;
 	if ( FS.fsname == NULL ) return WFS_BADPARAM;
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
 	args_ntfswipe[4] = (char *) malloc ( strlen (FS.fsname) + 1 );
 	if ( args_ntfswipe[4] == NULL )
 	{
+# ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+# else
+		error->errcode.gerror = 12L;	/* ENOMEM */
+# endif
 		return WFS_MALLOC;
 		/*args_ntfswipe[4] = FS.fsname;*/
 	}
@@ -1680,6 +1738,9 @@ wfs_ntfs_wipe_fs (
 	child_ntfswipe.stdin_fd = -1;
 	child_ntfswipe.stdout_fd = -1;
 	child_ntfswipe.stderr_fd = -1;
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
 	ret_wfs = wfs_create_child (&child_ntfswipe);
 	if ( ret_wfs != WFS_SUCCESS )
 	{
@@ -1697,7 +1758,7 @@ wfs_ntfs_wipe_fs (
 	wfs_wait_for_child (&child_ntfswipe);
 	if ( args_ntfswipe[4] != FS.fsname ) free (args_ntfswipe[4]);
 	show_progress (PROGRESS_WFS, 100, &prev_percent);
-#else
+#else /* USE_NTFSWIPE */
 	s64 i, size, result;
 	unsigned long int j;
 	int selected[NPAT];
@@ -1722,10 +1783,10 @@ wfs_ntfs_wipe_fs (
 		return WFS_MALLOC;
 	}
 
-	for (i = 0; (i < FS.ntfs.nr_clusters) && (sig_recvd==0); i++)
+	for (i = 0; (i < FS.ntfs->nr_clusters) && (sig_recvd==0); i++)
 	{
 		/* check if cluster in use */
-		if (utils_cluster_in_use (&(FS.ntfs), i) != 0)
+		if (utils_cluster_in_use (FS.ntfs, i) != 0)
 		{
 			continue;
 		}
@@ -1741,9 +1802,9 @@ wfs_ntfs_wipe_fs (
 		       		break;
 			}
 
-			size = FS.ntfs.cluster_size;
+			size = FS.ntfs->cluster_size;
 			/* writing modified cluster here: */
-			result = ntfs_pwrite (FS.ntfs.dev, FS.ntfs.cluster_size * i, size, buf);
+			result = ntfs_pwrite (FS.ntfs->dev, FS.ntfs->cluster_size * i, size, buf);
 			if (result != size)
 			{
 				free (buf);
@@ -1769,9 +1830,9 @@ wfs_ntfs_wipe_fs (
 # endif
 			if ( sig_recvd == 0 )
 			{
-				size = FS.ntfs.cluster_size;
+				size = FS.ntfs->cluster_size;
 				/* writing modified cluster here: */
-				result = ntfs_pwrite (FS.ntfs.dev, FS.ntfs.cluster_size * i, size, buf);
+				result = ntfs_pwrite (FS.ntfs->dev, FS.ntfs->cluster_size * i, size, buf);
 				if (result != size)
 				{
 					free (buf);
@@ -1785,7 +1846,7 @@ wfs_ntfs_wipe_fs (
 				}
 			}
 		}
-		show_progress (PROGRESS_WFS, (unsigned int) (i/FS.ntfs.nr_clusters), &prev_percent);
+		show_progress (PROGRESS_WFS, (unsigned int) (i/FS.ntfs->nr_clusters), &prev_percent);
 	}
 	show_progress (PROGRESS_WFS, 100, &prev_percent);
 	free (buf);
@@ -1803,15 +1864,13 @@ wfs_ntfs_wipe_fs (
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_ntfs_wipe_unrm (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const fselem_t node WFS_ATTR ((unused)),
 	error_type * const error )
 #else
-	FS, node WFS_ATTR ((unused)), error )
+	FS, node, error )
 	const wfs_fsid_t FS;
-	const fselem_t node;
+	const fselem_t node WFS_ATTR ((unused));
 	error_type * const error;
 #endif
 {
@@ -1825,9 +1884,17 @@ wfs_ntfs_wipe_unrm (
 		NULL, NULL };
 	struct child_id child_ntfswipe;
 	if ( FS.fsname == NULL ) return WFS_BADPARAM;
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
 	args_ntfswipe[4] = (char *) malloc ( strlen (FS.fsname) + 1 );
 	if ( args_ntfswipe[4] == NULL )
 	{
+# ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+# else
+		error->errcode.gerror = 12L;	/* ENOMEM */
+# endif
 		return WFS_MALLOC;
 		/*args_ntfswipe[4] = FS.fsname;*/
 	}
@@ -1844,6 +1911,9 @@ wfs_ntfs_wipe_unrm (
 	child_ntfswipe.stdin_fd = -1;
 	child_ntfswipe.stdout_fd = -1;
 	child_ntfswipe.stderr_fd = -1;
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
 	ret_wfs = wfs_create_child (&child_ntfswipe);
 	if ( ret_wfs != WFS_SUCCESS )
 	{
@@ -1861,7 +1931,7 @@ wfs_ntfs_wipe_unrm (
 	wfs_wait_for_child (&child_ntfswipe);
 	if ( args_ntfswipe[4] != FS.fsname ) free (args_ntfswipe[4]);
 	show_progress (PROGRESS_UNRM, 100, &prev_percent);
-#else
+#else /* USE_NTFSWIPE */
 	int ret;
 	ntfs_attr *bitmapattr = NULL;
 	s64 bmpsize, size, nr_mft_records, i, j, k;
@@ -1907,9 +1977,9 @@ wfs_ntfs_wipe_unrm (
 	}
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	bitmapattr = ntfs_attr_open (FS.ntfs.mft_ni, NTFS_AT_BITMAP, NTFS_AT_UNNAMED, 0);
+	bitmapattr = ntfs_attr_open (FS.ntfs->mft_ni, NTFS_AT_BITMAP, NTFS_AT_UNNAMED, 0);
 # else
-	bitmapattr = ntfs_attr_open (FS.ntfs.mft_ni, AT_BITMAP, AT_UNNAMED, 0);
+	bitmapattr = ntfs_attr_open (FS.ntfs->mft_ni, AT_BITMAP, AT_UNNAMED, 0);
 # endif
 	if (bitmapattr == NULL)
 	{
@@ -1921,7 +1991,7 @@ wfs_ntfs_wipe_unrm (
 	}
 	bmpsize = bitmapattr->initialized_size;
 
-	nr_mft_records = FS.ntfs.mft_na->initialized_size >> FS.ntfs.mft_record_size_bits;
+	nr_mft_records = FS.ntfs->mft_na->initialized_size >> FS.ntfs->mft_record_size_bits;
 
 	if ( sig_recvd != 0 )
 	{
@@ -1993,22 +2063,23 @@ done:
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_ntfs_open_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name,
 	wfs_fsid_t * const FS,
 	CURR_FS * const which_fs,
 	const fsdata * const data WFS_ATTR ((unused)),
 	error_type * const error)
 #else
-	dev_name, FS, which_fs, data WFS_ATTR ((unused)), error)
+	dev_name, FS, which_fs, data, error)
 	const char * const dev_name;
 	wfs_fsid_t * const FS;
 	CURR_FS * const which_fs;
-	const fsdata * const data;
+	const fsdata * const data WFS_ATTR ((unused));
 	error_type * const error;
 #endif
 {
@@ -2044,7 +2115,7 @@ wfs_ntfs_open_fs (
 			if ( nv != NULL )
 			{
 				*which_fs = CURR_NTFS;
-				FS->ntfs = *nv;
+				FS->ntfs = nv;
 # ifdef HAVE_MEMCPY
 /*				memcpy(&(FS->ntfs), nv, sizeof(ntfs_volume));*/
 # endif
@@ -2056,7 +2127,7 @@ wfs_ntfs_open_fs (
 	else if ( nv != NULL )
 	{
 		*which_fs = CURR_NTFS;
-		FS->ntfs = *nv;
+		FS->ntfs = nv;
 #ifdef HAVE_MEMCPY
 /*		memcpy(&(FS->ntfs), nv, sizeof(ntfs_volume));*/
 #endif
@@ -2076,11 +2147,12 @@ wfs_ntfs_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_ntfs_chk_mount (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -2119,11 +2191,12 @@ wfs_ntfs_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_ntfs_close_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error)
 #else
 	FS, error)
@@ -2135,14 +2208,15 @@ wfs_ntfs_close_fs (
 
 	if ( error != NULL )
 	{
-		error->errcode.gerror = ntfs_umount (&(FS.ntfs), FALSE);
+		error->errcode.gerror = ntfs_umount (FS.ntfs, FALSE);
 		if ( error->errcode.gerror != 0 )
 		{
 			show_error ( *error, err_msg_close, FS.fsname, FS );
 			ret = WFS_FSCLOSE;
 		}
 	}
-	else ntfs_umount (&(FS.ntfs), FALSE);
+	else ntfs_umount (FS.ntfs, FALSE);
+	FS.ntfs = NULL;
 	return ret;
 }
 
@@ -2153,9 +2227,7 @@ wfs_ntfs_close_fs (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_ntfs_check_err (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 #else
 	FS )
@@ -2164,9 +2236,9 @@ wfs_ntfs_check_err (
 {
 	/* better than nothing... */
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	return (FS.ntfs.flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK);
+	return (FS.ntfs->flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK);
 #else
-	return (FS.ntfs.flags & VOLUME_MODIFIED_BY_CHKDSK);
+	return (FS.ntfs->flags & VOLUME_MODIFIED_BY_CHKDSK);
 #endif
 }
 
@@ -2177,9 +2249,7 @@ wfs_ntfs_check_err (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_ntfs_is_dirty (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 #else
 	FS )
@@ -2188,20 +2258,20 @@ wfs_ntfs_is_dirty (
 {
 	int is_dirty = 0;
 #if (defined HAVE_NTFS_NTFS_VOLUME_H)
-	if ( ((FS.ntfs.flags & NTFS_VOLUME_IS_DIRTY) != 0)
-		|| ((FS.ntfs.flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK) != 0)
+	if ( ((FS.ntfs->flags & NTFS_VOLUME_IS_DIRTY) != 0)
+		|| ((FS.ntfs->flags & NTFS_VOLUME_MODIFIED_BY_CHKDSK) != 0)
 # ifdef NVolWasDirty
-		|| (NVolWasDirty (&(FS.ntfs)) != 0)
+		|| (NVolWasDirty (FS.ntfs) != 0)
 # endif
 		)
 	{
 		is_dirty = 1;
 	}
 #else
-	if ( ((FS.ntfs.flags & VOLUME_IS_DIRTY) != 0)
-		|| ((FS.ntfs.flags & VOLUME_MODIFIED_BY_CHKDSK) != 0)
+	if ( ((FS.ntfs->flags & VOLUME_IS_DIRTY) != 0)
+		|| ((FS.ntfs->flags & VOLUME_MODIFIED_BY_CHKDSK) != 0)
 # ifdef NVolWasDirty
-		|| (NVolWasDirty (&(FS.ntfs)) != 0)
+		|| (NVolWasDirty (FS.ntfs) != 0)
 # endif
 		)
 	{
@@ -2217,11 +2287,12 @@ wfs_ntfs_is_dirty (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_ntfs_flush_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error)
 #else
 	FS, error)
@@ -2236,13 +2307,13 @@ wfs_ntfs_flush_fs (
 		return WFS_BADPARAM;
 	}
 #ifdef NTFS_RICH
-	error->errcode.gerror = ntfs_volume_commit (&(FS.ntfs));
+	error->errcode.gerror = ntfs_volume_commit (FS.ntfs);
 	if (error->errcode.gerror < 0)
 	{
 		ret = WFS_FLUSHFS;
 	}
 #endif
-	error->errcode.gerror = FS.ntfs.dev->d_ops->sync (FS.ntfs.dev);
+	error->errcode.gerror = FS.ntfs->dev->d_ops->sync (FS.ntfs->dev);
 	if (error->errcode.gerror != 0)
 	{
 		ret = WFS_FLUSHFS;

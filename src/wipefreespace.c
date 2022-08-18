@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -141,7 +141,7 @@
 #include "wfs_signal.h"
 #include "wfs_util.h"
 
-#ifdef WFS_REISER /* after #include "wipefreespace.h" */
+#if (defined WFS_REISER) || (defined WFS_MINIXFS) /* after #include "wipefreespace.h" */
 # ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
 # else
@@ -150,7 +150,7 @@
 #  endif
 # endif
 # ifndef WEXITSTATUS
-#  define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
+#  define WEXITSTATUS(stat_val) ((unsigned int)(stat_val) >> 8)
 # endif
 # ifndef WIFEXITED
 #  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
@@ -163,7 +163,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2009 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2010 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -267,11 +267,11 @@ struct fs_ioctl
 				   on begin, decremented on fs close. When reaches zero,
 				   caching is brought back to its previous state. */
 	int was_enabled;
-	char fs_name[12];	/* space for "/dev/hda" */
+	char fs_name[WFS_MNTBUFLEN];	/* space for "/dev/hda" */
 };
 
 typedef struct fs_ioctl fs_ioctl;
-static fs_ioctl * ioctls;	/* array of structures */
+static fs_ioctl * ioctls = NULL;	/* array of structures */
 #endif
 
 /* Signal-related stuff */
@@ -307,11 +307,12 @@ static unsigned const int patterns[NPAT] =
  * \param buflen Length of the buffer.
  * \param FS The filesystem this wiping refers to.
  */
-void WFS_ATTR ((nonnull))
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 fill_buffer (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	unsigned long int 		pat_no,
 	unsigned char * const 		buffer,
 	const size_t 			buflen,
@@ -448,6 +449,29 @@ fill_buffer (
 	}
 }
 
+#ifdef malloc
+
+# define rpl_malloc 1
+# if malloc == 1	/* replacement function requested */
+#  undef rpl_malloc
+#  undef malloc
+
+/* Replacement malloc() function */
+void *
+rpl_malloc (
+#  ifdef WFS_ANSIC
+	size_t n)
+#  else
+	n)
+	size_t n;
+#  endif
+{
+	if (n == 0) n = 1;
+	return malloc (n);
+}
+# endif
+# undef rpl_malloc
+#endif /* malloc */
 
 /**
  * Displays an error message.
@@ -456,11 +480,12 @@ fill_buffer (
  * \param extra Last element of the error message (fsname or signal).
  * \param FS The filesystem this message refers to.
  */
-WFS_ATTR ((nonnull)) void
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 show_error (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const error_type	err,
 	const char * const	msg,
 	const char * const	extra,
@@ -502,6 +527,63 @@ show_error (
 	fflush (stderr);
 }
 
+#ifndef WFS_ANSIC
+static char * convert_fs_to_name PARAMS ((CURR_FS fs));
+#endif
+
+/**
+ * Converts the filesystem type (enum) to filesystem name.
+ * \param fs The filesystem to convert.
+ * \return The filesystem name
+ */
+static char *
+convert_fs_to_name (
+#ifdef WFS_ANSIC
+	CURR_FS fs)
+#else
+	fs)
+	CURR_FS fs;
+#endif
+{
+	if ( fs == CURR_NONE )
+	{
+		return "<none>";
+	}
+	else if ( fs == CURR_EXT234FS )
+	{
+		return "ext2/3/4";
+	}
+	else if ( fs == CURR_NTFS )
+	{
+		return "NTFS";
+	}
+	else if ( fs == CURR_XFS )
+	{
+		return "XFS";
+	}
+	else if ( fs == CURR_REISERFS )
+	{
+		return "ReiserFSv3";
+	}
+	else if ( fs == CURR_REISER4 )
+	{
+		return "Reiser4";
+	}
+	else if ( fs == CURR_FATFS )
+	{
+		return "FAT12/16/32";
+	}
+	else if ( fs == CURR_MINIXFS )
+	{
+		return "MinixFSv1/2";
+	}
+	else if ( fs == CURR_JFS )
+	{
+		return "JFS";
+	}
+	return "<unknown>";
+}
+
 /**
  * Displays a progress message (verbose mode).
  * \param type Type of message (0 == "%s: %s: %s\n", 1 == "%s: %s: %s: '%s'\n")
@@ -509,11 +591,12 @@ show_error (
  * \param extra Last element of the error message (fsname or signal).
  * \param FS The filesystem this message refers to.
  */
-WFS_ATTR ((nonnull)) void
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 show_msg (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const int		type,
 	const char * const	msg,
 	const char * const	extra,
@@ -547,11 +630,12 @@ show_msg (
  * \param percent Current percentage.
  * \param prev_percent Previous percentage (will be checked and filled with the current).
  */
-WFS_ATTR ((nonnull)) void
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 show_progress (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const unsigned int		type,
 	const unsigned int		percent,
 	unsigned int * const		prev_percent
@@ -589,11 +673,12 @@ show_progress (
  * Prints the help screen.
  * \param my_name Program identifier, like argv[0], if available.
  */
-static WFS_ATTR ((nonnull)) void
+static void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 print_help (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const my_name )
 #else
 	my_name )
@@ -646,11 +731,54 @@ print_help (
 
 /* ======================================================================== */
 
+#ifndef WFS_ANSIC
+static void enable_drive_cache PARAMS ((unsigned int drive_no));
+#endif
+
+/**
+ * Re-enables drive cache when the wiping function is about to finish.
+ * \param drive_no The number of the device in the ioctls array.
+ */
+static void enable_drive_cache (
+#ifdef WFS_ANSIC
+	int drive_no, const int total_fs)
+#else
+	drive_no, total_fs)
+	int drive_no;
+	const int total_fs;
+#endif
+{
+#ifdef HAVE_IOCTL
+	int ioctl_fd;
+	unsigned char hd_cmd[4];
+	if ( (opt_ioctl != 0) && (ioctls != NULL)
+		&& (drive_no >= 0) && (drive_no < total_fs) )
+	{
+		ioctls[drive_no].how_many--;
+		if ( (ioctls[drive_no].how_many == 0)
+			&& (ioctls[drive_no].was_enabled != 0) )
+		{
+			ioctl_fd = open (ioctls[drive_no].fs_name, O_RDWR | O_EXCL);
+			if ( ioctl_fd >= 0 )
+			{
+				/* enable cache: */
+				hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
+				hd_cmd[1] = 0;
+				hd_cmd[2] = 0x02;
+				hd_cmd[3] = 0;
+				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+				close (ioctl_fd);
+			}
+		}
+	}
+#endif
+}
+
+/* ======================================================================== */
+
 static errcode_enum WFS_ATTR((warn_unused_result))
 wfs_wipe_filesytem (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, const int total_fs)
 #else
 	dev_name, total_fs)
@@ -734,7 +862,7 @@ wfs_wipe_filesytem (
 		{
 			for ( j=0; j < total_fs; j++ )
 			{
-				if ( strncmp (ioctls[j].fs_name, dev_name, 8) == 0 )
+				if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
 				{
 					curr_ioctl = j;
 					break;
@@ -777,57 +905,21 @@ wfs_wipe_filesytem (
 	ret = wfs_open_fs ( dev_name, &fs, &curr_fs, &data, &error );
 	if ( ret != WFS_SUCCESS )
 	{
-#ifdef HAVE_IOCTL
-		if ( (opt_ioctl != 0) && (ioctls != NULL)
-			&& (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
-		{
-			ioctls[curr_ioctl].how_many--;
-			if ( (ioctls[curr_ioctl].how_many == 0)
-				&& (ioctls[curr_ioctl].was_enabled != 0) )
-			{
-				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
-				if ( ioctl_fd >= 0 )
-				{
-					/* enable cache: */
-					hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0x02;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					close (ioctl_fd);
-				}
-			}
-		}
-#endif
+		enable_drive_cache (curr_ioctl, total_fs);
 		show_error ( error, err_msg_open, dev_name, fs );
 		return WFS_OPENFS;
 	}
+
+	if ( (sig_recvd == 0) && (opt_verbose > 0) )
+	{
+		show_msg ( 0, convert_fs_to_name (curr_fs), dev_name, fs );
+	}
+
 	error.whichfs = curr_fs;
 	if ( sig_recvd != 0 )
 	{
 		wfs_close_fs ( fs, curr_fs, &error );
-#ifdef HAVE_IOCTL
-		if ( (opt_ioctl != 0) && (ioctls != NULL)
-			&& (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
-		{
-			ioctls[curr_ioctl].how_many--;
-			if ( (ioctls[curr_ioctl].how_many == 0)
-				&& (ioctls[curr_ioctl].was_enabled != 0) )
-			{
-				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
-				if ( ioctl_fd >= 0 )
-				{
-					/* enable cache: */
-					hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0x02;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					close (ioctl_fd);
-				}
-			}
-		}
-#endif
+		enable_drive_cache (curr_ioctl, total_fs);
 		return WFS_SIGNAL;
 	}
 
@@ -835,28 +927,7 @@ wfs_wipe_filesytem (
 	{
 		show_msg ( 1, err_msg_fserr, dev_name, fs );
 		wfs_close_fs ( fs, curr_fs, &error );
-#ifdef HAVE_IOCTL
-		if ( (opt_ioctl != 0) && (ioctls != NULL)
-			&& (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
-		{
-			ioctls[curr_ioctl].how_many--;
-			if ( (ioctls[curr_ioctl].how_many == 0)
-				&& (ioctls[curr_ioctl].was_enabled != 0) )
-			{
-				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
-				if ( ioctl_fd >= 0 )
-				{
-					/* enable cache: */
-					hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0x02;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					close (ioctl_fd);
-				}
-			}
-		}
-#endif
+		enable_drive_cache (curr_ioctl, total_fs);
 		return WFS_FSHASERROR;
 	}
 
@@ -873,28 +944,7 @@ wfs_wipe_filesytem (
         if ( sig_recvd != 0 )
         {
 		wfs_close_fs ( fs, curr_fs, &error );
-#ifdef HAVE_IOCTL
-		if ( (opt_ioctl != 0) && (ioctls != NULL)
-			&& (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
-		{
-			ioctls[curr_ioctl].how_many--;
-			if ( (ioctls[curr_ioctl].how_many == 0)
-				&& (ioctls[curr_ioctl].was_enabled != 0) )
-			{
-				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
-				if ( ioctl_fd >= 0 )
-				{
-					/* enable cache: */
-					hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0x02;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					close (ioctl_fd);
-				}
-			}
-		}
-#endif
+		enable_drive_cache (curr_ioctl, total_fs);
         	return WFS_SIGNAL;
         }
 
@@ -939,35 +989,19 @@ wfs_wipe_filesytem (
 	wfs_flush_fs ( fs, curr_fs, &error );
 	res = wfs_close_fs ( fs, curr_fs, &error );
 	if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
-
-#ifdef HAVE_IOCTL
-	if ( (opt_ioctl != 0) && (ioctls != NULL)
-		&& (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
-	{
-		ioctls[curr_ioctl].how_many--;
-		if ( (ioctls[curr_ioctl].how_many == 0)
-			&& (ioctls[curr_ioctl].was_enabled != 0) )
-		{
-			ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
-			if ( ioctl_fd >= 0 )
-			{
-				/* enable cache: */
-				hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-				hd_cmd[1] = 0;
-				hd_cmd[2] = 0x02;
-				hd_cmd[3] = 0;
-				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-				close (ioctl_fd);
-			}
-		}
-	}
-#endif
+	enable_drive_cache (curr_ioctl, total_fs);
 	return ret;
 }
 
 /* ======================================================================== */
 #if (defined WFS_REISER) && !(defined HAVE_FORK)
-static void * wfs_wipe_filesytem_wrapper (void * data)
+static void * wfs_wipe_filesytem_wrapper (
+# ifdef WFS_ANSIC
+	void * data)
+# else
+	data)
+	void * data;
+# endif
 {
 	wipedata * wd;
 
@@ -981,9 +1015,7 @@ static void * wfs_wipe_filesytem_wrapper (void * data)
 /* ======================================================================== */
 int
 main (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	int argc, char* argv[] )
 #else
 	argc, argv )
@@ -996,7 +1028,7 @@ main (
 #if (defined WFS_EXT234) || (defined WFS_NTFS) || (defined WFS_REISER4)
 	const char *lib_ver = NULL;
 #endif
-#ifdef WFS_REISER
+#if (defined WFS_REISER) || (defined WFS_MINIXFS)
 	pid_t child_pid;
 	int child_status;
 #endif
@@ -1517,7 +1549,7 @@ main (
 
 #if (!defined __STRICT_ANSI__) && (defined HAVE_SRANDOM)
 # if (defined HAVE_TIME_H) || (defined HAVE_SYS_TIME_H) || (defined TIME_WITH_SYS_TIME)
-	srandom (0xabadcafe*(unsigned long) time (NULL));
+	srandom (0xabadcafe*(unsigned long int) time (NULL));
 # else
 	srandom (0xabadcafe);
 # endif
@@ -1525,7 +1557,7 @@ main (
 #else
 
 # if (defined HAVE_TIME_H) || (defined HAVE_SYS_TIME_H) || (defined TIME_WITH_SYS_TIME)
-	srand (0xabadcafe*(unsigned long) time (NULL));
+	srand (0xabadcafe*(unsigned long int) time (NULL));
 # else
 	srand (0xabadcafe);
 # endif
@@ -1557,16 +1589,20 @@ main (
 	}
 	wfs_optind = res;
 
-	ioctls = (fs_ioctl *) malloc ( (argc - wfs_optind) * sizeof (fs_ioctl) );
-	if ( ioctls != NULL )
+	if ( argc > wfs_optind )
 	{
-		for ( i=0; i < argc - wfs_optind; i++ )
+		ioctls = (fs_ioctl *) malloc ( (size_t)(argc - wfs_optind) * sizeof (fs_ioctl) );
+		if ( ioctls != NULL )
 		{
-			ioctls[i].how_many = 0;
-			ioctls[i].was_enabled = 0;
-			ioctls[i].fs_name[0] = '\0';
-			if ( argv[wfs_optind+i] == NULL ) continue;
-			strncpy (ioctls[i].fs_name, argv[wfs_optind+i], 8);
+			for ( i=0; i < argc - wfs_optind; i++ )
+			{
+				ioctls[i].how_many = 0;
+				ioctls[i].was_enabled = 0;
+				ioctls[i].fs_name[0] = '\0';
+				if ( argv[wfs_optind+i] == NULL ) continue;
+				strncpy (ioctls[i].fs_name, argv[wfs_optind+i], sizeof (ioctls[i].fs_name)-1);
+				ioctls[i].fs_name[sizeof (ioctls[i].fs_name)-1] = '\0';
+			}
 		}
 	}
 
@@ -1649,7 +1685,15 @@ main (
 		wfs_optind++;
 	} /* while optind<argc && !signal */
 
-	if ( ioctls != NULL ) free (ioctls);
+	if ( ioctls != NULL )
+	{
+		free (ioctls);
+	}
+	ioctls = NULL;
+
+#if ((defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)) && (defined WFS_EXT234)
+	remove_error_table (&et_ext2_error_table);
+#endif
 
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	else return ret;	/* return the last error value or zero */

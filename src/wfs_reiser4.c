@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv4 file system-specific functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -84,6 +84,9 @@ struct wfs_r4_block_data
 	reiser4_object_t * obj;
 };
 
+#ifndef WFS_ANSIC
+static size_t WFS_ATTR ((warn_unused_result)) wfs_r4_get_block_size PARAMS((const wfs_fsid_t FS));
+#endif
 
 /**
  * Returns the buffer size needed to work on the
@@ -93,9 +96,7 @@ struct wfs_r4_block_data
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_r4_get_block_size (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
 #else
 	FS)
@@ -113,11 +114,17 @@ wfs_r4_get_block_size (
 /* ================================== */
 #ifdef WFS_REISER4_UNSHARED_BLOCKS
 
-static errno_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+# ifndef WFS_ANSIC
+static errno_t WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_last_block PARAMS ((
+	uint64_t start, uint64_t len, void * data));
+# endif
+
+static errno_t WFS_ATTR ((warn_unused_result))
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 wfs_r4_wipe_last_block (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+# ifdef WFS_ANSIC
 	uint64_t start, uint64_t len, void * data)
 # else
 	start, len, data)
@@ -213,6 +220,12 @@ wfs_r4_wipe_last_block (
 	return ret_part;
 }
 
+# ifndef WFS_ANSIC
+static errcode_enum WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_part_work PARAMS ((
+	wfs_fsid_t FS, reiser4_tree_t * const tree,
+	reiser4_object_t * const dir, error_type * const error));
+# endif
+
 /**
  * This is the function that actually does the wiping of the free space
  *	in partially used blocks on the given Reiser4 filesystem.
@@ -220,11 +233,12 @@ wfs_r4_wipe_last_block (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+static errcode_enum WFS_ATTR ((warn_unused_result))
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
 wfs_r4_wipe_part_work (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, reiser4_tree_t * const tree,
 	reiser4_object_t * const dir, error_type * const error)
 # else
@@ -442,11 +456,12 @@ wfs_r4_wipe_part_work (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_wipe_part (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS
 # ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
@@ -457,17 +472,17 @@ wfs_r4_wipe_part (
 # endif
 	 )
 #else
-	FS
+	FS, error)
+	wfs_fsid_t FS
 # ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
 # endif
-	, error
+	;
+	error_type * const error
 # ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
 # endif
-	)
-	wfs_fsid_t FS;
-	error_type * const error;
+	;
 #endif
 {
 	errcode_enum ret_part = WFS_SUCCESS;
@@ -506,11 +521,12 @@ wfs_r4_wipe_part (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_wipe_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
 #else
 	FS, error )
@@ -638,11 +654,17 @@ wfs_r4_wipe_fs (
 	return ret_wfs;
 }
 
-static errno_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static errno_t WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_journal PARAMS ((
+	uint64_t start, uint64_t len, void * data));
+#endif
+
+static errno_t WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_wipe_journal (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	uint64_t start, uint64_t len, void * data)
 #else
 	start, len, data)
@@ -766,11 +788,17 @@ wfs_r4_wipe_journal (
 	return ret_journ;
 }
 
-static errno_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+#ifndef WFS_ANSIC
+static errno_t WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_object PARAMS ((
+	uint64_t start, uint64_t len, void * data));
+#endif
+
+static errno_t WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_wipe_object (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	uint64_t start, uint64_t len, void * data)
 #else
 	start, len, data)
@@ -875,16 +903,17 @@ wfs_r4_wipe_object (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_wipe_unrm (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, fselem_t node, error_type * const error )
 #else
 	FS, node, error )
 	wfs_fsid_t FS;
-	const fselem_t node;
+	fselem_t node;
 	error_type * const error;
 #endif
 {
@@ -1034,20 +1063,21 @@ wfs_r4_wipe_unrm (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_open_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
 	const fsdata * const data WFS_ATTR ((unused)), error_type * const error WFS_ATTR ((unused)) )
 #else
-	dev_name, FS, whichfs, data WFS_ATTR ((unused)), error WFS_ATTR ((unused)) )
+	dev_name, FS, whichfs, data, error )
 	const char * const dev_name;
 	wfs_fsid_t * const FS;
 	CURR_FS * const whichfs;
-	const fsdata * const data;
-	error_type * const error;
+	const fsdata * const data WFS_ATTR ((unused));
+	error_type * const error WFS_ATTR ((unused));
 #endif
 {
 	aal_device_t * dev;
@@ -1129,11 +1159,12 @@ wfs_r4_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_chk_mount (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -1150,16 +1181,17 @@ wfs_r4_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_close_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error WFS_ATTR ((unused)) )
 #else
-	FS, error WFS_ATTR ((unused)) )
+	FS, error )
 	wfs_fsid_t FS;
-	error_type * const error;
+	error_type * const error WFS_ATTR ((unused));
 #endif
 {
 	aal_device_t * dev;
@@ -1185,9 +1217,7 @@ wfs_r4_close_fs (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_r4_check_err (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS )
 #else
 	FS )
@@ -1212,9 +1242,7 @@ wfs_r4_check_err (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_r4_is_dirty (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS )
 #else
 	FS )
@@ -1241,11 +1269,12 @@ wfs_r4_is_dirty (
  * \param FS The filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_r4_flush_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS )
 #else
 	FS )

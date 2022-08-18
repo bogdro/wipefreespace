@@ -57,7 +57,7 @@ This manual is for wipefreespace, version @VERSION@
 @chapter What is wipefreespace?
 
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
-ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1 and MinixFSv2 partitions.
+ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2 and JFS partitions.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
@@ -175,7 +175,11 @@ Then compile and install that package.
 @item XFS: xfsprogs installed and in your PATH variable (devel package unusable, so
 not required). Can be downloaded from@*
 	http://oss.sgi.com/projects/xfs/@*@*
-Compile and install that package.
+Compile and install that package. The following utilities should be available:
+xfs_db, xfs_freeze, xfs_unfreeze. The xfs_db program should support the following
+command-line options: "-i", "-c" and the following interactive mode commands:
+"quit", "freesp -d", "blockget -n", "ncheck", "sb 0", "print". Version 2.7.11 is
+enough, earlier versions will probably also work.
 
 @item ReiserFSv3: development package for the ReiserFSv3 file system library (usually
 included in something like reiserfsprogs-devel. If not available, copy the
@@ -211,6 +215,19 @@ Then copy the files libminixfs.a, minix_fs.h and protos.h to a directory
 where the C compiler can find them (or put the correct -I and -L options
 in the compiler flags).
 
+@item JFS: jfsutils and libuuid (the <uuid/uuid.h> header file). Go to@*
+	http://jfs.sourceforge.net/@*
+to get jfsutils. Libuuid can be a part of "util-linux-ng", which can be
+found on the kernel site:@*
+	ftp://ftp.kernel.org/pub/linux/utils/util-linux-ng/@*
+or as a part of e2fsprogs available at@*
+  	http://e2fsprogs.sf.net/.@*
+
+Compile jfsutils, then copy all the jfs_*.h header files from the
+"include" subdirectory and the libfs.a file to a directory where the
+C compiler can find them (or put the correct -I and -L options in the
+compiler flags).
+
 @end itemize
 
 @strong{WARNING}: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
@@ -245,7 +262,7 @@ BEFORE compiling reiserfs/mfstool.
 
 Type './configure' to configure the program for your system. If you do not
 with support for a filesystem, give the @option{--enable-FS=no} option to ./configure
-(FS=EXT234, NTFS, XFS, REISERFS, REISER4, MINIX).
+(FS=EXT234, NTFS, XFS, REISERFS, REISER4, MINIX, JFS).
 Run @command{./configure --help} for details.
 
 Type 'make' to compile the program.
@@ -268,6 +285,8 @@ To create an RPM package:@*
 @item type @command{rpmbuild -bb /usr/src/redhat/SPECS/wipefreespace.spec}
 @item get the rpms from /usr/src/redhat/RPMS/i386
 @end enumerate
+
+@strong{NOTE}: some systems may use other directories than these.
 
 @c ==================================================================
 @node Filesystems support, Usage, How to compile?, Top
@@ -337,6 +356,12 @@ by more than 1 object)
 @item wiping deleted files' names
 @end itemize
 
+@item JFS (using the library from jfsuitls):
+@itemize
+@item wiping the free space
+@item wiping the journal (log)
+@end itemize
+
 @end enumerate
 
 @c ==================================================================
@@ -346,15 +371,16 @@ by more than 1 object)
 @chapter Usage
 
 @menu
-* Konqueror::				Konqueror's context menu.
+* KDE::					Konqueror's/Dolphin's context menu.
 * Command line syntax and options::	Running from the command line.
 @end menu
 
 
-@node Konqueror, Command line syntax and options, Usage, Usage
+@node KDE, Command line syntax and options, Usage, Usage
 @comment  node-name, next,      previous,  up
-@section Konqueror
+@section KDE
 
+@strong{KDE3}:
 Copy the wipefreespace.desktop file from the distribution tarball to
 $KDEHOME/share/apps/konqueror/servicemenus/, creating the directory if necessary.
 $KDEHOME is usually $HOME/.kde. Then, restart Konqueror. A new context menu entry
@@ -362,10 +388,15 @@ under the "Actions" submenu should be available for block devices and all files
 (a filesystem can reside inside a regular file).
 @sp 1
 
-@strong{NOTE}: This will probably work only under KDE3. KDE4 gets rid of DCOP and
-Konqueror itself may be changed.
+@strong{KDE4}:
+Copy the wipefreespace-kde4.desktop file from the distribution tarball to
+$HOME/.kde4/share/kde4/services/ServiceMenus/, creating the directory if necessary.
+Then, restart Konqueror/Dolphin. A new context menu entry under the "Actions" submenu
+should be available for block devices and all files
+(a filesystem can reside inside a regular file).
 
-@node Command line syntax and options, , Konqueror, Usage
+
+@node Command line syntax and options, , KDE, Usage
 @comment  node-name, next,      previous,  up
 @section Command line syntax and options
 
@@ -1494,16 +1525,16 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2009 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2010 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*
 #@*
 msgid ""@*
 msgstr ""@*
-"Project-Id-Version: wipefreespace VERSION\n"@*
+"Project-Id-Version: wipefreespace @VERSION@\n"@*
 "Report-Msgid-Bugs-To: \n"@*
-"POT-Creation-Date: 2007-04-25 11:39+0200\n"@*
+"POT-Creation-Date: 2010-08-03 15:28+0200\n"@*
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"@*
 "Last-Translator: FULL NAME <EMAILADDRESS>\n"@*
 "Language-Team: LANGUAGE <EMAILADDRESS>\n"@*

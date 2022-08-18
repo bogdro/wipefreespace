@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -58,6 +58,8 @@
 #  define PASSES (NPAT+9)
 # endif
 
+# define WFS_MNTBUFLEN 4096
+
 enum errcode_enum
 {
 	WFS_SUCCESS		= 0,
@@ -100,7 +102,8 @@ enum CURR_FS
 	CURR_REISERFS,
 	CURR_REISER4,
 	CURR_FATFS,
-	CURR_MINIXFS
+	CURR_MINIXFS,
+	CURR_JFS
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -113,9 +116,9 @@ typedef int ssize_t;
 # endif
 # ifndef HAVE_OFF64_T
 #  ifdef HAVE_LONG_LONG
-typedef long long off64_t;
+typedef long long int off64_t;
 #  else
-typedef long off64_t;
+typedef long int off64_t;
 #  endif
 # endif
 
@@ -150,6 +153,9 @@ typedef long off64_t;
 # else
 #  undef	WFS_EXT234
 # endif
+
+/* fix symbol collision with ReiserFSv3 header files: */
+# define ROUND_UP NTFS_ROUND_UP
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
 #  include <ntfs/ntfs_volume.h>
@@ -192,12 +198,17 @@ typedef unsigned int __u32;
 typedef unsigned short int __u16;
 #  endif
 
+/* fix symbol collision with NTFS header files: */
+/*# define ROUND_UP REISER_ROUND_UP*/
+# undef ROUND_UP
+
 /* Avoid some Reiser3 header files' name conflicts:
  reiserfs_lib.h uses the same name for a function and a variable,
  so let's redefine one to avoid name conflicts */
 #  define div reiser_div
 #  define index reiser_index
 #  define key_format(x) key_format0 (x)
+#  include <stdio.h>	/* FILE for reiserfs_fs.h */
 #  include <reiserfs_lib.h>
 #  undef div
 #  undef index
@@ -218,9 +229,11 @@ typedef unsigned short int __u16;
 /* fix conflict between libext2fs and reiser4. This gets #undef'd in the source files. */
 #  define blk_t reiser4_blk_t
 /* we're not using these headers, so let's pretend they're already included,
- to avoid warnings caused by them. */
+   to avoid warnings caused by them. */
 #  define AAL_EXCEPTION_H 1
 #  define AAL_DEBUG_H 1
+#  define AAL_BITOPS_H 1
+#  define REISER4_FAKE_H 1
 
 #  include <reiser4/libreiser4.h>
 #  define	WFS_REISER4	1
@@ -247,6 +260,22 @@ typedef unsigned short int __u16;
 #  undef	WFS_MINIXFS
 # endif
 
+#if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
+#  include <stdio.h>	/* FILE */
+#  include <jfs/jfs_types.h>
+#  include <jfs/jfs_superblock.h>
+#  define	WFS_JFS		1
+# else
+#  if (defined HAVE_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
+#   include <stdio.h>	/* FILE  */
+#   include <jfs_types.h>
+#   include <jfs_superblock.h>
+#   define	WFS_JFS		1
+#  else
+#   undef	WFS_JFS
+#  endif
+# endif
+
 /* ================ End of filesystem includes ================ */
 
 # ifdef HAVE_GETTEXT
@@ -271,7 +300,7 @@ struct error_type
 {
 	CURR_FS whichfs;
 
-	union errcode {
+	union errcode_union {
 		/* general error, if more specific type unavailable */
 		errcode_enum	gerror;
 # ifdef 	WFS_EXT234
@@ -282,7 +311,6 @@ struct error_type
 # endif
 	/* TODO: to be expanded, when other FS come into the program */
 	} errcode;
-
 };
 
 typedef struct error_type error_type;
@@ -296,7 +324,7 @@ struct wfs_fsid_t
 	ext2_filsys e2fs;
 # endif
 # ifdef		WFS_NTFS
-	ntfs_volume ntfs;
+	ntfs_volume * ntfs;
 # endif
 # ifdef		WFS_XFS
 	struct wfs_xfs
@@ -321,6 +349,13 @@ struct wfs_fsid_t
 # endif
 # ifdef		WFS_MINIXFS
 	struct minix_fs_dat * minix;
+# endif
+# ifdef		WFS_JFS
+	struct wfs_jfs
+	{
+		FILE * fs;
+		struct superblock super;
+	} jfs;
 # endif
 
 	/* TODO: to be expanded, when other FS come into the program */
@@ -363,6 +398,9 @@ union fselem_t
 # ifdef		WFS_MINIXFS
 	int 		minix_ino;
 # endif
+# ifdef		WFS_JFS
+	/* Nothing. Undelete on JFS not supported. */
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
 
@@ -370,7 +408,7 @@ union fselem_t
 
 
 # if (!defined WFS_EXT234) && (!defined WFS_NTFS) && (!defined WFS_REISER) \
-	&& (!defined WFS_REISER4) && (!defined WFS_FATFS)
+	&& (!defined WFS_REISER4) && (!defined WFS_FATFS) && (!defined WFS_MINIXFS)
 	char dummy;	/* Make this union non-empty */
 # endif
 };
@@ -393,7 +431,7 @@ union fsdata
 typedef union fsdata fsdata;
 
 /* ========================= Common to all ================================ */
-/* PARAMS is a macro used to wrap function prototypes, so that
+/* autoconf: PARAMS is a macro used to wrap function prototypes, so that
         compilers that don't understand ANSI C prototypes still work,
         and ANSI C compilers can issue warnings about type mismatches. */
 # undef PARAMS
@@ -401,8 +439,10 @@ typedef union fsdata fsdata;
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
 	|| defined (WIN32) || defined (__cplusplus)
 #  define PARAMS(protos) protos
+#  define WFS_ANSIC
 # else
 #  define PARAMS(protos) ()
+#  undef WFS_ANSIC
 # endif
 
 extern void WFS_ATTR ((nonnull))

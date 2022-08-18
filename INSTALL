@@ -29,7 +29,12 @@ Requirements for compiling the full version:
   Then compile and install that package.
 
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
-  Get these at http://oss.sgi.com/projects/xfs/
+  Get these at http://oss.sgi.com/projects/xfs/. The following utilities
+  should be available: xfs_db, xfs_freeze, xfs_unfreeze. The xfs_db program
+  should support the following command-line options: "-i", "-c" and the
+  following interactive mode commands: "quit", "freesp -d", "blockget -n",
+  "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier versions will
+  probably also work.
 
 - ReiserFSv3: development package for reiserfsprogs (header files and
   compiled static libraries from the package). ReiserFS requires either the
@@ -66,6 +71,19 @@ Requirements for compiling the full version:
   where the C compiler can find them (or put the correct -I and -L options
   in the compiler flags).
 
+- JFS: jfsutils and libuuid (the <uuid/uuid.h> header file). Go to
+	http://jfs.sourceforge.net/
+  to get jfsutils. Libuuid can be a part of "util-linux-ng", which can be
+  found on the kernel site:
+	ftp://ftp.kernel.org/pub/linux/utils/util-linux-ng/
+  or as a part of e2fsprogs available at
+  	http://e2fsprogs.sf.net/
+
+  Compile jfsutils, then copy all the jfs_*.h header files from the
+  "include" subdirectory and the libfs.a file to a directory where the
+  C compiler can find them (or put the correct -I and -L options in the
+  compiler flags).
+
 WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
  refuse to link if the compiler doesn't support the command line option
  "-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
@@ -89,11 +107,11 @@ WARNING: If both ReiserFSv3 and MinixFS are enabled, the program
  in the root directory of either reiserfsprogs or mfstool (but
  NOT both, because this would bring back the same problem, but with a
  different name). Type the command as above. The command must be run
- BEFORE compiling the reiserfs/tool programs.
+ BEFORE compiling reiserfs/mfstool.
 
 Type './configure' to configure the program for your system.  If you do not
 wish support for a filesystem, give the '--enable-FS=no' option to ./configure
-(FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT, MINIX). Run
+(FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT, MINIX, JFS). Run
 './configure --help' for details.
 
 Type 'make' to compile the program.
@@ -120,3 +138,4 @@ Building an RPM package:
 	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
 4) get the rpms from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
 
+NOTE: some systems may use other directories than these.

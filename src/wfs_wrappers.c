@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -24,6 +24,8 @@
  */
 
 #include "wfs_cfg.h"
+
+#include <stdio.h>	/* NULL and others */
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>	/* sync() */
@@ -64,17 +66,22 @@
 # include "wfs_minixfs.h"
 #endif
 
+#ifdef WFS_JFS
+# include "wfs_jfs.h"
+#endif
+
 /**
  * Starts recursive directory search for deleted inodes and undelete data.
  * \param FS The filesystem.
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wipe_unrm (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -139,6 +146,12 @@ wipe_unrm (
 		ret_wfs = wfs_minixfs_wipe_unrm (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		ret_wfs = wfs_jfs_wipe_unrm (FS, elem, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -157,11 +170,12 @@ wipe_unrm (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wipe_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -214,6 +228,12 @@ wipe_fs (
 		ret_wfs = wfs_minixfs_wipe_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		ret_wfs = wfs_jfs_wipe_fs (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -232,11 +252,12 @@ wipe_fs (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wipe_part (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -289,6 +310,12 @@ wipe_part (
 		ret_wfs = wfs_minixfs_wipe_part (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		ret_wfs = wfs_jfs_wipe_part (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -308,11 +335,12 @@ wipe_part (
  * \param whichfs Pointer to an int saying which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_open_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const which_fs,
 	const fsdata * const data, error_type * const error )
 #else
@@ -351,11 +379,22 @@ wfs_open_fs (
 		ret_wfs = wfs_xfs_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
-#ifdef WFS_REISER
+/* JFS before ReiserFSv3 */
+#ifdef WFS_JFS
 	if ( ret_wfs != WFS_SUCCESS )
 	{
 		error->errcode.gerror = WFS_SUCCESS;
-		ret_wfs = wfs_reiser_open_fs (dev_name, FS, which_fs, data, error);
+		ret_wfs = wfs_jfs_open_fs (dev_name, FS, which_fs, data, error);
+	}
+#endif
+/* FAT is probably the least specific in its header - the TFFS library can detect
+   XFS and ReiserFS3/4 as FAT, which is bad. But now we have more advanced checks
+   than simply using TFFS, so this can be before ReiserFSv3. */
+#ifdef WFS_FATFS
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		error->errcode.gerror = WFS_SUCCESS;
+		ret_wfs = wfs_fat_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
 #ifdef WFS_MINIXFS
@@ -365,16 +404,14 @@ wfs_open_fs (
 		ret_wfs = wfs_minixfs_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
-/* FAT is probably the least specific in its header - the TFFS library can detect
-   XFS and ReiserFS3/4 as FAT, which is bad, so leave this on the last position: */
-#ifdef WFS_FATFS
+
+#ifdef WFS_REISER
 	if ( ret_wfs != WFS_SUCCESS )
 	{
 		error->errcode.gerror = WFS_SUCCESS;
-		ret_wfs = wfs_fat_open_fs (dev_name, FS, which_fs, data, error);
+		ret_wfs = wfs_reiser_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
-
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -392,11 +429,12 @@ wfs_open_fs (
  * \param devname Device name, like /dev/hdXY
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+errcode_enum WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_chk_mount (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -434,6 +472,10 @@ wfs_chk_mount (
 	ret_wfs = wfs_minixfs_chk_mount ( dev_name, error );
 	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
+#if (defined WFS_JFS)
+	ret_wfs = wfs_jfs_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
 	return ret_wfs;
 }
 
@@ -443,11 +485,12 @@ wfs_chk_mount (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_close_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -500,6 +543,12 @@ wfs_close_fs (
 		ret_wfs = wfs_minixfs_close_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		ret_wfs = wfs_jfs_close_fs (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -521,9 +570,7 @@ wfs_close_fs (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_check_err (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
 # ifndef WFS_XFS
 		WFS_ATTR((unused))
@@ -582,6 +629,12 @@ wfs_check_err (
 		return wfs_minixfs_check_err (FS);
 #endif
 	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		return wfs_jfs_check_err (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -594,9 +647,7 @@ wfs_check_err (
  */
 int WFS_ATTR ((warn_unused_result))
 wfs_is_dirty (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
 # ifndef WFS_XFS
 		WFS_ATTR((unused))
@@ -655,6 +706,12 @@ wfs_is_dirty (
 		return wfs_minixfs_is_dirty (FS);
 #endif
 	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		return wfs_jfs_is_dirty (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -665,11 +722,12 @@ wfs_is_dirty (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((nonnull))
+errcode_enum
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
 wfs_flush_fs (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -719,6 +777,12 @@ wfs_flush_fs (
 	{
 #ifdef WFS_MINIXFS
 		ret_wfs = wfs_minixfs_flush_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_JFS )
+	{
+#ifdef WFS_JFS
+		ret_wfs = wfs_jfs_flush_fs (FS, error);
 #endif
 	}
 

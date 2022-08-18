@@ -1,5 +1,5 @@
 # Polish translations for wipefreespace package.
-# Copyright (C) 2007-2009 Bogdan 'bogdro' Drozdowski
+# Copyright (C) 2007-2010 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as the wipefreespace package.
 # Bogdan Drozdowski <bogdandr@op.pl>, 2007.
 #
@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wipefreespace\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2009-04-26 20:05+0200\n"
+"POT-Creation-Date: 2010-09-05 15:53+0200\n"
 "PO-Revision-Date: 2007-04-23 17:24+0200\n"
 "Last-Translator: Bogdan Drozdowski <bogdandr@op.pl>\n"
 "Language-Team: Polish\n"
@@ -190,7 +190,7 @@ msgstr "Przechodzenie w t³o nie jest obs³ugiwane lub nie powiod³o siê"
 msgid "unknown"
 msgstr "nieznany"
 
-#: src/wipefreespace.c:621
+#: src/wipefreespace.c:706
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
@@ -198,11 +198,11 @@ msgstr ""
 " - Program do bezpiecznego czyszczenia pustego miejsca na systemach plików\n"
 "Sk³adnia: "
 
-#: src/wipefreespace.c:623
+#: src/wipefreespace.c:708
 msgid " [options] "
 msgstr " [opcje] "
 
-#: src/wipefreespace.c:625
+#: src/wipefreespace.c:710
 msgid ""
 "Options:\n"
 "--all-zeros\t\tUse only zeros for wiping\n"
@@ -218,7 +218,7 @@ msgstr ""
 "-B|--blocksize <size>\tRozmiar bloku na podanych systemach plików\n"
 "-f|--force\t\tCzy¶æ nawet gdy system plików ma b³êdy"
 
-#: src/wipefreespace.c:632
+#: src/wipefreespace.c:717
 msgid ""
 "-h|--help\t\tPrint help\n"
 "-n|--iterations NNN\tNumber of passes (>0, default: 35 in Gutmann method, 25 "
@@ -234,7 +234,7 @@ msgstr ""
 "-l|--license\t\tWy¶wietl informacje o licencji\n"
 "--nopart\t\tNIE czy¶æ pustego miejsca w czê¶ciowo u¿ywanych blokach"
 
-#: src/wipefreespace.c:638
+#: src/wipefreespace.c:723
 msgid ""
 "--nounrm\t\tDo NOT wipe undelete information\n"
 "--nowfs\t\t\tDo NOT wipe free space on file system\n"

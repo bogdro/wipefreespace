@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.2, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.3, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -73,6 +73,15 @@ AC_ARG_ENABLE(MINIX,[[  --enable-MINIX	MinixFS support (default=yes).]],
 	 fi
 	]
 	,[feat_minixfs=yes])
+
+AC_ARG_ENABLE(JFS,[[  --enable-JFS	JFS support (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_jfs=no
+	 else
+		feat_jfs=yes
+	 fi
+	]
+	,[feat_jfs=yes])
 
 AC_ARG_ENABLE([random-method],[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
 	[if (test "x$enableval" = "xyes"); then
@@ -178,6 +187,13 @@ if ( test "x$feat_minixfs" = "xyes" ); then
 	AC_CHECK_LIB([minixfs],open_fs,,[libminixfs=no])
 fi
 
+libjfs=no
+if ( test "x$feat_jfs" = "xyes" ); then
+
+	libjfs=yes
+	AC_CHECK_LIB([fs],ujfs_get_superblk,,[libjfs=no])
+fi
+
 # ==================== Checks for header files.
 AC_HEADER_STDC
 
@@ -191,7 +207,21 @@ has_uni_h=yes
 AC_CHECK_HEADER([unistd.h],AC_DEFINE([HAVE_UNISTD_H],[1],
 	[Whether you have the unistd.h header.]),[has_uni_h=no])
 
-AC_CHECK_HEADERS([sys/param.h mntent.h stdarg.h sys/types.h])
+has_uuid_h=yes
+if ( test "x$feat_jfs" = "xyes" ); then
+
+	if ( test "x$libjfs" = "xyes" ); then
+
+		AC_CHECK_HEADER([uuid/uuid.h],
+			AC_DEFINE([HAVE_UUID_UUID_H],[1],[Whether you have the uuid/uuid.h header.]),
+			[has_uuid_h=no])
+	fi
+fi
+
+AC_CHECK_HEADERS([sys/param.h mntent.h sys/types.h])
+AC_CHECK_HEADER([stdarg.h],[AC_DEFINE([HAVE_STDARG_H], [1], [Whether you have the stdarg.h header])],
+	[AC_CHECK_HEADER([varargs.h],[AC_DEFINE([HAVE_VARARGS_H], [1],
+		[Whether you have the varargs.h header])])])
 
 has_sys_wait_h=yes
 AC_CHECK_HEADER([sys/wait.h],AC_DEFINE([HAVE_SYS_WAIT_H],[1],
@@ -349,6 +379,25 @@ if ( test "x$feat_minixfs" = "xyes" ); then
 	fi
 fi
 
+has_jfs_h=no
+if ( test "x$feat_jfs" = "xyes" ); then
+
+	if ( test "x$libjfs" = "xyes" && test "x$has_uuid_h" = "xyes" ); then
+
+		has_jfs_h=yes
+		AC_CHECK_HEADER([jfs_superblock.h],
+			AC_DEFINE([HAVE_JFS_SUPERBLOCK_H],[1],
+				[Whether you have the jfs_superblock.h header.]),
+					[AC_CHECK_HEADER([jfs/jfs_superblock.h],
+						AC_DEFINE([HAVE_JFS_JFS_SUPERBLOCK_H],[1],
+						[Whether you have the jfs/jfs_superblock.h header.]),
+						[has_jfs_h=no],
+						[[#include <jfs_types.h>]])],
+			[[#include <jfs_types.h>]]
+						)
+	fi
+fi
+
 wfs_have_reiser4=no
 if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	&& test "x$libreiser4"		= "xyes"	\
@@ -381,6 +430,12 @@ AM_CONDITIONAL(MINIXFS, \
 	&& test "x$libminixfs"		= "xyes"	\
 	&& test "x$feat_minixfs"	= "xyes"] )
 
+AM_CONDITIONAL(JFS, \
+	[  test "x$has_jfs_h"	= "xyes"	\
+	&& test "x$libjfs"	= "xyes"	\
+	&& test "x$has_uuid_h"	= "xyes"	\
+	&& test "x$feat_jfs"	= "xyes"] )
+
 has_com_h=yes
 AC_CHECK_HEADER([et/com_err.h],
 	AC_DEFINE([HAVE_ET_COM_ERR_H],[1],[Whether you have the et/com_err.h header.]),
@@ -393,9 +448,11 @@ AM_CONDITIONAL(COMERR, \
 	[  test "x$has_com_h"	= "xyes"	\
 	&& test "x$libcomm"	= "xyes"])
 
-AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h malloc.h \
-	libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
-	sys/sysmacros.h sys/mkdev.h hdreg.h linux/hdreg.h sys/ioctl.h])
+AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h \
+	malloc.h libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
+	sys/sysmacros.h sys/mkdev.h hdreg.h linux/hdreg.h sys/ioctl.h \
+	sys/statfs.h sys/vfs.h sys/byteorder.h machine/endian.h endian.h \
+	stdbool.h])
 
 if ( test "x$feat_xfs" = "xyes" ); then
 
@@ -465,7 +522,8 @@ AC_TYPE_SIGNAL
 
 AC_CHECK_FUNCS([memset memcpy setlocale strtoul random srandom clearenv \
 	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
-	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl])
+	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl \
+	getmntinfo fopen64])
 
 has_execvp=no
 has_kill=no
@@ -571,12 +629,13 @@ if  (  test "x$has_ext234_h"		!= "xyes"	\
     && test "x$wfs_have_xfs"		!= "xyes"	\
     && test "x$has_reiser_h"		!= "xyes"	\
     && test "x$has_libreiser4_h"	!= "xyes"	\
-    && test "x$has_tffs_h"		!= "xyes"
+    && test "x$has_tffs_h"		!= "xyes"	\
+    && test "x$has_jfs_h"		!= "xyes"
     ); then
 	AC_MSG_ERROR([[I need at least one of the filesystem headers with its required data types (if any).]])
 fi
 
-AM_GNU_GETTEXT_VERSION([0.14.3])
+AM_GNU_GETTEXT_VERSION([0.17])
 AM_GNU_GETTEXT([external])
 
 # Can be /usr/local/include/libintl.h. Use --with-libintl-prefix=DIR then.
@@ -652,7 +711,7 @@ else
 	elif (test "x$have_dev_t" != "xyes"); then
 		echo " *	Ext2/3/4: no (dev_t type missing)"
 	else
-		echo " *	Ext2/3/4: no (headers missing)"
+		echo " *	Ext2/3/4: no (headers missing or unusable)"
 	fi
 fi
 
@@ -666,7 +725,7 @@ else
 	elif (test "x$libntfs" != "xyes"); then
 		echo " *	NTFS: no (library missing or unusable)"
 	else
-		echo " *	NTFS: no (headers missing)"
+		echo " *	NTFS: no (headers missing or unusable)"
 	fi
 fi
 
@@ -681,10 +740,10 @@ else
 		echo " *	XFS: no (long long type missing)"
 
 	elif (test "x$has_uni_h" != "xyes"); then
-		echo " *	XFS: no (unistd.h missing)"
+		echo " *	XFS: no (unistd.h missing or unusable)"
 
 	elif (test "x$has_fcntl_h" != "xyes"); then
-		echo " *	XFS: no (fcntl.h missing)"
+		echo " *	XFS: no (fcntl.h missing or unusable)"
 
 	elif (test "x$has_fork" != "xyes"); then
 		echo " *	XFS: no (fork() missing)"
@@ -721,17 +780,20 @@ else
 	if (test "x$feat_reiser" != "xyes"); then
 		echo " *	ReiserFSv3: no (disabled by command line)"
 
+	elif (test "x$libcore" != "xyes"); then
+		echo " *	ReiserFSv3: no (library missing or unusable)"
+
 	elif (test "x$have_ll" != "xyes"); then
 		echo " *	ReiserFSv3: no (long long type missing)"
 
 	elif ( test "x$has_reiser_h"  != "xyes" ); then
-		echo " *	ReiserFSv3: no (reiserfs_lib.h header missing)"
+		echo " *	ReiserFSv3: no (reiserfs_lib.h header missing or unusable)"
 
 	elif (test "x$has_uni_h" != "xyes"); then
-		echo " *	ReiserFSv3: no (unistd.h missing)"
+		echo " *	ReiserFSv3: no (unistd.h missing or unusable)"
 
 	elif (test "x$has_sys_wait_h" != "xyes"); then
-		echo " *	ReiserFSv3: no (wait.h & sys/wait.h missing)"
+		echo " *	ReiserFSv3: no (wait.h & sys/wait.h missing or unusable)"
 
 	elif (test "x$has_exit" != "xyes"); then
 		echo " *	ReiserFSv3: no (exit() missing)"
@@ -739,8 +801,6 @@ else
 	elif (test "x$has_fork" != "xyes"); then
 		echo " *	ReiserFSv3: no (fork() missing)"
 
-	elif (test "x$libcore" != "xyes"); then
-		echo " *	ReiserFSv3: no (library missing or unusable)"
 	else
 		echo " *	ReiserFSv3: no (waitpid() and wait() missing)"
 	fi
@@ -756,14 +816,14 @@ else
 	if (test "x$feat_reiser4" != "xyes"); then
 		echo " *	Reiser4: no (disabled by command line)"
 
+	elif (test "x$libreiser4" != "xyes"); then
+		echo " *	Reiser4: no (library missing or unusable)"
+
 	elif (test "x$have_ll" != "xyes"); then
 		echo " *	Reiser4: no (long long type missing)"
 
-	elif ( test "x$has_libreiser4_h"  != "xyes" ); then
-		echo " *	Reiser4: no (libreiser4.h header missing)"
-
-	else	#if (test "x$libreiser4" != "xyes"); then
-		echo " *	Reiser4: no (library missing or unusable)"
+	else	#if ( test "x$has_libreiser4_h"  != "xyes" ); then
+		echo " *	Reiser4: no (libreiser4.h header missing or unusable)"
 	fi
 fi
 
@@ -776,11 +836,11 @@ else
 	if (test "x$feat_fatfs" != "xyes"); then
 		echo " *	FAT12/16/32: no (disabled by command line)"
 
-	elif ( test "x$has_tffs_h"  != "xyes" ); then
-		echo " *	FAT12/16/32: no (tffs.h header missing)"
-
-	else	#if (test "x$libtffs" != "xyes"); then
+	elif (test "x$libtffs" != "xyes"); then
 		echo " *	FAT12/16/32: no (library missing or unusable)"
+
+	else	#if ( test "x$has_tffs_h"  != "xyes" ); then
+		echo " *	FAT12/16/32: no (tffs.h header missing or unusable)"
 	fi
 fi
 
@@ -793,11 +853,34 @@ else
 	if (test "x$feat_minixfs" != "xyes"); then
 		echo " *	MinixFS: no (disabled by command line)"
 
-	elif ( test "x$has_minixfs_h"  != "xyes" ); then
-		echo " *	MinixFS: no (minix_fs.h header missing)"
-
-	else	#if (test "x$libminixfs" != "xyes"); then
+	elif (test "x$libminixfs" != "xyes"); then
 		echo " *	MinixFS: no (library missing or unusable)"
+
+	else	#if ( test "x$has_minixfs_h"  != "xyes" ); then
+		echo " *	MinixFS: no (minix_fs.h header missing or unusable)"
+
+	fi
+fi
+
+if (	   test "x$has_jfs_h"	= "xyes"	\
+	&& test "x$libjfs"	= "xyes"	\
+	&& test "x$has_uuid_h"	= "xyes"	\
+	&& test "x$feat_jfs"	= "xyes"); then
+
+	echo " *	JFS: yes"
+else
+	if (test "x$feat_jfs" != "xyes"); then
+		echo " *	JFS: no (disabled by command line)"
+
+	elif (test "x$libjfs" != "xyes"); then
+		echo " *	JFS: no (library missing or unusable)"
+
+	elif (test "x$has_uuid_h" != "xyes"); then
+		echo " *	JFS: no (<uuid/uuid.h> header missing or unusable)"
+
+	else	#if ( test "x$has_jfs_h"  != "xyes" ); then
+		echo " *	JFS: no (jfs_superblock.h header missing or unusable)"
+
 	fi
 fi
 

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -156,9 +156,7 @@ static const int signals[] =
  */
 static RETSIGTYPE
 term_signal_received (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const int signum)
 # else
 	signum)
@@ -177,9 +175,7 @@ term_signal_received (
 
 static RETSIGTYPE
 child_signal_received (
-# if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	const int signum)
 # else
 	signum)
@@ -201,9 +197,7 @@ child_signal_received (
 /* =============================================================== */
 
 void wfs_set_sigh (
-#if defined (__STDC__) || defined (_AIX) \
-	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined (WIN32) || defined (__cplusplus)
+#ifdef WFS_ANSIC
 	error_type * const error, const int opt_verbose)
 #else
 	error, opt_verbose)
