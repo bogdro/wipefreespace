@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- configuration header file.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -133,12 +133,14 @@
 #  define HAVE_LIBMINIXFS		1
 #  define HAVE_LIBMISC			1	/* ReiserFSv3 */
 #  define HAVE_LIBNTFS			1
+#  define HAVE_LIBOCFS2			1
 #  define HAVE_LIBREISER4		1
 #  define HAVE_LIBREISER4MISC		1
 #  define HAVE_LIBTFFS			1	/* FAT */
-#  define HAVE_LIBUUID			1	/* ReiserFSv3/4 */
+#  define HAVE_LIBUUID			1	/* ReiserFSv3/4, OCFS2, JFS */
 #  define HAVE_MINIX_FS_H		1
 #  define HAVE_NTFS_VOLUME_H		1
+#  define HAVE_OCFS2_OCFS2_H		1
 #  define HAVE_REISER4_LIBREISER4_H	1
 #  define HAVE_REISERFS_LIB_H		1	/* ReiserFSv3 */
 #  define HAVE_SYS_CAPABILITY_H		1

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- HFS+ file system-specific functions, header file.
  *
- * Copyright (C) 2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or

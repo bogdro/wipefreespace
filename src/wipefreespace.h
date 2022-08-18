@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -97,7 +97,8 @@ enum CURR_FS
 	CURR_FATFS,
 	CURR_MINIXFS,
 	CURR_JFS,
-	CURR_HFSP
+	CURR_HFSP,
+	CURR_OCFS
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -312,6 +313,60 @@ typedef unsigned short int __u16;
 #  endif
 # endif
 
+# if (defined HAVE_OCFS2_OCFS2_H) && (defined HAVE_LIBOCFS2)
+/* fix incompatibility with NTFS: */
+#  define list_head ocfs_list_head
+#  define __list_add __ocfs_list_add
+#  define list_add ocfs_list_add
+#  define list_add_tail ocfs_list_add_tail
+#  define __list_del __ocfs_list_del
+#  define list_del ocfs_list_del
+#  define list_empty ocfs_list_empty
+#  define list_splice ocfs_list_splice
+/*
+#  define LIST_HEAD_INIT OCFS_LIST_HEAD_INIT
+#  define LIST_HEAD OCFS_LIST_HEAD
+#  define INIT_LIST_HEAD OCFS_INIT_LIST_HEAD
+#  define list_entry ocfs_list_entry
+#  define list_for_each ocfs_list_for_each
+#  define list_for_each_safe ocfs_list_for_each_safe
+*/
+/* fix incomaptibility with ext2_fs.h: */
+#  undef i_reserved2
+/* fix incomaptibility with ext2_io.h: */
+#  define io_channel ocfs_io_channel
+#  include <ocfs2/ocfs2.h>
+#  define	WFS_OCFS	1
+# else
+#  if (defined HAVE_OCFS2_H) && (defined HAVE_LIBOCFS2)
+/* fix incompatibility with NTFS: */
+#   define list_head ocfs_list_head
+#   define __list_add __ocfs_list_add
+#   define list_add ocfs_list_add
+#   define list_add_tail ocfs_list_add_tail
+#   define __list_del __ocfs_list_del
+#   define list_del ocfs_list_del
+#   define list_empty ocfs_list_empty
+#   define list_splice ocfs_list_splice
+/*
+#   define LIST_HEAD_INIT OCFS_LIST_HEAD_INIT
+#   define LIST_HEAD OCFS_LIST_HEAD
+#   define INIT_LIST_HEAD OCFS_INIT_LIST_HEAD
+#   define list_entry ocfs_list_entry
+#   define list_for_each ocfs_list_for_each
+#   define list_for_each_safe ocfs_list_for_each_safe
+*/
+/* fix incomaptibility with ext2_fs.h: */
+#   undef i_reserved2
+/* fix incomaptibility with ext2_io.h: */
+#   define io_channel ocfs_io_channel
+#   include <ocfs2.h>
+#   define	WFS_OCFS	1
+#  else
+#   undef	WFS_OCFS
+#  endif
+# endif
+
 # if (defined HAVE_LIBHIDEIP) && (defined HAVE_LIBHIDEIP_H)
 #  define WFS_HAVE_LIBHIDEIP	1
 # else
@@ -348,10 +403,11 @@ struct error_type
 {
 	CURR_FS whichfs;
 
-	union errcode_union {
+	union errcode_union
+	{
 		/* general error, if more specific type unavailable */
 		errcode_enum	gerror;
-# ifdef 	WFS_EXT234
+# if (defined WFS_EXT234) || (defined WFS_OCFS)
 		errcode_t	e2error;
 # endif
 # ifdef		WFS_REISER4
@@ -408,6 +464,9 @@ struct wfs_fsid_t
 # ifdef		WFS_HFSP
 	struct volume	hfsp_volume;
 # endif
+# ifdef		WFS_OCFS
+	ocfs2_filesys * ocfs2;
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
 };
@@ -454,6 +513,9 @@ union fselem_t
 # endif
 # ifdef		WFS_HFSP
 	record		hfsp_dirent;
+# endif
+# ifdef		WFS_OCFS
+	struct ocfs2_dir_entry * ocfs2dir;
 # endif
 
 	/* TODO: to be expanded, when other FS come into the program */

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -82,18 +82,27 @@ extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 #include "wipefreespace.h"
 #undef BLOCK_SIZE	/* fix conflict with MinixFS. Unused in NTFS anyway. */
 
+#undef WFS_NTFS_NEED_LIST
 #if ((defined HAVE_NTFS_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_NTFS_VOLUME_H)) \
 	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 # ifdef HAVE_NTFS_NTFS_VOLUME_H
 #  include <ntfs/ntfs_volume.h>
 #  include <ntfs/ntfs_attrib.h>		/* ntfs_attr_search_ctx() */
-#  include <ntfs/ntfs_list.h>		/* list_for_each_safe() */
+#  ifdef HAVE_NTFS_NTFS_LIST_H
+#   include <ntfs/ntfs_list.h>		/* list_for_each_safe() */
+#  else
+#   define WFS_NTFS_NEED_LIST
+#  endif
 #  include <ntfs/ntfs_mft.h>		/* ntfs_mft_records_write() */
 #  include <ntfs/ntfs_logfile.h>	/* ntfs_empty_logfile() */
 # else
 #  include <ntfs-3g/ntfs_volume.h>
 #  include <ntfs-3g/ntfs_attrib.h>	/* ntfs_attr_search_ctx() */
-#  include <ntfs-3g/ntfs_list.h>	/* list_for_each_safe() */
+#  ifdef HAVE_NTFS_3G_NTFS_LIST_H
+#   include <ntfs-3g/ntfs_list.h>	/* list_for_each_safe() */
+#  else
+#   define WFS_NTFS_NEED_LIST
+#  endif
 #  include <ntfs-3g/ntfs_mft.h>		/* ntfs_mft_records_write() */
 #  include <ntfs-3g/ntfs_logfile.h>	/* ntfs_empty_logfile() */
 # endif
@@ -103,13 +112,21 @@ extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 #  ifdef HAVE_NTFS_VOLUME_H
 #   include <ntfs/volume.h>
 #   include <ntfs/attrib.h>		/* ntfs_attr_search_ctx() */
-#   include <ntfs/list.h>		/* list_for_each_safe() */
+#   ifdef HAVE_NTFS_LIST_H
+#    include <ntfs/list.h>		/* list_for_each_safe() */
+#   else
+#    define WFS_NTFS_NEED_LIST
+#   endif
 #   include <ntfs/mft.h>		/* ntfs_mft_records_write() */
 #   include <ntfs/logfile.h>		/* ntfs_empty_logfile() */
 #  else
 #   include <ntfs-3g/volume.h>
 #   include <ntfs-3g/attrib.h>		/* ntfs_attr_search_ctx() */
-#   include <ntfs-3g/list.h>		/* list_for_each_safe() */
+#   ifdef HAVE_NTFS_3G_LIST_H
+#    include <ntfs-3g/list.h>		/* list_for_each_safe() */
+#   else
+#    define WFS_NTFS_NEED_LIST
+#   endif
 #   include <ntfs-3g/mft.h>		/* ntfs_mft_records_write() */
 #   include <ntfs-3g/logfile.h>		/* ntfs_empty_logfile() */
 #  endif
@@ -117,7 +134,11 @@ extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 #  if (defined HAVE_VOLUME_H) && ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 #   include <volume.h>
 #   include <attrib.h>
-#   include <list.h>
+#   ifdef HAVE_LIST_H
+#    include <list.h>
+#   else
+#    define WFS_NTFS_NEED_LIST
+#   endif
 #   include <mft.h>
 #   include <logfile.h>
 #  else
@@ -130,6 +151,15 @@ extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+
+#ifdef WFS_NTFS_NEED_LIST
+/* list.h header (in any form) not present - use our definitions */
+# ifdef HAVE_LIBNTFS_3G
+#  include "ntfs-3g/list.h"
+# else
+#  include "ntfs/list.h"
+# endif
+#endif
 
 /*#define USE_NTFSWIPE*/
 
@@ -323,7 +353,7 @@ wipe_compressed_attribute (
 
 	FS.ntfs = vol;
 
-	while ( (rlc->length != 0) && (sig_recvd==0) )
+	while ( (rlc->length != 0) && (sig_recvd == 0) )
 	{
 
 		go_back = 0;
@@ -1576,7 +1606,10 @@ wfs_ntfs_wipe_journal (
 			}
 			pos += count;
 		}
-		if ( ret_journ != WFS_SUCCESS ) break;
+		if ( ret_journ != WFS_SUCCESS )
+		{
+			break;
+		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
 		if ( (npasses > 1) && (sig_recvd == 0) )
@@ -1590,7 +1623,10 @@ wfs_ntfs_wipe_journal (
 	ntfs_inode_close(ni);
 
 	show_progress (PROGRESS_UNRM, 100, &prev_percent);
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 	return ret_journ;
 }
 # endif /* WFS_WANT_UNRM */
@@ -2323,13 +2359,13 @@ wfs_ntfs_close_fs (
 	int wfs_err;
 
 	wfs_err = ntfs_umount (FS.ntfs, FALSE);
-	if ( error != NULL )
+	if ( wfs_err != 0 )
 	{
-		error->errcode.gerror = wfs_err;
-		if ( wfs_err != 0 )
+		ret = WFS_FSCLOSE;
+		if ( error != NULL )
 		{
+			error->errcode.gerror = wfs_err;
 			show_error ( *error, err_msg_close, FS.fsname, FS );
-			ret = WFS_FSCLOSE;
 		}
 	}
 	FS.ntfs = NULL;

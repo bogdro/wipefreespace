@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -325,7 +325,7 @@ wfs_get_mnt_point (
 		*is_rw = 0;
 		return WFS_SUCCESS;
 	}
-# else /* ! HAVE_MNTENT_H && ! HAVE_GETMNTINFO */
+# else /* ! HAVE_SYS_MOUNT_H && ! HAVE_GETMNTINFO */
 	error->errcode.gerror = 1L;
 	return WFS_MNTCHK;	/* can't check, so don't do anything */
 # endif
@@ -696,6 +696,10 @@ convert_fs_to_name (
 	{
 		return "HFS+";
 	}
+	else if ( fs == CURR_OCFS )
+	{
+		return "OCFS";
+	}
 	return "<unknown>";
 }
 
@@ -747,10 +751,11 @@ enable_drive_cache (
 	int ioctl_fd;
 	unsigned char hd_cmd[4];
 
-	if ( ioctls != NULL && dev_name != NULL )
+	if ( (ioctls != NULL) && (dev_name != NULL) )
 	{
 		for ( j = 0; j < total_fs; j++ )
 		{
+			/* ioctls[j].fs_name can't be NULL, it's an array */
 			if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
 			{
 				curr_ioctl = j;

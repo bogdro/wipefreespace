@@ -26,7 +26,8 @@ Provides:	e2wipefreespace >= 0.6
 The wipefreespace is a program which securely cleans free space on given
 file systems, making confidential removed data recovery impossible. It also
 removes deleted files' names, so that no trace is left. Supported file systems
-are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS and HFS+.
+are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS, HFS+
+and OCFS.
 
 %prep
 # {__rm} -rf $RPM_BUILD_ROOT
@@ -73,6 +74,8 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 %{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/jfswipefreespace
 %{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/hfspwipefreespace
 %{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/hfswipefreespace
+%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/ocfswipefreespace
+%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/ocfs2wipefreespace
 # {__mv} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace $RPM_BUILD_ROOT {wfs_prefix}/bin/wipefreespace
 # {makeinstall}
 
@@ -100,6 +103,8 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 %{wfs_prefix}/bin/jfswipefreespace
 %{wfs_prefix}/bin/hfspwipefreespace
 %{wfs_prefix}/bin/hfswipefreespace
+%{wfs_prefix}/bin/ocfswipefreespace
+%{wfs_prefix}/bin/ocfs2wipefreespace
 %doc /usr/share/info/wipefreespace.info.gz
 %doc /usr/share/man/man1/wipefreespace.1.gz
 %doc README

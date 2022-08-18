@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -76,6 +76,10 @@ extern unsigned long int wfs_wrap_sig(char c0, char c1, char c2, char c3);
 
 #ifdef WFS_HFSP
 # include "wfs_hfsp.h"
+#endif
+
+#ifdef WFS_OCFS
+# include "wfs_ocfs.h"
 #endif
 
 /* ======================================================================== */
@@ -170,6 +174,12 @@ wipe_unrm (
 		ret_wfs = wfs_hfsp_wipe_unrm (FS, elem, error);
 # endif
 	}
+	else if ( which_fs == CURR_OCFS )
+	{
+# ifdef WFS_OCFS
+		ret_wfs = wfs_ocfs_wipe_unrm (FS, elem, error);
+# endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -260,6 +270,12 @@ wipe_fs (
 		ret_wfs = wfs_hfsp_wipe_fs (FS, error);
 # endif
 	}
+	else if ( which_fs == CURR_OCFS )
+	{
+# ifdef WFS_OCFS
+		ret_wfs = wfs_ocfs_wipe_fs (FS, error);
+# endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -348,6 +364,12 @@ wipe_part (
 	{
 # ifdef WFS_HFSP
 		ret_wfs = wfs_hfsp_wipe_part (FS, error);
+# endif
+	}
+	else if ( which_fs == CURR_OCFS )
+	{
+# ifdef WFS_OCFS
+		ret_wfs = wfs_ocfs_wipe_part (FS, error);
 # endif
 	}
 
@@ -452,6 +474,14 @@ wfs_open_fs (
 		ret_wfs = wfs_hfsp_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
+#ifdef WFS_OCFS
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		error->errcode.gerror = WFS_SUCCESS;
+		ret_wfs = wfs_ocfs_open_fs (dev_name, FS, which_fs, data, error);
+	}
+#endif
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -520,6 +550,11 @@ wfs_chk_mount (
 	ret_wfs = wfs_hfsp_chk_mount ( dev_name, error );
 	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
+#if (defined WFS_OCFS)
+	ret_wfs = wfs_ocfs_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
+
 	return ret_wfs;
 }
 
@@ -597,6 +632,12 @@ wfs_close_fs (
 	{
 #ifdef WFS_HFSP
 		ret_wfs = wfs_hfsp_close_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_OCFS )
+	{
+#ifdef WFS_OCFS
+		ret_wfs = wfs_ocfs_close_fs (FS, error);
 #endif
 	}
 
@@ -691,6 +732,12 @@ wfs_check_err (
 		return wfs_hfsp_check_err (FS);
 #endif
 	}
+	else if ( which_fs == CURR_OCFS )
+	{
+#ifdef WFS_OCFS
+		return wfs_ocfs_check_err (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -774,6 +821,12 @@ wfs_is_dirty (
 		return wfs_hfsp_is_dirty (FS);
 #endif
 	}
+	else if ( which_fs == CURR_OCFS )
+	{
+#ifdef WFS_OCFS
+		return wfs_ocfs_is_dirty (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -851,6 +904,12 @@ wfs_flush_fs (
 	{
 #ifdef WFS_HFSP
 		ret_wfs = wfs_hfsp_flush_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_OCFS )
+	{
+#ifdef WFS_OCFS
+		ret_wfs = wfs_ocfs_flush_fs (FS, error);
 #endif
 	}
 

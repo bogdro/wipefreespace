@@ -12,7 +12,7 @@ wipefreespace \- Secure cleaning of free space on filesystems.
 
 .SH DESCRIPTION
 The wipefreespace program securely cleans the free space and undelete data
-on the given ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS and HFS+ file systems.
+on the given ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS, HFS+ and OCFS file systems.
 Write permissions are required for the devices
 (or regular files containing the file system), but the program
 .B MUST NOT
@@ -20,6 +20,37 @@ be setuid(root).
 
 Each given filesystem is wiped ONLY ONCE, no matter how many times it appears on the command line.
 WipeFreeSpace also works for file systems created inside regular files on any host file system.
+
+Wipefreespace wipes the following things (when supported by the backing
+ library):
+.IP - 2
+ free space (space in unused blocks/clusters)
+.IP - 2
+ free space in partially used blocks (also called the "slack space")
+.IP - 2
+ deleted files' names and other data that can be used to undelete a file (like the journal)
+
+.LP
+Wipefreespace does NOT decrease the amount of available free space when
+ working.
+
+To perform a command after wiping (like sending e-mail), simply run a
+program after WipeFreeSpace is finished, for example:
+
+	wipefreespace [options] /dev/XY; mail [options]
+
+or in a script:
+
+	#!/bin/bash
+
+	wipefreespace [options] /dev/XY
+
+	mail [options]
+
+To run WipeFreeSpace with a higher or lower priority, simply use the "renice" utility, for example:
+
+	renice +1 $(pidof wipefreespace)
+
 
 .SH OPTIONS
 Any option affects all filesystems given on the command line, not just the ones following it.

@@ -1,3 +1,22 @@
+2012-05-06	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.6
+	  Improved NTFS compile-time support. Added support for OCFS/OCFS2.
+	* src/wfs_wiping.c (fill_buffer): checking for NULL in "selected"
+	* README, doc/wipefreespace.texi.in, doc/wipefreespace.1: added
+	  information about running commands after wiping a filesystem and
+	  wiping with a different process priority. Added OCFS2 information.
+	  Added a note about what does WipeFreeSpace actually wipe and that
+	  it does not eat up free space when running.
+	* INSTALL: added OCFS2 information.
+	* wipefreespace.spec.in: added OCFS2 information and symlinks.
+	* configure.ac, src/wfs_ntfs.c, src/list.h, src/ntfs/list.h,
+	  src/ntfs-3g/list.h: workaround for the missing NTFS list.h header.
+	* src/wfs_ntfs.c (wfs_ntfs_close_fs): fixed error handling.
+	* src/wfs_ocfs.{c,h}, src/wipefreespace.c, src/wfs_util.c,
+	  src/wfs_wrappers.c, configure.ac: OCFS/OCFS2 support.
+	* configure.ac: printing a summary of wiping areas enabled.
+
 2011-12-04	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.5

@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -141,7 +141,7 @@ extern unsigned long int wfs_main_sig(char c0, char c1, char c2, char c3);
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2011 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2012 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -288,8 +288,8 @@ show_error (
 	}
 
 #if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
-# if (defined WFS_EXT234)
-	if ( err.whichfs == CURR_EXT234FS )
+# if (defined WFS_EXT234) || (defined WFS_OCFS)
+	if ( (err.whichfs == CURR_EXT234FS) || (err.whichfs == CURR_OCFS) )
 	{
 		com_err ( wfs_progname, err.errcode.e2error, ERR_MSG_FORMATL,
 			_(err_msg), err.errcode.e2error, _(msg),
@@ -533,6 +533,9 @@ static void print_versions (
 #ifdef WFS_HFSP
 	printf ( "HFS+: ?\n");
 #endif
+#ifdef WFS_OCFS
+	printf ( "OCFS: ?\n");
+#endif
 }
 
 /* ======================================================================== */
@@ -584,7 +587,10 @@ wfs_wipe_filesytem (
 	fs.fsname = dev_name;
 	fs.zero_pass = opt_zero;
 
-	if ( dev_name == NULL ) return WFS_BAD_CMDLN;
+	if ( dev_name == NULL )
+	{
+		return WFS_BAD_CMDLN;
+	}
 
 	if ( dev_name[0] == '\0' /*strlen (dev_name) == 0*/ )
 	{
@@ -1372,7 +1378,10 @@ main (
 				ioctls[i].how_many = 0;
 				ioctls[i].was_enabled = 0;
 				ioctls[i].fs_name[0] = '\0';
-				if ( argv[wfs_optind+i] == NULL ) continue;
+				if ( argv[wfs_optind+i] == NULL )
+				{
+					continue;
+				}
 				strncpy (ioctls[i].fs_name, argv[wfs_optind+i], sizeof (ioctls[i].fs_name)-1);
 				ioctls[i].fs_name[sizeof (ioctls[i].fs_name)-1] = '\0';
 			}
@@ -1408,6 +1417,13 @@ main (
 			error.errcode.gerror = 1L;
 # endif
 			show_error ( error, err_msg_fork, argv[wfs_optind], wf_gen );
+#ifdef HAVE_IOCTL
+			if ( ioctls != NULL )
+			{
+				free (ioctls);
+			}
+			ioctls = NULL;
+#endif
 			return WFS_FORKERR;
 		}
 		else
@@ -1448,6 +1464,15 @@ main (
 # ifdef HAVE_FORK
 		else
 		{
+#ifdef HAVE_IOCTL
+/* Valgrind: when this is enabled, no memory leak in main() is reported, but the
+subsequent loop iterations may fail, so don't enable. */
+/*			if ( ioctls != NULL )
+			{
+				free (ioctls);
+			}
+			ioctls = NULL;*/
+#endif
 			/* child */
 			exit (wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind));
 		}

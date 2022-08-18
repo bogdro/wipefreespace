@@ -189,6 +189,9 @@
 /* Define to 1 if you have the `ntfs-3g' library (-lntfs-3g). */
 #undef HAVE_LIBNTFS_3G
 
+/* Define to 1 if you have the `ocfs2' library (-locfs2). */
+#undef HAVE_LIBOCFS2
+
 /* Define to 1 if you have the `reiser4' library (-lreiser4). */
 #undef HAVE_LIBREISER4
 
@@ -206,6 +209,9 @@
 
 /* Define to 1 if you have the <linux/hdreg.h> header file. */
 #undef HAVE_LINUX_HDREG_H
+
+/* Whether you have the list.h header. */
+#undef HAVE_LIST_H
 
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
@@ -237,17 +243,35 @@
 /* Define to 1 if you have the <mntent.h> header file. */
 #undef HAVE_MNTENT_H
 
+/* Whether you have the ntfs-3g/list.h header. */
+#undef HAVE_NTFS_3G_LIST_H
+
+/* Whether you have the ntfs-3g/ntfs_list.h header. */
+#undef HAVE_NTFS_3G_NTFS_LIST_H
+
 /* Whether you have the ntfs-3g/ntfs_volume.h header. */
 #undef HAVE_NTFS_3G_NTFS_VOLUME_H
 
 /* Whether you have the ntfs-3g/volume.h header. */
 #undef HAVE_NTFS_3G_VOLUME_H
 
+/* Whether you have the ntfs/list.h header. */
+#undef HAVE_NTFS_LIST_H
+
+/* Whether you have the ntfs/ntfs_list.h header. */
+#undef HAVE_NTFS_NTFS_LIST_H
+
 /* Whether you have the ntfs/ntfs_volume.h header. */
 #undef HAVE_NTFS_NTFS_VOLUME_H
 
 /* Whether you have the ntfs/volume.h header. */
 #undef HAVE_NTFS_VOLUME_H
+
+/* Whether you have the ocfs2.h header. */
+#undef HAVE_OCFS2_H
+
+/* Whether you have the ocfs2/ocfs2.h header. */
+#undef HAVE_OCFS2_OCFS2_H
 
 /* Define to 1 if the system has the type `off64_t'. */
 #undef HAVE_OFF64_T

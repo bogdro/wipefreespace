@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.5, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.6, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -91,6 +91,15 @@ AC_ARG_ENABLE(HFSP,[[  --enable-HFSP		HFS+ support (default=yes).]],
 	 fi
 	]
 	,[feat_hfsp=yes])
+
+AC_ARG_ENABLE(OCFS,[[  --enable-OCFS		OCFS support (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_ocfs=no
+	 else
+		feat_ocfs=yes
+	 fi
+	]
+	,[feat_ocfs=yes])
 
 AC_ARG_ENABLE([random-method],[[  --enable-random-method	DEPRECATED: Random pattern method (like shred) instead of full Gutmann.]],
 	[if (test "x$enableval" = "xyes"); then
@@ -282,6 +291,13 @@ if ( test "x$feat_hfsp" = "xyes" ); then
 	AC_CHECK_LIB([hfsp],volume_open,,[libhfsp=no])
 fi
 
+libocfs=no
+if ( test "x$feat_ocfs" = "xyes" ); then
+
+	libocfs=yes
+	AC_CHECK_LIB([ocfs2],ocfs2_open,,[libocfs=no])
+fi
+
 if ( test "x$feat_LIBHIDEIP" = "xyes" ); then
 
 	libhip=yes
@@ -386,11 +402,12 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 
 	elif (test "x$have_ll" = "xyes" && test "x$libntfs" = "xyes"); then
 
+		CFLAGS="$CFLAGS -I src"
 		has_ntfs_h=yes
 		if ( test "x$libntfs3g" = "xno" ); then
 			AC_CHECK_HEADER([ntfs/ntfs_volume.h],
-					AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
-						[Whether you have the ntfs/ntfs_volume.h header.]),
+					[AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
+						[Whether you have the ntfs/ntfs_volume.h header.])],
 					[AC_CHECK_HEADER([ntfs/volume.h],
 						AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
 							[Whether you have the ntfs/volume.h header.]),
@@ -413,10 +430,37 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 				#endif
 				]]
 				)
+			if ( test "x$has_ntfs_h" = "xyes" ); then
+				AC_CHECK_HEADER([ntfs/ntfs_list.h],
+						[AC_DEFINE([HAVE_NTFS_NTFS_LIST_H],[1],
+							[Whether you have the ntfs/ntfs_list.h header.])],
+						[AC_CHECK_HEADER([ntfs/list.h],
+							AC_DEFINE([HAVE_NTFS_LIST_H],[1],
+								[Whether you have the ntfs/list.h header.]),
+							[AC_CHECK_HEADER([list.h],
+								AC_DEFINE([HAVE_LIST_H],[1],
+									[Whether you have the list.h header.]),
+								[has_ntfs_h=no],
+							[[#ifdef HAVE_STDARG_H
+							# include <stdarg.h>
+							#endif
+							]]
+							)],
+						[[#ifdef HAVE_STDARG_H
+						# include <stdarg.h>
+						#endif
+						]]
+						)],
+					[[#ifdef HAVE_STDARG_H
+					# include <stdarg.h>
+					#endif
+					]]
+					)
+			fi
 		else
 			AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
-					AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
-						[Whether you have the ntfs-3g/ntfs_volume.h header.]),
+					[AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
+						[Whether you have the ntfs-3g/ntfs_volume.h header.])],
 					[AC_CHECK_HEADER([ntfs-3g/volume.h],
 						AC_DEFINE([HAVE_NTFS_3G_VOLUME_H],[1],
 							[Whether you have the ntfs-3g/volume.h header.]),
@@ -439,6 +483,33 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 				#endif
 				]]
 				)
+			if ( test "x$has_ntfs_h" = "xyes" ); then
+				AC_CHECK_HEADER([ntfs-3g/ntfs_list.h],
+						[AC_DEFINE([HAVE_NTFS_3G_NTFS_LIST_H],[1],
+							[Whether you have the ntfs-3g/ntfs_list.h header.])],
+						[AC_CHECK_HEADER([ntfs-3g/list.h],
+							AC_DEFINE([HAVE_NTFS_3G_LIST_H],[1],
+								[Whether you have the ntfs-3g/list.h header.]),
+							[AC_CHECK_HEADER([list.h],
+								AC_DEFINE([HAVE_LIST_H],[1],
+									[Whether you have the list.h header.]),
+								[has_ntfs_h=no],
+							[[#ifdef HAVE_STDARG_H
+							# include <stdarg.h>
+							#endif
+							]]
+							)],
+						[[#ifdef HAVE_STDARG_H
+						# include <stdarg.h>
+						#endif
+						]]
+						)],
+					[[#ifdef HAVE_STDARG_H
+					# include <stdarg.h>
+					#endif
+					]]
+					)
+			fi
 		fi
 	fi
 fi
@@ -542,6 +613,22 @@ if ( test "x$feat_hfsp" = "xyes" ); then
 	fi
 fi
 
+has_ocfs_h=no
+if ( test "x$feat_ocfs" = "xyes" ); then
+
+	if ( test "x$libocfs" = "xyes" ); then
+
+		has_ocfs_h=yes
+		AC_CHECK_HEADER([ocfs2.h],
+			AC_DEFINE([HAVE_OCFS2_H],[1],
+				[Whether you have the ocfs2.h header.]),
+					[AC_CHECK_HEADER([ocfs2/ocfs2.h],
+						AC_DEFINE([HAVE_OCFS2_OCFS2_H],[1],
+						[Whether you have the ocfs2/ocfs2.h header.]),
+						[has_ocfs_h=no])])
+	fi
+fi
+
 if ( test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" ); then
 
 	have_libhideip_h=yes
@@ -613,6 +700,16 @@ if (	   test "x$has_hfsp_h"		= "xyes"	\
 fi
 
 AM_CONDITIONAL(HFSP, [test "x$wfs_have_hfsp" = "xyes"] )
+
+wfs_have_ocfs=no
+if (	   test "x$has_ocfs_h"		= "xyes"	\
+	&& test "x$libocfs"		= "xyes"	\
+	&& test "x$feat_ocfs"		= "xyes" ); then
+
+	wfs_have_ocfs=yes
+fi
+
+AM_CONDITIONAL(OCFS, [test "x$wfs_have_ocfs" = "xyes"] )
 
 has_com_h=yes
 AC_CHECK_HEADER([et/com_err.h],
@@ -901,14 +998,14 @@ fi
 if (       test "x$has_ntfs_h"	= "xyes"	\
 	&& test "x$libntfs"	= "xyes"); then
 
-		echo " *	NTFS/NTFS-3G: yes"
+		echo " *	NTFS: yes"
 else
 	if (test "x$feat_ntfs" != "xyes"); then
-		echo " *	NTFS/NTFS-3G: no (disabled by command line)"
+		echo " *	NTFS: no (disabled by command line)"
 	elif (test "x$libntfs" != "xyes"); then
-		echo " *	NTFS/NTFS-3G: no (library missing or unusable)"
+		echo " *	NTFS: no (library missing or unusable)"
 	else
-		echo " *	NTFS/NTFS-3G: no (headers missing or unusable)"
+		echo " *	NTFS: no (headers missing or unusable)"
 	fi
 fi
 
@@ -1083,6 +1180,50 @@ else
 		echo " *	HFS+: no (libhfsp.h header missing or unusable)"
 
 	fi
+fi
+
+if (	   test "x$has_ocfs_h"	= "xyes"	\
+	&& test "x$libocfs"	= "xyes"	\
+	&& test "x$feat_ocfs"	= "xyes"); then
+
+	echo " *	OCFS: yes"
+else
+	if (test "x$feat_ocfs" != "xyes"); then
+		echo " *	OCFS: no (disabled by command line)"
+
+	elif (test "x$libocfs" != "xyes"); then
+		echo " *	OCFS: no (library missing or unusable)"
+
+	else	#if ( test "x$has_ocfs_h"  != "xyes" ); then
+		echo " *	OCFS: no (ocfs2.h header missing or unusable)"
+
+	fi
+fi
+
+echo "***********************************"
+
+if (test "x$feat_wfs" = "xyes"); then
+
+	echo " *	Wiping free space enabled: yes"
+else
+
+	echo " *	Wiping free space enabled: no (disabled by command line)"
+fi
+
+if (test "x$feat_unrm" = "xyes"); then
+
+	echo " *	Wiping undelete data enabled: yes"
+else
+
+	echo " *	Wiping undelete data enabled: no (disabled by command line)"
+fi
+
+if (test "x$feat_part" = "xyes"); then
+
+	echo " *	Wiping partially used blocks enabled: yes"
+else
+
+	echo " *	Wiping partially used blocks enabled: no (disabled by command line)"
 fi
 
 echo "***********************************"

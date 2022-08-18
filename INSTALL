@@ -98,6 +98,11 @@ https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
   from the libhfsp/src/ directory where the C compiler can find them (or
   put the correct -I and -L options in the compiler flags).
 
+- OCFS: the "ocfs2-tools" series 1.6.x package (other version also work, but
+  disable wiping undelete data in such case). Go to
+	http://oss.oracle.com/projects/ocfs2-tools/
+  to get it. Then compile and install that package.
+
 
 WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
  refuse to link if the compiler doesn't support the command line option
@@ -151,7 +156,7 @@ The patches for ntfsprogs are optional. Whether or not they will be included
 Type './configure' to configure the program for your system.
 If you do not wish support for a filesystem, give the '--enable-FS=no'
  option to ./configure (FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT,
- MINIX, JFS, HFSP).
+ MINIX, JFS, HFSP, OCFS).
 If you do not wish support for a particular wiping operation, give the
  '--enable-OPER=no' option to ./configure (OPER=wfs, unrm, part - these
  are wiping free space, undelete data and partially-used blocks,

@@ -57,7 +57,18 @@ This manual is for wipefreespace, version @VERSION@
 @chapter What is wipefreespace?
 
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
-ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2, JFS and HFS+ partitions.
+ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2, JFS, HFS+ and OCFS partitions.
+
+Wipefreespace wipes the following things (when supported by the backing
+library):
+@itemize
+@item free space (space in unused blocks/clusters)
+@item free space in partially used blocks (also called the "slack space")
+@item deleted files' names and other data that can be used to undelete a file
+(like the journal)
+@end itemize
+Wipefreespace does @strong{NOT} decrease the amount of available free space when
+working.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
@@ -234,6 +245,11 @@ Compile jfsutils, then copy all the jfs_*.h header files from the
 C compiler can find them (or put the correct -I and -L options in the
 compiler flags).
 
+@item OCFS: the "ocfs2-tools" series 1.6.x package (other version also work, but disable
+wiping undelete data in such case). Go to@*
+	http://oss.oracle.com/projects/ocfs2-tools/@*
+to get it. Then compile and install that package.
+
 @item HFS+: the "hfsplus" package. Go to@*
 https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz@*
 to get it. Before compiling, apply the patch:@*
@@ -305,7 +321,7 @@ Type './configure' to configure the program for your system.
 
 If you do not wish support for a filesystem, give the @option{--enable-FS=no}
 option to ./configure (FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT,
-MINIX, JFS, HFSP).
+MINIX, JFS, HFSP, OCFS).
 
 If you do not wish support for a particular wiping operation, give the
 @option{--enable-OPER=no} option to ./configure (OPER=wfs, unrm, part - these
@@ -356,7 +372,8 @@ To create an RPM package (the new way):
 @comment  node-name, next,      previous,  up
 @chapter Filesystems support
 
-Currently, wipefreespace does the following actions on supported filesystems:
+Currently, wipefreespace does the following actions on supported filesystems
+(note that "free space in partially used blocks" is sometimes called "slack space"):
 
 @enumerate
 
@@ -383,7 +400,7 @@ wiping deleted files' data (part of free space or partially used blocks)
 usable development library):
 @itemize
 @item wiping the free space
-@item wiping undelete data (actually does nothing, because XFS doesn't have undelete capability)
+@item wiping deleted files' data (part of free space or partially used blocks)
 @item wiping free space in partially used blocks
 @end itemize
 
@@ -393,15 +410,14 @@ part of any official development package):
 @item wiping the free space
 @item wiping free space in partially used blocks, but only if the block has just 1 item
 @item wiping deleted files' names
+@item wiping deleted files' data (part of free space or partially used blocks)
 @item wiping the journal
 @end itemize
 
 @item ReiserFSv4 (using the library from reiser4progs-devel):
 @itemize
 @item wiping the free space
-@item @strong{NOT} wiping free space in partially used blocks (because blocks can be shared
-by more than 1 object)
-@item @strong{NOT} wiping deleted files' names (but the filesystem itself seems to do it)
+@item wiping deleted files' data (part of free space)
 @item wiping the journal
 @end itemize
 
@@ -410,6 +426,7 @@ by more than 1 object)
 @item wiping the free space
 @item wiping free space in partially used blocks
 @item wiping deleted files' names
+@item wiping deleted files' data (part of free space or partially used blocks)
 @end itemize
 
 @item MinixFS (using the mfstool program as a library):
@@ -417,18 +434,30 @@ by more than 1 object)
 @item wiping the free space
 @item wiping free space in partially used blocks
 @item wiping deleted files' names
+@item wiping deleted files' data (part of free space or partially used blocks)
 @end itemize
 
 @item JFS (using the library from jfsuitls):
 @itemize
 @item wiping the free space
 @item wiping the journal (log)
+@item wiping deleted files' data (part of free space)
 @end itemize
 
 @item HFS+ (using the library from hfsplus):
 @itemize
 @item wiping the free space
 @item wiping free space in partially used blocks
+@item wiping deleted files' data (part of free space or partially used blocks)
+@end itemize
+
+@item OCFS (using the library from ocfs2-tools):
+@itemize
+@item wiping the free space
+@item wiping free space in partially used blocks
+@item wiping deleted files' names (if the library works)
+@item wiping deleted files' data (part of free space or partially used blocks)
+@item wiping the journal (log)
 @end itemize
 
 @end enumerate
@@ -592,6 +621,20 @@ exit with "Bad/missing command line syntax" error code.
 
 @strong{NOTE}: Any option affects all filesystems given on the command line, not just
 the ones following it.
+
+To perform a command after wiping (like sending e-mail), simply run a
+program after WipeFreeSpace is finished, for example:@*
+	@command{wipefreespace [options] /dev/XY; mail [options]}@*
+or in a script:@*
+	#!/bin/bash@*
+	wipefreespace [options] /dev/XY@*
+	mail [options]@*
+
+To run WipeFreeSpace with a higher or lower priority, simply use the
+@command{renice} utility, for example:@*
+	@command{renice +1 $(pidof wipefreespace)}@*
+
+
 
 @c ==================================================================
 
@@ -1610,7 +1653,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2011 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2012 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*

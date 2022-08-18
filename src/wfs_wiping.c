@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wiping functions.
  *
- * Copyright (C) 2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2012 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -354,19 +354,22 @@ fill_buffer (
 		return;
 	}
 
-	for ( i = 0; i < npat; i++ )
+	if ( selected != NULL )
 	{
-		if ( selected[i] == 0 )
+		for ( i = 0; i < npat; i++ )
 		{
-			break;
+			if ( selected[i] == 0 )
+			{
+				break;
+			}
 		}
-	}
-	if ( (i >= npat) && (wfs_is_pass_random (pat_no, opt_method) != 1) )
-	{
-		/* no patterns left and this is not a "random" pass - deselect all the patterns */
-		for ( i = 0; (i < npat) && (sig_recvd == 0); i++ )
+		if ( (i >= npat) && (wfs_is_pass_random (pat_no, opt_method) != 1) )
 		{
-			selected[i] = 0;
+			/* no patterns left and this is not a "random" pass - deselect all the patterns */
+			for ( i = 0; (i < npat) && (sig_recvd == 0); i++ )
+			{
+				selected[i] = 0;
+			}
 		}
 	}
         if ( sig_recvd != 0 ) return;
@@ -398,8 +401,16 @@ fill_buffer (
 #else
 					i = (size_t) ((size_t)rand () % npat);
 #endif
+					if ( selected == NULL )
+					{
+						break;
+					}
+					else if ( selected[i] == 0 )
+					{
+						break;
+					}
 				}
-				while ( (selected[i] == 1) && (sig_recvd == 0) );
+				while ( sig_recvd == 0 );
 				if ( sig_recvd != 0 ) return;
 			}
 			else
@@ -423,7 +434,10 @@ fill_buffer (
 			{
 				bits = patterns_dod[i] & 0xFFF;
 			}
-			selected[i] = 1;
+			if ( selected != NULL )
+			{
+				selected[i] = 1;
+			}
 		}
     	}
 

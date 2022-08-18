@@ -1,6 +1,15 @@
 This is the README file for wipefreespace, a program for secure wiping
  of free space on file systems.
 
+Wipefreespace wipes the following things (when supported by the backing
+ library):
+- free space (space in unused blocks/clusters)
+- free space in partially used blocks (also called the "slack space")
+- deleted files' names and other data that can be used to undelete a file
+  (like the journal)
+Wipefreespace does NOT decrease the amount of available free space when
+ working.
+
 NOTE: it is best to use this program on un-mounted file systems, which
  makes sure the journal is committed.
 
@@ -134,6 +143,10 @@ https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
   from the libhfsp/src/ directory where the C compiler can find them (or
   put the correct -I and -L options in the compiler flags).
 
+- OCFS: the "ocfs2-tools" series 1.6.x package (other versions also work, but
+  disable wiping undelete data in such case). Go to
+	http://oss.oracle.com/projects/ocfs2-tools/
+  to get it. Then compile and install that package.
 
 WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program
  may refuse to link if the compiler doesn't support the command line option
@@ -187,7 +200,7 @@ The patches for ntfsprogs are optional. Whether or not they will be included
 Type './configure' to configure the program for your system.
 If you do not wish support for a filesystem, give the '--enable-FS=no'
  option to ./configure (FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT,
- MINIX, JFS, HFSP).
+ MINIX, JFS, HFSP, OCFS).
 If you do not wish support for a particular wiping operation, give the
  '--enable-OPER=no' option to ./configure (OPER=wfs, unrm, part - these
  are wiping free space, undelete data and partially-used blocks,
@@ -257,6 +270,18 @@ WipeFreeSpace also works for file systems created inside regular
 Any option affects all filesystems given on the command line, not just
  the ones following it.
 
+To perform a command after wiping (like sending e-mail), simply run a
+ program after WipeFreeSpace is finished, for example:
+	wipefreespace [options] /dev/XY; mail [options]
+ or in a script:
+	#!/bin/bash
+	wipefreespace [options] /dev/XY
+	mail [options]
+
+To run WipeFreeSpace with a higher or lower priority, simply use the
+ "renice" utility, for example:
+	renice +1 $(pidof wipefreespace)
+
 =======================================================
 
 Building an RPM package (the old way):
@@ -290,7 +315,7 @@ you wish.
 marked with capital letters in the header:
 
 # YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007-2011 Bogdan 'bogdro' Drozdowski
+# Copyright (C) 2007-2012 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as
 # the wipefreespace package.
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.
