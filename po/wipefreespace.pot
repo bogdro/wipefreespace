@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace 1.7\n"
+"Project-Id-Version: wipefreespace 1.7.1\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2012-08-23 18:39+0200\n"
+"POT-Creation-Date: 2012-09-03 18:08+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -167,17 +167,17 @@ msgstr ""
 msgid "unknown"
 msgstr ""
 
-#: src/wipefreespace.c:466
+#: src/wipefreespace.c:467
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
 msgstr ""
 
-#: src/wipefreespace.c:468
+#: src/wipefreespace.c:469
 msgid " [options] "
 msgstr ""
 
-#: src/wipefreespace.c:470
+#: src/wipefreespace.c:471
 msgid ""
 "Options:\n"
 "--all-zeros\t\tUse only zeros for wiping\n"
@@ -187,7 +187,7 @@ msgid ""
 "-f|--force\t\tWipe even if the file system has errors"
 msgstr ""
 
-#: src/wipefreespace.c:477
+#: src/wipefreespace.c:478
 msgid ""
 "-h|--help\t\tPrint help\n"
 "-n|--iterations NNN\tNumber of passes (greater than 0)\n"
@@ -197,7 +197,7 @@ msgid ""
 "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr ""
 
-#: src/wipefreespace.c:484
+#: src/wipefreespace.c:485
 msgid ""
 "--nounrm\t\tDo NOT wipe undelete information\n"
 "--nowfs\t\t\tDo NOT wipe free space on file system\n"

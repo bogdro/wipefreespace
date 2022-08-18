@@ -220,7 +220,6 @@ wfs_reiser_wipe_part (
 
 	elem_key = root_dir_key;
 	elem_path.path_length = ILLEGAL_PATH_ELEMENT_OFFSET;
-
 	while ( (ret_part == WFS_SUCCESS)
 		&& (reiserfs_search_by_key_4 ( FS.rfs, &elem_key, &elem_path ) == ITEM_FOUND)
 		&& (sig_recvd == 0)

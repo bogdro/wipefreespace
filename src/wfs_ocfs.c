@@ -977,7 +977,7 @@ wfs_ocfs_wipe_unrm (
 				}
 			}
 			show_progress (WFS_PROGRESS_UNRM,
-				(unsigned int) (50+((curr_block - jsb->s_first)*50)/jsb->s_maxlen),
+				(unsigned int) (50+((curr_block - (journal_block_numer+1))*50)/jsb->s_maxlen),
 				&prev_percent);
 		}
 

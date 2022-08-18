@@ -362,7 +362,7 @@ wfs_r4_wipe_part_work (
 #  ifdef HAVE_ERRNO_H
 		errno = 0;
 #  endif
-		buf = (unsigned char *) malloc ( wfs_r4_get_block_size (FS) );
+		buf = (unsigned char *) malloc (wfs_r4_get_block_size (FS));
 		if ( buf == NULL )
 		{
 #  ifdef HAVE_ERRNO_H
@@ -1141,8 +1141,8 @@ wfs_r4_wipe_unrm (
 					}
 				}
 				/* change the key type and hash to something meaningless */
-				reiser4_key_set_type ( &(place.key), KEY_ATTRNAME_TYPE);
-				reiser4_key_set_hash ( &(place.key), MAX_UINT64 );
+				reiser4_key_set_type (&(place.key), KEY_ATTRNAME_TYPE);
+				reiser4_key_set_hash (&(place.key), MAX_UINT64);
 				reiser4_node_mkdirty (node.r4node);
 				reiser4_node_sync (node.r4node);
 				aal_block_write (node.r4node->block);

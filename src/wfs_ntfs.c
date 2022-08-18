@@ -1892,6 +1892,15 @@ wfs_ntfs_wipe_part (
 		}
 		return WFS_NOTHING;
 	}
+	if ( FS.ntfs->mft_na == NULL )
+	{
+		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_NOTHING;
+	}
 	if ( FS.ntfs->mft_na->initialized_size <= 0 )
 	{
 		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
@@ -1929,8 +1938,12 @@ wfs_ntfs_wipe_part (
 	{
 		ret_wfs = WFS_SUCCESS;
 		ni = ntfs_inode_open (FS.ntfs, inode_num);
-
-		if (ni == NULL)
+		if ( ni == NULL )
+		{
+			ret_wfs = WFS_INOREAD;
+			continue;
+                }
+		if ( ni->mrec == NULL )
 		{
 			ret_wfs = WFS_INOREAD;
 			continue;

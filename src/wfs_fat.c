@@ -475,7 +475,7 @@ _lookup_free_clus (
 
 #ifdef WFS_WANT_PART
 # ifndef WFS_ANSIC
-static void _file_seek WFS_PARAMS ((tfile_t * pfile, unsigned int offset));
+static void _file_seek WFS_PARAMS ((tfile_t * pfile, int offset));
 # endif
 
 static void
@@ -484,14 +484,15 @@ WFS_ATTR ((nonnull))
 # endif
 _file_seek (
 # ifdef WFS_ANSIC
-	tfile_t * pfile, unsigned int offset)
+	tfile_t * pfile, int offset)
 # else
 	pfile, offset)
 	tfile_t * pfile;
-	unsigned int offset;
+	int offset;
 # endif
 {
-	unsigned int cur_offset = offset;
+	int cur_offset = offset;
+
 	if ( pfile == NULL )
 	{
 		return;
@@ -508,6 +509,11 @@ _file_seek (
 	{
 		return;
 	}
+	if ( cur_offset - pfile->ptffs->pbs->byts_per_sec <= 0 )
+	{
+		pfile->cur_sec_offset = (unsigned int)cur_offset;
+		return;
+	}
 
 	while ( (cur_offset - pfile->ptffs->pbs->byts_per_sec > 0) &&
 		(fat_get_next_sec (pfile->ptffs->pfat, &pfile->cur_clus, &pfile->cur_sec) != 0)
@@ -515,7 +521,7 @@ _file_seek (
 	{
 		cur_offset -= pfile->ptffs->pbs->byts_per_sec;
 	}
-	pfile->cur_sec_offset = cur_offset;
+	pfile->cur_sec_offset = (unsigned int)cur_offset;
 }
 #endif /* WFS_WANT_PART */
 
@@ -669,7 +675,6 @@ wfs_fat_dirent_find (
 		ret = _get_dirent (pdir, &dirent);
 		if (ret == DIRENTRY_OK)
 		{
-
 			if (dirent.dir_name[0] == 0x00)
 			{
 				ret = ERR_DIRENTRY_NOT_FOUND;
@@ -854,12 +859,24 @@ wfs_fat_wipe_file_tail (
 
 	if ( (FS.fat == NULL) || (file == NULL) || (buf == NULL) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
 	file_len = dirent_get_file_size (fh->pdir_entry);
-	bufsize = wfs_fat_get_block_size (FS) -	(file_len % wfs_fat_get_block_size (FS));
+	if ( ((int)file_len < 0) || (file_len >= (unsigned int)0x80000000) )
+	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_SUCCESS;
+	}
 
+	bufsize = wfs_fat_get_block_size (FS) -	(file_len % wfs_fat_get_block_size (FS));
 	for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer ( j, buf, bufsize, selected, FS );
@@ -869,7 +886,7 @@ wfs_fat_wipe_file_tail (
 			break;
 		}
 		/* wipe the space after the file */
-		_file_seek (fh, file_len);
+		_file_seek (fh, (int)file_len);
 		written = TFFS_fwrite (file, bufsize, buf);
 		if ( written != (int)bufsize )
 		{
@@ -902,7 +919,7 @@ wfs_fat_wipe_file_tail (
 		if ( sig_recvd == 0 )
 		{
 			/* wipe the space after the file */
-			_file_seek (fh, file_len);
+			_file_seek (fh, (int)file_len);
 			written = TFFS_fwrite (file, bufsize, buf);
 			if ( written != (int)bufsize )
 			{
@@ -1457,7 +1474,7 @@ wfs_fat_wipe_unrm (
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_fat_get_block_size (FS) );
+	buf = (unsigned char *) malloc (wfs_fat_get_block_size (FS));
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H

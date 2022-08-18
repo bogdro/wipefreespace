@@ -1273,7 +1273,6 @@ wfs_xfs_wipe_part (
 		{
 			continue;
 		}
-
 		/* send "bmap -d" */
 		res = write (pipe_to_blk_db[PIPE_W], "bmap -d\n", 8);
 		if ( res <= 0 )
@@ -1331,10 +1330,12 @@ wfs_xfs_wipe_part (
 				read_buffer[res] = '\0';
 				continue;
 			}
-			res = 0;
+			start_block = 0;
+			number_of_blocks = 0;
 			res = sscanf (pos1,
 				"data offset %u startblock %llu (%llu/%llu) count %llu flag %u",
 				&offset, &start_block, &trash, &trash, &number_of_blocks, &mode );
+
 			/* flush input to get rid of the rest of inode info and 'xfs_db>' trash */
 			flush_pipe_input (pipe_from_blk_db[PIPE_R]);
 			if ( res != 6 )
@@ -1342,7 +1343,8 @@ wfs_xfs_wipe_part (
 				/* line found, but cannot be parsed */
 				break;
 			}
-			if ( offset > wfs_xfs_get_block_size (FS) )
+			if ( (start_block == 0) /* probably parsed incorrectly */
+				|| (offset > wfs_xfs_get_block_size (FS)) )
 			{
 				continue;
 			}

@@ -183,7 +183,7 @@ e2_do_block (
 	}
 
 	bd = (struct wfs_e234_block_data *)PRIVATE;
-	if ( (bd->ino == NULL) || (bd->wd.buf == NULL) )
+	if ( bd->wd.buf == NULL )
 	{
 		return BLOCK_ABORT;
 	}
@@ -214,7 +214,7 @@ e2_do_block (
 	/* do nothing on metadata blocks or if incorrect block number given */
 	if ( (BLOCKCNT < 0) || (*BLOCKNR == 0) )
 	{
-		return WFS_SUCCESS;
+		return 0;
 	}
 
 	for ( j = 0; (j < bd->wd.filesys.npasses) && (sig_recvd == 0); j++ )
@@ -785,6 +785,7 @@ wfs_e234_wipe_fs (
 	struct wfs_e234_block_data block_data;
 	unsigned int prev_percent = 0;
 	wfs_error_type_t error = {CURR_EXT234FS, {0}};
+	int block_ret = 0;
 
 	if ( FS.e2fs == NULL )
 	{
@@ -834,7 +835,6 @@ wfs_e234_wipe_fs (
 	error.errcode.e2error = ext2fs_read_block_bitmap (FS.e2fs);
 	if ( error.errcode.e2error != 0 )
 	{
-		error.errcode.e2error = ext2fs_close (FS.e2fs);
 		free (block_data.wd.buf);
 		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
@@ -850,11 +850,12 @@ wfs_e234_wipe_fs (
 		/* if we find an empty block, we shred it */
 		if ( ext2fs_test_block_bitmap (FS.e2fs->block_map, blno) == 0 )
 		{
-			ret_wfs = e2_do_block (FS.e2fs, &blno, 1, &block_data);
+			block_ret = e2_do_block (FS.e2fs, &blno, 1, &block_data);
 			show_progress (WFS_PROGRESS_WFS, (blno * 100)/FS.e2fs->super->s_blocks_count,
 				&prev_percent);
-			if ( (ret_wfs != WFS_SUCCESS) || (sig_recvd != 0) )
+			if ( (block_ret != 0) || (sig_recvd != 0) )
 			{
+				ret_wfs = WFS_BLKWR;
 				break;
 			}
 		}

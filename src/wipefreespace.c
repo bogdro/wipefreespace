@@ -385,6 +385,7 @@ show_progress (
 #endif
 {
 	unsigned int i;
+
 	if ( (stdout_open == 0) || (opt_verbose == 0) || (prev_percent == NULL)
 		|| ((type != 0) && (type != 1) && (type != 2)) )
 	{
@@ -516,14 +517,14 @@ static void print_versions (
 	printf ( "LibNTFS %s, http://www.linux-ntfs.org\n",
 		(lib_ver != NULL)? lib_ver : "<?>" );
 # else
-	printf ( "NTFS-3G: ?\n");
+	printf ( "NTFS-3G: <?>\n");
 # endif
 #endif
 #ifdef WFS_XFS
-	printf ( "XFS: ?\n");
+	printf ( "XFS: <?>\n");
 #endif
 #ifdef WFS_REISER
-	printf ( "ReiserFSv3: ?\n");
+	printf ( "ReiserFSv3: <?>\n");
 #endif
 #ifdef WFS_REISER4
 	lib_ver = libreiser4_version ();
@@ -531,19 +532,19 @@ static void print_versions (
 		(lib_ver != NULL)? lib_ver : "<?>" );
 #endif
 #ifdef WFS_FATFS
-	printf ( "FAT (TFFS): ?\n");
+	printf ( "FAT (TFFS): <?>\n");
 #endif
 #ifdef WFS_MINIXFS
-	printf ( "MinixFS: ?\n");
+	printf ( "MinixFS: <?>\n");
 #endif
 #ifdef WFS_JFS
-	printf ( "JFS: ?\n");
+	printf ( "JFS: <?>\n");
 #endif
 #ifdef WFS_HFSP
-	printf ( "HFS+: ?\n");
+	printf ( "HFS+: <?>\n");
 #endif
 #ifdef WFS_OCFS
-	printf ( "OCFS: ?\n");
+	printf ( "OCFS: <?>\n");
 #endif
 }
 

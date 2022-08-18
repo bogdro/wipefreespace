@@ -1,3 +1,21 @@
+2012-09-03	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.7.1
+	  This is a bugfix-only release.
+	* src/wfs_e234.c (e2_do_block): corrected wiping of free space. Not
+	  returning WFS_* constants.
+	* src/wfs_e234.c (wfs_e234_wipe_fs): not closing the filesystem
+	  in case of error. Better handling of block wiping errors.
+	* src/wipefreespace.c (print_versions): more consistent results for
+	  unknown versions.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): corrected the progress bar.
+	* src/wfs_xfs.c (wfs_xfs_wipe_part): added another check when parsing
+	  responses from xfs_db.
+	* src/wfs_fat.c (_file_seek): corrected seeking in the file, fixing
+	  wiping of partially-used blocks
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_part): more checks for NULL
+
+
 2012-08-23	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.7
