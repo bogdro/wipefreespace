@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv4 file system-specific functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -59,6 +59,14 @@
 /* this must be here, as it defines blk_t: */
 #include "wipefreespace.h"
 
+#if (defined HAVE_INT64_T) &&	\
+	(! defined __int8_t_defined)	/* defined in stdint.h in older glibc */
+/* workaround for a problem between libaal and newer glibc libraries - we
+ * have int64_t defined, so don't re-define: */
+# define __int8_t_defined 1
+/*#define int64_t reiser4_int64_t */
+#endif
+
 /* Avoid some Reiser4 header files' name conflicts: */
 #define div reiser4_div
 #define index reiser4_index
@@ -71,7 +79,7 @@
 #define REISER4_FAKE_H 1
 
 #if (defined HAVE_REISER4_LIBREISER4_H) && (defined HAVE_LIBREISER4)	\
-	&& (defined HAVE_LIBREISER4MISC) && (defined HAVE_LIBAAL)
+	/*&& (defined HAVE_LIBREISER4MISC)*/ && (defined HAVE_LIBAAL)
 # include <reiser4/libreiser4.h>
 #else
 # error Something wrong. Reiser4 requested, but headers or libraries missing.
@@ -250,7 +258,7 @@ wfs_r4_wipe_last_block (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (bd->wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
 		{
 			r4error = wfs_r4_flush_fs (bd->wfs_fs);
 		}
@@ -277,13 +285,12 @@ wfs_r4_wipe_last_block (
 				{
 					ret_part = WFS_BLKWR;
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (bd->wfs_fs.npasses > 1) && (sig_recvd == 0)
 					&& (ret_part == WFS_SUCCESS) )
 				{
 					r4error = wfs_r4_flush_fs (bd->wfs_fs);
-				}
+				} */
 			}
 		}
 	}
@@ -291,6 +298,7 @@ wfs_r4_wipe_last_block (
 	{
 		*error_ret = r4error;
 	}
+	aal_block_free (block);
 	return ret_part;
 }
 
@@ -498,7 +506,7 @@ wfs_r4_wipe_part_work (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				r4error = wfs_r4_flush_fs (wfs_fs);
 			}
@@ -523,13 +531,12 @@ wfs_r4_wipe_part_work (
 				{
 					ret_part = WFS_BLKWR;
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0)
 					&& (ret_part == WFS_SUCCESS) )
 				{
 					r4error = wfs_r4_flush_fs (wfs_fs);
-				}
+				} */
 			}
 		}
 		free (buf);
@@ -718,7 +725,7 @@ wfs_r4_wipe_fs (
 
 	/*number_of_blocks = aal_device_len (wfs_fs.r4->device);*/
 	number_of_blocks = reiser4_format_len (r4->device,
-		fs_block_size);
+		(uint32_t)(fs_block_size & 0x0FFFFFFFF));
 	if ( number_of_blocks == INVAL_BLK )
 	{
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
@@ -751,11 +758,15 @@ wfs_r4_wipe_fs (
 		{
 			/* block is unallocated, wipe it */
 			block = aal_block_load (r4->device,
-				fs_block_size,
+				(uint32_t)(fs_block_size & 0x0FFFFFFFF),
 				blk_no);
 			if ( block == NULL )
 			{
 				ret_wfs = WFS_BLKITER;
+				curr_sector++;
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int)((curr_sector * 100)/number_of_blocks),
+					&prev_percent);
 				continue;
 			}
 			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
@@ -786,8 +797,7 @@ wfs_r4_wipe_fs (
 				/* Flush after each writing, if more than 1
 				   overwriting needs to be done. Allow I/O bufferring
 				   (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1)
-					&& (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_r4_flush_fs (wfs_fs);
 				}
@@ -813,20 +823,20 @@ wfs_r4_wipe_fs (
 						if ( error != 0 )
 						{
 							ret_wfs = WFS_BLKWR;
-							break;
+							/*break; free the block first */
 						}
-						/* Flush after each writing, if more than 1
-						overwriting needs to be done. Allow I/O bufferring
-						(efficiency), if just one pass is needed. */
+						/* No need to flush the last
+						 * writing of a given block. *
 						if ( (wfs_fs.npasses > 1)
 							&& (sig_recvd == 0) )
 						{
 							error = wfs_r4_flush_fs (
 								wfs_fs);
-						}
+						} */
 					}
 				}
 			}
+			aal_block_free (block);
 		}
 		curr_sector++;
 		wfs_show_progress (WFS_PROGRESS_WFS,
@@ -913,9 +923,12 @@ wfs_r4_wipe_journal (
 		/*&& (ret_journ == WFS_SUCCESS)*/; blk_no++ )
 	{
 		block = aal_block_load (r4->device,
-			fs_block_size, blk_no);
+			(uint32_t)(fs_block_size & 0x0FFFFFFFF), blk_no);
 		if ( block == NULL )
 		{
+			curr_sector++;
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int) ((curr_sector*50)/len), &prev_percent);
 			continue;
 		}
 		for ( j = 0; (j < bd->wfs_fs.npasses) && (sig_recvd == 0)
@@ -945,7 +958,7 @@ wfs_r4_wipe_journal (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (bd->wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
 			{
 				r4error = wfs_r4_flush_fs (bd->wfs_fs);
 			}
@@ -993,21 +1006,21 @@ wfs_r4_wipe_journal (
 						if ( r4error != 0 )
 						{
 							ret_journ = WFS_BLKWR;
-							break;
+							/*break; free the block first */
 						}
-						/* Flush after each writing, if more than 1 overwriting needs
-						to be done.
-						Allow I/O bufferring (efficiency), if just one pass is needed. */
+						/* No need to flush the last
+						 * writing of a given block. *
 						if ( (bd->wfs_fs.npasses > 1)
 							&& (sig_recvd == 0) )
 						{
 							r4error = wfs_r4_flush_fs (
 								bd->wfs_fs);
-						}
+						} */
 					}
 				}
 			}
 		}
+		aal_block_free (block);
 		/* increase the block number for future iterations and calls */
 		bd->block_number++;
 		curr_sector++;
@@ -1080,7 +1093,7 @@ wfs_r4_wipe_object (
 		/*&& (ret_obj == WFS_SUCCESS)*/; blk_no++ )
 	{
 		block = aal_block_load (r4->device,
-			fs_block_size, blk_no);
+			(uint32_t)(fs_block_size & 0x0FFFFFFFF), blk_no);
 		if ( block == NULL )
 		{
 			continue;
@@ -1126,8 +1139,7 @@ wfs_r4_wipe_object (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (bd->wfs_fs.npasses > 1)
-				&& (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
 			{
 				r4error = wfs_r4_flush_fs (bd->wfs_fs);
 			}
@@ -1152,18 +1164,19 @@ wfs_r4_wipe_object (
 					if ( r4error != 0 )
 					{
 						ret_obj = WFS_BLKWR;
-						break;
+						/*break; free the block first */
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing
+					 * of a given block. *
 					if ( (bd->wfs_fs.npasses > 1)
 						&& (sig_recvd == 0) )
 					{
 						r4error = wfs_r4_flush_fs (bd->wfs_fs);
-					}
+					} */
 				}
 			}
 		}
+		aal_block_free (block);
 		/* increase the block number for future iterations and calls */
 		bd->block_number++;
 	}
@@ -1278,6 +1291,10 @@ wfs_r4_wipe_unrm_work (
 		if ( e != 0 )
 		{
 			/* could not fetch place data - move on to the next item */
+			curr_direlem++;
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int)(50 + (curr_direlem * 50)
+				/reiser4_node_items (r4node)), &prev_percent);
 			continue;
 		}
 
@@ -1296,11 +1313,19 @@ wfs_r4_wipe_unrm_work (
 # endif
 			if ( key_copy.plug->check_struct == NULL )
 			{
+				curr_direlem++;
+				wfs_show_progress (WFS_PROGRESS_UNRM,
+					(unsigned int)(50 + (curr_direlem * 50)
+					/reiser4_node_items (r4node)), &prev_percent);
 				continue;
 			}
 			e = key_copy.plug->check_struct (&key_copy);
 			if ( e < 0 )
 			{
+				curr_direlem++;
+				wfs_show_progress (WFS_PROGRESS_UNRM,
+					(unsigned int)(50 + (curr_direlem * 50)
+					/reiser4_node_items (r4node)), &prev_percent);
 				continue;
 			}
 			if ( e != 0 )
@@ -1340,6 +1365,10 @@ wfs_r4_wipe_unrm_work (
 				reiser4_node_sync (r4node);
 				aal_block_write (r4node->block);
 			}
+			curr_direlem++;
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int)(50 + (curr_direlem * 50)
+				/reiser4_node_items (r4node)), &prev_percent);
 			continue;
 		}
 		/* if branch node, recurse */
@@ -1455,7 +1484,7 @@ wfs_r4_open_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1488,6 +1517,11 @@ wfs_r4_open_fs (
 
 	if ( libreiser4_init () != 0 )
 	{
+		error = 100;
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		free (dev_name_copy);
 		return WFS_OPENFS;
 	}
@@ -1501,6 +1535,7 @@ wfs_r4_open_fs (
 		);
 	if ( dev == NULL )
 	{
+		error = 101;
 		free (dev_name_copy);
 		libreiser4_fini ();
 		if ( error_ret != NULL )
@@ -1513,9 +1548,9 @@ wfs_r4_open_fs (
 	r4 = reiser4_fs_open (dev, 1);
 	if ( r4 == NULL )
 	{
+		error = 102;
 		aal_device_close (dev);
 		free (dev_name_copy);
-		free (r4);
 		libreiser4_fini ();
 		if ( error_ret != NULL )
 		{

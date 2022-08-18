@@ -1,44 +1,47 @@
-# Special names here like {__make} come from /usr/lib/rpm/macros
+# Special names here like {__make} come from /usr/lib/rpm/macros, /usr/lib/rpm/macros.rpmbuild
 
 %define version @VERSION@
 %define name wipefreespace
-%define wfs_prefix /usr/local
+# define wfs_prefix /usr/local
 
 Summary:	Program for secure cleaning of free space on file systems
 Name:		%{name}
 Version:	%{version}
-Release:	1
+Release:	1%{?dist}
 URL:		http://wipefreespace.sf.net
 License:	GPLv2
-Group:		Applications/System
-# Group:		System Utilities
+# group must be one of the listed in /usr/share/doc/rpm-.../GROUPS or /usr/share/rpmlint/config.d/distro.conf
+Group:		Security
+# Group:		System Utilities / Applications/System
 # Packager:	Bogdan Drozdowski <bogdandr@op.pl>
 # Prefix:		/usr/local
 Source:		%{name}-%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-build
 Requires:	xfsprogs
-BuildRequires:	gcc, glibc, glibc-devel, glibc-headers, make
+BuildRequires:	gcc, glibc, glibc-devel, make
 Obsoletes:	e2wipefreespace <= 0.5
 Provides:	e2wipefreespace >= 0.6
 
 %description
 
-The wipefreespace is a program which securely cleans free space on given
+Wipefreespace is a program which securely cleans free space on given
 file systems, making confidential removed data recovery impossible. It also
 removes deleted files' names, so that no trace is left. Supported file systems
 are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS, HFS+
 and OCFS.
 
 %prep
-# {__rm} -rf $RPM_BUILD_ROOT
 %setup -q
+%configure
 
 %build
-CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man \
-	--infodir=/usr/share/info --libdir=%{wfs_prefix}/lib
+#CFLAGS='-march=i386' ./configure --prefix= {wfs_prefix} --mandir=/usr/share/man \
+#	--infodir=/usr/share/info --libdir= {wfs_prefix}/lib
 #--mandir=$RPM_BUILD_ROOT/usr/local/man
 #prefix=$RPM_BUILD_ROOT/usr/local
-%{__make} 2>/dev/null
+# {__make} 2>/dev/null
+
+%make
 
 %post
 #install-info
@@ -48,34 +51,54 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 
 %install
 
-%{__mkdir_p} $RPM_BUILD_ROOT/usr/share/info
+%makeinstall_std
+
+# {__mkdir_p} $RPM_BUILD_ROOT/usr/share/info
 #prefix=$RPM_BUILD_ROOT/usr/local
-%{__make} DESTDIR="$RPM_BUILD_ROOT" install-strip
+# {__make} DESTDIR="$RPM_BUILD_ROOT" install-strip
 # {__mv} -f $RPM_BUILD_ROOT/usr/share/locale/pl/LC_MESSAGES/wipefreespace.mo \
 #	$RPM_BUILD_ROOT {wfs_prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
-%{__rm} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace*
-%{__rm} -f $RPM_BUILD_ROOT%{wfs_prefix}/info/wipefreespace.info*
-%{__rm} -f $RPM_BUILD_ROOT%{wfs_prefix}/man/man1/wipefreespace.1*
-%{__rm} -f $RPM_BUILD_ROOT%{wfs_prefix}/share/info/wipefreespace.info*
-%{__rm} -f $RPM_BUILD_ROOT%{wfs_prefix}/share/man/man1/wipefreespace.1*
+# {__rm} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace*
+# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/info/wipefreespace.info*
+# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/man/man1/wipefreespace.1*
+# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/share/info/wipefreespace.info*
+# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/share/man/man1/wipefreespace.1*
 # {__rm} -f $RPM_BUILD_ROOT {wfs_wfs_prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/e2wipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/e3wipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/e4wipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/ntfswipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/xfswipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/reiserwipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/reiser4wipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/fatwipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/vfatwipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/minixwipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/minix1wipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/minix2wipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/jfswipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/hfspwipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/hfswipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/ocfswipefreespace
-%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/ocfs2wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/e2wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/e3wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/e4wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/ntfswipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/xfswipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/reiserwipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/reiser4wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/fatwipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/vfatwipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/minixwipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/minix1wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/minix2wipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/jfswipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/hfspwipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/hfswipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/ocfswipefreespace
+%{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/ocfs2wipefreespace
+
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/e2wipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/e3wipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/e4wipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/ntfswipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/xfswipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/reiserwipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/reiser4wipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/fatwipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/vfatwipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/minixwipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/minix1wipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/minix2wipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/jfswipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/hfspwipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/hfswipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/ocfswipefreespace.1%_extension
+%{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/ocfs2wipefreespace.1%_extension
 # {__mv} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace $RPM_BUILD_ROOT {wfs_prefix}/bin/wipefreespace
 # {makeinstall}
 
@@ -87,32 +110,49 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 %files
 
 %defattr(-,root,root)
-%{wfs_prefix}/bin/wipefreespace
-%{wfs_prefix}/bin/e2wipefreespace
-%{wfs_prefix}/bin/e3wipefreespace
-%{wfs_prefix}/bin/e4wipefreespace
-%{wfs_prefix}/bin/ntfswipefreespace
-%{wfs_prefix}/bin/xfswipefreespace
-%{wfs_prefix}/bin/reiserwipefreespace
-%{wfs_prefix}/bin/reiser4wipefreespace
-%{wfs_prefix}/bin/fatwipefreespace
-%{wfs_prefix}/bin/vfatwipefreespace
-%{wfs_prefix}/bin/minixwipefreespace
-%{wfs_prefix}/bin/minix1wipefreespace
-%{wfs_prefix}/bin/minix2wipefreespace
-%{wfs_prefix}/bin/jfswipefreespace
-%{wfs_prefix}/bin/hfspwipefreespace
-%{wfs_prefix}/bin/hfswipefreespace
-%{wfs_prefix}/bin/ocfswipefreespace
-%{wfs_prefix}/bin/ocfs2wipefreespace
-%doc /usr/share/info/wipefreespace.info.gz
-%doc /usr/share/man/man1/wipefreespace.1.gz
+%{_bindir}/wipefreespace
+%{_bindir}/e2wipefreespace
+%{_bindir}/e3wipefreespace
+%{_bindir}/e4wipefreespace
+%{_bindir}/ntfswipefreespace
+%{_bindir}/xfswipefreespace
+%{_bindir}/reiserwipefreespace
+%{_bindir}/reiser4wipefreespace
+%{_bindir}/fatwipefreespace
+%{_bindir}/vfatwipefreespace
+%{_bindir}/minixwipefreespace
+%{_bindir}/minix1wipefreespace
+%{_bindir}/minix2wipefreespace
+%{_bindir}/jfswipefreespace
+%{_bindir}/hfspwipefreespace
+%{_bindir}/hfswipefreespace
+%{_bindir}/ocfswipefreespace
+%{_bindir}/ocfs2wipefreespace
+%doc %{_infodir}/wipefreespace.info%_extension
+%doc %{_mandir}/man1/wipefreespace.1%_extension
+%doc %{_mandir}/man1/e2wipefreespace.1%_extension
+%doc %{_mandir}/man1/e3wipefreespace.1%_extension
+%doc %{_mandir}/man1/e4wipefreespace.1%_extension
+%doc %{_mandir}/man1/ntfswipefreespace.1%_extension
+%doc %{_mandir}/man1/xfswipefreespace.1%_extension
+%doc %{_mandir}/man1/reiserwipefreespace.1%_extension
+%doc %{_mandir}/man1/reiser4wipefreespace.1%_extension
+%doc %{_mandir}/man1/fatwipefreespace.1%_extension
+%doc %{_mandir}/man1/vfatwipefreespace.1%_extension
+%doc %{_mandir}/man1/minixwipefreespace.1%_extension
+%doc %{_mandir}/man1/minix1wipefreespace.1%_extension
+%doc %{_mandir}/man1/minix2wipefreespace.1%_extension
+%doc %{_mandir}/man1/jfswipefreespace.1%_extension
+%doc %{_mandir}/man1/hfspwipefreespace.1%_extension
+%doc %{_mandir}/man1/hfswipefreespace.1%_extension
+%doc %{_mandir}/man1/ocfswipefreespace.1%_extension
+%doc %{_mandir}/man1/ocfs2wipefreespace.1%_extension
 %doc README
 %doc COPYING
 %doc AUTHORS
 %doc ChangeLog
-%{wfs_prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
-%{wfs_prefix}/share/locale/en@boldquot/LC_MESSAGES/wipefreespace.mo
-%{wfs_prefix}/share/locale/en@quot/LC_MESSAGES/wipefreespace.mo
+%{_localedir}/pl/LC_MESSAGES/wipefreespace.mo %lang(pl)
+%{_localedir}/en@boldquot/LC_MESSAGES/wipefreespace.mo %lang(en)
+%{_localedir}/en@quot/LC_MESSAGES/wipefreespace.mo %lang(en)
 
 %changelog

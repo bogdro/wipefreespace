@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- OCFS file system-specific functions.
  *
- * Copyright (C) 2011-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -70,6 +70,9 @@
 
 /* fix conflict with <string.h>: */
 #define index ocfs_index
+#ifndef HAVE_UMODE_T
+# define umode_t mode_t
+#endif
 
 #if (defined HAVE_OCFS2_OCFS2_H) && (defined HAVE_LIBOCFS2)
 # include <ocfs2/ocfs2.h>
@@ -154,7 +157,7 @@ static int wfs_ocfs_wipe_part_blocks (
 	int selected[WFS_NPAT] = {0};
 	size_t to_wipe;
 	unsigned int offset;
-	unsigned int j;
+	unsigned long int j;
 	ocfs2_filesys * ocfs2;
 	errcode_t * error_ret;
 
@@ -214,8 +217,7 @@ static int wfs_ocfs_wipe_part_blocks (
 					}
 					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (bd->wd.filesys.npasses > 1)
-						&& (sig_recvd == 0) )
+					if ( WFS_IS_SYNC_NEEDED(bd->wd.filesys) )
 					{
 						error = wfs_ocfs_flush_fs (
 							bd->wd.filesys);
@@ -245,14 +247,13 @@ static int wfs_ocfs_wipe_part_blocks (
 							{
 								ret_part = WFS_BLKWR;
 							}
-							/* Flush after each writing, if more than 1 overwriting needs to be done.
-							Allow I/O bufferring (efficiency), if just one pass is needed. */
+							/* No need to flush the last writing of a given block. *
 							if ( (bd->wd.filesys.npasses > 1)
 								&& (sig_recvd == 0) )
 							{
 								error = wfs_ocfs_flush_fs (
 									bd->wd.filesys);
-							}
+							}*/
 						}
 					}
 				}
@@ -461,8 +462,7 @@ wfs_ocfs_wipe_part (
 					}
 					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (wfs_fs.npasses > 1)
-						&& (sig_recvd == 0) )
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 					{
 						error = wfs_ocfs_flush_fs (wfs_fs);
 					}
@@ -490,14 +490,13 @@ wfs_ocfs_wipe_part (
 							ret_part = WFS_BLKWR;
 							error = err;
 						}
-						/* Flush after each writing, if more than 1 overwriting needs to be done.
-						Allow I/O bufferring (efficiency), if just one pass is needed. */
+						/* No need to flush the last writing of a given block. *
 						if ( (wfs_fs.npasses > 1)
 							&& (sig_recvd == 0) )
 						{
 							error = wfs_ocfs_flush_fs (
 								wfs_fs);
-						}
+						}*/
 					}
 				}
 			}
@@ -682,7 +681,7 @@ wfs_ocfs_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_ocfs_flush_fs (wfs_fs);
 			}
@@ -716,13 +715,12 @@ wfs_ocfs_wipe_fs (
 						}
 						return WFS_BLKWR;
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_ocfs_flush_fs (
 							wfs_fs);
-					}
+					}*/
 				}
 			}
 		}
@@ -805,7 +803,7 @@ static int wfs_ocfs_wipe_unrm_dir (
 		{
 			err = ocfs2_dir_iterate2 (ocfs2, dirent->inode,
 				OCFS2_DIRENT_FLAG_INCLUDE_REMOVED, NULL,
-				&wfs_ocfs_wipe_unrm_dir, &wd);
+				&wfs_ocfs_wipe_unrm_dir, wd);
 			if ( err != 0 )
 			{
 				ret_unrm = WFS_DIRITER;
@@ -893,6 +891,7 @@ wfs_ocfs_wipe_unrm (
 	errcode_t error = 0;
 	ocfs2_filesys * ocfs2;
 	errcode_t * error_ret;
+	unsigned int journal_size;
 
 	ocfs2 = (ocfs2_filesys *) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -1032,9 +1031,9 @@ wfs_ocfs_wipe_unrm (
 		}
 		/*journal_size_in_clusters = (jsb->s_blocksize * jsb->s_maxlen) >>
 			OCFS2_RAW_SB(ocfs2->fs_super)->s_clustersize_bits;*/
-
+		journal_size = jsb->s_maxlen; /* save before overwriting */
 		for ( curr_block = journal_block_numer+1;
-			(curr_block < journal_block_numer + jsb->s_maxlen)
+			(curr_block < journal_block_numer + journal_size)
 			&& (sig_recvd == 0); curr_block++ )
 		{
 			for ( j = 0; (j < wfs_fs.npasses)
@@ -1066,7 +1065,7 @@ wfs_ocfs_wipe_unrm (
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					err = wfs_ocfs_flush_fs (
 						wfs_fs);
@@ -1101,18 +1100,17 @@ wfs_ocfs_wipe_unrm (
 						}
 						return WFS_BLKWR;
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						err = wfs_ocfs_flush_fs (
 							wfs_fs);
-					}
+					}*/
 				}
 			}
 			wfs_show_progress (WFS_PROGRESS_UNRM,
 				(unsigned int) (50+((curr_block -
-					(journal_block_numer+1))*50)/jsb->s_maxlen),
+					(journal_block_numer+1))*50)/journal_size),
 				&prev_percent);
 		}
 
@@ -1204,12 +1202,16 @@ wfs_ocfs_open_fs (
 	{
 		return WFS_BADPARAM;
 	}
+	error_ret = (errcode_t *) wfs_fs->fs_error;
 	if ( wfs_fs->fsname == NULL )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = WFS_BADPARAM;
+		}
 		return WFS_BADPARAM;
 	}
 
-	error_ret = (errcode_t *) wfs_fs->fs_error;
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 	ocfs2 = NULL;
 	err = ocfs2_open (wfs_fs->fsname, OCFS2_FLAG_RW | OCFS2_FLAG_BUFFERED,

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -30,6 +30,7 @@
 #define _BSD_SOURCE /* fsync() */
 /* used for fsync(), but this makes BSD's select() impossible. Same for _POSIX_SOURCE - don't define. */
 /*#define _XOPEN_SOURCE*/
+#define _DEFAULT_SOURCE 1
 
 #include <stdio.h>	/* sscanf() */
 
@@ -185,7 +186,7 @@ wfs_xfs_read_line (
 	/* read just 1 line */
 	int res = 0;
 	int select_fails = 0;
-	int bytes_read = -1;
+	ssize_t bytes_read = -1;
 #ifdef WFS_XFS_HAVE_SELECT
 	struct timeval tv;
 	fd_set set;
@@ -683,8 +684,8 @@ wfs_xfs_wipe_fs	(
 		}
 		/* Disk offset = (agno * xxfs->wfs_xfs_agblocks + agoff ) * \
 			xxfs->wfs_xfs_blocksize */
-		file_offset = (off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
-			fs_block_size;
+		file_offset = (off64_t) ((agno * xxfs->wfs_xfs_agblocks + agoff) *
+			fs_block_size);
 		/* Wiping loop */
 		for ( i = 0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
 		{
@@ -726,12 +727,12 @@ wfs_xfs_wipe_fs	(
 					/* Flush after each writing, if more than 1 overwriting
 						needs to be done. Allow I/O bufferring (efficiency),
 						if just one pass is needed. */
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 					{
 						error = wfs_xfs_flush_fs (wfs_fs);
 					}
 				}
-				file_offset += fs_block_size;
+				file_offset += (off64_t) fs_block_size;
 			}
 			if ( j < length )
 			{
@@ -740,8 +741,8 @@ wfs_xfs_wipe_fs	(
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
-			file_offset = (off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
-				fs_block_size;
+			file_offset = (off64_t) ((agno * xxfs->wfs_xfs_agblocks + agoff) *
+				fs_block_size);
 			/* NOTE: this must be inside */
 			if ( lseek64 (fs_fd, file_offset, SEEK_SET) != file_offset )
 			{
@@ -789,15 +790,13 @@ wfs_xfs_wipe_fs	(
 							ret_wfs = WFS_BLKWR;
 							break;
 						}
-						/* Flush after each writing, if more than 1 overwriting
-						needs to be done. Allow I/O bufferring (efficiency),
-						if just one pass is needed. */
+						/* No need to flush the last writing of a given block. *
 						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 						{
 							error = wfs_xfs_flush_fs (wfs_fs);
-						}
+						} */
 					}
-					file_offset += fs_block_size;
+					file_offset += (off64_t) fs_block_size;
 				}
 				if ( j < length )
 				{
@@ -919,6 +918,7 @@ wfs_xfs_wipe_part (
 
 	unsigned long int i;
 	int res;
+	ssize_t write_res;
 	int pipe_from_ino_db[2];
 	int pipe_from_blk_db[2], pipe_to_blk_db[2];
 	int fs_fd;
@@ -1234,7 +1234,7 @@ wfs_xfs_wipe_part (
 		res = sscanf ( read_buffer, " %llu", &inode );
 		if ( res != 1 )
 		{
-			continue;	/* stop ony when child stops writing */
+			continue;	/* stop only when child stops writing */
 		}
 		/* request inode data from the second xfs_db */
 #  ifdef HAVE_SNPRINTF
@@ -1243,8 +1243,10 @@ wfs_xfs_wipe_part (
 		sprintf (inode_cmd, "inode %llu\nprint\n", inode);
 #  endif
 		inode_cmd[sizeof (inode_cmd)-1] = '\0';
-		res = write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd));
-		if ( res <= 0 )
+		/* flush input to get rid of the rest of inode info and 'xfs_db>' trash */
+		flush_pipe_input (pipe_from_blk_db[PIPE_R]);
+		write_res = write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd));
+		if ( write_res <= 0 )
 		{
 			break;
 		}
@@ -1315,17 +1317,18 @@ wfs_xfs_wipe_part (
 			continue;
 		}
 		/* send "bmap -d" */
-		res = write (pipe_to_blk_db[PIPE_W], "bmap -d\n", 8);
-		if ( res <= 0 )
+		write_res = write (pipe_to_blk_db[PIPE_W], "bmap -d\n", 8);
+		if ( write_res <= 0 )
 		{
 			break;
 		}
 		flush_pipe_output (pipe_to_blk_db[PIPE_W]);
+		res = 0;
 		do
 		{
 			/* read just 1 line */
-			res = wfs_xfs_read_line (pipe_from_blk_db[PIPE_R], read_buffer,
-				&child_xfsdb, sizeof (read_buffer) );
+			res = wfs_xfs_read_line (pipe_from_blk_db[PIPE_R], &read_buffer[res],
+				&child_xfsdb, sizeof (read_buffer) - (size_t)res );
 #  ifdef HAVE_ERRNO_H
 			/*if ( errno == EAGAIN ) continue;*/
 #  endif
@@ -1364,11 +1367,14 @@ wfs_xfs_wipe_part (
 			/* check for last line element */
 			if ( strstr (read_buffer, "flag") == NULL )
 			{
-				/* if missing, but first is present, joing this reading
-				   with the next one */
-				strncpy (read_buffer, pos1,
-					(size_t)(&read_buffer[sizeof (read_buffer)] - pos1));
-				res = &read_buffer[sizeof (read_buffer)] - pos1;
+				/* if missing, but first is present, join this reading
+				   with the next one. Strncpy requires non-overlapping
+				   buffers. */
+				for ( i = 0; i < (size_t)(&read_buffer[sizeof (read_buffer) - 1] - pos1); i++ )
+				{
+					read_buffer[i] = pos1[i];
+				}
+				res = (int)((&read_buffer[sizeof (read_buffer) - 1] - pos1) & 0x0FFFFFFFF);
 				read_buffer[res] = '\0';
 				continue;
 			}
@@ -1388,6 +1394,7 @@ wfs_xfs_wipe_part (
 			if ( (start_block == 0) /* probably parsed incorrectly */
 				|| (offset > fs_block_size) )
 			{
+				res = 0;
 				continue;
 			}
 
@@ -1401,6 +1408,7 @@ wfs_xfs_wipe_part (
 				- (int)((inode_size/*+offset*/) % fs_block_size);
 			if ( length_to_wipe <= 0 )
 			{
+				res = 0;
 				continue;
 			}
 			file_offset = (off64_t) (start_block * fs_block_size
@@ -1443,7 +1451,7 @@ wfs_xfs_wipe_part (
 					}
 					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 					{
 						error = wfs_xfs_flush_fs (wfs_fs);
 					}
@@ -1477,13 +1485,12 @@ wfs_xfs_wipe_part (
 							ret_part = WFS_BLKWR;
 							break;
 						}
-						/* Flush after each writing, if more than 1 overwriting needs
-						to be done.
-						Allow I/O bufferring (efficiency), if just one pass is needed. */
+						/* No need to flush the last
+						 * writing of a given block. *
 						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 						{
 							error = wfs_xfs_flush_fs (wfs_fs);
-						}
+						} */
 					}
 				}
 			}
@@ -1561,6 +1568,13 @@ wfs_xfs_check_err (
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
+#ifdef HAVE_STAT_H
+# ifdef HAVE_STAT64
+	struct stat64 s;
+# else
+	struct stat s;
+# endif
+#endif
 
 	xxfs = (struct wfs_xfs *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1570,9 +1584,11 @@ wfs_xfs_check_err (
 	}
 
 #ifdef HAVE_STAT_H
-	struct stat s;
-
+# ifdef HAVE_STAT64
+	if ( stat64 (xxfs->dev_name, &s) >= 0 )
+# else
 	if ( stat (xxfs->dev_name, &s) >= 0 )
+# endif
 	{
 		if ( S_ISREG (s.st_mode) )
 		{
@@ -2032,7 +2048,8 @@ wfs_xfs_open_fs (
 		}
 		if ( pos1 != NULL )
 		{
-			res = sscanf (pos1, search1 "%u", &(xxfs->wfs_xfs_blocksize) );
+			xxfs->wfs_xfs_blocksize = 0;
+			res = sscanf (pos1, search1 "%u", (unsigned int *)&(xxfs->wfs_xfs_blocksize) );
 			if ( res != 1 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -470,8 +470,8 @@ wipe_compressed_attribute (
 			{
 				if ( mybuf != NULL )
 				{
-					ret = ntfs_rl_pread (ntfs, na->rl, offset, 1LL * bufsize, mybuf);
-					if (ret != 1LL * bufsize)
+					ret = ntfs_rl_pread (ntfs, na->rl, offset, 1LL * (s64)bufsize, mybuf);
+					if (ret != 1LL * (s64)bufsize)
 					{
 						if ( error_ret != NULL )
 						{
@@ -535,7 +535,7 @@ wipe_compressed_attribute (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				/*ntfs_inode_mark_dirty(na->ni);*/
 				ntfs_inode_sync (na->ni);
@@ -592,14 +592,13 @@ wipe_compressed_attribute (
 						ret = ntfs_rl_pwrite (ntfs, na->rl, s64zero, offset, size, buf);
 #  endif
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
-						/*ntfs_inode_mark_dirty(na->ni);*/
+						/ * ntfs_inode_mark_dirty(na->ni); * /
 						ntfs_inode_sync (na->ni);
 						gerror = wfs_ntfs_flush_fs (wfs_fs);
-					}
+					} */
 					if (ret != size)
 					{
 						if ( mybuf != NULL )
@@ -743,7 +742,7 @@ wipe_attribute (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			/*ntfs_inode_mark_dirty(na->ni);*/
 			ntfs_inode_sync (na->ni);
@@ -779,14 +778,13 @@ wipe_attribute (
 					}
 					return -1;
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
-					/*ntfs_inode_mark_dirty(na->ni);*/
+					/ * ntfs_inode_mark_dirty(na->ni); * /
 					ntfs_inode_sync (na->ni);
 					gerror = wfs_ntfs_flush_fs (wfs_fs);
-				}
+				} */
 			}
 		}
 	}
@@ -1190,7 +1188,7 @@ destroy_record (
 
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_ntfs_flush_fs (wfs_fs);
 			}
@@ -1220,12 +1218,11 @@ destroy_record (
 					break;
 				}
 
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
 					error = wfs_ntfs_flush_fs (wfs_fs);
-				}
+				}*/
 			}
 		}
 		/* Wiping file name length */
@@ -1253,7 +1250,7 @@ destroy_record (
 
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_ntfs_flush_fs (wfs_fs);
 			}
@@ -1320,7 +1317,7 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
@@ -1350,13 +1347,11 @@ destroy_record (
 						break;
 					}
 
-					/* Flush after each writing, if more than 1 overwriting needs
-					   to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_ntfs_flush_fs (wfs_fs);
-					}
+					}*/
 				}
 			}
 			/* Wiping data length */
@@ -1383,7 +1378,7 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
@@ -1468,7 +1463,7 @@ destroy_record (
 							   overwriting needs to be done.
 							   Allow I/O bufferring (efficiency), if just
 							   one pass is needed. */
-							if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+							if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 							{
 								error = wfs_ntfs_flush_fs (wfs_fs);
 							}
@@ -1565,7 +1560,7 @@ destroy_record (
 
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
@@ -1846,7 +1841,7 @@ wfs_ntfs_wipe_journal (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			error = wfs_ntfs_flush_fs (wfs_fs);
 		}
@@ -2050,15 +2045,29 @@ wfs_ntfs_wipe_part (
 		/*&& (ret_wfs == WFS_SUCCESS)*/; inode_num++ )
 	{
 		ret_wfs = WFS_SUCCESS;
+#ifdef HAVE_ERRNO_H
+		errno = 0;
+#endif
 		ni = ntfs_inode_open (ntfs, inode_num);
 		if ( ni == NULL )
 		{
-			ret_wfs = WFS_INOREAD;
+#ifdef HAVE_ERRNO_H
+			if ( errno != ENOENT )
+#endif
+			{
+				ret_wfs = WFS_INOREAD;
+			}
+			wfs_show_progress (WFS_PROGRESS_PART,
+				(unsigned int) (inode_num/nr_mft_records),
+				&prev_percent);
 			continue;
                 }
 		if ( ni->mrec == NULL )
 		{
 			ret_wfs = WFS_INOREAD;
+			wfs_show_progress (WFS_PROGRESS_PART,
+				(unsigned int) (inode_num/nr_mft_records),
+				&prev_percent);
 			continue;
                 }
 		if ( sig_recvd != 0 )
@@ -2331,7 +2340,7 @@ wfs_ntfs_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_ntfs_flush_fs (wfs_fs);
 			}
@@ -2366,12 +2375,11 @@ wfs_ntfs_wipe_fs (
 						}
 						return WFS_BLKWR;
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_ntfs_flush_fs (wfs_fs);
-					}
+					}*/
 				}
 			}
 		}
@@ -2711,11 +2719,15 @@ wfs_ntfs_open_fs (
 	{
 		return WFS_BADPARAM;
 	}
+	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	if ( wfs_fs->fsname == NULL )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = WFS_BADPARAM;
+		}
 		return WFS_BADPARAM;
 	}
-	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 
 #ifdef HAVE_ERRNO_H
@@ -2724,6 +2736,7 @@ wfs_ntfs_open_fs (
 	nv = ntfs_mount (wfs_fs->fsname, 0);
 	if ( (nv == NULL) && (sig_recvd == 0) )
 	{
+		error = WFS_OPENFS;
 #ifdef HAVE_ERRNO_H
 		if ( errno != 0 )
 		{
@@ -2738,6 +2751,7 @@ wfs_ntfs_open_fs (
 			nv = ntfs_mount (wfs_fs->fsname, 0);
 			if ( nv != NULL )
 			{
+				error = 0;
 				wfs_fs->whichfs = WFS_CURR_FS_NTFS;
 				wfs_fs->fs_backend = nv;
 # ifdef HAVE_MEMCPY
@@ -2750,6 +2764,7 @@ wfs_ntfs_open_fs (
 	}
 	else if ( nv != NULL )
 	{
+		error = 0;
 		wfs_fs->whichfs = WFS_CURR_FS_NTFS;
 		wfs_fs->fs_backend = nv;
 #ifdef HAVE_MEMCPY

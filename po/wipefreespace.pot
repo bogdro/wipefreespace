@@ -1,17 +1,18 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR Bogdan bogdro Drozdowski
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the wipefreespace package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace 2.2.2\n"
+"Project-Id-Version: wipefreespace 2.3\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2018-01-14 15:06+0100\n"
+"POT-Creation-Date: 2019-10-17 17:30+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -199,85 +200,85 @@ msgstr ""
 msgid "unknown"
 msgstr ""
 
-#: src/wipefreespace.c:598
+#: src/wipefreespace.c:597
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
 msgstr ""
 
-#: src/wipefreespace.c:600
+#: src/wipefreespace.c:599
 msgid " [options] "
 msgstr ""
 
-#: src/wipefreespace.c:602
+#: src/wipefreespace.c:601
 msgid "Options:"
 msgstr ""
 
-#: src/wipefreespace.c:603
+#: src/wipefreespace.c:602
 msgid "--all-zeros\t\tUse only zeros for wiping"
 msgstr ""
 
-#: src/wipefreespace.c:604
+#: src/wipefreespace.c:603
 msgid "--background\t\tContinue work in the background, if possible"
 msgstr ""
 
-#: src/wipefreespace.c:605
+#: src/wipefreespace.c:604
 msgid "-b|--superblock <off>\tSuperblock offset on the given filesystems"
 msgstr ""
 
-#: src/wipefreespace.c:606
+#: src/wipefreespace.c:605
 msgid "-B|--blocksize <size>\tBlock size on the given filesystems"
 msgstr ""
 
-#: src/wipefreespace.c:607
+#: src/wipefreespace.c:606
 msgid "-f|--force\t\tWipe even if the file system has errors"
 msgstr ""
 
-#: src/wipefreespace.c:608
+#: src/wipefreespace.c:607
 msgid "-h|--help\t\tPrint help"
 msgstr ""
 
-#: src/wipefreespace.c:609
+#: src/wipefreespace.c:608
 msgid "-n|--iterations NNN\tNumber of passes (greater than 0)"
 msgstr ""
 
-#: src/wipefreespace.c:610
+#: src/wipefreespace.c:609
 msgid "--last-zero\t\tPerform additional wiping with zeros"
 msgstr ""
 
-#: src/wipefreespace.c:611
+#: src/wipefreespace.c:610
 msgid "-l|--license\t\tPrint license information"
 msgstr ""
 
-#: src/wipefreespace.c:612
+#: src/wipefreespace.c:611
 msgid "--method <name>\t\tUse the given method for wiping"
 msgstr ""
 
-#: src/wipefreespace.c:613
+#: src/wipefreespace.c:612
 msgid "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr ""
 
-#: src/wipefreespace.c:614
+#: src/wipefreespace.c:613
 msgid "--nounrm\t\tDo NOT wipe undelete information"
 msgstr ""
 
-#: src/wipefreespace.c:615
+#: src/wipefreespace.c:614
 msgid "--nowfs\t\t\tDo NOT wipe free space on file system"
 msgstr ""
 
-#: src/wipefreespace.c:616
+#: src/wipefreespace.c:615
 msgid "--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system"
 msgstr ""
 
-#: src/wipefreespace.c:617
+#: src/wipefreespace.c:616
 msgid "--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)"
 msgstr ""
 
-#: src/wipefreespace.c:618
+#: src/wipefreespace.c:617
 msgid "-v|--verbose\t\tVerbose output"
 msgstr ""
 
-#: src/wipefreespace.c:619
+#: src/wipefreespace.c:618
 msgid "-V|--version\t\tPrint version number"
 msgstr ""
 

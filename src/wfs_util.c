@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -120,6 +120,20 @@
 # include <sched.h>
 #endif
 
+#if (!defined MAJOR_IN_SYSMACROS) && (!defined MAJOR_IN_MKDEV)
+# ifdef HAVE_SYS_SYSMACROS_H
+#  define MAJOR_IN_SYSMACROS 1
+#  define MAJOR_IN_MKDEV 0
+#  include <sys/sysmacros.h>
+# else
+#  ifdef HAVE_SYS_MKDEV_H
+#   define MAJOR_IN_SYSMACROS 0
+#   define MAJOR_IN_MKDEV 1
+#   include <sys/mkdev.h>
+#  endif
+# endif
+#endif
+
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>	/* for open() */
 #endif
@@ -224,7 +238,6 @@
 # define WFS_USED_ONLY_WITH_LOOP
 #endif
 
-
 /* ======================================================================== */
 
 #ifdef WFS_HAVE_MNTENT
@@ -321,7 +334,7 @@ wfs_get_mnt_point_getmntent (
 			break;
 		}
 
-	} while ( 1==1 );
+	} while ( mnt != NULL );
 
 	endmntent (mnt_f);
 	if ( (mnt == NULL)
@@ -409,7 +422,11 @@ wfs_get_mnt_point_mounts (
 {
 	FILE * mounts_file;
 #ifdef WFS_HAVE_IOCTL_LOOP
+# ifdef HAVE_STAT64
+	struct stat64 s;
+# else
 	struct stat s;
+# endif
 	int res;
 	int res64;
 	int fd;
@@ -460,6 +477,7 @@ wfs_get_mnt_point_mounts (
 
 		if ( sscanf (mounts_buffer,
 			WFS_SCANF_STRING (WFS_MNTBUFLEN),
+			/*"%1000s %1000s %*s %1000s %*d %*d",*/
 			mounts_device, mnt_point, mounts_flags) == 3 )
 		{
 			mounts_device[sizeof (mounts_device) - 1] = '\0';
@@ -480,7 +498,11 @@ wfs_get_mnt_point_mounts (
 			}
 #ifdef WFS_HAVE_IOCTL_LOOP
 			/* check if the device looks like a loop device: */
+# ifdef HAVE_STAT64
+			res = stat64 (dev_name, &s);
+# else
 			res = stat (dev_name, &s);
+# endif
 			if ( ((res >= 0)
 					&& (S_ISBLK (s.st_mode))
 					&& major (s.st_rdev) == LOOPMAJOR)
@@ -530,7 +552,11 @@ wfs_get_mnt_point_mounts (
 				{
 					continue;
 				}
+# ifdef HAVE_STAT64
+				res = stat64 (dev_name, &s);
+# else
 				res = stat (dev_name, &s);
+# endif
 				if ( res < 0 )
 				{
 					continue;
@@ -771,7 +797,7 @@ wfs_check_mounted (
 {
 	wfs_errcode_t res;
 	int is_rw;
-	char buffer[WFS_MNTBUFLEN];
+	char buffer[WFS_MNTBUFLEN+1];
 
 	res = wfs_get_mnt_point (wfs_fs.fsname, wfs_fs.fs_error, buffer,
 		sizeof (buffer), &is_rw);
@@ -813,7 +839,11 @@ wfs_check_loop_mounted (
 #endif
 {
 #ifdef WFS_HAVE_IOCTL_LOOP
+# ifdef HAVE_STAT64
+	struct stat64 s;
+# else
 	struct stat s;
+# endif
 # ifdef LOOP_GET_STATUS64
 	struct loop_info64 li64;
 # endif
@@ -829,7 +859,11 @@ wfs_check_loop_mounted (
 		return 0;
 	}
 #ifdef WFS_HAVE_IOCTL_LOOP
+# ifdef HAVE_STAT64
+	res = stat64 (dev_name, &s);
+# else
 	res = stat (dev_name, &s);
+# endif
 	if ( ((res >= 0) && (S_ISBLK(s.st_mode)) && (major(s.st_rdev) == LOOPMAJOR))
 		|| (strncmp (dev_name, "/dev/loop", 9) == 0) )
 	{
@@ -892,7 +926,9 @@ child_function (
 # endif
 #endif
 	const child_id_t * const id = (child_id_t *) p;
+#ifdef HAVE_DUP2
 	int res;
+#endif
 #ifdef HAVE_EXECVPE
 	char * null_env[] = { NULL };
 #endif
@@ -1203,6 +1239,9 @@ wfs_has_child_exited (
 # if malloc == 1	/* replacement function requested */
 #  undef rpl_malloc
 #  undef malloc
+
+/* re-declare, because it was #undef'd: */
+extern void* malloc WFS_PARAMS ((size_t __size));
 
 /* Replacement malloc() function */
 void *
@@ -1610,10 +1649,11 @@ flush_pipe_input (
 	const int fd;
 #endif
 {
-	int r;
 	char c;
+	ssize_t br;
 	/* set non-blocking mode to quit as soon as the pipe is empty */
 #ifdef HAVE_FCNTL_H
+	int r;
 	r = fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) | O_NONBLOCK );
 	if ( r != 0 )
 	{
@@ -1622,8 +1662,8 @@ flush_pipe_input (
 #endif
 	do
 	{
-		r = read (fd, &c, 1);
-	} while (r == 1);
+		br = read (fd, &c, 1);
+	} while (br == 1);
 	/* set blocking mode again */
 #ifdef HAVE_FCNTL_H
 	fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) & ~ O_NONBLOCK );

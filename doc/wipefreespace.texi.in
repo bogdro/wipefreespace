@@ -209,9 +209,13 @@ command-line options: "-i", "-c" and the following interactive mode commands:
 "quit", "freesp -d", "blockget -n", "ncheck", "sb 0", "print". Version 2.7.11 is
 enough, earlier versions will probably also work.
 
-@item ReiserFSv3: development package for the ReiserFSv3 file system library (usually
-included in something like reiserfsprogs-devel. If not available, copy the
-headers and the library from reiserfsprogs after compiling them).
+@item ReiserFSv3: development package for reiserfsprogs (header files and
+compiled static libraries from the package).
+
+If you're having trouble compiling, try to apply the patch first:
+	@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX-compile-fix.diff}
+
+See below for other patches that may be necessary.
 
 @item Reiser4: development package for reiser4progs, libuuid (e2fsprogs or
 e2fsprogs-libs) and libaal. Go to@*
@@ -236,11 +240,13 @@ the filesystem from TFFS (WipeFreeSpace does its own synchronising):
 
 	@command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-speed.diff}
 
-If you experience crashes (especially on x64), you may try to apply two more patches:
+If you experience crashes (especially on x64), you may try to apply three more patches:
 
      @command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-free-fix.diff}
 
      @command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-overflow-fix.diff}
+
+     @command{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-fat-eof-fix.diff}
 
 After applying any patch, you need to recompile and install the library and
 ALL its header files (including the private ones, from the src directory).
@@ -276,10 +282,16 @@ Compile jfsutils, then copy all the jfs_*.h header files from the
 C compiler can find them (or put the correct -I and -L options in the
 compiler flags).
 
+If you're having trouble compiling, try to apply the patch first:
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/jfsutils-1.1.11-compile-fix.diff}
+
 @item OCFS: the "ocfs2-tools" series 1.6.x package (other version also work, but disable
 wiping undelete data in such case). Go to@*
 	http://oss.oracle.com/projects/ocfs2-tools/@*
 to get it. Then compile and install that package.
+
+  If you're having trouble compiling, try to apply the patch first:
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/ocfs2-tools-1.6.4-compile-fix.diff}
 
 @item HFS+: the "hfsplus" package. Go to@*
 https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz@*
@@ -335,18 +347,14 @@ to do this:
 
 @strong{WARNING}: If both ReiserFSv3 and JFS are enabled, you @strong{MUST} either disable
 the support for either of these filesystems (you can compile two
-versions of the program) or fix either of these libraries yourself,
+versions of the program) or fix the ReiserFSv3 library yourself,
 by running
 
-@command{find . -type f -exec sed -i 's/bread/new_bread/g' '@{@}' \;}
+@command{find . -type f -exec sed -i 's/bread/reiser3_new_bread/g' '@{@}' \;}
 
-in the root directory of either reiserfsprogs or jfsutils (but
-NOT both, because this would bring back the same problem, but with a
-different name). Type the command as above. The command must be run
-@strong{BEFORE} compiling reiserfs/jfsutils. You can use the provided patches
-to do this:
-
-@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/jfsutils-1.1.11.diff}
+in the root directory of reiserfsprogs. Type the command as above. The command
+must be run @strong{BEFORE} compiling reiserfs/jfsutils. You can use the provided
+patches to do this:
 
 @command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff}
 
@@ -430,7 +438,7 @@ Currently, wipefreespace does the following actions on supported filesystems
 
 @enumerate
 
-@item Ext2/3/4 (native, working libraries from e2fsprogs):
+@item Ext2/3/4 (native, working libraries from e2fsprogs / libext2fs):
 @itemize
 @item wiping the free space
 @item wiping free space in partially used blocks (@strong{NOTE}: may print errors
@@ -440,7 +448,7 @@ wiping deleted files' names and setting deleted files' names' lengths once to ze
 @item wiping the journal
 @end itemize
 
-@item NTFS (libntfs: not official - not written by the filesystem's creators, written without
+@item NTFS (libntfs / ntfs-3g: not official - not written by the filesystem's creators, written without
 any specifications)
 @itemize
 @item wiping the free space
@@ -462,7 +470,7 @@ usable development library):
 part of any official development package):
 @itemize
 @item wiping the free space
-@item wiping free space in partially used blocks, but only if the block has just 1 item
+@item wiping free space in partially used blocks, but only if the block has just 1 item, and limited to 2^32 blocks
 @item wiping deleted files' names
 @item wiping deleted files' data (part of free space or partially used blocks)
 @item wiping the journal
@@ -497,7 +505,7 @@ it can't be wiped).
 
 @item MinixFS (using the mfstool program as a library):
 @itemize
-@item wiping the free space
+@item wiping the free space, limited to 2^32 blocks
 @item wiping free space in partially used blocks
 @item wiping deleted files' names
 @item wiping deleted files' data (part of free space or partially used blocks)
@@ -839,11 +847,19 @@ bogdro (at) rudy . mif . pg . gda . pl
 
 
 or look at my website:@*
-[EN] http://wipefreespace.sf.net@*
-[PL] http://wipefreespace.sf.net/index-pl.php@*
-[EN] http://rudy.mif.pg.gda.pl/~bogdro/soft/@*
-[EN] http://rudy.mif.pg.gda.pl/~bogdro/inne/@*
-[PL] http://rudy.mif.pg.gda.pl/~bogdro/@*
+[EN] @url{http://wipefreespace.sf.net}@*
+[PL] @url{http://wipefreespace.sf.net/index-pl.php}@*
+[EN] @url{http://bogdro.evai.pl/soft/}@*
+[EN] @url{http://bogdro.evai.pl/inne/}@*
+[PL] @url{http://bogdro.evai.pl/}@*
+[EN] @url{http://bogdro.evai.pl/index-en.php}@*
+[EN] @url{http://bogdro.byethost18.com/soft/}@*
+[EN] @url{http://bogdro.byethost18.com/inne/}@*
+[PL] @url{http://bogdro.byethost18.com/}@*
+[EN] @url{http://bogdro.byethost18.com/index-en.php}@*
+[EN] @url{http://rudy.mif.pg.gda.pl/~bogdro/soft/}@*
+[EN] @url{http://rudy.mif.pg.gda.pl/~bogdro/inne/}@*
+[PL] @url{http://rudy.mif.pg.gda.pl/~bogdro/}@*
 
 
 @c ==================================================================
@@ -860,9 +876,10 @@ The 'shred' utility is:@*
 	Copyright (C) 1999-2006 Free Software Foundation, Inc.@*
 	Copyright (C) 1997, 1998, 1999 Colin Plumb.
 @item Patrick R. McDonald 'marlowe' (www.antagonism.org) - for
-bug reports, testing and promoting wipefreespace.
-@item Mark Lord (mlord@@pobox.com) for the gread hdparm utility.
+bug reports, testing and promoting WipeFreeSpace.
+@item Mark Lord (mlord@@pobox.com) for the great hdparm utility.
 @item knightray@@gmail.com for The Tiny FAT FS library (on LGPL).
+@item Gregory Grosse - for bug reports and testing WipeFreeSpace.
 
 @end enumerate
 
@@ -1753,7 +1770,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2018 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*

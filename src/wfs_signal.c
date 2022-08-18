@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -227,7 +227,7 @@ static void print_signal_error (
 	const int signum;
 # endif
 {
-# define 	TMPSIZE	12
+# define 	TMPSIZE	13
 	char tmp[TMPSIZE];		/* Place for a signal number. */
 	wfs_fsid_t wf_gen;
 	wfs_errcode_t err = 0;
@@ -245,7 +245,7 @@ static void print_signal_error (
 		err = 1L;
 # endif
 # ifdef HAVE_SNPRINTF
-		res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, signum);
+		res = snprintf (tmp, TMPSIZE, "%.*d", TMPSIZE-1, signum);
 # else
 		res = sprintf (tmp, "%.*d", TMPSIZE-1, signum);
 # endif

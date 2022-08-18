@@ -1,7 +1,7 @@
 # English translations for wipefreespace package.
-# Copyright (C) 2018 Bogdan bogdro Drozdowski
+# Copyright (C) 2019 Bogdan bogdro Drozdowski
 # This file is distributed under the same license as the wipefreespace package.
-# Automatically generated, 2018.
+# Automatically generated, 2019.
 #
 # All this catalog "translates" are quotation characters.
 # The msgids must be ASCII and therefore cannot contain real quotation
@@ -30,12 +30,13 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace 2.2.2\n"
+"Project-Id-Version: wipefreespace 2.3\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2018-01-14 15:06+0100\n"
-"PO-Revision-Date: 2018-01-14 15:06+0100\n"
+"POT-Creation-Date: 2019-10-17 17:30+0200\n"
+"PO-Revision-Date: 2019-10-17 17:30+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
+"Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -235,7 +236,7 @@ msgstr "Disabling cache"
 msgid "unknown"
 msgstr "unknown"
 
-#: src/wipefreespace.c:598
+#: src/wipefreespace.c:597
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
@@ -243,79 +244,79 @@ msgstr ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
 
-#: src/wipefreespace.c:600
+#: src/wipefreespace.c:599
 msgid " [options] "
 msgstr " [options] "
 
-#: src/wipefreespace.c:602
+#: src/wipefreespace.c:601
 msgid "Options:"
 msgstr "Options:"
 
-#: src/wipefreespace.c:603
+#: src/wipefreespace.c:602
 msgid "--all-zeros\t\tUse only zeros for wiping"
 msgstr "--all-zeros\t\tUse only zeros for wiping"
 
-#: src/wipefreespace.c:604
+#: src/wipefreespace.c:603
 msgid "--background\t\tContinue work in the background, if possible"
 msgstr "--background\t\tContinue work in the background, if possible"
 
-#: src/wipefreespace.c:605
+#: src/wipefreespace.c:604
 msgid "-b|--superblock <off>\tSuperblock offset on the given filesystems"
 msgstr "-b|--superblock <off>\tSuperblock offset on the given filesystems"
 
-#: src/wipefreespace.c:606
+#: src/wipefreespace.c:605
 msgid "-B|--blocksize <size>\tBlock size on the given filesystems"
 msgstr "-B|--blocksize <size>\tBlock size on the given filesystems"
 
-#: src/wipefreespace.c:607
+#: src/wipefreespace.c:606
 msgid "-f|--force\t\tWipe even if the file system has errors"
 msgstr "-f|--force\t\tWipe even if the file system has errors"
 
-#: src/wipefreespace.c:608
+#: src/wipefreespace.c:607
 msgid "-h|--help\t\tPrint help"
 msgstr "-h|--help\t\tPrint help"
 
-#: src/wipefreespace.c:609
+#: src/wipefreespace.c:608
 msgid "-n|--iterations NNN\tNumber of passes (greater than 0)"
 msgstr "-n|--iterations NNN\tNumber of passes (greater than 0)"
 
-#: src/wipefreespace.c:610
+#: src/wipefreespace.c:609
 msgid "--last-zero\t\tPerform additional wiping with zeros"
 msgstr "--last-zero\t\tPerform additional wiping with zeros"
 
-#: src/wipefreespace.c:611
+#: src/wipefreespace.c:610
 msgid "-l|--license\t\tPrint license information"
 msgstr "-l|--license\t\tPrint license information"
 
-#: src/wipefreespace.c:612
+#: src/wipefreespace.c:611
 msgid "--method <name>\t\tUse the given method for wiping"
 msgstr "--method <name>\t\tUse the given method for wiping"
 
-#: src/wipefreespace.c:613
+#: src/wipefreespace.c:612
 msgid "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr "--nopart\t\tDo NOT wipe free space in partially used blocks"
 
-#: src/wipefreespace.c:614
+#: src/wipefreespace.c:613
 msgid "--nounrm\t\tDo NOT wipe undelete information"
 msgstr "--nounrm\t\tDo NOT wipe undelete information"
 
-#: src/wipefreespace.c:615
+#: src/wipefreespace.c:614
 msgid "--nowfs\t\t\tDo NOT wipe free space on file system"
 msgstr "--nowfs\t\t\tDo NOT wipe free space on file system"
 
-#: src/wipefreespace.c:616
+#: src/wipefreespace.c:615
 msgid "--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system"
 msgstr "--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system"
 
-#: src/wipefreespace.c:617
+#: src/wipefreespace.c:616
 msgid "--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)"
 msgstr "--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)"
 
-#: src/wipefreespace.c:618
+#: src/wipefreespace.c:617
 msgid "-v|--verbose\t\tVerbose output"
 msgstr "-v|--verbose\t\tVerbose output"
 
-#: src/wipefreespace.c:619
+#: src/wipefreespace.c:618
 msgid "-V|--version\t\tPrint version number"
 msgstr "-V|--version\t\tPrint version number"
 

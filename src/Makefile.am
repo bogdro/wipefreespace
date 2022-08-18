@@ -6,7 +6,8 @@ wipefreespace_SOURCES = wipefreespace.c wipefreespace.h wfs_wrappers.c wfs_wrapp
 
 wipefreespace_LDADD = $(INTLLIBS)
 localedir = $(datadir)/locale
-INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
+#INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
+AM_CPPFLAGS = -I../intl -DLOCALEDIR=\"$(localedir)\"
 EXTRA_DIST = wfs_cfg.h.in
 
 if EXT234FS

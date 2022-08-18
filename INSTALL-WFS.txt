@@ -1,50 +1,4 @@
-This is the README file for wipefreespace, a program for secure wiping
- of free space on file systems.
-
-Wipefreespace wipes the following things (when supported by the backing
- library):
-- free space (space in unused blocks/clusters)
-- free space in partially used blocks (also called the "slack space")
-- deleted files' names and other data that can be used to undelete a file
-  (like the journal)
-Wipefreespace does NOT decrease the amount of available free space when
- working.
-
-NOTE: it is best to use this program on un-mounted file systems, what
- makes sure the journal is committed.
-
-NOTE: if a block is damaged, it is only wiped until the first error. There is
- no guarantee that it will be fully wiped.
-
-Read the info documentation (type 'info doc/wipefreespace.info') to get more
- information.
-
-Author: Bogdan Drozdowski, bogdandr @ op . pl
-License: GPLv2+
-
-================================================================
-
-The binary version of wipefreespace is linked with the GNU C Library,
- licensed under the GNU LGPL:
-
-Copyright (C) 1991,92,93,94,95,96,97,98,99,2000,2001,2002,2003,2004,2005,
- 2006,2007 Free Software Foundation, Inc.
-
-The GNU C Library is free software; you can redistribute it and/or modify
- it under the terms of the GNU Lesser General Public License as published
- by the Free Software Foundation; either version 2.1 of the License, or
- (at your option) any later version.
-
-The GNU C Library is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
- License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
- along with the GNU C Library; if not, write to the Free Software Foundation,
- Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-
-================================================================
+Wipefreespace - a program for secure cleaning of free space on filesystems.
 
 Requirements for compiling the full version:
 
@@ -144,6 +98,7 @@ Requirements for compiling the full version:
 
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff
 
+
 - JFS: jfsutils and libuuid (the <uuid/uuid.h> header file). Go to
 	http://jfs.sourceforge.net/
   to get jfsutils. Libuuid can be a part of "util-linux-ng", which can be
@@ -166,11 +121,11 @@ https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
 
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff
 
-  After compiling, install all the libraries and ALL the *.h header files
+  After compiling, install all the libraries and ALL the header files
   from the libhfsp/src/ directory where the C compiler can find them (or
   put the correct -I and -L options in the compiler flags).
 
-- OCFS: the "ocfs2-tools" series 1.6.x package (other versions also work, but
+- OCFS: the "ocfs2-tools" series 1.6.x package (other version also work, but
   disable wiping undelete data in such case). Go to
 	http://oss.oracle.com/projects/ocfs2-tools/
   to get it. Then compile and install that package.
@@ -178,8 +133,9 @@ https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
   If you're having trouble compiling, try to apply the patch first:
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/ocfs2-tools-1.6.4-compile-fix.diff
 
-WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program
- may refuse to link if the compiler doesn't support the command line option
+
+WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
+ refuse to link if the compiler doesn't support the command line option
  "-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
  definitions. If you have this problem, disable the support for either
  of these filesystems (you can compile two versions of the program).
@@ -217,15 +173,18 @@ WARNING: If both ReiserFSv3 and MinixFS are enabled, the program
 
 WARNING: If both ReiserFSv3 and JFS are enabled, you MUST either disable
  the support for either of these filesystems (you can compile two
- versions of the program) or fix the ReiserFSv3 library yourself,
+ versions of the program) or fix either of these libraries yourself,
  by running
 
-	find . -type f -exec sed -i 's/bread/reiser3_new_bread/g' '{}' \;
+	find . -type f -exec sed -i 's/bread/new_bread/g' '{}' \;
 
- in the root directory of reiserfsprogs. Type the command as above. The
- command must be run BEFORE compiling reiserfs. You can use the provided
- patches to do this:
+ in the root directory of either reiserfsprogs or jfsutils (but
+ NOT both, because this would bring back the same problem, but with a
+ different name). Type the command as above. The command must be run
+ BEFORE compiling reiserfs/jfsutils. You can use the provided patches
+ to do this:
 
+	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/jfsutils-1.1.11.diff
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
 
  Even if your linker/compiler accepts the "-Wl,-z -Wl,muldefs" option, it
@@ -259,7 +218,8 @@ Type
 
 	make
 
-to compile the program.
+ to compile the program.
+
 Documentation will be compiled, if you have the 'makeinfo' program
  ('texinfo' package).
 Translations will be compiled, if you have the 'gettext' package.
@@ -271,92 +231,15 @@ Type
 
 	make install
 
- to install the program (NOT recommended) or read below on how to make an
- RPM package (recommended).
+ to install the program (NOT recommended) or read below on how to make
+ an RPM package (recommended).
 
-Type 'info wipefreespace' to get help.
-
-Syntax:
-
-	wipefreespace [options] /dev/XY [...]
-
-Command line options:
-
---all-zeros		Use only zeros for wiping
---background		Continue work in the background, if possible. This
-			disables verbose mode.
--b|--superblock <off>	Superblock offset on the given filesystems
--B|--blocksize <size>	Block size on the given filesystems
--f|--force		Wipe even if the file system has errors
--h|--help		Print help
---last-zero		Perform additional wiping with zeros
--l|--license|--licence	Print license information
---method <name>		Use the given method for wiping (read below)
--n|--iterations NNN	Number of passes (greater than 0)
---nopart		Do NOT wipe free space in partially used blocks
---nounrm		Do NOT wipe undelete information
---nowfs			Do NOT wipe free space on file system
---no-wipe-zero-blocks	Do NOT wipe all-zero blocks on file system (useful for
-			virtual/sparse devices, where empty areas are read as
-			all-zeros and do not take physical space unless
-			actually written to)
---use-ioctl		Disable device caching during work (can be DANGEROUS).
-			NOTE: this may not work for sub-partitions on drives.
-			To disable the cache, run the 'hdparm' utility with
-			the correct options to disable the cache before
-			running wipefreespace and enable the cache afterwards.
--v|--verbose		Verbose output. Use twice for more. This also enables
-			progress bars, but be warned: these may not always be
-			accurate or increase at a constant rate.
--V|--version		Print version number
-
-The '/dev/XY' part stands for a device with a supported file system.
- Examples: /dev/hda1, /dev/fd0. More than one device can be given on the
- command line, but they will be wiped sequentially, NOT in
- multiple threads. WipeFreeSpace is not multi-threaded and probably
- won't be, because the libraries used can be not thread-safe.
-The following method names (case-insensitive) are available:
- - Gutmann (method similar to Gutmann's, the default, 36 passes)
- - random (shred-like, 25 passes)
- - schneier (Shneier's method, 7 passes, contains ITSG-06)
- - dod (DoD, 3 passes, contains NAVSO P-5239-26 and German Federal
-   Office for Information Security)
-Each given filesystem is wiped ONLY ONCE, no matter how many times it
- appears on the command line.
-WipeFreeSpace also works for file systems created inside regular
- files on any host file system.
-
-NOTE: wiping with just one pattern at a time (-n 1) will NOT perform wiping
- with all patterns of the given method one by one, it will always use the
- first pattern. However, it will be MUCH faster than any "full" method.
- If you need just random wiping, run
-
-	wipefreespace -n 1 /dev/XY
-
- a few times in a row.
-
-Any option affects all filesystems given on the command line, not just
- the ones following it.
-
-To perform a command after wiping (like sending e-mail), simply run a
- program after WipeFreeSpace is finished, for example:
-
-	wipefreespace [options] /dev/XY; mail [options]
-
- or in a script:
-
-	#!/bin/bash
-	wipefreespace [options] /dev/XY
-	mail [options]
-
-To run WipeFreeSpace with a higher or lower priority, simply use the
- "renice" utility, for example:
-
-	renice +1 $(pidof wipefreespace)
+Type 'info wipefreespace' (or 'info doc/wipefreespace.info' before install)
+ to get help.
 
 =======================================================
 
-Building an RPM package (the old way):
+Building an RPM package:
 
 1) copy the wipefreespace.spec file to /usr/src/redhat/SPECS
 2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
@@ -373,41 +256,3 @@ Building an RPM package (the new way):
 3) type
         rpmbuild -ba $HOME/rpmbuild/SPECS/wipefreespace.spec
 4) get the RPMs from $HOME/rpmbuild/RPMS/i386 and $HOME/rpmbuild/SRPMS
-
-=======================================================
-
-Translating the docs to your language:
-
- Type `msginit -i wipefreespace.pot -o XX.po', substituting your
-2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the
-'gettext' package installed. You can manually copy the file
-wipefreespace.pot to XX.po and manually add the following header, if
-you wish.
- In the resulting XX.po file you have to fill in all the fields
-marked with capital letters in the header:
-
-# YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski
-# This file is distributed under the same license as
-# the wipefreespace package.
-# YOUR FULL NAME <EMAILADDRESS>, YEAR.
-#
-msgid ""
-msgstr ""
-"Project-Id-Version: wipefreespace VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-08-03 15:28+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAILADDRESS>\n"
-"Language-Team: LANGUAGE <EMAILADDRESS>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
-"Content-Transfer-Encoding: 8bit\n"
-
-The rest of the file will contain messages from the program. Translate
-them all and send me the resulting XX.po file.
-
-Translating the documentation:
-- info: simply change the wipefreespace.texi file
-- man: Unpack the page using 'gunzip wipefreespace.1.gz' and
-  translate the resulting wipefreespace.1 file.

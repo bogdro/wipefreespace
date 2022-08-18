@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -762,73 +762,75 @@ wfs_fat_dirent_find (
 					/* Flush after each writing, if more than 1 overwriting
 					   needs to be done. Allow I/O bufferring (efficiency),
 					   if just one pass is needed. */
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 					{
 						error = wfs_fat_flush_fs (wfs_fs);
 					}
 				}
-				/* last pass with zeros: */
-				if ( (dirent.dir_attr & ATTR_LONG_NAME) == ATTR_LONG_NAME )
+				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 				{
+					/* last pass with zeros: */
+					if ( (dirent.dir_attr & ATTR_LONG_NAME) == ATTR_LONG_NAME )
+					{
 #ifdef WFS_DEBUG
-					printf("wfs_fat_dirent_find: wiping long name with zeros\n");
-					fflush(stdout);
+						printf("wfs_fat_dirent_find: wiping long name with zeros\n");
+						fflush(stdout);
 #endif
 # ifdef HAVE_MEMSET
-					memset (fname,
-						'\0', 13 /*dirent.h->long_dir_entry_t*/
-							/* 2 / *sizeof UTF-16 character */
-							-1 /* the first marker byte */
-							);
+						memset (fname,
+							'\0', 13 /*dirent.h->long_dir_entry_t*/
+								/* 2 / *sizeof UTF-16 character */
+								-1 /* the first marker byte */
+								);
 # else
-					for ( j = 0; j < 13 /*dirent.h->long_dir_entry_t*/
-							/* 2 / *sizeof UTF-16 character */
-							-1 /* the first marker byte */
-							; j++ )
-					{
-						fname[j] = '\0';
-					}
+						for ( j = 0; j < 13 /*dirent.h->long_dir_entry_t*/
+								/* 2 / *sizeof UTF-16 character */
+								-1 /* the first marker byte */
+								; j++ )
+						{
+							fname[j] = '\0';
+						}
 # endif
-				}
-				else
-				{
+					}
+					else
+					{
 #ifdef WFS_DEBUG
-					printf("wfs_fat_dirent_find: wiping short name with zeros\n");
-					fflush(stdout);
+						printf("wfs_fat_dirent_find: wiping short name with zeros\n");
+						fflush(stdout);
 #endif
 # ifdef HAVE_MEMSET
-					memset (fname, '\0', sizeof (dirent.dir_name) - 1);
+						memset (fname, '\0', sizeof (dirent.dir_name) - 1);
 # else
-					for ( j = 0; j < sizeof (dirent.dir_name) - 1; j++ )
-					{
-						fname[j] = '\0';
-					}
+						for ( j = 0; j < sizeof (dirent.dir_name) - 1; j++ )
+						{
+							fname[j] = '\0';
+						}
 # endif
-				}
-				if ( sig_recvd != 0 )
-				{
-					break;
-				}
-				/* write the wiped name: */
+					}
+					if ( sig_recvd != 0 )
+					{
+						break;
+					}
+					/* write the wiped name: */
 #ifdef WFS_DEBUG
-				printf("wfs_fat_dirent_find: writing new sector contents (2)\n");
-				fflush(stdout);
+					printf("wfs_fat_dirent_find: writing new sector contents (2)\n");
+					fflush(stdout);
 #endif
-				error = dir_write_sector (pdir);
+					error = dir_write_sector (pdir);
 #ifdef WFS_DEBUG
-				printf("wfs_fat_dirent_find: writing new sector contents (2), result=%d, should be %d\n",
-					error, DIR_OK);
-				fflush(stdout);
+					printf("wfs_fat_dirent_find: writing new sector contents (2), result=%d, should be %d\n",
+						error, DIR_OK);
+					fflush(stdout);
 #endif
-				if ( error != DIR_OK )
-				{
-					break;
-				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-				{
-					error = wfs_fat_flush_fs (wfs_fs);
+					if ( error != DIR_OK )
+					{
+						break;
+					}
+					/* No need to flush the last writing of a given block. *
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_fat_flush_fs (wfs_fs);
+					} */
 				}
 				continue;
 			}
@@ -997,7 +999,7 @@ wfs_fat_wipe_file_tail (
 		printf("wfs_fat_wipe_file_tail: seek to size done. writing\n");
 		fflush(stdout);
 #endif
-		written = TFFS_fwrite (file, bufsize, buf);
+		written = TFFS_fwrite (file, (uint32)(bufsize & 0x0FFFFFFFF), buf);
 #ifdef WFS_DEBUG
 		printf("wfs_fat_wipe_file_tail: writing done, size: %d\n", written);
 		fflush(stdout);
@@ -1014,7 +1016,7 @@ wfs_fat_wipe_file_tail (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			error = wfs_fat_flush_fs (wfs_fs);
 		}
@@ -1038,7 +1040,7 @@ wfs_fat_wipe_file_tail (
 		{
 			/* wipe the space after the file */
 			_file_seek (fh, (int)file_len);
-			written = TFFS_fwrite (file, bufsize, buf);
+			written = TFFS_fwrite (file, (uint32)(bufsize & 0x0FFFFFFFF), buf);
 			if ( written != (int)bufsize )
 			{
 				ret_tail = WFS_BLKWR;
@@ -1048,12 +1050,11 @@ wfs_fat_wipe_file_tail (
 			{
 				fh->file_size -= (uint32)written;
 			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			/* No need to flush the last writing of a given block. *
 			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
 				error = wfs_fat_flush_fs (wfs_fs);
-			}
+			}*/
 		}
 	}
 #ifdef WFS_DEBUG
@@ -1598,7 +1599,7 @@ wfs_fat_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_fat_flush_fs (wfs_fs);
 			}
@@ -1652,12 +1653,11 @@ wfs_fat_wipe_fs (
 				ret_wfs = WFS_BLKWR;
 				break;
 			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			/* No need to flush the last writing of a given block. *
 			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
 				error = wfs_fat_flush_fs (wfs_fs);
-			}
+			}*/
 		}
 		wfs_show_progress (WFS_PROGRESS_WFS,
 			(cluster * 100)/ptffs->total_clusters,
@@ -1752,11 +1752,6 @@ wfs_fat_wipe_unrm_dir (
 	if ( dirh == NULL )*/
 	if ( dir_res != TFFS_OK )
 	{
-		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
-		if ( error_ret != NULL )
-		{
-			*error_ret = error;
-		}
 		return WFS_DIRITER;
 	}
 
@@ -1834,6 +1829,14 @@ wfs_fat_wipe_unrm_dir (
 			printf("wfs_fat_wipe_unrm_dir: change back to parent directory done\n");
 			fflush(stdout);
 #endif
+			if ( (dirh == (tdir_handle_t) ((tffs_t *)fat)->root_dir)
+				&& (((tffs_t *)fat)->pbs != NULL) )
+			{
+				curr_direlem++;
+				wfs_show_progress (WFS_PROGRESS_UNRM,
+					curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+					&prev_percent);
+			}
 		}
 	}
 
@@ -2023,7 +2026,7 @@ wfs_fat_open_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -2064,7 +2067,7 @@ wfs_fat_open_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_OPENFS;
 		}
 		return WFS_OPENFS;
 	}
@@ -2073,7 +2076,7 @@ wfs_fat_open_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_OPENFS;
 		}
 		return WFS_OPENFS;
 	}

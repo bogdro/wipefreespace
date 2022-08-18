@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -58,7 +58,11 @@
 # undef		WFS_NPAT
 # define	WFS_NPAT 50 /* anything more than the maximum number of patterns in all wiping methods. */
 
+# undef		WFS_MNTBUFLEN
 # define	WFS_MNTBUFLEN 4096
+
+# undef		WFS_IS_SYNC_NEEDED
+# define	WFS_IS_SYNC_NEEDED(fs) ((((fs).npasses > 1) || ((fs).zero_pass != 0)) && (sig_recvd == 0))
 
 enum wfs_errcode
 {
@@ -192,7 +196,7 @@ typedef unsigned short int __u16;
 # endif
 
 # if (defined HAVE_REISER4_LIBREISER4_H) && (defined HAVE_LIBREISER4)	\
-	&& (defined HAVE_LIBREISER4MISC) && (defined HAVE_LIBAAL)
+	/*&& (defined HAVE_LIBREISER4MISC)*/ && (defined HAVE_LIBAAL)
 #  define	WFS_REISER4	1
 # else
 #  undef	WFS_REISER4
@@ -365,7 +369,7 @@ typedef enum wfs_progress_type wfs_progress_type_t;
 
 extern WFS_ATTR ((nonnull)) void
 	wfs_show_progress WFS_PARAMS ((const wfs_progress_type_t type,
-		const unsigned int percent,
+		unsigned int percent,
 		unsigned int * const prev_percent));
 
 extern const char * const wfs_err_msg;

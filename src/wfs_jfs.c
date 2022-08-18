@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- JFS file system-specific functions.
  *
- * Copyright (C) 2010-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2010-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -120,6 +120,10 @@
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+
+#if (defined WFS_JFS) && (! defined HAVE_JFS_BREAD) && (defined WFS_REISER) && (! defined HAVE_REISER3_NEW_BREAD)
+# warning Detected unpatched JFS library with Reiser3FS enabled. WipeFreeSpace can crash! Read README.
+#endif
 
 static char wfs_jfs_dev_path[] = "/dev";
 
@@ -323,7 +327,7 @@ wfs_jfs_wipe_block (
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
-	unsigned int j;
+	unsigned long int j;
 	int selected[WFS_NPAT] = {0};
 	int res;
 	wfs_errcode_t error = 0;
@@ -355,7 +359,7 @@ wfs_jfs_wipe_block (
 		if ( wfs_fs.no_wipe_zero_blocks != 0 )
 		{
 			res = ujfs_rw_diskblocks (fp,
-				blocknum * fs_block_size,
+				blocknum * (int64_t)fs_block_size,
 				(int32_t)bufsize, buf, GET);
 			if ( res != 0 )
 			{
@@ -374,7 +378,7 @@ wfs_jfs_wipe_block (
 		{
 			break;
 		}
-		res = ujfs_rw_diskblocks (fp, blocknum * fs_block_size,
+		res = ujfs_rw_diskblocks (fp, blocknum * (int64_t)fs_block_size,
 			(int32_t)bufsize, buf, PUT);
 		if ( res != 0 )
 		{
@@ -382,7 +386,7 @@ wfs_jfs_wipe_block (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			error = ujfs_flush_dev (fp);
 		}
@@ -415,7 +419,7 @@ wfs_jfs_wipe_block (
 			if ( sig_recvd == 0 )
 			{
 				res = ujfs_rw_diskblocks (fp,
-					blocknum * fs_block_size,
+					blocknum * (int64_t)fs_block_size,
 					(int32_t)bufsize, buf, PUT);
 				if ( res != 0 )
 				{
@@ -426,12 +430,11 @@ wfs_jfs_wipe_block (
 					}
 					return ret_wfs;
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
 					error = ujfs_flush_dev (fp);
-				}
+				}*/
 			}
 		}
 	}
@@ -522,7 +525,7 @@ wfs_jfs_wipe_fs (
 	int64_t total_size = 0;
 	int64_t nblocks = 0;
 	int64_t i;
-	int64_t j;
+	int64_t j = 0;
 	struct dmap **block_map = NULL;
 	int64_t start = 0;
 	int level;
@@ -669,6 +672,9 @@ wfs_jfs_wipe_fs (
 		/* skip this dmap if no free blocks */
 		if ( block_map[i]->nfree == 0 )
 		{
+			/* update the progress: */
+			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((i*100)/ndmaps
+				+ (j*100)/block_map[i]->nblocks/ndmaps), &prev_percent);
 			continue;
 		}
 		for ( j = 0; (j < block_map[i]->nblocks)
@@ -862,6 +868,9 @@ wfs_jfs_wipe_unrm (
 					(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
 					buf, bufsize, jfs->fs);
 			}
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int)(50 /* unrm i-nodes */ + (i * 50)/(journal.size - 2)),
+				&prev_percent);
 		}
 		free (buf);
 		/* format a new journal: */
@@ -999,6 +1008,9 @@ wfs_jfs_wipe_unrm (
 				wfs_jfs_wipe_block (wfs_fs, block, buf,
 					bufsize, journal_fp);
 			}
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int)(50 /* unrm i-nodes */ + (block * 50)/nblocks),
+				&prev_percent);
 		}
 		free (buf);
 		/* format a new journal */
@@ -1065,7 +1077,7 @@ wfs_jfs_open_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1082,6 +1094,10 @@ wfs_jfs_open_fs (
 #else
 		error = 12L;	/* ENOMEM */
 #endif
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
 #ifdef HAVE_ERRNO_H

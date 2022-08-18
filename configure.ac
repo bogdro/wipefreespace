@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 2.2.2, bogdandr@op.pl)
+AC_INIT(wipefreespace, 2.3, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])
@@ -235,14 +235,18 @@ fi
 
 libmisc=no
 libcore=no
+has_patched_r3=no
 if ( test "x$feat_reiser" = "xyes" ); then
 
 	if (test "x$libuuid" = "xyes"); then
 
 		libmisc=yes
 		libcore=yes
+		has_patched_r3=yes
 		AC_CHECK_LIB([misc],[misc_test_bit],,[libmisc=no],[-luuid])
 		AC_CHECK_LIB([core],[reiserfs_open],,[libcore=no],[-lmisc -luuid])
+		AC_CHECK_FUNC([reiser3_new_bread], AC_DEFINE([HAVE_REISER3_NEW_BREAD],[1],
+			[Whether you have patched Reiser3FS library.]),[has_patched_r3=no])
 	else
 		AC_MSG_WARN([[ReiserFS support impossible without the uuid library.]])
 	fi
@@ -258,10 +262,12 @@ if ( test "x$feat_reiser4" = "xyes" ); then
 		libreiser4=yes
 		AC_CHECK_LIB([reiser4misc],[misc_str2long],,,[-laal -luuid -lreiser4])
 		AC_CHECK_LIB([reiser4],[reiser4_fs_open],,[libreiser4=no],[-laal -luuid -lreiser4misc])
+		if (test "x$libreiser4" != "xyes"); then
+			libreiser4=yes
+			AC_CHECK_LIB([reiser4],[reiser4_object_open],,[libreiser4=no],[-laal -luuid])
+		fi
 	else
-		AC_MSG_WARN([[Reiser4 support impossible without the aal and uuid libraries.
-			Libmisc.a from reiser4progs has to be installed under a new name:
-			libreiser4misc.a]])
+		AC_MSG_WARN([[Reiser4 support impossible without the aal and uuid libraries.]])
 	fi
 fi
 
@@ -280,10 +286,17 @@ if ( test "x$feat_minixfs" = "xyes" ); then
 fi
 
 libjfs=no
+has_patched_jfs=no
 if ( test "x$feat_jfs" = "xyes" ); then
 
 	libjfs=yes
 	AC_CHECK_LIB([fs],ujfs_get_superblk,,[libjfs=no])
+	if (test "x$libjfs" = "xyes"); then
+
+		has_patched_jfs=yes
+		AC_CHECK_FUNC([jfs_bread], AC_DEFINE([HAVE_JFS_BREAD],[1],
+			[Whether you have patched JFS library.]),[has_patched_jfs=no])
+	fi
 fi
 
 libhfsp=no
@@ -336,7 +349,7 @@ if ( test "x$feat_jfs" = "xyes" ); then
 	fi
 fi
 
-AC_CHECK_HEADERS([sys/param.h mntent.h sys/types.h])
+AC_CHECK_HEADERS([sys/param.h mntent.h sys/types.h linux/types.h])
 AC_CHECK_HEADER([stdarg.h],[AC_DEFINE([HAVE_STDARG_H], [1], [Whether you have the stdarg.h header])],
 	[AC_CHECK_HEADER([varargs.h],[AC_DEFINE([HAVE_VARARGS_H], [1],
 		[Whether you have the varargs.h header])])])
@@ -500,7 +513,7 @@ if ( test "x$feat_reiser4" = "xyes" ); then
 		AC_CHECK_HEADER([reiser4/libreiser4.h],
 			AC_DEFINE([HAVE_REISER4_LIBREISER4_H],[1],
 				[Whether you have the libreiser4.h header.]),
-			[has_libreiser4_h=no])
+			[has_libreiser4_h=no], [/* stub comment to avoid default #defines */])
 	fi
 fi
 
@@ -565,19 +578,40 @@ if ( test "x$feat_hfsp" = "xyes" ); then
 	fi
 fi
 
+AC_CHECK_TYPES([umode_t],,,
+	[[
+	#ifdef HAVE_LINUX_TYPES_H
+	# include <linux/types.h>
+	#endif
+	]])
+
 has_ocfs_h=no
 if ( test "x$feat_ocfs" = "xyes" ); then
 
 	if ( test "x$libocfs" = "xyes" ); then
 
 		has_ocfs_h=yes
-		AC_CHECK_HEADER([ocfs2.h],
+		AC_CHECK_HEADER(
+			[ocfs2.h],
 			AC_DEFINE([HAVE_OCFS2_H],[1],
 				[Whether you have the ocfs2.h header.]),
-					[AC_CHECK_HEADER([ocfs2/ocfs2.h],
-						AC_DEFINE([HAVE_OCFS2_OCFS2_H],[1],
-						[Whether you have the ocfs2/ocfs2.h header.]),
-						[has_ocfs_h=no])])
+			[AC_CHECK_HEADER(
+				[ocfs2/ocfs2.h],
+				AC_DEFINE([HAVE_OCFS2_OCFS2_H],[1],
+					[Whether you have the ocfs2/ocfs2.h header.]),
+				[has_ocfs_h=no],
+				[
+					#ifndef HAVE_UMODE_T
+					#define umode_t mode_t /* workaround for new glibc */
+					#endif
+				]
+			)],
+			[
+				#ifndef HAVE_UMODE_T
+				#define umode_t mode_t /* workaround for new glibc */
+				#endif
+			]
+		)
 	fi
 fi
 
@@ -751,6 +785,12 @@ AC_CHECK_TYPES([off64_t],,,
 	# include <sys/types.h>
 	#endif
 	]])
+AC_CHECK_TYPES([int64_t],,,
+	[[
+	#ifdef HAVE_SYS_TYPES_H
+	# include <sys/types.h>
+	#endif
+	]])
 AC_CHECK_TYPES([sig_atomic_t],,,
 	[[
 	#ifdef HAVE_SIGNAL_H
@@ -762,10 +802,10 @@ AC_CHECK_TYPES([sig_atomic_t],,,
 AC_FUNC_MALLOC
 AC_TYPE_SIGNAL
 
-AC_CHECK_FUNCS([memset memcpy setlocale strtoul random srandom clearenv \
+AC_CHECK_FUNCS([memset memcpy setlocale strtol random srandom clearenv \
 	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
 	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl \
-	getmntinfo fopen64 basename umount open])
+	getmntinfo fopen64 basename umount open stat stat64 fstat fstat64])
 
 # NOTE: Debian 5 does not support execvpe(), so it requires execvp()
 # along with setenv() or putenv()
@@ -937,12 +977,13 @@ if (test "x$GCC" = "xyes" ); then
 	AX_C_CHECK_FLAG([-Wstrict-prototypes], [CFLAGS="$CFLAGS -Wstrict-prototypes"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wformat -Wformat-security], [CFLAGS="$CFLAGS -Wformat -Wformat-security"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wformat -Wformat-nonliteral], [CFLAGS="$CFLAGS -Wformat -Wformat-nonliteral"], [CFLAGS="$CFLAGS"])
+	AX_C_CHECK_FLAG([-Wformat -Wformat-overflow=2], [CFLAGS="$CFLAGS -Wformat -Wformat-overflow=2"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wnested-externs], [CFLAGS="$CFLAGS -Wnested-externs"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wshadow], [CFLAGS="$CFLAGS -Wshadow"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wconversion], [CFLAGS="$CFLAGS -Wconversion"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wdeclaration-after-statement], [CFLAGS="$CFLAGS -Wdeclaration-after-statement"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wundef], [CFLAGS="$CFLAGS -Wundef"], [CFLAGS="$CFLAGS"])
-	AX_C_CHECK_FLAG([-Wpadded], [CFLAGS="$CFLAGS -Wpadded"], [CFLAGS="$CFLAGS"])
+	#AX_C_CHECK_FLAG([-Wpadded], [CFLAGS="$CFLAGS -Wpadded"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wredundant-decls], [CFLAGS="$CFLAGS -Wredundant-decls"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wfatal-errors], [CFLAGS="$CFLAGS -Wfatal-errors"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-pedantic], [CFLAGS="$CFLAGS -pedantic"], [CFLAGS="$CFLAGS"])
@@ -954,9 +995,15 @@ if (test "x$GCC" = "xyes" ); then
 	AX_C_CHECK_FLAG([-Wlogical-op], [CFLAGS="$CFLAGS -Wlogical-op"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-fstack-protector-all], [CFLAGS="$CFLAGS -fstack-protector-all"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-O2], [CFLAGS="$CFLAGS -O2"], [CFLAGS="$CFLAGS"])
+	AX_C_CHECK_FLAG([-O3], [CFLAGS="$CFLAGS -O3"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Waggregate-return], [CFLAGS="$CFLAGS -Waggregate-return"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Wwrite-strings], [CFLAGS="$CFLAGS -Wwrite-strings"], [CFLAGS="$CFLAGS"])
-	AX_C_CHECK_FLAG([-O3], [CFLAGS="$CFLAGS -O3"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wchkp], [CFLAGS="$CFLAGS -Wchkp"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wduplicated-cond], [CFLAGS="$CFLAGS -Wduplicated-cond"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wrestrict], [CFLAGS="$CFLAGS -Wrestrict"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Woverlength-strings], [CFLAGS="$CFLAGS -Woverlength-strings"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wno-nonnull-compare], [CFLAGS="$CFLAGS -Wno-nonnull-compare"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-g], [CFLAGS="$CFLAGS -g"], [CFLAGS="$CFLAGS"])	# needed for the 'debuginfo' rpm package
 
 	if (test "x$have_ll" = "xyes"); then
 
@@ -1287,6 +1334,12 @@ fi
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" ); then
 
 	AC_MSG_WARN([ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file.])
+fi
+
+if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" \
+	&& test "x$has_patched_r3" != "xyes" && test "x$has_patched_jfs" != "xyes" ); then
+
+	AC_MSG_WARN([ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the REDME file.])
 fi
 
 if ( test "x$wfs_have_hfsp" = "xyes"  ); then

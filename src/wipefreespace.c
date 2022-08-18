@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -145,7 +145,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2018 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -500,13 +500,13 @@ WFS_ATTR ((nonnull))
 wfs_show_progress (
 #ifdef WFS_ANSIC
 	const wfs_progress_type_t	type,
-	const unsigned int		percent,
+	unsigned int			percent,
 	unsigned int * const		prev_percent
 	)
 #else
 	type, percent, prev_percent )
 	const wfs_progress_type_t	type;
-	const unsigned int		percent;
+	unsigned int			percent;
 	unsigned int * const		prev_percent;
 #endif
 {
@@ -527,8 +527,7 @@ wfs_show_progress (
 	}
 	if ( percent > 100 )
 	{
-		*prev_percent = percent;
-		return;
+		percent = 100;
 	}
 
 	for ( i = *prev_percent; i < percent; i++ )
@@ -742,7 +741,7 @@ wfs_wipe_filesytem (
 	}
 
 	data.e2fs.super_off = super_off;
-	data.e2fs.blocksize = blocksize;
+	data.e2fs.blocksize = (unsigned int) (blocksize & 0x0FFFFFFFF);
 	ret = wfs_open_fs (&fs, &data);
 	if ( ret != WFS_SUCCESS )
 	{
@@ -948,6 +947,56 @@ wfs_wipe_filesytem (
 }
 
 /* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static int GCC_WARN_UNUSED_RESULT wfs_read_ulong_param
+	WFS_PARAMS ((const char param[], unsigned long int * const result));
+#endif
+
+static int GCC_WARN_UNUSED_RESULT wfs_read_ulong_param (
+#ifdef WFS_ANSIC
+	const char param[], unsigned long int * const result)
+#else
+	param, result)
+	const char param[];
+	unsigned long int * const result;
+#endif
+{
+	long int tmp_value;
+#ifndef HAVE_STRTOL
+	int res;
+#endif
+
+	if ( result == NULL )
+	{
+		return -1;
+	}
+
+#ifdef HAVE_ERRNO_H
+	errno = 0;
+#endif
+#ifdef HAVE_STRTOL
+	tmp_value = strtol ( param, NULL, 10 );
+#else
+	res = sscanf ( param, "%ld", &tmp_value );
+#endif
+	if ( (tmp_value <= 0)
+#ifndef HAVE_STRTOL
+		|| (res == 0)
+#else
+# ifdef HAVE_ERRNO_H
+		|| (errno != 0)
+# endif
+#endif
+		)
+	{
+		return -2;
+	}
+	*result = (unsigned long int)tmp_value;
+	return 0;
+}
+
+/* ======================================================================== */
 #ifndef WFS_ANSIC
 int main WFS_PARAMS ((int argc, char* argv[]));
 #endif
@@ -976,6 +1025,10 @@ main (
 	wf_gen.fsname = "";
 	wf_gen.fs_error = &err;
 	wf_gen.whichfs = WFS_CURR_FS_NONE;
+	wf_gen.npasses = 0;
+	wf_gen.zero_pass = 0;
+	wf_gen.fs_backend = NULL;
+	wf_gen.no_wipe_zero_blocks = 0;
 	wfs_check_stds (&stdout_open, &stderr_open);
 
 #ifdef HAVE_LIBINTL_H
@@ -1091,23 +1144,8 @@ main (
 
 		if ( (opt_char == (int)'n') || (opt_number == 1) )
 		{
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-# ifdef HAVE_STRTOUL
-			npasses = strtoul ( optarg, NULL, 10 );
-# else
-			res = sscanf ( optarg, "%u", &npasses );
-# endif
-			if ( (npasses == 0)
-# ifndef HAVE_STRTOUL
-				&& (res == 0)
-# else
-#  ifdef HAVE_ERRNO_H
-				|| (errno != 0)
-#  endif
-# endif
-			   )
+			res = wfs_read_ulong_param ( optarg, &npasses );
+			if ( res != 0 )
 			{
 				if ( stdout_open == 1 )
 				{
@@ -1120,26 +1158,8 @@ main (
 
 		if ( (opt_char == (int)'B') || (opt_blksize == 1) )
 		{
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-
-# ifdef HAVE_STRTOUL
-			blocksize = strtoul ( optarg, NULL, 10 );
-# else
-			res = sscanf ( optarg, "%u", &blocksize );
-# endif
-			if (
-# ifndef HAVE_STRTOUL
-				(res == 0)
-# else
-#  ifdef HAVE_ERRNO_H
-				(errno != 0)
-#  else
-				0
-#  endif
-# endif
-			   )
+			res = wfs_read_ulong_param ( optarg, &blocksize );
+			if ( res != 0 )
 			{
 				if ( stdout_open == 1 )
 				{
@@ -1152,26 +1172,8 @@ main (
 
 		if ( (opt_char == (int)'b') || (opt_super == 1) )
 		{
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-
-# ifdef HAVE_STRTOUL
-			super_off = strtoul ( optarg, NULL, 10 );
-# else
-			res = sscanf ( optarg, "%u", &super_off );
-# endif
-			if (
-# ifndef HAVE_STRTOUL
-				(res == 0)
-# else
-#  ifdef HAVE_ERRNO_H
-				(errno != 0)
-#  else
-				0
-#  endif
-# endif
-			   )
+			res = wfs_read_ulong_param ( optarg, &super_off );
+			if ( res != 0 )
 			{
 				if ( stdout_open == 1 )
 				{
@@ -1250,23 +1252,8 @@ main (
 				}
 				return WFS_BAD_CMDLN;
 			}
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-# ifdef HAVE_STRTOUL
-			npasses = strtoul ( argv[i+1], NULL, 10 );
-# else
-			res = sscanf ( argv[i+1], "%u", &npasses );
-# endif
-			if ( (npasses == 0)
-# ifndef HAVE_STRTOUL
-				&& (res == 0)
-# else
-#  ifdef HAVE_ERRNO_H
-				|| (errno != 0)
-#  endif
-# endif
-			   )
+			res = wfs_read_ulong_param ( argv[i+1], &npasses );
+			if ( res != 0 )
 			{
 				if ( stdout_open == 1 )
 				{
@@ -1289,26 +1276,8 @@ main (
 				}
 				return WFS_BAD_CMDLN;
 			}
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-
-# ifdef HAVE_STRTOUL
-			blocksize = strtoul ( argv[i+1], NULL, 10 );
-# else
-			res = sscanf ( argv[i+1], "%u", &blocksize );
-# endif
-			if (
-# ifndef HAVE_STRTOUL
-				(res == 0)
-# else
-#  ifdef HAVE_ERRNO_H
-				(errno != 0)
-#  else
-				0
-#  endif
-# endif
-			   )
+			res = wfs_read_ulong_param ( argv[i+1], &blocksize );
+			if ( res != 0 )
 			{
 				if ( stdout_open == 1 )
 				{
@@ -1332,26 +1301,8 @@ main (
 				}
 				return WFS_BAD_CMDLN;
 			}
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-
-# ifdef HAVE_STRTOUL
-			super_off = strtoul ( argv[i+1], NULL, 10 );
-# else
-			res = sscanf ( argv[i+1], "%u", &super_off );
-# endif
-			if (
-# ifndef HAVE_STRTOUL
-				(res == 0)
-# else
-#  ifdef HAVE_ERRNO_H
-				(errno != 0)
-#  else
-				0
-#  endif
-# endif
-			   )
+			res = wfs_read_ulong_param ( argv[i+1], &super_off );
+			if ( res != 0 )
 			{
 				if ( stdout_open == 1 )
 				{
@@ -1517,7 +1468,7 @@ main (
 
 #if (!defined __STRICT_ANSI__) && (defined HAVE_SRANDOM)
 # if (defined HAVE_TIME_H) || (defined HAVE_SYS_TIME_H) || (defined TIME_WITH_SYS_TIME)
-	srandom (0xabadcafe*(unsigned long int) time (NULL));
+	srandom (0xabadcafe * (unsigned int) time (NULL));
 # else
 	srandom (0xabadcafe);
 # endif

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- HFS+ file system-specific functions.
  *
- * Copyright (C) 2011-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -250,7 +250,7 @@ wfs_hfsp_wipe_part_file (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			error = wfs_hfsp_flush_fs (wfs_fs);
 		}
@@ -277,12 +277,11 @@ wfs_hfsp_wipe_part_file (
 				ret_part = WFS_BLKWR;
 				/* do NOT break here */
 			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			/* No need to flush the last writing of a given block. *
 			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 			{
 				error = wfs_hfsp_flush_fs (wfs_fs);
-			}
+			}*/
 		}
 	}
 
@@ -292,7 +291,7 @@ wfs_hfsp_wipe_part_file (
 		if ( (prev_percent != NULL) && (hfsp_volume->vol.file_count != 0) )
 		{
 			wfs_show_progress (WFS_PROGRESS_PART,
-				(*curr_file_no)/(hfsp_volume->vol.file_count), prev_percent);
+				(unsigned int)((*curr_file_no)/(hfsp_volume->vol.file_count)), prev_percent);
 		}
 	}
 
@@ -637,7 +636,7 @@ wfs_hfsp_wipe_fs (
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_hfsp_flush_fs (wfs_fs);
 				}
@@ -664,17 +663,16 @@ wfs_hfsp_wipe_fs (
 						ret_wfs = WFS_BLKWR;
 						/* do NOT break here */
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_hfsp_flush_fs (wfs_fs);
-					}
+					}*/
 				}
 			}
 		} /* if (volume_allocated) */
 		wfs_show_progress (WFS_PROGRESS_WFS,
-			curr_block / hfsp_volume->vol.total_blocks,
+			(unsigned int)(curr_block / hfsp_volume->vol.total_blocks),
 			&prev_percent);
 	} /* for (curr_block) */
 	free (buf);
@@ -767,11 +765,15 @@ wfs_hfsp_open_fs (
 	{
 		return WFS_BADPARAM;
 	}
+	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	if ( wfs_fs->fsname == NULL )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = WFS_BADPARAM;
+		}
 		return WFS_BADPARAM;
 	}
-	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
@@ -836,6 +838,7 @@ wfs_hfsp_open_fs (
 	{
 		volume_close (hfsp_volume);
 		free (hfsp_volume);
+		error = WFS_OPENFS;
 	}
 
 	free (dev_name_copy);

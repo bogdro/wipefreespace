@@ -1,3 +1,151 @@
+2019-10-25	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 2.3
+	  This is a major bugfix release. No new features are introduced.
+	  Fixes in XFS, OCFS, FAT and Reiser4 filesystem support. Specifying
+	  --last-zero now triggers flushing for better security. Compatibility
+	  and portability improvements. Better error setting. Progress bar
+	  fixes. Updated copyright and documentation. Other small fixes.
+	* configure.ac: Added checking for the -Wno-nonnull-compare compiler
+	  flag to avoid warnings about defensive programming code. Added
+	  checking for the stat(), fstat(), stat64() and fstat64() functions.
+	  Added checking for the -Wchkp, -Wformat-overflow=2, -Wrestrict
+	  -Wduplicated-cond, -Woverlength-strings compiler warning options.
+	  Stop enabling -Wpadded, most warnings of this type are not useful
+	  in this case. Improved the check for libreiser4.h, because the aal.h
+	  header is incompatible with newer systems and was not updated.
+	  Improved the check for ocfs2.h, because it's incompatible with newer
+	  systems and was not updated. Improved the check for libreiser4, now
+	  should also work with the default devel package. Added checking for
+	  a patched ReiserFSv3 and JFS libraries and new summary warnings.
+	  Added checking for the int64_t type and the linux/types.h header.
+	  Added checking for strtol() instead of strtoul(). Added checking for
+	  the -g compiler option for the debuginfo RPM package build to work
+	  by default. Binary version linked with libtffs with less logging.
+	* src/wfs_secure.c (wfs_check_stds): check for fstat() and fstat64().
+	  Use fstat64() first, if available.
+	* src/wfs_util.c (wfs_check_loop_mounted, wfs_get_mnt_point_mounts):
+	  use stat64(), if available
+	* src/wfs_xfs.c (wfs_xfs_open_fs): zero the blocksize before reading,
+	  for systems where size_t is 64-bit.
+	* src/Makefile.am: changed "INCLUDES" to "AM_CPPFLAGS"
+	* src/wfs_reiser4.c: fix in case of conflicting "int64_t"
+	* src/wfs_ocfs.c: fix in case of missing "umode_t"
+	* patches/reiser-3.6.XX-compile-fix.diff: added a patch to fix errors
+	  in compiling reiserfsprogs on some systems (missing symbols due to
+	  inlining).
+	* src/wfs_xfs.c (wfs_xfs_check_err): use stat64(), if available
+	* src/wfs_util.c: added missing headers for newer systems and declared
+	  malloc() in case it is missing
+	* src/wfs_xfs.c: added feature #defines (_DEFAULT_SOURCE)
+	* src/wfs_util.c (flush_pipe_input): change types to avoid warnings
+	* src/wfs_signal.c (print_signal_error): fix output buffer size
+	* src/wipefreespace.c (wfs_wipe_filesytem, main): change types to
+	  avoid warnings
+	* src/wfs_ntfs.c (wipe_compressed_attribute): change types to avoid
+	  warnings
+	* src/wfs_xfs.c (wfs_xfs_read_line, wfs_xfs_wipe_fs, wfs_xfs_wipe_part,
+	  wfs_xfs_open_fs): change types to avoid warnings
+	* src/wfs_reiser.c (wfs_reiser_wipe_part, wfs_reiser_wipe_fs,
+	  wfs_reiser_wipe_unrm): change types to avoid warnings
+	* src/wfs_reiser4.c (wfs_r4_wipe_fs, wfs_r4_wipe_journal,
+	  wfs_r4_wipe_object): change types to avoid warnings
+	* src/wfs_fat.c (wfs_fat_wipe_file_tail): change types to avoid
+	  warnings
+	* src/wfs_minixfs.c (wfs_minixfs_wipe_fs): change types to avoid
+	  warnings
+	* src/wfs_jfs.c (wfs_jfs_wipe_block): change types to avoid warnings
+	* src/wfs_hfsp.c (wfs_hfsp_wipe_part_file, wfs_hfsp_wipe_fs): change
+	  types to avoid warnings
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_part_blocks): change types to avoid
+	  warnings
+	* doc/wipefreespace.texi.in: updated limits on Reiser3 and MinixFS.
+	  Added the new names for libraries: 'libext2fs' and 'ntfs-3g'.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm_dir): fix user-provided data
+	  pointer when recurring into subdirectories
+	* src/wfs_xfs.c (wfs_xfs_wipe_part): fix reading partial lines, add
+	  input flushing in one more place
+	* src/wfs_hfsp.c (wfs_hfsp_open_fs): set the error code on error
+	* src/wfs_reiser4.c (wfs_r4_open_fs): set the error code on error, fix
+	  free(NULL) on error path
+	* src/wfs_reiser.c (wfs_reiser_open_fs): set the error code on error
+	* src/wfs_ntfs.c (wfs_ntfs_open_fs): set the error code on error
+	* src/wfs_minixfs.c (wfs_minixfs_open_fs): set the error code on error
+	* src/wfs_jfs.c (wfs_jfs_open_fs): set the error code on error
+	* src/wfs_ext234.c (wfs_e234_wipe_part, wfs_e234_wipe_fs,
+	  wfs_e234_wipe_journal, wfs_e234_chk_mount): set the error code on
+	  error paths
+	* src/wfs_reiser.c: attempt to detect an unpatched Reiser3 library
+	  with JFS also enabled
+	* src/wfs_jfs.c: attempt to detect an unpatched JFS library with
+	  Reiser3 also enabled
+	* README, doc/wipefreespace.texi.in: more specific information on
+	  patching Reiser3, to match the new code and the test in 'configure'
+	* doc/wipefreespace.texi.in, doc/wipefreespace.1: added new URLs,
+	  updated the thank-you list
+	* src/wfs_cfg.h.in: updated the default constant list
+	* configure.ac, src/wipefreespace.c (wfs_read_ulong_param, main): the
+	  --iterations, --superblock and --blocksize parameters (and their
+	  short versions) no longer accept negative values and print the help
+	  when given such
+	* src/wipefreespace.h: updated the check for Reiser4 - libmisc is no
+	  longer strictly required (it's not present in the official package)
+	* src/wfs_fat.c (wfs_fat_wipe_unrm_dir): correctly update the progress
+	  bar also when sub-directories are processed
+	* src/wfs_et234.c (wfs_e234_wipe_part): correctly update the progress
+	  bar also when skipping i-nodes
+	* src/wfs_et234.c (e2_wipe_unrm_dir): correctly update the progress
+	  bar also when sub-directories are processed
+	* src/wfs_jfs.c (wfs_jfs_wipe_fs, wfs_jfs_wipe_unrm): correctly update
+	  the progress bar also when skipping blocks and wiping the journal
+	* src/wfs_minixfs.c (wfs_minixfs_wipe_dir): correctly update the
+	  progress bar also when skipping blocks
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_part): correctly update
+	  the progress bar also when skipping i-nodes. If an i-node can't be
+	  opened, set the error only if the i-node exists in the filesystem -
+	  this fixes the "error 0 during reading of an inode" message
+	* src/wfs_reiser.c (wfs_reiser_wipe_fs, wfs_reiser_wipe_unrm):
+	  correctly update the progress bar also when skipping blocks
+	* src/wfs_reiser4.c (wfs_r4_wipe_fs, wfs_r4_wipe_journal,
+	  wfs_r4_wipe_unrm_work): correctly update the progress bar also when
+	  skipping blocks
+	* src/wfs_fat.c (wfs_fat_dirent_find): zeroing deleted files' names
+	  only if requested
+	* src/wipefreespace.c, src/wipefreespace.h (wfs_show_progress): fix
+	  an unnecessary empty line after the progress bar
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): save journal size before wiping
+	  it, to be sure to process all blocks and view the correct progress
+	* src/wfs_util.c (wfs_check_mounted): fix the buffer size
+	* src/wipefreespace.c (main): initialize wf_gen fully, just in case
+	* src/wipefreespace.h, src/*.c: make the backends flush also when
+	  --last-zero was given, because that's an additional wiping pass
+	* src/wfs_reiser4.c (wfs_r4_wipe_last_block, wfs_r4_wipe_fs,
+	  wfs_r4_wipe_journal, wfs_r4_wipe_object): free the block after usage
+	  to avoid memory leaks
+	* patches/hfsplus-1.0.4.diff: updated the patch with new fixes
+	* patches/jfsutils-1.1.11-compile-fix.diff: added a patch for fixing
+	  duplicate symbols and compile errors in jfsutils on newer systems
+	* patches/ocfs2-tools-1.6.4-compile-fix.diff: added a patch for fixing
+	  compile errors in ocfs-tools on newer systems
+	* patches/tffs-free-fix.diff: updated with chunks fixing memory leaks
+	* patches/tffs-overflow-fix.diff: fixed filename length. This may fix
+	  a crash encountered on some systems
+	* patches/tffs-fat-eof-fix.diff: a new patch to avoid reading invalid
+	  clusters (marked as end-of-file).
+	* INSTALL-WFS.txt: renamed from "INSTALL", which autotools overwrite
+	* README, doc/wipefreespace.texi.in, INSTALL-WFS.txt: added new patch
+	  commands for the new patches
+	* test/test_wfs_util.c: changed the hardcoded mount directory to a
+	  local subdirectory (created before the tests and deleted after).
+	  Sync the file descriptors before un-mounting. This should make the
+	  tests more reliable.
+	* Makefile.am: stop using 'tar --delete', for systems where GNU tar is
+	  not installed or not the default
+	* doc/Makefile.am: changed "man_MANS" to "dist_man1_MANS"
+	* wipefreespace.spec.in: made the spec file more portable (assuming that
+	  the required macros are properly defined on the target systems) and
+	  removed some rpmlint warnings and errors
+
 2018-01-14	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 2.2.2

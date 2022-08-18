@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- unit test for the wfs_util.c file.
  *
- * Copyright (C) 2015-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2015-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v3+
  *
  * This program is free software; you can redistribute it and/or
@@ -240,7 +240,7 @@ fill_buffer (
 /* ============================================================= */
 
 #define WFS_TEST_FILESYSTEM "../../dysk_ext2"
-#define WFS_TEST_MOUNT_POINT "/home/bogdan/siemens/"
+#define WFS_TEST_MOUNT_POINT "testdir"
 #define WFS_TEST_LOOP_DEVICE "/dev/loop3"	/* chosen arbitrarily */
 
 START_TEST(test_wfs_check_mounted)
@@ -324,14 +324,28 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 			ret2 = (*mcf) (wfs_fs);
 			free (wfs_fs.fs_error);
 
-			umount (WFS_TEST_MOUNT_POINT);
+			fsync(fd_fs);
+			fsync(fd_loop);
+			sync();
+			res = umount (WFS_TEST_MOUNT_POINT);
+			if ( res != 0 )
+			{
+				printf("umount(WFS_TEST_MOUNT_POINT) failed 1, errno=%d\n", errno);
+			}
 			close (fd_fs);
 			ioctl (fd_loop, LOOP_CLR_FD, 0);
 			close (fd_loop);
 		}
 		else
 		{
-			umount (WFS_TEST_MOUNT_POINT);
+			fsync(fd_fs);
+			fsync(fd_loop);
+			sync();
+			res = umount (WFS_TEST_MOUNT_POINT);
+			if ( res != 0 )
+			{
+				printf("umount(WFS_TEST_MOUNT_POINT) failed 2, errno=%d\n", errno);
+			}
 			close (fd_fs);
 			ioctl (fd_loop, LOOP_CLR_FD, 0);
 			close (fd_loop);
@@ -622,13 +636,14 @@ END_TEST
 __attribute__ ((constructor))
 static void setup_global(void) /* unchecked */
 {
+	mkdir (WFS_TEST_MOUNT_POINT, 0666);
 }
 
-/*
+/*__attribute__ ((destructor))*/
 static void teardown_global(void)
 {
+	rmdir (WFS_TEST_MOUNT_POINT);
 }
-*/
 
 /* checked * /
 static void setup_test(void)
@@ -693,7 +708,7 @@ static Suite * wfs_create_suite(void)
 #endif
 
 	/*tcase_add_checked_fixture(tests_mount, &setup_test, &teardown_test);*/
-	/*tcase_add_unchecked_fixture(tests_mount, &setup_global, &teardown_global);*/
+	tcase_add_unchecked_fixture(tests_mount, &setup_global, &teardown_global);
 
 	/* set 30-second timeouts */
 	tcase_set_timeout(tests_mount, 30);

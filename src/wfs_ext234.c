@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2/3/4 file system-specific functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -304,7 +304,7 @@ e2_do_block (
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(bd->wd.filesys) )
 		{
 			gerror = wfs_e234_flush_fs (bd->wd.filesys);
 		}
@@ -346,12 +346,11 @@ e2_do_block (
 					returns = BLOCK_ABORT;
 				}
 			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			/* No need to flush the last writing of a given block. *
 			if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
 			{
 				gerror = wfs_e234_flush_fs (bd->wd.filesys);
-			}
+			}*/
 		}
 	}
 
@@ -407,12 +406,11 @@ e2_do_block (
 						returns = BLOCK_ABORT;
 					}
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
 				{
 					gerror = wfs_e234_flush_fs (bd->wd.filesys);
-				}
+				} */
 			}
 		}
 		bd->curr_inode++;
@@ -618,6 +616,11 @@ e2_wipe_unrm_dir (
 			}
 		}
 		changed = 1;
+		bd->curr_inode++;
+		wfs_show_progress (WFS_PROGRESS_UNRM,
+			(bd->curr_inode * 50)/(e2fs->super->s_inodes_count
+				- e2fs->super->s_free_inodes_count),
+			& (bd->prev_percent));
 	}		/* is the current i-node a directory? If so, dig into it. */
 	else if ( 	(entry != DIRENT_DOT_FILE)
 			&& (entry != DIRENT_DOT_DOT_FILE)
@@ -711,7 +714,7 @@ wfs_e234_wipe_part (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -719,7 +722,7 @@ wfs_e234_wipe_part (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -773,6 +776,11 @@ wfs_e234_wipe_part (
 
 			if ( e2error != 0 )
 			{
+				curr_inode++;
+				wfs_show_progress (WFS_PROGRESS_PART,
+					(curr_inode * 100)/(e2fs->super->s_inodes_count
+						- e2fs->super->s_free_inodes_count),
+					&prev_percent);
 				continue;
 			}
 			if ( ino_number == 0 )
@@ -782,6 +790,11 @@ wfs_e234_wipe_part (
 
 			if ( ino_number < (ext2_ino_t) EXT2_FIRST_INO (e2fs->super) )
 			{
+				curr_inode++;
+				wfs_show_progress (WFS_PROGRESS_PART,
+					(curr_inode * 100)/(e2fs->super->s_inodes_count
+						- e2fs->super->s_free_inodes_count),
+					&prev_percent);
 				continue;
 			}
 
@@ -793,6 +806,11 @@ wfs_e234_wipe_part (
 			/* skip if no data blocks */
 			if ( ext2fs_inode_data_blocks (e2fs, &ino) == 0 )
 			{
+				curr_inode++;
+				wfs_show_progress (WFS_PROGRESS_PART,
+					(curr_inode * 100)/(e2fs->super->s_inodes_count
+						- e2fs->super->s_free_inodes_count),
+					&prev_percent);
 				continue;
 			}
 
@@ -804,6 +822,11 @@ wfs_e234_wipe_part (
 				((ino.i_flags & EXT2_INDEX_FL) != 0)
 			   )
 			{
+				curr_inode++;
+				wfs_show_progress (WFS_PROGRESS_PART,
+					(curr_inode * 100)/(e2fs->super->s_inodes_count
+						- e2fs->super->s_free_inodes_count),
+					&prev_percent);
 				continue;
 			}
 
@@ -815,6 +838,11 @@ wfs_e234_wipe_part (
 			/* check if there's unused space in any block */
 			if ( (ino.i_size % fs_block_size) == 0 )
 			{
+				curr_inode++;
+				wfs_show_progress (WFS_PROGRESS_PART,
+					(curr_inode * 100)/(e2fs->super->s_inodes_count
+						- e2fs->super->s_free_inodes_count),
+					&prev_percent);
 				continue;
 			}
 
@@ -859,7 +887,7 @@ wfs_e234_wipe_part (
 			) && (sig_recvd == 0) );
 
 		ext2fs_close_inode_scan (ino_scan);
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			gerror = wfs_e234_flush_fs (wfs_fs);
 		}
@@ -920,7 +948,7 @@ wfs_e234_wipe_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -928,7 +956,7 @@ wfs_e234_wipe_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1047,7 +1075,7 @@ wfs_e234_wipe_journal (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1055,7 +1083,7 @@ wfs_e234_wipe_journal (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1172,7 +1200,7 @@ wfs_e234_wipe_unrm (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = e2error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1200,7 +1228,7 @@ wfs_e234_wipe_unrm (
 			ret = WFS_DIRITER;
 			break;
 		}
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 		{
 			gerror = wfs_e234_flush_fs (wfs_fs);
 		}
@@ -1273,18 +1301,22 @@ wfs_e234_open_fs (
 	{
 		return WFS_BADPARAM;
 	}
+	error_ret = (errcode_t *) wfs_fs->fs_error;
 	if ( wfs_fs->fsname == NULL )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = 100;
+		}
 		return WFS_BADPARAM;
 	}
 
-	error_ret = (errcode_t *) wfs_fs->fs_error;
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 	e2error = ext2fs_open (wfs_fs->fsname, EXT2_FLAG_RW
 #ifdef EXT2_FLAG_EXCLUSIVE
 		| EXT2_FLAG_EXCLUSIVE
 #endif
-		, (int)(data->e2fs.super_off), (unsigned int) (data->e2fs.blocksize),
+		, (int)(data->e2fs.super_off), data->e2fs.blocksize,
 		unix_io_manager, (ext2_filsys *) &(wfs_fs->fs_backend));
 
 	if ( e2error != 0 )
@@ -1292,7 +1324,7 @@ wfs_e234_open_fs (
 		ret = WFS_OPENFS;
 		e2error = ext2fs_open (wfs_fs->fsname, EXT2_FLAG_RW,
 			(int)(data->e2fs.super_off),
-			(unsigned int) (data->e2fs.blocksize),
+			data->e2fs.blocksize,
 			unix_io_manager,
 			(ext2_filsys *) &(wfs_fs->fs_backend));
 	}
@@ -1336,7 +1368,7 @@ wfs_e234_chk_mount (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}

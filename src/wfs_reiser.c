@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv3 file system-specific functions.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -109,6 +109,14 @@ typedef short int __u16;
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+
+#ifdef HAVE_REISER3_NEW_BREAD
+# define bread reiser3_new_bread
+#else
+# if (defined WFS_JFS) && (! defined HAVE_JFS_BREAD)
+#  warning Detected unpatched Reiser3FS library with JFS enabled. WipeFreeSpace can crash! Read README.
+# endif
+#endif
 
 /* Fix the sizes. */
 static const unsigned long long int bh_dirty = BH_Dirty;
@@ -363,7 +371,7 @@ wfs_reiser_wipe_part (
 					}
 					else if (reiserfs_bitmap_test_bit (
 						rfs->fs_badblocks_bm,
-						bh->b_blocknr) == 0)
+						(unsigned int)(bh->b_blocknr & 0x0FFFFFFFF)) == 0)
 					{
 						ret_part = WFS_BLKWR;
 						break;
@@ -372,7 +380,7 @@ wfs_reiser_wipe_part (
 				/* Flush after each writing, if more than 1 overwriting needs
 				   to be done. Allow I/O bufferring (efficiency), if just one
 				   pass is needed. */
-				if ((wfs_fs.npasses > 1) && (sig_recvd == 0))
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_reiser_flush_fs (wfs_fs);
 				}
@@ -412,19 +420,17 @@ wfs_reiser_wipe_part (
 						}
 						else if (reiserfs_bitmap_test_bit (
 							rfs->fs_badblocks_bm,
-							bh->b_blocknr) == 0)
+							(unsigned int)(bh->b_blocknr & 0x0FFFFFFFF)) == 0)
 						{
 							ret_part = WFS_BLKWR;
 							break;
 						}
 					}
-					/* Flush after each writing, if more than 1 overwriting needs
-					to be done. Allow I/O bufferring (efficiency), if just one
-					pass is needed. */
-					if ((wfs_fs.npasses > 1) && (sig_recvd == 0))
+					/* No need to flush the last writing of a given block. *
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_reiser_flush_fs (wfs_fs);
-					}
+					} */
 					if ( sig_recvd != 0 )
 					{
 						ret_part = WFS_SIGNAL;
@@ -574,15 +580,21 @@ wfs_reiser_wipe_fs (
 		if (       (not_data_block   ( rfs, blk_no ) != 0)
 			|| (block_of_bitmap  ( rfs, blk_no ) != 0)
 			|| (block_of_journal ( rfs, blk_no ) != 0)
-			|| (reiserfs_bitmap_test_bit (rfs->fs_bitmap2, blk_no) != 0)
+			|| (reiserfs_bitmap_test_bit (rfs->fs_bitmap2, (unsigned int)(blk_no & 0x0FFFFFFFF)) != 0)
 		)
 		{
+			curr_sector++;
+			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
+				/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
 			continue;
 		}
 		/* read the block just to fill the structure */
 		bh = bread (rfs->fs_dev, blk_no, fs_block_size);
 		if ( bh == NULL )
 		{
+			curr_sector++;
+			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
+				/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
 			continue;
 		}
 
@@ -621,7 +633,7 @@ wfs_reiser_wipe_fs (
 				}
 				else if (reiserfs_bitmap_test_bit (
 					rfs->fs_badblocks_bm,
-					blk_no) == 0)
+					(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
 				{
 					ret_wfs = WFS_BLKWR;
 					break;
@@ -629,7 +641,7 @@ wfs_reiser_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_reiser_flush_fs (wfs_fs);
 			}
@@ -664,18 +676,17 @@ wfs_reiser_wipe_fs (
 						}
 						else if (reiserfs_bitmap_test_bit (
 							rfs->fs_badblocks_bm,
-							blk_no) == 0)
+							(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
 						{
 							ret_wfs = WFS_BLKWR;
 							break;
 						}
 					}
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_reiser_flush_fs (wfs_fs);
-					}
+					}*/
 				}
 			}
 		}
@@ -801,6 +812,10 @@ wfs_reiser_wipe_unrm (
 				|| blk_no <= get_jp_journal_1st_block (sb_jp (rfs.fs_ondisk_sb))
 				)
 			{
+				curr_direlem++;
+				wfs_show_progress (WFS_PROGRESS_UNRM, (unsigned int) ((curr_direlem*50)
+					/ get_jp_journal_size (&(rfs->fs_ondisk_sb->s_v1.sb_journal))),
+					&prev_percent);
 				continue;
 			}
 			*/
@@ -808,6 +823,10 @@ wfs_reiser_wipe_unrm (
 			bh = bread (rfs->fs_dev, blk_no, fs_block_size);
 			if ( bh == NULL )
 			{
+				curr_direlem++;
+				wfs_show_progress (WFS_PROGRESS_UNRM, (unsigned int) ((curr_direlem*50)
+					/ get_jp_journal_size (&(rfs->fs_ondisk_sb->s_v1.sb_journal))),
+					&prev_percent);
 				continue;
 			}
 
@@ -861,7 +880,7 @@ wfs_reiser_wipe_unrm (
 						break;
 					}
 					else if (reiserfs_bitmap_test_bit
-						(rfs->fs_badblocks_bm, blk_no) == 0)
+						(rfs->fs_badblocks_bm, (unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
 					{
 						ret_wfs = WFS_BLKWR;
 						break;
@@ -869,8 +888,7 @@ wfs_reiser_wipe_unrm (
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1)
-					&& (sig_recvd == 0) )
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_reiser_flush_fs (wfs_fs);
 				}
@@ -904,20 +922,18 @@ wfs_reiser_wipe_unrm (
 								break;
 							}
 							else if (reiserfs_bitmap_test_bit
-								(rfs->fs_badblocks_bm, blk_no) == 0)
+								(rfs->fs_badblocks_bm, (unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
 							{
 								ret_wfs = WFS_BLKWR;
 								break;
 							}
 						}
-						/* Flush after each writing, if more than 1 overwriting needs
-						to be done.
-						Allow I/O bufferring (efficiency), if just one pass is needed. */
+						/* No need to flush the last writing of a given block. *
 						if ( (wfs_fs.npasses > 1)
 							&& (sig_recvd == 0) )
 						{
 							error = wfs_reiser_flush_fs (wfs_fs);
-						}
+						}*/
 					}
 				}
 			}
@@ -1060,7 +1076,7 @@ wfs_reiser_wipe_unrm (
 							}
 							else if (reiserfs_bitmap_test_bit
 								(rfs->fs_badblocks_bm,
-								bh->b_blocknr) == 0)
+								(unsigned int)(bh->b_blocknr & 0x0FFFFFFFF)) == 0)
 							{
 								ret_wfs = WFS_BLKWR;
 								break;
@@ -1070,8 +1086,7 @@ wfs_reiser_wipe_unrm (
 						   overwriting needs to be done. Allow I/O
 						   bufferring (efficiency), if just one
 						   pass is needed. */
-						if ((wfs_fs.npasses > 1)
-							&& (sig_recvd == 0))
+						if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 						{
 							error =
 								wfs_reiser_flush_fs (wfs_fs);
@@ -1129,22 +1144,19 @@ wfs_reiser_wipe_unrm (
 								}
 								else if (reiserfs_bitmap_test_bit
 									(rfs->fs_badblocks_bm,
-									bh->b_blocknr) == 0)
+									(unsigned int)(bh->b_blocknr & 0x0FFFFFFFF)) == 0)
 								{
 									ret_wfs = WFS_BLKWR;
 									break;
 								}
 							}
-							/* Flush after each writing, if more than 1
-							overwriting needs to be done. Allow I/O
-							bufferring (efficiency), if just one
-							pass is needed. */
-							if ((wfs_fs.npasses > 1)
-								&& (sig_recvd == 0))
+							/* No need to flush the last writing of a given block. *
+							if ( (wfs_fs.npasses > 1)
+								&& (sig_recvd == 0) )
 							{
 								error =
 									wfs_reiser_flush_fs (wfs_fs);
-							}
+							} */
 							if ( sig_recvd != 0 )
 							{
 								ret_wfs = WFS_SIGNAL;
@@ -1244,7 +1256,7 @@ wfs_reiser_open_fs (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = error;
+			*error_ret = WFS_BADPARAM;
 		}
 		return WFS_BADPARAM;
 	}
@@ -1290,8 +1302,9 @@ wfs_reiser_open_fs (
 		return WFS_OPENFS;
 	}
 
-	if (no_reiserfs_found (res) != 0)
+	if ( no_reiserfs_found (res) != 0 )
 	{
+		error = WFS_OPENFS;
 		/*reiserfs_close (res);*/
 		free (dev_name_copy);
 		if ( error_ret != NULL )
@@ -1303,6 +1316,7 @@ wfs_reiser_open_fs (
 
 	if ( reiserfs_open_ondisk_bitmap (res) != 0 )
 	{
+		error = WFS_BLBITMAPREAD;
 		reiserfs_close (res);
 		free (dev_name_copy);
 		if ( error_ret != NULL )
@@ -1314,6 +1328,7 @@ wfs_reiser_open_fs (
 
 	if ( res->fs_bitmap2 == NULL )
 	{
+		error = WFS_BLBITMAPREAD;
 		reiserfs_close (res);
 		free (dev_name_copy);
 		if ( error_ret != NULL )

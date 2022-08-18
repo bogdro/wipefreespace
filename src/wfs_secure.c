@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- security-related procedures.
  *
- * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -24,6 +24,8 @@
  */
 
 #include "wfs_cfg.h"
+
+#define _LARGEFILE64_SOURCE 1
 
 #include <stdio.h>	/* stdout & stderr */
 
@@ -50,6 +52,12 @@
 #endif
 
 #include "wfs_secure.h"
+
+#if (defined HAVE_SYS_STAT_H) && ((defined HAVE_STAT) || (defined HAVE_STAT64))
+# define WFS_HAVE_STAT 1
+#else
+# undef WFS_HAVE_STAT
+#endif
 
 /* ======================================================================== */
 
@@ -191,24 +199,37 @@ wfs_check_stds (
 	int *stderr_open;
 #endif
 {
-#ifdef HAVE_SYS_STAT_H
+#ifdef WFS_HAVE_STAT
 	int res;
+# ifdef HAVE_FSTAT64
+	struct stat64 stat_buf;
+# else
 	struct stat stat_buf;
+# endif
+# ifdef HAVE_UNISTD_H
+	int stdout_fd = STDOUT_FILENO;
+	int stderr_fd = STDERR_FILENO;
+# else
+	int stdout_fd = 1;
+	int stderr_fd = 2;
+# endif
 #endif
 
 	if ( stdout_open != NULL )
 	{
 		*stdout_open = 1;
 
-#ifdef HAVE_SYS_STAT_H
+#ifdef WFS_HAVE_STAT
 
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
-# ifdef HAVE_UNISTD_H
-		res = fstat (STDOUT_FILENO, &stat_buf);
+# ifdef HAVE_FSTAT64
+		res = fstat64 (stdout_fd, &stat_buf);
+# elif HAVE_FSTAT
+		res = fstat (stdout_fd, &stat_buf);
 # else
-		res = fstat (1, &stat_buf);
+		res = 0; /* open by default */
 # endif
 		if ( (res < 0)
 # ifdef HAVE_ERRNO_H
@@ -218,21 +239,23 @@ wfs_check_stds (
 		{
 			*stdout_open = 0;
 		}
-#endif	/* HAVE_SYS_STAT_H */
+#endif	/* WFS_HAVE_STAT */
 	}
 
 	if ( stderr_open != NULL )
 	{
 		*stderr_open = 1;
 
-#ifdef HAVE_SYS_STAT_H
+#ifdef WFS_HAVE_STAT
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
-# ifdef HAVE_UNISTD_H
-		res = fstat (STDERR_FILENO, &stat_buf);
+# ifdef HAVE_FSTAT64
+		res = fstat64 (stderr_fd, &stat_buf);
+# elif HAVE_FSTAT
+		res = fstat (stderr_fd, &stat_buf);
 # else
-		res = fstat (2, &stat_buf);
+		res = 0; /* open by default */
 # endif
 		if ( (res < 0)
 # ifdef HAVE_ERRNO_H
@@ -242,7 +265,7 @@ wfs_check_stds (
 		{
 			*stderr_open = 0;
 		}
-#endif	/* HAVE_SYS_STAT_H */
+#endif	/* WFS_HAVE_STAT */
 	}
 
 	if ( (stdout == NULL) && (stdout_open != NULL) )

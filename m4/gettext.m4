@@ -84,7 +84,7 @@ AC_DEFUN([AM_GNU_GETTEXT],
   dnl Ideally we would do this search only after the
   dnl      if test "$USE_NLS" = "yes"; then
   dnl        if { eval "gt_val=\$$gt_func_gnugettext_libc"; test "$gt_val" != "yes"; }; then
-  dnl tests. But if configure.in invokes AM_ICONV after AM_GNU_GETTEXT
+  dnl tests. But if configure.ac invokes AM_ICONV after AM_GNU_GETTEXT
   dnl the configure script would need to contain the same shell code
   dnl again, outside any 'if'. There are two solutions:
   dnl - Invoke AM_ICONV_LINKFLAGS_BODY here, outside any 'if'.
@@ -323,7 +323,7 @@ return * gettext ("")$gt_expression_test_code + _nl_msg_cat_cntr + *_nl_expand_a
     AC_SUBST(USE_INCLUDED_LIBINTL)
     AC_SUBST(CATOBJEXT)
 
-    dnl For backward compatibility. Some configure.ins may be using this.
+    dnl For backward compatibility. Some configure.acs may be using this.
     nls_cv_header_intl=
     nls_cv_header_libgt=
 

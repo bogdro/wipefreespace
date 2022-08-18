@@ -126,14 +126,14 @@ changequote([,])dnl
           if test -f "$ac_given_srcdir/$ac_dir/LINGUAS"; then
             # The LINGUAS file contains the set of available languages.
             if test -n "$OBSOLETE_ALL_LINGUAS"; then
-              test -n "$as_me" && echo "$as_me: setting ALL_LINGUAS in configure.in is obsolete" || echo "setting ALL_LINGUAS in configure.in is obsolete"
+              test -n "$as_me" && echo "$as_me: setting ALL_LINGUAS in configure.ac is obsolete" || echo "setting ALL_LINGUAS in configure.ac is obsolete"
             fi
             ALL_LINGUAS_=`sed -e "/^#/d" -e "s/#.*//" "$ac_given_srcdir/$ac_dir/LINGUAS"`
             # Hide the ALL_LINGUAS assigment from automake < 1.5.
             eval 'ALL_LINGUAS''=$ALL_LINGUAS_'
             POMAKEFILEDEPS="$POMAKEFILEDEPS LINGUAS"
           else
-            # The set of available languages was given in configure.in.
+            # The set of available languages was given in configure.ac.
             # Hide the ALL_LINGUAS assigment from automake < 1.5.
             eval 'ALL_LINGUAS''=$OBSOLETE_ALL_LINGUAS'
           fi
@@ -219,7 +219,7 @@ AC_DEFUN([AM_POSTPROCESS_PO_MAKEFILE],
 [
   # When this code is run, in config.status, two variables have already been
   # set:
-  # - OBSOLETE_ALL_LINGUAS is the value of LINGUAS set in configure.in,
+  # - OBSOLETE_ALL_LINGUAS is the value of LINGUAS set in configure.ac,
   # - LINGUAS is the value of the environment variable LINGUAS at configure
   #   time.
 
@@ -304,7 +304,7 @@ changequote([,])dnl
   POMAKEFILEDEPS=""
 
   if test -n "$OBSOLETE_ALL_LINGUAS"; then
-    test -n "$as_me" && echo "$as_me: setting ALL_LINGUAS in configure.in is obsolete" || echo "setting ALL_LINGUAS in configure.in is obsolete"
+    test -n "$as_me" && echo "$as_me: setting ALL_LINGUAS in configure.ac is obsolete" || echo "setting ALL_LINGUAS in configure.ac is obsolete"
   fi
   if test -f "$ac_given_srcdir/$ac_dir/LINGUAS"; then
     # The LINGUAS file contains the set of available languages.

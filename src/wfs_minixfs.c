@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions.
  *
- * Copyright (C) 2009-2018 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2009-2019 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -284,6 +284,14 @@ wfs_minixfs_wipe_dir (
 			bsz = read_inoblk (minix, dir_ino, i / BLOCK_SIZE, blk);
 			if ( bsz < 0 )
 			{
+				if ( wipe_part != 0 )
+				{
+					wfs_show_progress (WFS_PROGRESS_PART, (i*100)/root_count, prev_percent);
+				}
+				else
+				{
+					wfs_show_progress (WFS_PROGRESS_UNRM, (i*100)/root_count, prev_percent);
+				}
 				continue;
 			}
 			for (j = 0; (j < (unsigned int)bsz)
@@ -334,11 +342,9 @@ wfs_minixfs_wipe_dir (
 						   overwriting needs to be done.
 						   Allow I/O bufferring (efficiency), if just one
 						   pass is needed. */
-						if ( (wfs_fs.npasses > 1)
-							&& (sig_recvd == 0) )
+						if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 						{
-							error =
-								wfs_minixfs_flush_fs (wfs_fs);
+							error = wfs_minixfs_flush_fs (wfs_fs);
 						}
 					}
 					if ( (wfs_fs.zero_pass != 0)
@@ -359,16 +365,12 @@ wfs_minixfs_wipe_dir (
 							error = 0;
 							write_inoblk (minix, dir_ino,
 								i / BLOCK_SIZE, blk); /* void */
-							/* Flush after each writing, if more than
-							   1 overwriting needs to be done.
-							   Allow I/O bufferring (efficiency), if just
-							   one pass is needed. */
+							/* No need to flush the last writing of a given block. *
 							if ( (wfs_fs.npasses > 1)
 								&& (sig_recvd == 0) )
 							{
-								error =
-									wfs_minixfs_flush_fs (wfs_fs);
-							}
+								error = wfs_minixfs_flush_fs (wfs_fs);
+							}*/
 						}
 					}
 				}
@@ -419,7 +421,7 @@ wfs_minixfs_wipe_dir (
 			write_inoblk (minix, dir_ino, inode_size / BLOCK_SIZE, buf); /* void */
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_minixfs_flush_fs (wfs_fs);
 			}
@@ -444,13 +446,12 @@ wfs_minixfs_wipe_dir (
 				{
 					error = 0;
 					write_inoblk (minix, dir_ino, inode_size / BLOCK_SIZE, buf); /* void */
-					/* Flush after each writing, if more than 1 overwriting needs to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					/* No need to flush the last writing of a given block. *
 					if ( (wfs_fs.npasses > 1)
 						&& (sig_recvd == 0) )
 					{
 						error = wfs_minixfs_flush_fs (wfs_fs);
-					}
+					}*/
 				}
 			}
 		}
@@ -618,7 +619,7 @@ wfs_minixfs_wipe_fs (
 			{
 				was_read = fread (buf, 1,
 					fs_block_size,
-					goto_blk (minix->fp, current_block));
+					goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
 				if ( (was_read == fs_block_size)
 					&& (wfs_is_block_zero (buf,
 					fs_block_size) != 0) )
@@ -639,7 +640,7 @@ wfs_minixfs_wipe_fs (
 			errno = 0;
 # endif
 			written = fwrite (buf, 1, fs_block_size,
-				goto_blk (minix->fp, current_block));
+				goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
 			if ( written != fs_block_size )
 			{
 # ifdef HAVE_ERRNO_H
@@ -650,7 +651,7 @@ wfs_minixfs_wipe_fs (
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 			{
 				error = wfs_minixfs_flush_fs (wfs_fs);
 			}
@@ -678,7 +679,7 @@ wfs_minixfs_wipe_fs (
 				errno = 0;
 # endif
 				written = fwrite (buf, 1, fs_block_size,
-					goto_blk (minix->fp, current_block));
+					goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
 				if ( written != fs_block_size )
 				{
 # ifdef HAVE_ERRNO_H
@@ -687,16 +688,15 @@ wfs_minixfs_wipe_fs (
 					ret_wfs = WFS_BLKWR;
 					break;
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				/* No need to flush the last writing of a given block. *
 				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 				{
 					error = wfs_minixfs_flush_fs (wfs_fs);
-				}
+				}*/
 			}
 		}
 		wfs_show_progress (WFS_PROGRESS_WFS,
-			((unsigned long int)current_block * 100)/(BLOCKS (minix)),
+			(unsigned int)((current_block * 100)/(BLOCKS (minix))),
 			&prev_percent);
 	}
 	while ( (current_block != -1L) && (sig_recvd == 0) );
@@ -810,18 +810,26 @@ wfs_minixfs_open_fs (
 	{
 		return WFS_BADPARAM;
 	}
+	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	if ( wfs_fs->fsname == NULL )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = WFS_BADPARAM;
+		}
 		return WFS_BADPARAM;
 	}
 
-	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 
 	/* fseek fails badly when given a loop device that is not
 	   backed by anything. Check this here: */
 	if ( wfs_check_loop_mounted (wfs_fs->fsname) == 0 )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = WFS_OPENFS;
+		}
 		return WFS_OPENFS;
 	}
 
@@ -874,6 +882,7 @@ wfs_minixfs_open_fs (
 		&& (FSMAGIC (minix) != MINIX2_SUPER_MAGIC)
 		&& (FSMAGIC (minix) != MINIX2_SUPER_MAGIC2) )
 	{
+		ret = WFS_OPENFS;
 		free (minix);
 		if ( error_ret != NULL )
 		{
