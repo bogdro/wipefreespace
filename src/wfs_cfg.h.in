@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- configuration header file.
  *
- * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -146,6 +146,7 @@
 #  define HAVE_SYS_CAPABILITY_H		1
 #  define HAVE_TFFS_H			1	/* FAT */
 #  define HAVE_UUID_UUID_H		1	/* JFS */
+#  define HAVE_XFS_DB			1
 
 #  undef const
 #  undef size_t

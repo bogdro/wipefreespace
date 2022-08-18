@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.7.1, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.7.2, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -160,7 +160,7 @@ if ( test "x$want_rand" = "xyes" ); then
 fi
 
 if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
-	AC_ERROR([All three options --enable-wfs=no --enable-unrm=no --enable-part=no can't be given together.])
+	AC_ERROR([All three options --enable-wfs=no --enable-unrm=no --enable-part=no can NOT be given together.])
 fi
 
 if ( test "x$feat_wfs" = "xyes" ); then
@@ -371,6 +371,10 @@ fi
 if ( test "x$feat_xfs" = "xyes" ); then
 
 	AC_CHECK_PROG([XFS_DB], [xfs_db], [yes], [no])
+	if ( test "x$XFS_DB" = "xyes" ); then
+
+		AC_DEFINE([HAVE_XFS_DB],[1],[Whether you have the xfs_db program.])
+	fi
 fi
 
 have_ll=yes
@@ -835,6 +839,11 @@ AC_CHECK_FUNC([malloc],
 	AC_DEFINE([HAVE_MALLOC],[1],[Whether you have the malloc function.]),
 	[has_malloc=no])
 
+if (test "x$has_malloc" != "xyes"); then
+
+	AC_MSG_ERROR([[I need the malloc() function.]])
+fi
+
 has_fork=yes
 AC_CHECK_FUNC([fork],
 	AC_DEFINE([HAVE_FORK],[1],[Whether you have the fork function.]),
@@ -870,11 +879,6 @@ AC_CHECK_FUNC([exit],
 	AC_DEFINE([HAVE_EXIT],[1],[Whether you have the exit function.]),
 	[has_exit=no])
 
-
-if (test "x$has_malloc" != "xyes"); then
-
-	AC_MSG_ERROR([[I need the malloc() function.]])
-fi
 
 if ( \
 	   test "x$have_ll"  = "xyes"	\
@@ -971,6 +975,7 @@ if (test "x$GCC" = "xyes" ); then
 	AX_C_CHECK_FLAG([-O2], [CFLAGS="$CFLAGS -O2"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Waggregate-return], [CFLAGS="$CFLAGS -Waggregate-return"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Wwrite-strings], [CFLAGS="$CFLAGS -Wwrite-strings"], [CFLAGS="$CFLAGS"])
+	AX_C_CHECK_FLAG([-O3], [CFLAGS="$CFLAGS -O3"], [CFLAGS="$CFLAGS"])
 
 	if (test "x$have_ll" = "xyes"); then
 

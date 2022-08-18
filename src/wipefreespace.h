@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -215,7 +215,8 @@ typedef long int off64_t;
 	      (defined HAVE_WAITPID)				\
 	   || (defined HAVE_WAIT)				\
 	   || (defined HAVE_KILL)				\
-	)
+	)							\
+	&& (defined HAVE_XFS_DB)
 #  define	WFS_XFS		1
 # else
 #  undef	WFS_XFS

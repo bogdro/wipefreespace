@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2012 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -152,13 +152,14 @@ static const int signals[] =
 # endif
 };
 
+# ifndef RETSIGTYPE
+#  define RETSIGTYPE void
+# endif
+
 # ifndef WFS_ANSIC
 static RETSIGTYPE term_signal_received WFS_PARAMS ((const int signum));
 # endif
 
-# ifndef RETSIGTYPE
-#  define RETSIGTYPE void
-# endif
 /**
  * Signal handler - Sets a flag which will stop further program operations, when a
  * signal which would normally terminate the program is received.
@@ -231,6 +232,9 @@ void wfs_set_sigh (
 # if (defined __STRICT_ANSI__) && (defined HAVE_SIGNAL_H)
 	typedef void (*sighandler_t) (int);
 	sighandler_t shndlr;
+# endif
+# ifndef HAVE_MEMSET
+	size_t i;
 # endif
 	wfs_fsid_t wf_gen;
 
