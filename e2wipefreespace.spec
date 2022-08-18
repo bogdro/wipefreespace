@@ -1,4 +1,4 @@
-%define version 0.4
+%define version 0.5
 
 Summary:	Program for secure cleaning of free space.
 Name:		e2wipefreespace
@@ -38,9 +38,14 @@ PREFIX=$RPM_BUILD_ROOT/usr/local CFLAGS="-march=i386" make install
 
 rm -rf $RPM_BUILD_ROOT
 
+#%uninstall
+
+#/sbin/install-info --delete /usr/local/share/info/e2wipefreespace.info.gz /usr/local/share/info/dir
+
 %files
 
 %defattr(-,root,root)
 /usr/local/bin/e2wipefreespace
 %doc /usr/local/share/info/e2wipefreespace.info.gz
+/usr/local/share/locale/pl/e2wipefreespace.mo
 

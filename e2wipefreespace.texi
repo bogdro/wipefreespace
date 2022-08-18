@@ -1,11 +1,11 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename e2wipefreespace.info
-@settitle e2wipefreespace manual 0.4
+@settitle e2wipefreespace manual 0.5
 @c %**end of header
 
 @copying
-This manual is for e2wipefreespace, version 0.4
+This manual is for e2wipefreespace, version 0.5
 @end copying
 
 @titlepage
@@ -39,6 +39,7 @@ This manual is for e2wipefreespace, version 0.4
 * Signals::				Behaviour upon receiving signals.
 * Author::				How to contact me.
 * Copying::				License - your rights and freedoms.
+* Translating::				How to translate the program.
 @end menu
 
 
@@ -75,6 +76,12 @@ wipe deleted elements' names.
 THE PROGRAM HAS BEEN TESTED, BUT IT MAY NOW OR LATER CONTAIN ERRORS, WHICH MAY LEAD TO DATA LOSS.
 ALWAYS BACKUP YOUR DATA BEFORE USING THIS PROGRAM. READ THE LICENSE FOR A WARRANTY (THERE IS NONE).
 
+Note: The program will refuse operating if it finds out that it has the suid permission
+bit set and the owner is root. PLEASE, NEVER do such a thing. If the program is exploited,
+it can do severe damage to the system. Log in as root and run the program. If you really
+must run the program as a normal user, set the sgid bit instead and correct the necessary
+device/file permissions. This is MUCH safer.
+
 @c @cindex first chapter
 
 
@@ -93,7 +100,7 @@ Requirements for compiling:@*
 @item development package for the ext2 file system library, libext2fs (usually
 included in something like e2fsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
-  	@indicateurl{http://e2fsprogs.sf.net/}@*
+   	@indicateurl{http://e2fsprogs.sf.net/}@*
 Then compile and install that package.
 @item the 'make' program (you may however compile it by hand, if you wish)
 @end itemize
@@ -127,8 +134,7 @@ To do this, run:
 
 	RPMROOT=/path/to/dir make rpms
 
-This works for BASH, but may be different on other shells. the RPMROOT should
-contain at least the SPECS and SOURCES directories.
+This works for BASH, but may be different on other shells.
 
 Set the PREFIX variable, if you want the program somewhere else than /usr/local,
 like this:
@@ -221,7 +227,7 @@ exit with "Bad/missing command line syntax" error code.
 The e2wipefreespace program can return any of the following values:
 
 @itemize
-@item 0: All actions succeded (no errors).
+@item 0: All actions on the last file system succeded (no errors).
 @item 1: Only version number, help or licence information was requested and printed, no action.
 @item -1: Bad/missing command line syntax.
 @item -2: Unable to check if the file system is mounted. Cannot continue.
@@ -233,12 +239,14 @@ blocks are unused).
 @item -7: The file system contained errors and the option @option{--force} was not given.
 @item -8: Closing the file system failed.
 @item -9: Opening i-node scan failed. Thus, the program was unable to wipe free space in
-partially used blocks and/or remove undelete data.
+partially used blocks.
 @item -10: Iterating over blocks failed. Thus, the program was unable to wipe free space in
 partially used blocks.
-@item -11: I-node write failed.
-@item -12: I-node read failed.
-@item -13: Directory iterating failed. Thus, the program was unable to remove undelete data.
+@item -11: I-node read failed. Some undelete data may not have been removed.
+@item -12: Directory iterating failed. Thus, the program was unable to remove some of (maybe all)
+undelete data.
+@item -13: The program found out that it has the suid permission bit set and the owner
+is root. Read the first chapter of this documentation for an explanation and a solution.
 @item -100: A signal was caught and the program was forced to exit.
 @item 128+N: The program was terminated by signal number N (the signal either wasn't caught
 or was caught after SIGCONT was received).
@@ -247,6 +255,8 @@ or was caught after SIGCONT was received).
 NOTE: Actually, the negative values are substracted from 256, so -1 could be shown as 255,
 -2 as 254 and so on.
 
+NOTE: The error code is reset after each file system. If the last file system was wiped successfully,
+but the previous weren't, their errors are currently lost.
 
 
 
@@ -258,8 +268,9 @@ The program will terminate normally (that is: will flush and close the file syst
 release memory) if any of the following signals are caught: SIGINT (Ctrl+C), SIGQUIT, SIGILL,
 SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGTTIN,
 SIGTTOU, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGXCPU, SIGXFSZ, SIGPWR, SIGVTALRM,
-SIGUNUSED. If compiled without the @option{-ansi} option, the program will close
-cleanly also upon receiving the SIGEMT and SIGLOST signals.
+SIGUNUSED.
+The program will close cleanly also upon receiving the SIGEMT and SIGLOST signals, if they're
+available (during compiling).
 
 If the program receives the SIGKILL signal, it will, of course be killed. But then the
 program won't be able to close the file system and finish working normally. File system
@@ -278,6 +289,8 @@ You can still send other signals to it, if you wish to terminate it.
 @node Author, Copying, Signals, Top
 @chapter Author
 
+Bogdan 'bogdro' Drozdowski.
+
 To contact me, try one of these adresses: @*
 @quotation
 bogdandr (at) op . pl@*
@@ -294,7 +307,7 @@ or look at my website:@*
 
 
 
-@node Copying, , Author, Top
+@node Copying, Translating, Author, Top
 @chapter Copying
 
 See @indicateurl{http://www.gnu.org} to get the full texts of these licenses.
@@ -337,5 +350,50 @@ and with the Back-Cover Texts as in (a) below.
 (a) The FSF's Back-Cover Text is: ``You have freedom to copy and modify
 this GNU Manual, like GNU software.  Copies published by the Free
 Software Foundation raise funds for GNU development.''
+
+
+
+
+
+
+@node Translating, , Copying, Top
+@chapter Translating
+
+Type @command{msginit -i e2wipefreespace.pot -o XX.po}, substituting your
+2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the 'gettext'
+package installed. You can manually copy the file e2wipefreespace.pot to XX.po and
+manually add the following header, if you wish (you have to fill in all the fields):
+
+@quotation
+# YOUR LANGUAGE translations for e2wipefreespace package.@*
+# Copyright (C) 2007 Bogdan 'bogdro' Drozdowski@*
+# This file is distributed under the same license as@*
+# the e2wipefreespace package.@*
+# YOUR FULL NAME <EMAILADDRESS>, YEAR.@*
+#@*
+msgid ""@*
+msgstr ""@*
+"Project-Id-Version: e2wipefreespace VERSION\n"@*
+"Report-Msgid-Bugs-To: \n"@*
+"POT-Creation-Date: 2007-04-25 11:39+0200\n"@*
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"@*
+"Last-Translator: FULL NAME <EMAILADDRESS>\n"@*
+"Language-Team: LANGUAGE <EMAILADDRESS>\n"@*
+"MIME-Version: 1.0\n"@*
+"Content-Type: text/plain; charset=CHARSET\n"@*
+"Content-Transfer-Encoding: 8bit\n"@*
+@end quotation
+
+The rest of the file will contain messages from the program. Translate them all
+and send me the resulting XX.po file.
+
+Translating the documentation:
+@itemize
+@item info: simply change the e2wipefreespace.texi file
+@item man: Unpack the page using @command{gunzip e2wipefreespace.1.gz} and translate the
+resulting e2wipefreespace.1 file.
+@end itemize
+
+
 
 @bye

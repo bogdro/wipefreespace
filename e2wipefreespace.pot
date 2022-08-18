@@ -1,0 +1,190 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2007-04-25 11:39+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: e2wipefreespace.c:61
+msgid "version"
+msgstr ""
+
+#: e2wipefreespace.c:64
+msgid ""
+"Program for secure cleaning of free space on ext2/3 partitions.\n"
+"\n"
+"This program is Free Software; you can redistribute it and/or\n"
+"modify it under the terms of the GNU General Public License\n"
+"as published by the Free Software Foundation; either version 2\n"
+"of the License, or (at your option) any later version.\n"
+"\n"
+"This program is distributed in the hope that it will be useful,\n"
+"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+"\n"
+msgstr ""
+
+#: e2wipefreespace.c:74
+msgid "error"
+msgstr ""
+
+#: e2wipefreespace.c:75
+msgid "during opening"
+msgstr ""
+
+#: e2wipefreespace.c:76
+msgid "while flushing"
+msgstr ""
+
+#: e2wipefreespace.c:77
+msgid "during closing"
+msgstr ""
+
+#: e2wipefreespace.c:78
+msgid "during malloc while working on"
+msgstr ""
+
+#: e2wipefreespace.c:79
+msgid "during checking if the file system is mounted:"
+msgstr ""
+
+#: e2wipefreespace.c:80
+msgid "- Device is mounted in read-write mode:"
+msgstr ""
+
+#: e2wipefreespace.c:81
+msgid "during reading block bitmap from"
+msgstr ""
+
+#: e2wipefreespace.c:82
+msgid "during writing of a block on"
+msgstr ""
+
+#: e2wipefreespace.c:83
+msgid "during reading of a block on"
+msgstr ""
+
+#: e2wipefreespace.c:84
+msgid "during reading of an inode on"
+msgstr ""
+
+#: e2wipefreespace.c:85
+msgid "while trying to set a signal handler for"
+msgstr ""
+
+#: e2wipefreespace.c:86
+msgid "Filesystem has errors:"
+msgstr ""
+
+#: e2wipefreespace.c:87
+msgid "during opening a scan of"
+msgstr ""
+
+#: e2wipefreespace.c:88
+msgid "during iterating over blocks on"
+msgstr ""
+
+#: e2wipefreespace.c:89
+msgid "during iterating over a directory on"
+msgstr ""
+
+#: e2wipefreespace.c:90
+msgid "Nothing selected for wiping."
+msgstr ""
+
+#: e2wipefreespace.c:91
+msgid "PLEASE do NOT set this program's suid bit. Use sgid instead."
+msgstr ""
+
+#: e2wipefreespace.c:94
+msgid "Setting signal handlers"
+msgstr ""
+
+#: e2wipefreespace.c:95
+msgid "Checking if file system is mounted"
+msgstr ""
+
+#: e2wipefreespace.c:96
+msgid "Opening file system"
+msgstr ""
+
+#: e2wipefreespace.c:97
+msgid "File system invalid or dirty, flushing"
+msgstr ""
+
+#: e2wipefreespace.c:98
+msgid "Reading block bitmap from"
+msgstr ""
+
+#: e2wipefreespace.c:99
+msgid "Wiping free space on file system"
+msgstr ""
+
+#: e2wipefreespace.c:100
+msgid "Using pattern"
+msgstr ""
+
+#: e2wipefreespace.c:101
+msgid "random"
+msgstr ""
+
+#: e2wipefreespace.c:102
+msgid "Wiping unused space in used blocks on"
+msgstr ""
+
+#: e2wipefreespace.c:103
+msgid "Wiping undelete data on"
+msgstr ""
+
+#: e2wipefreespace.c:104
+msgid "Closing file system"
+msgstr ""
+
+#: e2wipefreespace.c:151
+msgid "unknown"
+msgstr ""
+
+#: e2wipefreespace.c:232
+msgid ""
+" - Program for secure cleaning of free space on ext2/3 partitions\n"
+"Syntax: "
+msgstr ""
+
+#: e2wipefreespace.c:234
+msgid " [options] "
+msgstr ""
+
+#: e2wipefreespace.c:236
+msgid ""
+"Options:\n"
+"-b|--superblock <off>\tSuperblock offset on the given filesystems\n"
+"-B|--blocksize <size>\tBlock size on the given filesystems\n"
+"-f|--force\t\tWipe even if the file system has errors"
+msgstr ""
+
+#: e2wipefreespace.c:241
+msgid ""
+"-h|--help\t\tPrint help\n"
+"-l|--license\t\tPrint license information\n"
+"-n|--iterations NNN\tNumber of passes (>0, default: 25)\n"
+"--nopart\t\tDo NOT wipe free space in partially used blocks"
+msgstr ""
+
+#: e2wipefreespace.c:246
+msgid ""
+"--nounrm\t\tDo NOT wipe undelete information\n"
+"--nowfs\t\t\tDo NOT wipe free space on file system\n"
+"-v|--verbose\t\tVerbose output\n"
+"-V|--version\t\tPrint version number\n"
+msgstr ""

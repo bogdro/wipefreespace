@@ -1,0 +1,107 @@
+.\"	Process this file with groff -man -Tascii foo.1
+.\"
+.TH e2wipefreespace 1 Linux "User's Manual"
+
+.SH NAME
+e2wipefreespace \- Secure cleaning of free space on filesystems.
+
+.SH SYNOPSIS
+.B e2wipefreespace [options]
+.I /dev/XY
+.B ...
+
+.SH DESCRIPTION
+The e2wipefreespace program securely cleans the free space and undelete data
+on the given ext2/3 file systems. Write permissions are required for the devices
+(or regular files containing an ext2/3 file system), but the program
+.B MUST NOT
+be setuid(root).
+
+.SH OPTIONS
+.IP "-b|--superblock OFFSET"
+Superblock offset on the given filesystems
+.IP "-B|--blocksize SIZE"
+Block size on the given filesystems
+.IP -f|--force
+Wipe even if the file system has errors
+.IP -h|--help
+Print help
+.IP -l|--license
+Print license information
+.IP "-n|--iterations NNN"
+Number of passes (>0, default: 25)
+.IP --nopart
+Do NOT wipe free space in partially used blocks.
+.IP --nounrm
+Do NOT wipe undelete information
+.IP --nowfs
+Do NOT wipe free space on file system
+.IP -v|--verbose
+Verbose output
+.IP -V|--version
+Print version number
+
+.SH DIAGNOSTICS
+The program returns with 0 exit code if everything went fine. If there
+were errors, the program exits with non-zero exit code:
+.IP 1:
+Only version number, help or licence information was requested and printed, no action.
+.IP \-1:
+Bad/missing command line syntax.
+.IP \-2:
+Unable to check if the file system is mounted. Cannot continue.
+.IP \-3:
+The file system was mounted in read-write mode. Cannot continue.
+.IP \-4:
+Unable to open the file system.
+.IP \-5:
+Unable to read block bitmap from the file system (thus, unable to determine, which
+blocks are unused).
+.IP \-6:
+Memory allocation failed.
+.IP \-7:
+The file system contained errors and the option \-\-force was not given.
+.IP \-8:
+Closing the file system failed.
+.IP \-9:
+Opening i\-node scan failed. Thus, the program was unable to wipe free space in
+partially used blocks.
+.IP \-10:
+Iterating over blocks failed. Thus, the program was unable to wipe free space in
+partially used blocks.
+.IP \-11:
+I\-node read failed. Some undelete data may not have been removed.
+.IP \-12:
+Directory iterating failed. Thus, the program was unable to remove some of (maybe all)
+undelete data.
+.IP \-13:
+The program found out that it has the suid permission bit set and the owner
+is root. Read the first chapter of the info documentation for an explanation and a solution.
+.IP \-100:
+A signal was caught and the program was forced to exit.
+
+.SH NOTES
+The error code is reset after each file system. If the last file system was wiped successfully,
+but the previous weren't, their errors are currently lost.
+
+.SH AUTHOR
+Bogdan 'bogdro' Drozdowski,
+bogdandr /AT/ op . pl
+
+bogdro /AT/ rudy . mif . pg . gda . pl
+
+[EN] http://rudy.mif.pg.gda.pl/~bogdro/soft/
+
+[EN] http://rudy.mif.pg.gda.pl/~bogdro/inne/
+
+[PL] http://rudy.mif.pg.gda.pl/~bogdro/
+
+.SH "SEE ALSO"
+.BR shred (1)
+
+The 'info' documentation is more descriptive and is the main one. Type
+
+.B 	info e2wipefreespace
+
+to read it.
+

@@ -1,3 +1,16 @@
+2007-04-31	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Version 0.5
+	  Code rebuild: separate 3 source files (+headers), to allow
+	  other file systems in the future. Info doc update. Man page.
+	* e2wipefreespace.c:
+	  Security fixes: setuid bit checking and snprintf(). Return
+	  codes slightly changed. Translations enabled
+	  (gettext)+Polish translation. Separate message printing
+	  functions (easy changeable).
+	* Makefile: updated with translation & manpage.
+	* ext23.c (e2wipe_unrm_dir): corrected: name_len&255.
+
 2007-04-10	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Version 0.4
