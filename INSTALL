@@ -1,0 +1,32 @@
+Wipefreespace - a program for secure cleaning of free space on filesystems.
+
+Requirements for compiling the full version:
+- a non-root account. Please, NEVER compile or 'make' anything as root.
+- a working C compiler
+- development package for the C library (like glibc-devel and glibc-headers)
+- development package for the ext2 file system library, libext2fs (usually
+  included in something like e2fsprogs-devel). If you don't have anything
+  like this installed or available (check twice), then go to
+  	http://e2fsprogs.sf.net/
+  Then compile and install that package.
+- the 'make' program
+
+Type './configure' to configure the program for your system.
+
+Type 'make' to compile the program.
+Documentation will be compiled, if you have the 'makeinfo' program
+ ('texinfo' package).
+Translations will be compiled, if you have the 'gettext' package.
+
+Type 'make install' to install the program.
+
+=======================================================
+
+Building an RPM package:
+
+1) copy the wipefreespace.spec file to /usr/src/redhat/SPECS
+2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
+3) type
+	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
+4) get the rpms from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
+

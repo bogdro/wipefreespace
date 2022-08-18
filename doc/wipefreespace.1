@@ -1,19 +1,19 @@
 .\"	Process this file with groff -man -Tascii foo.1
 .\"
-.TH e2wipefreespace 1 Linux "User's Manual"
+.TH wipefreespace 1 Linux "User's Manual"
 
 .SH NAME
-e2wipefreespace \- Secure cleaning of free space on filesystems.
+wipefreespace \- Secure cleaning of free space on filesystems.
 
 .SH SYNOPSIS
-.B e2wipefreespace [options]
+.B wipefreespace [options]
 .I /dev/XY
 .B ...
 
 .SH DESCRIPTION
-The e2wipefreespace program securely cleans the free space and undelete data
-on the given ext2/3 file systems. Write permissions are required for the devices
-(or regular files containing an ext2/3 file system), but the program
+The wipefreespace program securely cleans the free space and undelete data
+on the given ext2/3 and NTFS file systems. Write permissions are required for the devices
+(or regular files containing the file system), but the program
 .B MUST NOT
 be setuid(root).
 
@@ -101,7 +101,7 @@ bogdro /AT/ rudy . mif . pg . gda . pl
 
 The 'info' documentation is more descriptive and is the main one. Type
 
-.B 	info e2wipefreespace
+.B 	info wipefreespace
 
 to read it.
 

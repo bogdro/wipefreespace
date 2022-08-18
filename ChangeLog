@@ -1,3 +1,16 @@
+2007-07-01	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Version 0.6
+	  Switch to autoconf+automake. Works great. Project rename
+	  to 'wipefreespace'.
+	* wipefreespace.c: Security: dropping capabilities and clearing
+	  environment. Better error/message displaying routines.
+	* secure.c: New file containing all security-related stuff.
+	* wrappers.c: Fully filesystem-neutral. Better mount checking.
+	* wipefreespace.h: New error_type definition. Less externs.
+	* ext23.c: Flushing corrected and it shows error just once.
+	* wfs_ntfs.{c,h}: NTFS support based on ntfsprogs, thus experimental.
+
 2007-04-31	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Version 0.5
@@ -9,7 +22,7 @@
 	  (gettext)+Polish translation. Separate message printing
 	  functions (easy changeable).
 	* Makefile: updated with translation & manpage.
-	* ext23.c (e2wipe_unrm_dir): corrected: name_len&255.
+	* ext23.c (e2wipe_unrm_dir): corrected: "name_len & 255".
 
 2007-04-10	Bogdan Drozdowski <bogdandr@op.pl>
 

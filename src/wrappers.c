@@ -1,5 +1,5 @@
 /*
- * A program for secure cleaning of free space on ext2/3 partitions.
+ * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions.
  *
  * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
@@ -23,8 +23,22 @@
  *		USA
  */
 
-#include "ext23.h"
-#include <unistd.h>
+#include "cfg.h"
+
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>	/* sync() */
+#endif
+
+#include "wipefreespace.h"
+#include "wrappers.h"
+
+#ifdef WFS_EXT2
+# include "ext23.h"
+#endif
+
+#ifdef WFS_NTFS
+# include "wfs_ntfs.h"
+#endif
 
 
 /**
@@ -33,19 +47,23 @@
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int ATTR((warn_unused_result)) wipe_unrm ( fsid FS, int whichfs ) {
+int ATTR((warn_unused_result)) wipe_unrm ( wfs_fsid_t FS, int whichfs ) {
 
-	fselem elem;
-#ifdef WFS_EXT2
-	elem.e2elem = EXT2_ROOT_INO;
-#endif
+	int ret_wfs = WFS_SUCCESS;
+	fselem_t elem;
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		return e2wipe_unrm(FS, elem);
+		elem.e2elem = EXT2_ROOT_INO;
+		ret_wfs = wfs_e2wipe_unrm(FS, elem);
 #endif
 	}
-	return WFS_SUCCESS;
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		ret_wfs = wfs_ntfswipe_unrm(FS, elem);
+#endif
+	}
+	return ret_wfs;
 }
 
 /**
@@ -54,11 +72,16 @@ int ATTR((warn_unused_result)) wipe_unrm ( fsid FS, int whichfs ) {
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int ATTR((warn_unused_result)) wipe_fs ( fsid FS, int whichfs ) {
+int ATTR((warn_unused_result)) wipe_fs ( wfs_fsid_t FS, int whichfs ) {
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		return e2wipe_fs(FS);
+		return wfs_e2wipe_fs(FS);
+#endif
+	}
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		return wfs_ntfswipe_fs(FS);
 #endif
 	}
 	return WFS_SUCCESS;
@@ -70,11 +93,16 @@ int ATTR((warn_unused_result)) wipe_fs ( fsid FS, int whichfs ) {
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int ATTR((warn_unused_result)) wipe_part ( fsid FS, int whichfs ) {
+int ATTR((warn_unused_result)) wipe_part ( wfs_fsid_t FS, int whichfs ) {
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		return e2wipe_part(FS);
+		return wfs_e2wipe_part(FS);
+#endif
+	}
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		return wfs_ntfswipe_part(FS);
 #endif
 	}
 	return WFS_SUCCESS;
@@ -88,27 +116,20 @@ int ATTR((warn_unused_result)) wipe_part ( fsid FS, int whichfs ) {
  * \return 0 in case of no errors, other values otherwise.
  */
 int ATTR((warn_unused_result)) ATTR((nonnull)) wfs_openfs ( const char*const devname,
-	fsid *FS, int *whichfs, fsdata* data ) {
+	wfs_fsid_t *FS, int *whichfs, fsdata* data ) {
 
 	int ret = WFS_SUCCESS;
 	*whichfs = 0;
 
 #ifdef WFS_EXT2
-	error.e2error = ext2fs_open ( devname, EXT2_FLAG_RW
-# ifdef EXT2_FLAG_EXCLUSIVE
-		| EXT2_FLAG_EXCLUSIVE
-# endif
-		, (int)(data->e2fs.super_off), (unsigned int)(data->e2fs.blocksize),
-		unix_io_manager, &FS->e2fs );
-	if ( error.e2error != 0 ) {
-		error.e2error = ext2fs_open ( devname, EXT2_FLAG_RW, (int)(data->e2fs.super_off),
-			(unsigned int)(data->e2fs.blocksize), unix_io_manager, &FS->e2fs );
-	}
-	if ( error.e2error == 0 ) {
-		*whichfs = CURR_EXT2FS;
-		return WFS_SUCCESS;
-	}
+	ret = wfs_e2openfs(devname, FS, whichfs, data);
 #endif
+	if ( ret != WFS_SUCCESS ) {
+#ifdef WFS_NTFS
+		/*error.errcode.e2error = 0;*/
+		ret = wfs_ntfsopenfs(devname, FS, whichfs, data);
+#endif
+	}
 
 	return ret;
 }
@@ -121,19 +142,12 @@ int ATTR((warn_unused_result)) ATTR((nonnull)) wfs_openfs ( const char*const dev
 int ATTR((warn_unused_result)) ATTR((nonnull)) wfs_chkmount ( const char*const devname ) {
 
 	int ret = WFS_SUCCESS;
-	int mtflags = 0;		/* Mount flags */
 
 #ifdef WFS_EXT2
-	/* reject if mounted for read and write (when we can't go on with our work) */
-	error.e2error = ext2fs_check_if_mounted ( devname, &mtflags );
-	if ( error.e2error != 0 ) {
-		/* go to the next device on the command line and set the "last error" value */
-		ret = WFS_MNTCHK;
-	}
-	if ( ((mtflags & EXT2_MF_MOUNTED) != 0) && ((mtflags & EXT2_MF_READONLY) == 0) ) {
-		error.e2error = 1L;
-		ret = WFS_MNTRW;
-	}
+	ret = wfs_e2chkmount ( devname );
+#endif
+#if defined WFS_NTFS
+	ret += wfs_ntfschkmount ( devname );
 #endif
 
 	return ret;
@@ -145,17 +159,18 @@ int ATTR((warn_unused_result)) ATTR((nonnull)) wfs_chkmount ( const char*const d
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int wfs_closefs ( fsid FS, int whichfs ) {
+int wfs_closefs ( wfs_fsid_t FS, int whichfs ) {
 
 	int ret = WFS_SUCCESS;
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		error.e2error = ext2fs_close ( FS.e2fs );
-		if ( error.e2error != 0 ) {
-			show_error ( error, err_msg_close, fsname );
-			ret = WFS_FSCLOSE;
-		}
+		ret = wfs_e2closefs(FS);
+#endif
+	}
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		ret = wfs_ntfsclosefs(FS);
 #endif
 	}
 
@@ -168,11 +183,16 @@ int wfs_closefs ( fsid FS, int whichfs ) {
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int ATTR((warn_unused_result)) wfs_checkerr ( fsid FS, int whichfs ) {
+int ATTR((warn_unused_result)) wfs_checkerr ( wfs_fsid_t FS, int whichfs ) {
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		return (FS.e2fs->super->s_state & EXT2_ERROR_FS);
+		return wfs_e2checkerr(FS);
+#endif
+	}
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		return wfs_ntfscheckerr(FS);
 #endif
 	}
 	return WFS_SUCCESS;
@@ -184,16 +204,16 @@ int ATTR((warn_unused_result)) wfs_checkerr ( fsid FS, int whichfs ) {
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int ATTR((warn_unused_result)) wfs_isdirty ( fsid FS, int whichfs ) {
+int ATTR((warn_unused_result)) wfs_isdirty ( wfs_fsid_t FS, int whichfs ) {
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		return ( ((FS.e2fs->super->s_state & EXT2_VALID_FS) == 0) ||
-			((FS.e2fs->flags & EXT2_FLAG_DIRTY) != 0) ||
-			(ext2fs_test_changed(FS.e2fs) != 0)
-			);
-#else
-		return WFS_SUCCESS;
+		return wfs_e2isdirty(FS);
+#endif
+	}
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		return wfs_ntfsisdirty(FS);
 #endif
 	}
 
@@ -206,19 +226,21 @@ int ATTR((warn_unused_result)) wfs_isdirty ( fsid FS, int whichfs ) {
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-int wfs_flushfs ( fsid FS, int whichfs ) {
+int wfs_flushfs ( wfs_fsid_t FS, int whichfs ) {
 
 	int ret = WFS_SUCCESS;
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		error.e2error = ext2fs_flush ( FS.e2fs );
-		if ( error.e2error != 0 ) {
-			show_error ( error, err_msg_flush, fsname );
-			ret = WFS_FLUSHFS;
-		}
+		ret = wfs_e2flushfs (FS);
 #endif
 	}
-#if !defined __STRICT_ANSI__
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		ret = wfs_ntfsflushfs (FS);
+#endif
+	}
+
+#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H)
 	sync();
 #endif
 	return ret;
@@ -228,13 +250,18 @@ int wfs_flushfs ( fsid FS, int whichfs ) {
  * Returns the buffer size needed to work on the smallest physical unit on a filesystem
  * \param FS The filesystem.
  * \param whichfs Tells which fs is curently in use.
- * \return 0 in case of no errors, other values otherwise.
+ * \return Block size on the filesystem. Deafults to 4096 if not available.
  */
-int ATTR((warn_unused_result)) wfs_getblocksize ( fsid FS, int whichfs ) {
+int ATTR((warn_unused_result)) wfs_getblocksize ( wfs_fsid_t FS, int whichfs ) {
 
 	if ( whichfs == CURR_EXT2FS ) {
 #ifdef WFS_EXT2
-		return WFS_BLOCKSIZE(FS.e2fs);
+		return wfs_e2getblocksize(FS);
+#endif
+	}
+	else if ( whichfs == CURR_NTFS ) {
+#ifdef WFS_NTFS
+		return wfs_ntfsgetblocksize(FS);
 #endif
 	}
 	return 4096;

@@ -15,7 +15,7 @@ wipefreespace
 *.info
 *.html
 *~
-wipefreespace.spec
+# wipefreespace.spec
 wfs_cfg.h
 
 po/POTFILES

@@ -1,5 +1,5 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# Copyright (C) YEAR Bogdan bogdro Drozdowski
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
@@ -7,8 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-04-25 11:39+0200\n"
+"Report-Msgid-Bugs-To: bogdandr@op.pl\n"
+"POT-Creation-Date: 2007-07-01 13:54+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,13 +16,13 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: e2wipefreespace.c:61
+#: src/wipefreespace.c:102
 msgid "version"
 msgstr ""
 
-#: e2wipefreespace.c:64
+#: src/wipefreespace.c:105
 msgid ""
-"Program for secure cleaning of free space on ext2/3 partitions.\n"
+"Program for secure cleaning of free space on filesystems.\n"
 "\n"
 "This program is Free Software; you can redistribute it and/or\n"
 "modify it under the terms of the GNU General Public License\n"
@@ -35,137 +35,141 @@ msgid ""
 "\n"
 msgstr ""
 
-#: e2wipefreespace.c:74
+#: src/wipefreespace.c:115
 msgid "error"
 msgstr ""
 
-#: e2wipefreespace.c:75
+#: src/wipefreespace.c:116
 msgid "during opening"
 msgstr ""
 
-#: e2wipefreespace.c:76
+#: src/wipefreespace.c:117
 msgid "while flushing"
 msgstr ""
 
-#: e2wipefreespace.c:77
+#: src/wipefreespace.c:118
 msgid "during closing"
 msgstr ""
 
-#: e2wipefreespace.c:78
+#: src/wipefreespace.c:119
 msgid "during malloc while working on"
 msgstr ""
 
-#: e2wipefreespace.c:79
+#: src/wipefreespace.c:120
 msgid "during checking if the file system is mounted:"
 msgstr ""
 
-#: e2wipefreespace.c:80
+#: src/wipefreespace.c:121
 msgid "- Device is mounted in read-write mode:"
 msgstr ""
 
-#: e2wipefreespace.c:81
+#: src/wipefreespace.c:122
 msgid "during reading block bitmap from"
 msgstr ""
 
-#: e2wipefreespace.c:82
+#: src/wipefreespace.c:123
 msgid "during writing of a block on"
 msgstr ""
 
-#: e2wipefreespace.c:83
+#: src/wipefreespace.c:124
 msgid "during reading of a block on"
 msgstr ""
 
-#: e2wipefreespace.c:84
+#: src/wipefreespace.c:125
 msgid "during reading of an inode on"
 msgstr ""
 
-#: e2wipefreespace.c:85
+#: src/wipefreespace.c:126
 msgid "while trying to set a signal handler for"
 msgstr ""
 
-#: e2wipefreespace.c:86
+#: src/wipefreespace.c:127
 msgid "Filesystem has errors:"
 msgstr ""
 
-#: e2wipefreespace.c:87
+#: src/wipefreespace.c:128
 msgid "during opening a scan of"
 msgstr ""
 
-#: e2wipefreespace.c:88
+#: src/wipefreespace.c:129
 msgid "during iterating over blocks on"
 msgstr ""
 
-#: e2wipefreespace.c:89
+#: src/wipefreespace.c:130
 msgid "during iterating over a directory on"
 msgstr ""
 
-#: e2wipefreespace.c:90
+#: src/wipefreespace.c:131
 msgid "Nothing selected for wiping."
 msgstr ""
 
-#: e2wipefreespace.c:91
+#: src/wipefreespace.c:132
 msgid "PLEASE do NOT set this program's suid bit. Use sgid instead."
 msgstr ""
 
-#: e2wipefreespace.c:94
+#: src/wipefreespace.c:133
+msgid "during setting capabilities"
+msgstr ""
+
+#: src/wipefreespace.c:136
 msgid "Setting signal handlers"
 msgstr ""
 
-#: e2wipefreespace.c:95
+#: src/wipefreespace.c:137
 msgid "Checking if file system is mounted"
 msgstr ""
 
-#: e2wipefreespace.c:96
+#: src/wipefreespace.c:138
 msgid "Opening file system"
 msgstr ""
 
-#: e2wipefreespace.c:97
+#: src/wipefreespace.c:139
 msgid "File system invalid or dirty, flushing"
 msgstr ""
 
-#: e2wipefreespace.c:98
+#: src/wipefreespace.c:140
 msgid "Reading block bitmap from"
 msgstr ""
 
-#: e2wipefreespace.c:99
+#: src/wipefreespace.c:141
 msgid "Wiping free space on file system"
 msgstr ""
 
-#: e2wipefreespace.c:100
+#: src/wipefreespace.c:142
 msgid "Using pattern"
 msgstr ""
 
-#: e2wipefreespace.c:101
+#: src/wipefreespace.c:143
 msgid "random"
 msgstr ""
 
-#: e2wipefreespace.c:102
+#: src/wipefreespace.c:144
 msgid "Wiping unused space in used blocks on"
 msgstr ""
 
-#: e2wipefreespace.c:103
+#: src/wipefreespace.c:145
 msgid "Wiping undelete data on"
 msgstr ""
 
-#: e2wipefreespace.c:104
+#: src/wipefreespace.c:146
 msgid "Closing file system"
 msgstr ""
 
-#: e2wipefreespace.c:151
+#: src/wipefreespace.c:197
 msgid "unknown"
 msgstr ""
 
-#: e2wipefreespace.c:232
+#: src/wipefreespace.c:291
 msgid ""
-" - Program for secure cleaning of free space on ext2/3 partitions\n"
+" - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
 msgstr ""
 
-#: e2wipefreespace.c:234
+#: src/wipefreespace.c:293
 msgid " [options] "
 msgstr ""
 
-#: e2wipefreespace.c:236
+#: src/wipefreespace.c:295
 msgid ""
 "Options:\n"
 "-b|--superblock <off>\tSuperblock offset on the given filesystems\n"
@@ -173,7 +177,7 @@ msgid ""
 "-f|--force\t\tWipe even if the file system has errors"
 msgstr ""
 
-#: e2wipefreespace.c:241
+#: src/wipefreespace.c:300
 msgid ""
 "-h|--help\t\tPrint help\n"
 "-l|--license\t\tPrint license information\n"
@@ -181,7 +185,7 @@ msgid ""
 "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr ""
 
-#: e2wipefreespace.c:246
+#: src/wipefreespace.c:305
 msgid ""
 "--nounrm\t\tDo NOT wipe undelete information\n"
 "--nowfs\t\t\tDo NOT wipe free space on file system\n"

@@ -1,15 +1,15 @@
-# Polish translations for e package.
-# Copyright (C) 2007 THE e'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the e package.
-# Bogdan Drozdowski <bogdan@bogdan.org.pl>, 2007.
+# Polish translations for wipefreespace package.
+# Copyright (C) 2007 Bogdan 'bogdro' Drozdowski
+# This file is distributed under the same license as the wipefreespace package.
+# Bogdan Drozdowski <bogdandr@op.pl>, 2007.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: e 2wfs\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-04-23 17:24+0200\n"
+"Project-Id-Version: wipefreespace\n"
+"Report-Msgid-Bugs-To: bogdandr@op.pl\n"
+"POT-Creation-Date: 2007-07-01 13:54+0200\n"
 "PO-Revision-Date: 2007-04-23 17:24+0200\n"
-"Last-Translator: Bogdan Drozdowski <bogdan@bogdan.org.pl>\n"
+"Last-Translator: Bogdan Drozdowski <bogdandr@op.pl>\n"
 "Language-Team: Polish\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-2\n"
@@ -17,13 +17,13 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: e2wipefreespace.c:62
+#: src/wipefreespace.c:102
 msgid "version"
 msgstr "wersja"
 
-#: e2wipefreespace.c:65
+#: src/wipefreespace.c:105
 msgid ""
-"Program for secure cleaning of free space on ext2/3 partitions.\n"
+"Program for secure cleaning of free space on filesystems.\n"
 "\n"
 "This program is Free Software; you can redistribute it and/or\n"
 "modify it under the terms of the GNU General Public License\n"
@@ -34,166 +34,171 @@ msgid ""
 "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
 "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 "\n"
-msgstr "Program do bezpiecznego czyszczenia pustego miejsca na systemach plików ext2/3\n"
+msgstr ""
+"Program do bezpiecznego czyszczenia pustego miejsca na systemach plików\n"
 "\n"
 "Niniejszy program jest wolnym oprogramowaniem; mo¿esz go\n"
 "rozprowadzaæ dalej i/lub modyfikowaæ na warunkach Powszechnej\n"
 "Licencji Publicznej GNU, wydanej przez Fundacjê Wolnego\n"
-"Oprogramowania - wed³ug wersji 2-giej tej Licencji lub ktorej¶\n"
-"z pó¼niejszych wersji.\n"
+"Oprogramowania - wedug wersji 2-giej tej Licencji lub ktorej¶\n"
+"z pó¼iejszych wersji.\n"
 "\n"
 "Niniejszy program rozpowszechniany jest z nadziej±, i¿ bêdzie on\n"
 "u¿yteczny - jednak BEZ JAKIEJKOLWIEK GWARANCJI, nawet domy¶lnej\n"
 "gwarancji PRZYDATNO¦CI HANDLOWEJ albo PRZYDATNO¦CI DO OKRE¦LONYCH\n"
-"ZASTOSOWAÑ.\n"
+"ZASTOSOWAÑ\n"
 "\n"
 
-#: e2wipefreespace.c:75
+#: src/wipefreespace.c:115
 msgid "error"
 msgstr "b³±d"
 
-#: e2wipefreespace.c:76
+#: src/wipefreespace.c:116
 msgid "during opening"
 msgstr "podczas otwierania"
 
-#: e2wipefreespace.c:77
+#: src/wipefreespace.c:117
 msgid "while flushing"
 msgstr "podczas zapisu systemu na dysk"
 
-#: e2wipefreespace.c:78
+#: src/wipefreespace.c:118
 msgid "during closing"
 msgstr "podczas zamykania"
 
-#: e2wipefreespace.c:79
+#: src/wipefreespace.c:119
 msgid "during malloc while working on"
 msgstr "przy alokacji pamiêci podczas pracy na"
 
-#: e2wipefreespace.c:80
+#: src/wipefreespace.c:120
 msgid "during checking if the file system is mounted:"
 msgstr "podczas sprawdzania, czy system plików jest zamontowany:"
 
-#: e2wipefreespace.c:81
+#: src/wipefreespace.c:121
 msgid "- Device is mounted in read-write mode:"
 msgstr "- Urz±dzenie jest zamontowane do odczytu i zapisu:"
 
-#: e2wipefreespace.c:82
+#: src/wipefreespace.c:122
 msgid "during reading block bitmap from"
 msgstr "podczas czytania bitmapy bloków z"
 
-#: e2wipefreespace.c:83
+#: src/wipefreespace.c:123
 msgid "during writing of a block on"
 msgstr "podczas zapisu bloku na"
 
-#: e2wipefreespace.c:84
+#: src/wipefreespace.c:124
 msgid "during reading of a block on"
 msgstr "podczas czytania bloku z"
 
-#: e2wipefreespace.c:85
+#: src/wipefreespace.c:125
 msgid "during reading of an inode on"
 msgstr "podczas czytania i-wêz³a z"
 
-#: e2wipefreespace.c:86
+#: src/wipefreespace.c:126
 msgid "while trying to set a signal handler for"
 msgstr "podczas ustawiania procedury obs³ugi sygna³u"
 
-#: e2wipefreespace.c:87
+#: src/wipefreespace.c:127
 msgid "Filesystem has errors:"
 msgstr "System plików zawiera b³êdy:"
 
-#: e2wipefreespace.c:88
+#: src/wipefreespace.c:128
 msgid "during opening a scan of"
 msgstr "podczas otwierania skanu na"
 
-#: e2wipefreespace.c:89
+#: src/wipefreespace.c:129
 msgid "during iterating over blocks on"
 msgstr "podczas iterowania po blokach na"
 
-#: e2wipefreespace.c:90
+#: src/wipefreespace.c:130
 msgid "during iterating over a directory on"
 msgstr "podczas iterowania katalogu na"
 
-#: e2wipefreespace.c:91
+#: src/wipefreespace.c:131
 msgid "Nothing selected for wiping."
 msgstr "Nie wybrano nic do czyszczenia."
 
-#: e2wipefreespace.c:92
+#: src/wipefreespace.c:132
 msgid "PLEASE do NOT set this program's suid bit. Use sgid instead."
-msgstr "PROSZÊ NIE ustawiaj bitu suid dla tego programu. Zamiast tego, u¿yj sgid."
+msgstr ""
+"PROSZÊ NIE ustawiaj bitu suid dla tego programu. Zamiast tego, u¿yj sgid."
 
-#: e2wipefreespace.c:95
+#: src/wipefreespace.c:133
+msgid "during setting capabilities"
+msgstr "podczas ustawiania uprawnieñ programu"
+
+#: src/wipefreespace.c:136
 msgid "Setting signal handlers"
-msgstr "Ustawianie procedur obs³ugi sygna³ów"
+msgstr "Ustawianie procedur obsugi sygna³ów"
 
-#: e2wipefreespace.c:96
+#: src/wipefreespace.c:137
 msgid "Checking if file system is mounted"
 msgstr "Sprawdzanie, czy system plików jest zamontowany"
 
-#: e2wipefreespace.c:97
+#: src/wipefreespace.c:138
 msgid "Opening file system"
 msgstr "Otwieranie systemu plików"
 
-#: e2wipefreespace.c:98
+#: src/wipefreespace.c:139
 msgid "File system invalid or dirty, flushing"
 msgstr "System plików nieprawid³owy lub ma niezapisane zmiany, zapisujê"
 
-#: e2wipefreespace.c:99
+#: src/wipefreespace.c:140
 msgid "Reading block bitmap from"
 msgstr "Czytam bitmapê bloków z"
 
-#: e2wipefreespace.c:100
+#: src/wipefreespace.c:141
 msgid "Wiping free space on file system"
 msgstr "Czyszczê puste miejsce na systemie plików"
 
-#: e2wipefreespace.c:101
+#: src/wipefreespace.c:142
 msgid "Using pattern"
 msgstr "U¿ywam wzorca"
 
-#: e2wipefreespace.c:102
+#: src/wipefreespace.c:143
 msgid "random"
 msgstr "losowy"
 
-#: e2wipefreespace.c:103
+#: src/wipefreespace.c:144
 msgid "Wiping unused space in used blocks on"
 msgstr "Czyszczê nieu¿ywane miejsce w u¿ywanych blokach na"
 
-#: e2wipefreespace.c:104
+#: src/wipefreespace.c:145
 msgid "Wiping undelete data on"
 msgstr "Czyszczê dane s³u¿±ce do odzyskiwania plików na"
 
-#: e2wipefreespace.c:105
+#: src/wipefreespace.c:146
 msgid "Closing file system"
 msgstr "Zamykam system plików"
 
-#: e2wipefreespace.c:152
+#: src/wipefreespace.c:197
 msgid "unknown"
 msgstr "nieznany"
 
-#: e2wipefreespace.c:197
+#: src/wipefreespace.c:291
 msgid ""
-" - Program for secure cleaning of free space on ext2/3 partitions\n"
+" - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
 msgstr ""
-" - Program do bezpiecznego czyszczenia pustego miejsca na partycjach ext2/3\n"
+" - Program do bezpiecznego czyszczenia pustego miejsca na systemach plików\n"
 "Sk³adnia: "
 
-#: e2wipefreespace.c:199
+#: src/wipefreespace.c:293
 msgid " [options] "
 msgstr " [opcje] "
 
-#: e2wipefreespace.c:201
+#: src/wipefreespace.c:295
 msgid ""
 "Options:\n"
 "-b|--superblock <off>\tSuperblock offset on the given filesystems\n"
 "-B|--blocksize <size>\tBlock size on the given filesystems\n"
-"-f|--force\t\tWipe even if the file system has errors\n"
+"-f|--force\t\tWipe even if the file system has errors"
 msgstr ""
 "Opcje:\n"
 "-b|--superblock <off>\tPozycja Superbloku na podanych systemach plików\n"
 "-B|--blocksize <size>\tRozmiar bloku na podanych systemach plików\n"
-"-f|--force\t\tCzy¶æ nawet gdy system plików ma b³êdy\n"
+"-f|--force\t\tCzy¶æ nawet gdy system plików ma b³êdy"
 
-
-#: e2wipefreespace.c:207
+#: src/wipefreespace.c:300
 msgid ""
 "-h|--help\t\tPrint help\n"
 "-l|--license\t\tPrint license information\n"
@@ -205,9 +210,9 @@ msgstr ""
 "-n|--iterations NNN\tLiczba przej¶æ (>0, domy¶lne: 25)\n"
 "--nopart\t\tNIE czy¶æ pustego miejsca w czê¶ciowo u¿ywanych blokach"
 
-#: e2wipefreespace.c:212
+#: src/wipefreespace.c:305
 msgid ""
-"--nounrm\t\t NOT wipe undelete information\n"
+"--nounrm\t\tDo NOT wipe undelete information\n"
 "--nowfs\t\t\tDo NOT wipe free space on file system\n"
 "-v|--verbose\t\tVerbose output\n"
 "-V|--version\t\tPrint version number\n"

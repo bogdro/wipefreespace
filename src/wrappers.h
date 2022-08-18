@@ -1,5 +1,5 @@
 /*
- * A program for secure cleaning of free space on ext2/3 partitions.
+ * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions, header file.
  *
  * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
@@ -26,21 +26,23 @@
 #ifndef WFS_HEADER_WRAP
 # define WFS_HEADER_WRAP
 
-# include "e2wipefreespace.h"
+# ifndef ATTR
+#  define ATTR(x)
+# endif
 
 extern int ATTR((warn_unused_result)) ATTR((nonnull))
-	wfs_openfs ( const char*const devname, fsid *FS, int *whichfs, fsdata *data );
+	wfs_openfs ( const char*const devname, wfs_fsid_t *FS, int *whichfs, fsdata *data );
 
 extern int ATTR((warn_unused_result)) ATTR((nonnull))
 	wfs_chkmount ( const char*const devname );
 
-extern int ATTR((warn_unused_result))	wipe_unrm		( fsid FS, int whichfs );
-extern int ATTR((warn_unused_result))	wipe_fs			( fsid FS, int whichfs );
-extern int ATTR((warn_unused_result))	wipe_part		( fsid FS, int whichfs );
-extern int 				wfs_closefs		( fsid FS, int whichfs );
-extern int ATTR((warn_unused_result))	wfs_checkerr		( fsid FS, int whichfs );
-extern int ATTR((warn_unused_result))	wfs_isdirty		( fsid FS, int whichfs );
-extern int 				wfs_flushfs		( fsid FS, int whichfs );
-extern int ATTR((warn_unused_result))	wfs_getblocksize	( fsid FS, int whichfs );
+extern int ATTR((warn_unused_result))	wipe_unrm		( wfs_fsid_t FS, int whichfs );
+extern int ATTR((warn_unused_result))	wipe_fs			( wfs_fsid_t FS, int whichfs );
+extern int ATTR((warn_unused_result))	wipe_part		( wfs_fsid_t FS, int whichfs );
+extern int 				wfs_closefs		( wfs_fsid_t FS, int whichfs );
+extern int ATTR((warn_unused_result))	wfs_checkerr		( wfs_fsid_t FS, int whichfs );
+extern int ATTR((warn_unused_result))	wfs_isdirty		( wfs_fsid_t FS, int whichfs );
+extern int 				wfs_flushfs		( wfs_fsid_t FS, int whichfs );
+extern int ATTR((warn_unused_result))	wfs_getblocksize	( wfs_fsid_t FS, int whichfs );
 
 #endif	/* WFS_HEADER_WRAP */

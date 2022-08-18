@@ -1,0 +1,73 @@
+This is the README file for wipefreespace, a program for secure wiping
+ of free space on file systems.
+
+Author: Bogdan Drozdowski, bogdandr @ op . pl
+License: GPLv2
+
+Requirements for compiling the full version:
+- a non-root account. Please, NEVER compile or 'make' anything as root.
+- a working C compiler
+- development package for the C library (like glibc-devel and glibc-headers)
+- development package for the ext2 file system library, libext2fs (usually
+  included in something like e2fsprogs-devel). If you don't have anything
+  like this installed or available (check twice), then go to
+  	http://e2fsprogs.sf.net/
+  Then compile and install that package.
+- the 'make' program
+
+Type './configure' to configure the program for your system.
+
+Type 'make' to compile the program.
+Documentation will be compiled, if you have the 'makeinfo' program
+ ('texinfo' package).
+Translations will be compiled, if you have the 'gettext' package.
+
+Type 'make install' to install the program.
+
+Type 'info wipefreespace' to get help.
+
+=======================================================
+
+Building an RPM package:
+
+1) copy the wipefreespace.spec file to /usr/src/redhat/SPECS
+2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
+3) type
+	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
+4) get the rpms from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
+
+=======================================================
+
+Translating the docs to your language:
+
+Type `msginit -i wipefreespace.pot -o XX.po', substituting your
+2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the
+'gettext' package installed. You can manually copy the file
+e2wipefreespace.pot to XX.po and manually add the following header, if
+you wish (you have to fill in all the fields):
+
+# YOUR LANGUAGE translations for wipefreespace package.
+# Copyright (C) 2007 Bogdan 'bogdro' Drozdowski
+# This file is distributed under the same license as
+# the e2wipefreespace package.
+# YOUR FULL NAME <EMAILADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: wipefreespace VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2007-04-25 11:39+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAILADDRESS>\n"
+"Language-Team: LANGUAGE <EMAILADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+The rest of the file will contain messages from the program. Translate
+them all and send me the resulting XX.po file.
+
+Translating the documentation:
+- info: simply change the wipefreespace.texi file
+- man: Unpack the page using @command{gunzip wipefreespace.1.gz} and
+  translate the resulting wipefreespace.1 file.

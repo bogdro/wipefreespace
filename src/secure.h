@@ -1,6 +1,6 @@
 /*
- * A program for secure cleaning of free space on ext2/3 partitions.
- *	-- ext2 and ext3 file system-specific functions, header file.
+ * A program for secure cleaning of free space on filesystems.
+ *	-- security-related procedures, header file.
  *
  * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
@@ -23,13 +23,17 @@
  *		USA
  */
 
-#ifndef WFS_HEADER_EXT23
-# define WFS_HEADER_EXT23
+#ifndef WFS_HEADER_SEC
+# define WFS_HEADER_SEC
 
-#include "e2wipefreespace.h"
+# ifndef ATTR
+#  define ATTR(x)
+# endif
 
-extern int ATTR((warn_unused_result))	e2wipe_unrm	( fsid FS, fselem node );
-extern int ATTR((warn_unused_result))	e2wipe_fs	( fsid FS );
-extern int ATTR((warn_unused_result))	e2wipe_part	( fsid FS );
+extern ATTR((warn_unused_result)) int wfs_clearcap(void);
+extern ATTR((warn_unused_result)) int wfs_checksuid(void);
+extern ATTR((nonnull)) 		  void wfs_checkstds(int *stdout_open, int *stderr_open);
+extern void wfs_clearenv(void);
 
-#endif	/* WFS_HEADER_EXT23 */
+#endif /* WFS_HEADER_SEC */
+

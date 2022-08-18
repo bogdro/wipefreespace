@@ -1,15 +1,15 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
-@setfilename e2wipefreespace.info
-@settitle e2wipefreespace manual 0.5
+@setfilename wipefreespace.info
+@settitle wipefreespace manual 0.6
 @c %**end of header
 
 @copying
-This manual is for e2wipefreespace, version 0.5
+This manual is for wipefreespace, version 0.6
 @end copying
 
 @titlepage
-@title The e2wipefreespace program
+@title The wipefreespace program
 @author Bogdan 'bogdro' Drozdowski
 
 @c  The following two commands
@@ -25,14 +25,14 @@ This manual is for e2wipefreespace, version 0.5
 @contents
 
 @ifnottex
-@node Top, What is e2wipefreespace?, (dir), (dir)
-@top The e2wipefreespace program
+@node Top, What is wipefreespace?, (dir), (dir)
+@top The wipefreespace program
 
 @insertcopying
 @end ifnottex
 
 @menu
-* What is e2wipefreespace?::		About the program.
+* What is wipefreespace?::		About the program.
 * How to compile?::			How to compile the program.
 * Command line syntax and options::	Details of command line options.
 * Return values::			Program's return values.
@@ -47,11 +47,11 @@ This manual is for e2wipefreespace, version 0.5
 
 
 
-@node What is e2wipefreespace?, How to compile?, Top, Top
+@node What is wipefreespace?, How to compile?, Top, Top
 @comment  node-name, next,      previous,  up
-@chapter What is e2wipefreespace?
+@chapter What is wipefreespace?
 
-This program is used for secure erasing of free space on ext2 or ext3 partitions.
+This program is used for secure erasing of free space on ext2, ext3 and NTFS partitions.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
@@ -65,9 +65,9 @@ ALWAYS USE THE @command{shred} (or similar) PROGRAM TO ERASE CONFIDENTIAL DATA.
 
 Sometimes you may delete confidential data
 the normal way by accident (or have no other choice). In such case normally you would have to shred the
-whole partition, which may be a big problem. This is where @command{e2wipefreespace} comes in.
+whole partition, which may be a big problem. This is where @command{wipefreespace} comes in.
 This program works in a similar way to the @command{shred} program, but instead of shreding regular files,
-it overwrites (just like @command{shred}) the free space on a ext2/3 partition, hopefully without
+it overwrites (just like @command{shred}) the free space on a partition, hopefully without
 doing any harm to existing files.
 
 This program also tries to wipe the remaining space in blocks partially used by existing files and
@@ -89,60 +89,51 @@ device/file permissions. This is MUCH safer.
 
 
 
-@node How to compile?, Command line syntax and options, What is e2wipefreespace?, Top
+@node How to compile?, Command line syntax and options, What is wipefreespace?, Top
 @chapter How to compile the program?
 
-Requirements for compiling:@*
+Requirements for compiling the full version of the program:@*
 @itemize
 @item a non-root account. Please, NEVER compile or 'make' anything as root.
-@item a gcc-compatible C compiler
+@item a working C compiler
 @item development package for the C library (like glibc-devel and glibc-headers)
+@item the 'make' program
+@end itemize
+
+You'll also need at least one of the following filesystem libraries:
+
+@itemize
 @item development package for the ext2 file system library, libext2fs (usually
 included in something like e2fsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
    	@indicateurl{http://e2fsprogs.sf.net/}@*
 Then compile and install that package.
-@item the 'make' program (you may however compile it by hand, if you wish)
+@item development package for the NTFS file system library, libntfs (usually
+included in something like ntfsprogs-devel). If you don't have anything
+like this installed or available (check twice), then go to@*
+   	@indicateurl{http://www.linux-ntfs.org/}@*
+Then compile and install that package.
 @end itemize
 
-Type 'make' to compile the program. If you don't have or don't want to use 'make', a simple
+Type './configure' to configure the program for your system.
 
-	cc -o e2wipefreespace e2wipefreespace.c -lext2fs -lcom_err
+Type 'make' to compile the program.
+ Documentation will be compiled, if you have the 'makeinfo' program ('texinfo' package).
+ Translations will be compiled, if you have the 'gettext' package.
 
-should do.
-
-Type 'make doc' to compile the "info" documentation. This requires the
- 'makeinfo' program (usually comes in a 'texinfo' package) and the texinfo.tex
- file (usually comes in a TeX package, like 'tetex'). The manual command is
-
-	makeinfo e2wipefreespace.texi && gzip -f -9 e2wipefreespace.info
-
-Type 'make static' to compile a static binary (this may be big). You can use the
-command
-
-	cc -march=i386 -static -o e2wipefreespace e2wipefreespace.c -lext2fs -lcom_err
-
-(all in one line) instead, if you wish.
-
-Try to avoid compiling the program with the @option{-ansi} option.
-
-Type 'make rpms' to build i386 rpm and source rpm packages. This will require the
-@command{rpmbuild} program and write permissions to the /usr/src/redhat/* directories
-(and all directories below).  You may need to set RPMROOT, if it's different
-than /usr/src/redhat on your system (look what rpmbuild wants).
-To do this, run:
-
-	RPMROOT=/path/to/dir make rpms
-
-This works for BASH, but may be different on other shells.
-
-Set the PREFIX variable, if you want the program somewhere else than /usr/local,
-like this:
-
-	PREFIX=/usr make install
+Type 'make install' to install the program.
 
 NOTE: 'make install' is NOT recommended. Create and install an rpm package instead,
-if possible (type 'make rpms').
+if possible.
+
+To create an RPM package:
+@enumerate
+@item copy the wipefreespace.spec file to /usr/src/redhat/SPECS
+@item copy the source package wipefreespace-version.tar.gz to /usr/src/redhat/SOURCES
+@item type @command{rpmbuild -bb /usr/src/redhat/SPECS/wipefreespace.spec}
+@item get the rpms from /usr/src/redhat/RPMS/i386
+@end enumerate
+
 
 
 
@@ -151,9 +142,9 @@ if possible (type 'make rpms').
 
 Basic syntax is:
 
- e2wipefreespace [options] /dev/XY [...]
+ wipefreespace [options] /dev/XY [...]
 
-The '/dev/XY' part stands for a device with an ext2/3 file system. Examples: /dev/hda1, /dev/fd0.
+The '/dev/XY' part stands for a device with a supported file system. Examples: /dev/hda1, /dev/fd0.
 More than one device can be given on the command line. This program also works for
 file systems created inside regular files on any host file system.
 
@@ -224,7 +215,7 @@ exit with "Bad/missing command line syntax" error code.
 @node Return values, Signals, Command line syntax and options, Top
 @chapter Return values
 
-The e2wipefreespace program can return any of the following values:
+The wipefreespace program can return any of the following values:
 
 @itemize
 @item 0: All actions on the last file system succeded (no errors).
@@ -277,9 +268,9 @@ program won't be able to close the file system and finish working normally. File
 could be left in an unconsistent state, errors could show up.
 Try to avoid stopping the program this way.
 
-You can freeze the program by sending the SIGSTOP signal (like @command{killall -STOP e2wipefreespace})
+You can freeze the program by sending the SIGSTOP signal (like @command{killall -STOP wipefreespace})
 to it or by pressing Ctrl+Z on the terminal, where the program is running. The program will
-continue, if it receives the SIGCONT signal (like with @command{killall -CONT e2wipefreespace}).
+continue, if it receives the SIGCONT signal (like with @command{killall -CONT wipefreespace}).
 You can still send other signals to it, if you wish to terminate it.
 
 
@@ -314,7 +305,7 @@ See @indicateurl{http://www.gnu.org} to get the full texts of these licenses.
 
 ========================
 
-License for e2wipefreespace:
+License for wipefreespace:
 
 Copyright @copyright{} 2007 Bogdan 'bogdro' Drozdowski.
 
@@ -359,21 +350,21 @@ Software Foundation raise funds for GNU development.''
 @node Translating, , Copying, Top
 @chapter Translating
 
-Type @command{msginit -i e2wipefreespace.pot -o XX.po}, substituting your
+Type @command{msginit -i wipefreespace.pot -o XX.po}, substituting your
 2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the 'gettext'
-package installed. You can manually copy the file e2wipefreespace.pot to XX.po and
+package installed. You can manually copy the file wipefreespace.pot to XX.po and
 manually add the following header, if you wish (you have to fill in all the fields):
 
 @quotation
-# YOUR LANGUAGE translations for e2wipefreespace package.@*
+# YOUR LANGUAGE translations for wipefreespace package.@*
 # Copyright (C) 2007 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
-# the e2wipefreespace package.@*
+# the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*
 #@*
 msgid ""@*
 msgstr ""@*
-"Project-Id-Version: e2wipefreespace VERSION\n"@*
+"Project-Id-Version: wipefreespace VERSION\n"@*
 "Report-Msgid-Bugs-To: \n"@*
 "POT-Creation-Date: 2007-04-25 11:39+0200\n"@*
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"@*
@@ -389,9 +380,9 @@ and send me the resulting XX.po file.
 
 Translating the documentation:
 @itemize
-@item info: simply change the e2wipefreespace.texi file
-@item man: Unpack the page using @command{gunzip e2wipefreespace.1.gz} and translate the
-resulting e2wipefreespace.1 file.
+@item info: simply change the wipefreespace.texi file
+@item man: Unpack the page using @command{gunzip wipefreespace.1.gz} and translate the
+resulting wipefreespace.1 file.
 @end itemize
 
 

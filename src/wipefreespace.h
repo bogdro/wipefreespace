@@ -1,5 +1,5 @@
 /*
- * A program for secure cleaning of free space on ext2/3 partitions.
+ * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
  * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
@@ -33,12 +33,8 @@
 # endif
 
 # define 	ERR_MSG_FORMAT			"(%s %ld) %s '%s'"
-# define 	MSG_FORMAT1			"%s: %s\n"
-# define 	MSG_FORMAT2			"%s: %s: '%s'\n"
 
 # define	NPAT	22
-
-# define 	TMPSIZE	12
 
 # define	WFS_SUCCESS		0
 # define	WFS_NOTHING		1
@@ -56,47 +52,70 @@
 # define	WFS_DIRITER		-12
 # define	WFS_SUID		-13
 # define	WFS_FLUSHFS		-14
+# define	WFS_BLKWR		-15
+# define	WFS_ATTROPEN		-16
+# define	WFS_NTFSRUNLIST		-17
+# define	WFS_GETNAME		-18
+# define	WFS_CTXERROR		-19
 # define	WFS_SIGNAL		-100
 
-# define 	_(String)		gettext (String)
+# ifdef HAVE_GETTEXT
+#  define 	_(String)		gettext (String)
+# else
+#  define 	_(String)		String
+# endif
+
 # define	gettext_noop(String)	String
+# define	N_(String)		String
 
 # define	CURR_EXT2FS		1
+# define	CURR_NTFS		2
 
-# ifndef WFS_EXT2
-/* TODO: to be expanded, when other FS come into the program */
-#  define WFS_EXT2
+# ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+# elif !defined HAVE_SIZE_T
+typedef unsigned size_t;
 # endif
 
-# ifdef 	WFS_EXT2
-#  define WFS_BLOCKSIZE(E2FS) EXT2_BLOCK_SIZE(E2FS->super)
-#  ifdef __STRICT_ANSI__
-#   include <sys/types.h>		/* just for ext2fs.h */
-#  endif
-#  include <et/com_err.h>
+# ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>		/* dev_t: just for ext2fs.h */
+# elif defined HAVE_SYS_STAT_H
+#  include <sys/stat.h>
+# elif (!defined HAVE_DEV_T) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
+#  error No dev_t
+# endif
+
+# if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS)
 #  include <ext2fs/ext2fs.h>
-
-	/* TODO: to be expanded, when other FS come into the program */
+#  define	WFS_EXT2	1
+# elif (defined HAVE_EXT2FS_H) && (defined HAVE_LIBEXT2FS)
+#  include <ext2fs.h>
+#  define	WFS_EXT2	1
+# else
+#  undef	WFS_EXT2
 # endif
 
+# if (defined HAVE_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
+#  include <ntfs/volume.h>
+#  define	WFS_NTFS	1
+# elif (defined HAVE_VOLUME_H) && (defined HAVE_LIBNTFS)
+#  include <volume.h>
+#  define	WFS_NTFS	1
+# else
+#  undef	WFS_NTFS
+# endif
 
 typedef struct {
 
-	unsigned long int passno;
+	int whichfs;
+
+	union {
+		long int	gerror;
 # ifdef 	WFS_EXT2
-	ext2_filsys fs;
+		errcode_t	e2error;
 # endif
 	/* TODO: to be expanded, when other FS come into the program */
-
-} wipedata;
-
-
-typedef union {
-
-# ifdef 	WFS_EXT2
-	errcode_t	e2error;
-# endif
-	/* TODO: to be expanded, when other FS come into the program */
+	} errcode;
 
 } error_type;
 
@@ -105,18 +124,32 @@ typedef union {
 # ifdef 	WFS_EXT2
 	ext2_filsys	e2fs;
 # endif
+# ifdef		WFS_NTFS
+	ntfs_volume	ntfs;
+# endif
 	/* TODO: to be expanded, when other FS come into the program */
 
-} fsid;
+} wfs_fsid_t;
+
+typedef struct {
+
+	unsigned long int passno;
+	wfs_fsid_t		filesys;
+
+} wipedata;
+
 
 typedef union {
 
 # ifdef 	WFS_EXT2
 	ext2_ino_t	e2elem;
 # endif
+# ifdef		WFS_NTFS
+	ntfs_inode 	*ntfselem;
+# endif
 	/* TODO: to be expanded, when other FS come into the program */
 
-} fselem;
+} fselem_t;
 
 typedef union {
 
@@ -131,10 +164,10 @@ typedef union {
 
 /* ========================= Common to all ================================ */
 extern void ATTR((nonnull)) 	show_error ( const error_type err, const char*const msg,
-	const char*const extra );
+						const char*const extra );
 
 extern void ATTR((nonnull)) 	show_msg ( const int type, const char*const msg,
-	const char*const extra );
+						const char*const extra );
 
 extern void ATTR((nonnull)) 	fill_buffer ( 	unsigned long int 		pat_no,
 						unsigned char* const 		buffer,
@@ -161,26 +194,11 @@ extern const char *err_msg_diriter;
 extern const char *err_msg_nowork;
 extern const char *err_msg_suid;
 
-/* Messages displayed when verbose mode is on */
-extern const char *msg_signal;
-extern const char *msg_chkmnt;
-extern const char *msg_openfs;
-extern const char *msg_flushfs;
-extern const char *msg_rdblbm;
-extern const char *msg_wipefs;
-extern const char *msg_pattern;
-extern const char *msg_random;
-extern const char *msg_wipeused;
-extern const char *msg_wipeunrm;
-extern const char *msg_closefs;
-
 extern char *fsname;
 
 extern error_type error;
 extern unsigned char /*@only@*/ *buf;
 extern unsigned long int npasses;
 
-
-#include "wrappers.h"
 
 #endif	/* WFS_HEADER */
