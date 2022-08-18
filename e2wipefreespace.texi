@@ -1,11 +1,11 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename e2wipefreespace.info
-@settitle e2wipefreespace manual 0.3
+@settitle e2wipefreespace manual 0.4
 @c %**end of header
 
 @copying
-This manual is for e2wipefreespace, version 0.3.
+This manual is for e2wipefreespace, version 0.4
 @end copying
 
 @titlepage
@@ -36,9 +36,12 @@ This manual is for e2wipefreespace, version 0.3.
 * How to compile?::			How to compile the program.
 * Command line syntax and options::	Details of command line options.
 * Return values::			Program's return values.
+* Signals::				Behaviour upon receiving signals.
 * Author::				How to contact me.
 * Copying::				License - your rights and freedoms.
 @end menu
+
+
 
 
 
@@ -66,14 +69,16 @@ This program works in a similar way to the @command{shred} program, but instead 
 it overwrites (just like @command{shred}) the free space on a ext2/3 partition, hopefully without
 doing any harm to existing files.
 
-This program also tries to wipe the remaining space in blocks partially used by existing files.
+This program also tries to wipe the remaining space in blocks partially used by existing files and
+wipe deleted elements' names.
 
 THE PROGRAM HAS BEEN TESTED, BUT IT MAY NOW OR LATER CONTAIN ERRORS, WHICH MAY LEAD TO DATA LOSS.
 ALWAYS BACKUP YOUR DATA BEFORE USING THIS PROGRAM. READ THE LICENSE FOR A WARRANTY (THERE IS NONE).
 
-NOTE: Erased files' names will still be on the drive, this program can not yet remove them.
-
 @c @cindex first chapter
+
+
+
 
 
 
@@ -82,14 +87,15 @@ NOTE: Erased files' names will still be on the drive, this program can not yet r
 
 Requirements for compiling:@*
 @itemize
-@item a gcc-compatible C compiler@*
-@item development package for the C library (like glibc-devel and glibc-headers)@*
+@item a non-root account. Please, NEVER compile or 'make' anything as root.
+@item a gcc-compatible C compiler
+@item development package for the C library (like glibc-devel and glibc-headers)
 @item development package for the ext2 file system library, libext2fs (usually
 included in something like e2fsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
   	@indicateurl{http://e2fsprogs.sf.net/}@*
-Then compile and install that package.@*
-@item the 'make' program (you may however compile it by hand, if you wish)@*
+Then compile and install that package.
+@item the 'make' program (you may however compile it by hand, if you wish)
 @end itemize
 
 Type 'make' to compile the program. If you don't have or don't want to use 'make', a simple
@@ -107,11 +113,30 @@ Type 'make doc' to compile the "info" documentation. This requires the
 Type 'make static' to compile a static binary (this may be big). You can use the
 command
 
-	cc -static -o e2wipefreespace e2wipefreespace.c -lext2fs -lcom_err
+	cc -march=i386 -static -o e2wipefreespace e2wipefreespace.c -lext2fs -lcom_err
 
-instead, if you wish.
+(all in one line) instead, if you wish.
 
+Try to avoid compiling the program with the @option{-ansi} option.
 
+Type 'make rpms' to build i386 rpm and source rpm packages. This will require the
+@command{rpmbuild} program and write permissions to the /usr/src/redhat/* directories
+(and all directories below).  You may need to set RPMROOT, if it's different
+than /usr/src/redhat on your system (look what rpmbuild wants).
+To do this, run:
+
+	RPMROOT=/path/to/dir make rpms
+
+This works for BASH, but may be different on other shells. the RPMROOT should
+contain at least the SPECS and SOURCES directories.
+
+Set the PREFIX variable, if you want the program somewhere else than /usr/local,
+like this:
+
+	PREFIX=/usr make install
+
+NOTE: 'make install' is NOT recommended. Create and install an rpm package instead,
+if possible (type 'make rpms').
 
 
 
@@ -123,7 +148,8 @@ Basic syntax is:
  e2wipefreespace [options] /dev/XY [...]
 
 The '/dev/XY' part stands for a device with an ext2/3 file system. Examples: /dev/hda1, /dev/fd0.
-More than one device can be given on the command line.
+More than one device can be given on the command line. This program also works for
+file systems created inside regular files on any host file system.
 
 Options:
 
@@ -147,15 +173,30 @@ Forces the program to do its job even when the file system has errors.
 Print help and exit.
 @end quotation
 
+@noindent @option{-l}@*@option{--license}@*@option{--licence}@*
+@quotation
+Print license information and exit.
+@end quotation
+
 @noindent @option{-n NNN}@*@option{--iterations NNN}@*
 @quotation
 Number of passes (must be greater than 0, default is 25). This is also the number of
 patterns (including random) used to wipe the free space.
 @end quotation
 
-@noindent @option{-l}@*@option{--license}@*@option{--licence}@*
+@noindent @option{--nopart}@*
 @quotation
-Print license information and exit.
+Do NOT wipe free space in partially used blocks.
+@end quotation
+
+@noindent @option{--nounrm}@*
+@quotation
+Do NOT wipe undelete information.
+@end quotation
+
+@noindent @option{--nowfs}@*
+@quotation
+Do NOT wipe free space on file system.
 @end quotation
 
 @noindent @option{-v}@*@option{--verbose}@*
@@ -168,11 +209,13 @@ Enables verbose output. The program will tell what it's doing.
 Print version number and exit.
 @end quotation
 
+NOTE: All three options @option{--nopart}, @option{--nounrm}, @option{--nowfs} must
+NOT be given at once. This would mean that no work must be done and the program will
+exit with "Bad/missing command line syntax" error code.
 
 
 
-
-@node Return values, Author, Command line syntax and options, Top
+@node Return values, Signals, Command line syntax and options, Top
 @chapter Return values
 
 The e2wipefreespace program can return any of the following values:
@@ -190,17 +233,49 @@ blocks are unused).
 @item -7: The file system contained errors and the option @option{--force} was not given.
 @item -8: Closing the file system failed.
 @item -9: Opening i-node scan failed. Thus, the program was unable to wipe free space in
-partially used blocks and remove undelete data.
-@item -10: Iterating over blocks failed.Thus, the program was unable to wipe free space in
+partially used blocks and/or remove undelete data.
+@item -10: Iterating over blocks failed. Thus, the program was unable to wipe free space in
 partially used blocks.
 @item -11: I-node write failed.
+@item -12: I-node read failed.
+@item -13: Directory iterating failed. Thus, the program was unable to remove undelete data.
 @item -100: A signal was caught and the program was forced to exit.
+@item 128+N: The program was terminated by signal number N (the signal either wasn't caught
+or was caught after SIGCONT was received).
 @end itemize
 
 NOTE: Actually, the negative values are substracted from 256, so -1 could be shown as 255,
 -2 as 254 and so on.
 
-@node Author, Copying, Return values, Top
+
+
+
+
+@node Signals, Author, Return values, Top
+@chapter Signals
+
+The program will terminate normally (that is: will flush and close the file system and
+release memory) if any of the following signals are caught: SIGINT (Ctrl+C), SIGQUIT, SIGILL,
+SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGTTIN,
+SIGTTOU, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGXCPU, SIGXFSZ, SIGPWR, SIGVTALRM,
+SIGUNUSED. If compiled without the @option{-ansi} option, the program will close
+cleanly also upon receiving the SIGEMT and SIGLOST signals.
+
+If the program receives the SIGKILL signal, it will, of course be killed. But then the
+program won't be able to close the file system and finish working normally. File system
+could be left in an unconsistent state, errors could show up.
+Try to avoid stopping the program this way.
+
+You can freeze the program by sending the SIGSTOP signal (like @command{killall -STOP e2wipefreespace})
+to it or by pressing Ctrl+Z on the terminal, where the program is running. The program will
+continue, if it receives the SIGCONT signal (like with @command{killall -CONT e2wipefreespace}).
+You can still send other signals to it, if you wish to terminate it.
+
+
+
+
+
+@node Author, Copying, Signals, Top
 @chapter Author
 
 To contact me, try one of these adresses: @*
@@ -213,6 +288,7 @@ bogdro (at) rudy . mif . pg . gda . pl
 or look at my website:@*
 [PL] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/}@*
 [EN] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/inne/}@*
+[EN] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/soft/}@*
 
 
 

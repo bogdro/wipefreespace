@@ -1,3 +1,14 @@
+2007-04-10	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Version 0.4
+	  Finding last partially used buffer only if needed. More code
+	  changes & cleanup. Added sync()ing after every writing,
+	  if available. Three new options: --nopart, --nounrm, --nowfs.
+	  Docs updated with signal information. Removing deleted files'
+	  names fully works. Some Makefile updates - easy building RPMs.
+	  Signals corrected and checked more often. Security: checking
+	  stdout & stdin.
+
 2007-04-08	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Version 0.3
