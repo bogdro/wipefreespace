@@ -1,0 +1,48 @@
+--- ../tffs-lib-read-only-orig/src/crtdef.h	2016-11-11 13:51:05.377567571 +0100
++++ ./src/crtdef.h	2017-03-11 22:10:49.119513192 +0100
+@@ -17,7 +17,7 @@
+ #include <time.h>
+
+ #define Malloc(size) malloc(size)
+-#define Free(ptr) free(ptr)
++#define Free(ptr) {if (ptr) {free(ptr);}}
+ #define Memset(ptr, b, size) memset(ptr, b, size)
+ #define Memcpy(dst, src, size) memcpy(dst, src, size)
+ #define Memcmp(dst, src, size) memcmp(dst, src, size)
+--- ../tffs-lib-read-only-orig/src/dirent.c	2016-11-11 13:51:05.739569090 +0100
++++ src/dirent.c	2017-09-12 21:19:39.349745003 +0200
+@@ -263,8 +263,14 @@
+ dirent_release(
+ 	IN	tdir_entry_t * pdir_entry)
+ {
+-	Free(pdir_entry->pdirent);
+-	Free(pdir_entry);
++	if (pdir_entry != NULL)
++	{
++		if (pdir_entry->pdirent != NULL)
++		{
++			Free(pdir_entry->pdirent);
++		}
++		Free(pdir_entry);
++	}
+ }
+
+ tdir_entry_t *
+--- ../tffs-lib-read-only-orig/src/dirent.c	2016-11-11 13:51:05.000000000 +0100
++++ ./src/dirent.c	2019-08-27 00:27:45.972944679 +0200
+@@ -447,6 +453,7 @@
+ 		dir_entry_t dirent;
+ 
+ 		lf_entry_num = pdirent->dir_name[0] & ~(LAST_LONG_ENTRY);
++		if (pdir_entry->pdirent != NULL) Free(pdir_entry->pdirent);
+ 		pdir_entry->pdirent = (dir_entry_t *)Malloc((lf_entry_num + 1) * sizeof(dir_entry_t));
+ 
+ 		_get_long_file_name(pdirent, pdir_entry->long_name + (lf_entry_num - 1) * 13);
+@@ -462,6 +469,7 @@
+ 		Memcpy(pdir_entry->pdirent + lf_i, &dirent, sizeof(dir_entry_t));
+ 	}
+ 	else {
++		if (pdir_entry->pdirent != NULL) Free(pdir_entry->pdirent);
+ 		pdir_entry->pdirent = (dir_entry_t *)Malloc(sizeof(dir_entry_t));
+ 
+ 		_convert_short_fname(pdirent->dir_name, pdir_entry->long_name);

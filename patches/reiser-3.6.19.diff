@@ -1,0 +1,1937 @@
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/corruption.c ./debugreiserfs/corruption.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/corruption.c	2004-08-19 11:31:49.000000000 +0200
++++ ./debugreiserfs/corruption.c	2011-05-02 15:15:45.568806509 +0200
+@@ -35,7 +35,7 @@
+ 
+ 	ret =  (int)(min + (int)((max - min + 1) * rand() / (RAND_MAX + 1.0)));
+ 	if ((ret < min) || (ret > max))
+-		die ("get_rand failed: min %d, max %d, returned %d\n", (int)min, (int)max, ret);
++		reiser3_die ("get_rand failed: min %d, max %d, returned %d\n", (int)min, (int)max, ret);
+ 
+ 	return ret;
+ }
+@@ -256,7 +256,7 @@
+         else
+             bm_block = fs->fs_super_bh->b_blocknr + 1 + (block / (fs->fs_blocksize * 8));
+         
+-        bm_bh = bread (fs->fs_dev, bm_block, fs->fs_blocksize);
++        bm_bh = reiser3_new_bread (fs->fs_dev, bm_block, fs->fs_blocksize);
+         if (bm_bh) {
+             if ( misc_test_bit((block % (fs->fs_blocksize * 8)), bm_bh->b_data) )
+                 fprintf (stderr, "%lu is used in ondisk bitmap\n", block);
+@@ -273,9 +273,9 @@
+     }
+     
+     /* READ block */
+-    bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++    bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+     if (!bh) {
+-		printf ("corrupt_one_block: bread fialed\n");
++		printf ("corrupt_one_block: reiser3_new_bread fialed\n");
+ 		return;
+     }
+ 
+@@ -736,7 +736,7 @@
+ 		if (!reiserfs_bitmap_test_bit (fs->fs_bitmap2, i))
+ 			continue;
+ 
+-		bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++		bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 		if (!bh) {
+ 			reiserfs_warning (stderr, "could not read block %lu\n", i);
+ 			continue;
+@@ -819,10 +819,10 @@
+ 		{
+ 			block = ( i == 0 ) ? first 
+ 				: fs->fs_blocksize * 8 * i;
+-			bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++			bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+ 
+ 			if (!bh) {
+-				printf ("do_bitmap_corruption: bread failed for bitmap %d: %lu\n",
++				printf ("do_bitmap_corruption: reiser3_new_bread failed for bitmap %d: %lu\n",
+ 						i, block); 
+ 				exit (1);
+ 			}
+@@ -861,7 +861,7 @@
+ 		if (!reiserfs_bitmap_test_bit (fs->fs_bitmap2, i))
+ 			continue;
+ 
+-		bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++		bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 		if (!bh) {
+ 			reiserfs_warning (stderr, "could not read block %lu\n", i);
+ 			continue;
+@@ -968,7 +968,7 @@
+ 		if (!reiserfs_bitmap_test_bit (fs->fs_bitmap2, i))
+ 			continue;
+ 
+-		bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++		bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 		if (!bh) {
+ 			reiserfs_warning (stderr, "could not read block %lu\n", i);
+ 			continue;
+@@ -1049,7 +1049,7 @@
+ 		if (!reiserfs_bitmap_test_bit (fs->fs_bitmap2, i))
+ 			continue;
+ 
+-		bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++		bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 		if (!bh) {
+ 			reiserfs_warning (stderr, "could not read block %lu\n", i);
+ 			continue;
+@@ -1130,7 +1130,7 @@
+ 		if (!reiserfs_bitmap_test_bit (fs->fs_bitmap2, i))
+ 			continue;
+ 
+-		bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++		bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 		if (!bh) {
+ 			reiserfs_warning (stderr, "could not read block %lu\n", i);
+ 			continue;
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/debugreiserfs.c ./debugreiserfs/debugreiserfs.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/debugreiserfs.c	2004-08-19 11:45:12.000000000 +0200
++++ ./debugreiserfs/debugreiserfs.c	2011-05-02 15:15:45.784809534 +0200
+@@ -76,14 +76,14 @@
+     if (level == -1)
+ 	    level = get_sb_tree_height (fs->fs_ondisk_sb);
+ 
+-    bh = bread (fs->fs_dev, block_nr, fs->fs_blocksize);
++    bh = reiser3_new_bread (fs->fs_dev, block_nr, fs->fs_blocksize);
+     if (!bh) {
+-	    die ("Could not read block %lu\n", block_nr);
++	    reiser3_die ("Could not read block %lu\n", block_nr);
+     }
+     level --;
+ 
+     if (level < 1)
+-	    die ("level too small");
++	    reiser3_die ("level too small");
+ 	
+     if (level != get_blkh_level (B_BLK_HEAD (bh))) {
+ 	    printf ("%d expected, %d found in %lu\n", level, 
+@@ -147,7 +147,7 @@
+ 		
+ 		print_how_far (stderr, &done, total, 1, be_quiet (fs));
+ 		
+-		bh = bread (fs->fs_dev, j, fs->fs_blocksize);
++		bh = reiser3_new_bread (fs->fs_dev, j, fs->fs_blocksize);
+ 		if (!bh) {
+ 			reiserfs_warning (stderr, "could not read block %lu\n", j);
+ 			continue;
+@@ -190,7 +190,7 @@
+ 		bm_block = fs->fs_super_bh->b_blocknr + 1 + 
+ 			(block / (fs->fs_blocksize * 8));
+ 
+-        bm_bh = bread (fs->fs_dev, bm_block, fs->fs_blocksize);
++        bm_bh = reiser3_new_bread (fs->fs_dev, bm_block, fs->fs_blocksize);
+         if (bm_bh) {
+ 		if (misc_test_bit((block % (fs->fs_blocksize * 8)), 
+ 				  bm_bh->b_data))
+@@ -211,9 +211,9 @@
+ 		fprintf (stderr, "%lu is free in ondisk bitmap\n", block);
+     }
+     
+-    bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++    bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+     if (!bh) {
+-	    printf ("print_one_block: bread failed\n");
++	    printf ("print_one_block: reiser3_new_bread failed\n");
+ 	    return;
+     }
+ 	
+@@ -286,21 +286,21 @@
+ 	    case '1':	/* print a single node */
+ 		    data->block = strtol (optarg, &tmp, 0);
+ 		    if (*tmp)
+-			    die ("parse_options: bad block number");
++			    reiser3_die ("parse_options: bad block number");
+ 		    break;
+ 
+ 	    case 'C':
+ 		    data->mode = DO_CORRUPT_ONE;
+ 		    data->block = strtol (optarg, &tmp, 0);
+ 		    if (*tmp) {
+-			    die ("parse_options: bad block number");
++			    reiser3_die ("parse_options: bad block number");
+ 		    }
+ 		    break;
+ 
+ 	    case 'F':
+ 		    data->mode = DO_CORRUPT_FILE;
+ 		    if (asprintf (&corruption_list_file, "%s", optarg) == -1 ) {    
+-			    die ("parse_options: bad list corruption file");
++			    reiser3_die ("parse_options: bad list corruption file");
+ 		    }
+ 		    break;
+ 
+@@ -658,7 +658,7 @@
+ 		bh = getblk(fs->fs_dev, i, fs->fs_blocksize);
+ 		
+ 		if (!bh)
+-			die("Could not get block %lu\n", i);
++			reiser3_die("Could not get block %lu\n", i);
+ 		
+ 		memset(bh->b_data, 0, fs->fs_blocksize);
+ 		mark_buffer_dirty(bh);
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/pack.c ./debugreiserfs/pack.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/pack.c	2004-05-25 00:50:01.000000000 +0200
++++ ./debugreiserfs/pack.c	2011-05-02 15:15:45.514806007 +0200
+@@ -486,7 +486,7 @@
+ 	else if (is_stat_data_ih (ih))
+ 	    pack_stat_data (&pi, bh, ih);
+ 	else
+-	    die ("pack_leaf: unknown item found");
++	    reiser3_die ("pack_leaf: unknown item found");
+ #if 0
+ 	v32 = ITEM_END_MAGIC;
+ 	fwrite32 (&v32);
+@@ -588,9 +588,9 @@
+     /* bitmaps */
+     block = fs->fs_super_bh->b_blocknr + 1;
+     for (i = 0; i < get_sb_bmap_nr (fs->fs_ondisk_sb); i ++) {
+-	bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+ 	if (!bh) {
+-	    fprintf (stderr, "pack_frozen_data: bread failed: %lu\n", block);
++	    fprintf (stderr, "pack_frozen_data: reiser3_new_bread failed: %lu\n", block);
+ 	    continue;
+ 	}
+ 	send_block (fs, bh, 1);
+@@ -607,7 +607,7 @@
+ 	/* non-standard journal is on a separate device */
+ 	    
+ 	if (journal_device_name (fs) && !reiserfs_journal_opened (fs))
+-	    die ("Specified journal is not available. Specify it correctly or "
++	    reiser3_die ("Specified journal is not available. Specify it correctly or "
+ 		 "don't specify at all");
+ 	else if (!journal_device_name(fs)) 
+ 	    /* non-standard journal was not specified (that confirmed by user) -
+@@ -624,7 +624,7 @@
+ 		      block, block + get_jp_journal_size (sb_jp (fs->fs_ondisk_sb)));
+     fflush (stderr);
+     for (i = 0; i <= get_jp_journal_size (sb_jp (fs->fs_ondisk_sb)); i ++) {
+-	bh = bread (fs->fs_journal_dev, block + i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_journal_dev, block + i, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    reiserfs_warning (stderr, "could not read %lu, skipped\n", i);
+ 	    continue;
+@@ -681,7 +681,7 @@
+ 	
+ 	print_how_far (stderr, &done, total, 1, be_quiet (fs));
+ 
+-	bh = bread (fs->fs_dev, i, blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, i, blocksize);
+ 	if (!bh) {
+ 	    reiserfs_warning (stderr, "could not read block %lu\n", i);
+ 	    continue;
+@@ -723,7 +723,7 @@
+     // blocksize
+     fwrite_le16 (&fs->fs_blocksize);
+     
+-    bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++    bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+ 
+     if (!bh) 
+ 	return;
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/recover.c ./debugreiserfs/recover.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/recover.c	2004-05-25 19:30:06.000000000 +0200
++++ ./debugreiserfs/recover.c	2011-05-02 15:15:45.700805996 +0200
+@@ -46,7 +46,7 @@
+ 	case 'K':
+ 	    /* get a key of file which is to be recovered */
+ 	    if (sscanf (line, "%c %u %u\n", &code, &key.k_dir_id, &key.k_objectid) != 3) {
+-		die ("recover_file: wrong input K format");
++		reiser3_die ("recover_file: wrong input K format");
+ 	    }
+ 	    printf ("Recovering file (%u, %u)\n", key.k_dir_id, key.k_objectid);
+ 	    break;
+@@ -55,22 +55,22 @@
+ 	    /* get a file name */
+ 	    recovered = 0;
+ 	    if (sscanf (line, "%c %s\n", &code, name) != 2) {
+-		die ("recover_file: wrong input N format");
++		reiser3_die ("recover_file: wrong input N format");
+ 	    }
+ 	    fd = open (name, O_RDWR | O_CREAT | O_EXCL, 0644);
+ 	    if (fd == -1)
+-		die ("recover_file: could not create file %s: %s",
++		reiser3_die ("recover_file: could not create file %s: %s",
+ 		     name,strerror (errno));
+ 	    printf ("Recovering file %s..\n", name);
+ 	    break;
+ 
+ 	case 'B':
+ 	    if (!fd)
+-		die ("recover_file: file name is not specified");
++		reiser3_die ("recover_file: file name is not specified");
+ 	    if (sscanf (line, "%c %lu\n", &code, &block) != 2) {
+-		die ("recover_file: wrong input B format");
++		reiser3_die ("recover_file: wrong input B format");
+ 	    }
+-	    bh = bread (fs->s_dev, block, fs->s_blocksize);
++	    bh = reiser3_new_bread (fs->s_dev, block, fs->s_blocksize);
+ 	    if (!bh) {
+ 		printf ("reading block %lu failed\n", block);
+ 		continue;
+@@ -92,7 +92,7 @@
+ 		    block = le32_to_cpu (indirect [j]);
+ 		    if (!block)
+ 			continue;
+-		    tmp_bh = bread (fs->s_dev, block, fs->s_blocksize);
++		    tmp_bh = reiser3_new_bread (fs->s_dev, block, fs->s_blocksize);
+ 		    if (!tmp_bh) {
+ 			printf ("reading block %Lu failed\n", (loff_t)block * fs->s_blocksize);
+ 			continue;
+@@ -278,9 +278,9 @@
+     }
+     
+     for (i = 1, cur = map + 1; i <= map_size / sizeof(struct saved_item); i++, cur++) {
+-	bh = bread (fs->fs_dev, (cur - 1)->si_block, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, (cur - 1)->si_block, fs->fs_blocksize);
+ 	if (!bh) {
+-	    reiserfs_warning (fp, "bread failed\n");
++	    reiserfs_warning (fp, "reiser3_new_bread failed\n");
+ 	    continue;
+ 	}
+ 
+@@ -327,9 +327,9 @@
+ 
+ 	printf("write %ld\n", result);
+ 
+-	bh = bread (fs->fs_dev, (map + result)->si_block, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, (map + result)->si_block, fs->fs_blocksize);
+ 	if (!bh) {
+-	    reiserfs_warning (fp, "bread failed\n");
++	    reiserfs_warning (fp, "reiser3_new_bread failed\n");
+ 	    continue;
+ 	}
+ 
+@@ -344,9 +344,9 @@
+ 		    fseek(target_file, fs->fs_blocksize, SEEK_CUR);
+ 		    continue;
+ 		}
+-		bh_pointed = bread (fs->fs_dev, unfm_ptr, fs->fs_blocksize);
++		bh_pointed = reiser3_new_bread (fs->fs_dev, unfm_ptr, fs->fs_blocksize);
+ 		if (!bh_pointed) {
+-		    reiserfs_warning (fp, "bread failed\n");
++		    reiserfs_warning (fp, "reiser3_new_bread failed\n");
+ 		    continue;
+ 		}
+ 		fwrite(bh_pointed->b_data, fs->fs_blocksize, 1, target_file);
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/scan.c ./debugreiserfs/scan.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/scan.c	2004-08-19 11:29:20.000000000 +0200
++++ ./debugreiserfs/scan.c	2011-05-02 15:15:45.746806438 +0200
+@@ -542,9 +542,9 @@
+     void * data;
+ 
+     // read the block containing the item 
+-    bh = bread (fs->fs_dev, item->si_block, fs->fs_blocksize);
++    bh = reiser3_new_bread (fs->fs_dev, item->si_block, fs->fs_blocksize);
+     if (!bh) {
+-	reiserfs_warning (stderr, "bread failed\n");
++	reiserfs_warning (stderr, "reiser3_new_bread failed\n");
+ 	return;
+     }
+ 
+@@ -709,9 +709,9 @@
+     int size = sizeof(struct saved_item) - sizeof(struct saved_item *);
+ 
+     while (fread(&item, size, 1, fp) == 1) {
+-	bh = bread (fs->fs_dev, item.si_block, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, item.si_block, fs->fs_blocksize);
+ 	if (!bh) {
+-	    reiserfs_warning (fp, "bread failed\n");
++	    reiserfs_warning (fp, "reiser3_new_bread failed\n");
+ 	    continue;
+ 	}
+ 	ih = B_N_PITEM_HEAD (bh, item.si_item_num);
+@@ -1007,7 +1007,7 @@
+ 	for (i = 0; i < get_sb_block_count (fs->fs_ondisk_sb); i ++) {
+ 	    if (!reiserfs_bitmap_test_bit (input_bitmap (fs), i))
+ 		continue;
+-	    bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++	    bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 	    if (!bh) {
+ 		printf ("could not read block %lu\n", i);
+ 		continue;
+@@ -1038,7 +1038,7 @@
+ 	
+ 	if (!reiserfs_bitmap_test_bit (input_bitmap (fs), i))
+ 	    continue;
+-	bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    printf ("could not read block %lu\n", i);
+ 	    continue;
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/stat.c ./debugreiserfs/stat.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/stat.c	2004-08-19 12:11:10.000000000 +0200
++++ ./debugreiserfs/stat.c	2011-05-02 15:15:45.640808570 +0200
+@@ -174,7 +174,7 @@
+     items_tree = 0;
+ 
+ /*
+-    bh = bread (fs->s_dev, 8211, fs->s_blocksize);
++    bh = reiser3_new_bread (fs->s_dev, 8211, fs->s_blocksize);
+     stat1_the_leaf (fs, bh);
+     
+     return;
+@@ -189,7 +189,7 @@
+ 
+ 	print_how_far (stderr, &done, total, 1, be_quiet (fs));
+ 
+-	bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    printf ("could not read block %lu\n", i);
+ 	    continue;
+@@ -263,7 +263,7 @@
+ 
+ 	print_how_far (stderr, &done, total, 1, be_quiet (fs));
+ 
+-	bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    printf ("could not read block %lu\n", i);
+ 	    continue;
+diff -uraN ../reiserfsprogs-3.6.19/debugreiserfs/unpack.c ./debugreiserfs/unpack.c
+--- ../reiserfsprogs-3.6.19/debugreiserfs/unpack.c	2004-09-16 14:23:11.000000000 +0200
++++ ./debugreiserfs/unpack.c	2011-05-02 15:15:45.617806328 +0200
+@@ -7,7 +7,7 @@
+ #include <sys/resource.h>
+ 
+ 
+-#define print_usage_and_exit() die ("Usage: %s [-v] [-b filename] device\n\
++#define print_usage_and_exit() reiser3_die ("Usage: %s [-v] [-b filename] device\n\
+ -v		prints blocks number of every block unpacked\n\
+ -b filename	saves bitmap of blocks unpacked to filename\n\
+ -j filename     stores journal in the filename\n", argv[0]);
+@@ -31,7 +31,7 @@
+ 	__u64 v64;
+ 
+ 	if (get_ih_key_format (ih) != KEY_FORMAT_2)
+-	    die ("unpack_offset: key format is not set or wrong");
++	    reiser3_die ("unpack_offset: key format is not set or wrong");
+ 	fread_le64 (&v64);
+ 	set_offset (KEY_FORMAT_2, &ih->ih_key, v64);
+ 	return;
+@@ -90,10 +90,10 @@
+     char * item;
+ 
+ /*    if (!hash_func)
+-	die ("unpack_direntry: hash function is not set");*/
++	reiser3_die ("unpack_direntry: hash function is not set");*/
+ 
+     if (!(get_pi_mask(pi) & IH_FREE_SPACE))
+-        die ("ih_entry_count must be packed for directory items");
++        reiser3_die ("ih_entry_count must be packed for directory items");
+ 
+     entry_count = get_ih_entry_count (ih);
+ /*    if (!entry_count)
+@@ -304,7 +304,7 @@
+ 
+     bh = getblk (dev, v32, blocksize);
+     if (!bh)
+-	die ("unpack_leaf: getblk failed");
++	reiser3_die ("unpack_leaf: getblk failed");
+ 
+     set_blkh_nr_items (B_BLK_HEAD (bh), v16);
+     set_blkh_level (B_BLK_HEAD (bh), DISK_LEAF_NODE_LEVEL);
+@@ -316,7 +316,7 @@
+ #if 0
+ 	fread32 (&v32);
+ 	if (v32 != ITEM_START_MAGIC)
+-	    die ("unpack_leaf: no start item magic found: block %lu, item %i",
++	    reiser3_die ("unpack_leaf: no start item magic found: block %lu, item %i",
+ 		 bh->b_blocknr, i);
+ #endif	
+ 
+@@ -328,7 +328,7 @@
+             set_key_dirid (&ih->ih_key, le32_to_cpu(v32));
+ 	} else {
+ 	    if (!i)
+-		die ("unpack_leaf: dir_id is not set");
++		reiser3_die ("unpack_leaf: dir_id is not set");
+ 	    set_key_dirid (&ih->ih_key, get_key_dirid (&(ih - 1)->ih_key));
+ 	}
+ 
+@@ -338,7 +338,7 @@
+             set_key_objectid (&ih->ih_key, le32_to_cpu(v32));
+ 	} else {
+ 	    if (!i)
+-		die ("unpack_leaf: object_id is not set");
++		reiser3_die ("unpack_leaf: object_id is not set");
+ 	    set_key_objectid (&ih->ih_key, get_key_objectid (&(ih - 1)->ih_key));
+ 	}
+ 
+@@ -380,7 +380,7 @@
+ #if 0
+ 	fread32 (&v32);
+ 	if (v32 != ITEM_END_MAGIC)
+-	    die ("unpack_leaf: no end item magic found: block %lu, item %i",
++	    reiser3_die ("unpack_leaf: no end item magic found: block %lu, item %i",
+ 		 bh->b_blocknr, i);
+ 	if (verbose)
+ 	    reiserfs_warning (stderr, "%d: %H\n", i, ih);
+@@ -389,7 +389,7 @@
+ 
+     fread_le16 (&v16);
+     if (v16 != LEAF_END_MAGIC)
+-	die ("unpack_leaf: wrong end signature found - %x, block %lu", 
++	reiser3_die ("unpack_leaf: wrong end signature found - %x, block %lu", 
+ 	     v16, bh->b_blocknr);
+ 
+     mark_buffer_uptodate (bh, 1);
+@@ -423,7 +423,7 @@
+ 
+     bh = getblk (dev, block, blocksize);
+     if (!bh)
+-	die ("unpack_full_block: getblk failed");
++	reiser3_die ("unpack_full_block: getblk failed");
+ 
+     fread (bh->b_data, bh->b_size, 1, stdin);
+ 
+@@ -496,7 +496,7 @@
+     
+     fread_le32 (&magic32);
+     if (magic32 != REISERFS_SUPER_MAGIC)
+-	die ("unpack_partition: reiserfs magic number (0x%x) not found - %x\n",
++	reiser3_die ("unpack_partition: reiserfs magic number (0x%x) not found - %x\n",
+              REISERFS_SUPER_MAGIC, magic32);
+     
+     fread_le16 (&blocksize);
+@@ -525,7 +525,7 @@
+ 	    fread (c + 1, 1, 1, stdin); /* read % */
+ 		
+ 	    if (c[0] != '0' || c[1] != '%')
+-		die ("0%% expected\n");
++		reiser3_die ("0%% expected\n");
+ 
+ 	    if (verbose)
+ 		fprintf (stderr, "0%% skipped\n");
+@@ -544,7 +544,7 @@
+ 	    
+ 	case SEPARATED_JOURNAL_START_MAGIC:
+ 	    if (Default_journal)
+-		die ("file name for separated journal has to be specified");	
++		reiser3_die ("file name for separated journal has to be specified");	
+ 	    dev = jfd;
+ 	    break;    
+ 
+@@ -568,9 +568,9 @@
+ 	default:
+ 	    position = ftell(stdin);
+ 	    if (position == ~(long)0)
+-		die ("unpack_partition: bad magic found - %x", magic16 & 0xff);
++		reiser3_die ("unpack_partition: bad magic found - %x", magic16 & 0xff);
+ 	    else
+-		die ("unpack_partition: bad magic found - %x, position %lu", 
++		reiser3_die ("unpack_partition: bad magic found - %x, position %lu", 
+ 		    magic16 & 0xff, ftell(stdin));
+ 	}
+     }
+diff -uraN ../reiserfsprogs-3.6.19/depcomp ./depcomp
+--- ../reiserfsprogs-3.6.19/depcomp	2003-09-23 17:39:40.000000000 +0200
++++ ./depcomp	2011-05-02 15:15:46.302806605 +0200
+@@ -104,7 +104,7 @@
+       -e 's/^['$alpha']:\/[^:]*: / /' < "$tmpdepfile" >> "$depfile"
+ ## This next piece of magic avoids the `deleted header file' problem.
+ ## The problem is that when a header file which appears in a .P file
+-## is deleted, the dependency causes make to die (because there is
++## is deleted, the dependency causes make to reiser3_die (because there is
+ ## typically no way to rebuild the header).  We avoid this by adding
+ ## dummy dependencies for each header file.  Too bad gcc doesn't do
+ ## this for us directly.
+diff -uraN ../reiserfsprogs-3.6.19/fsck/check_tree.c ./fsck/check_tree.c
+--- ../reiserfsprogs-3.6.19/fsck/check_tree.c	2004-09-29 21:52:20.000000000 +0200
++++ ./fsck/check_tree.c	2011-05-02 15:15:47.083805825 +0200
+@@ -146,7 +146,7 @@
+ 
+     control_bitmap = reiserfs_create_bitmap(get_sb_block_count(fs->fs_ondisk_sb));
+     if (!control_bitmap)
+-	die ("init_control_bitmap: Failed to allocate a control bitmap.");
++	reiser3_die ("init_control_bitmap: Failed to allocate a control bitmap.");
+ 
+     /*printf ("Initially number of zeros in control bitmap %d\n", 
+ 	      reiserfs_bitmap_zeros (control_bitmap));*/
+@@ -185,7 +185,7 @@
+ 
+     if (!is_new_sb_location (fs->fs_super_bh->b_blocknr, fs->fs_blocksize) &&
+     	!is_old_sb_location (fs->fs_super_bh->b_blocknr, fs->fs_blocksize))
+-	die ("init_control_bitmap: Wrong super block location. You must run "
++	reiser3_die ("init_control_bitmap: Wrong super block location. You must run "
+ 	     "--rebuild-sb.");
+ 
+     block = get_journal_start_must (fs);
+@@ -988,7 +988,7 @@
+ 	if (get_dc_child_blocknr (B_N_CHILD (bh, i)) == block)
+ 	    return i;
+     }
+-    die ("An internal pointer to the block (%lu) cannot be found in the node (%lu)", 
++    reiser3_die ("An internal pointer to the block (%lu) cannot be found in the node (%lu)", 
+ 	block, bh->b_blocknr);
+     return 0;
+ }
+@@ -1038,7 +1038,7 @@
+     
+     // path[h] is leaf
+     if (h != h1)
+-	die ("bad_path: The leaf is expected as the last element in the path");
++	reiser3_die ("bad_path: The leaf is expected as the last element in the path");
+ 
+     if (h)
+ 	pos = get_pos (path[h - 1], path[h]->b_blocknr);
+diff -uraN ../reiserfsprogs-3.6.19/fsck/main.c ./fsck/main.c
+--- ../reiserfsprogs-3.6.19/fsck/main.c	2004-10-07 16:04:08.000000000 +0200
++++ ./fsck/main.c	2011-05-02 15:15:46.942806181 +0200
+@@ -738,7 +738,7 @@
+     reiserfs_delete_bitmap (fs->fs_bitmap2);
+     fs->fs_bitmap2 = fsck_new_bitmap (fs);
+     if (!fs->fs_bitmap2->bm_dirty)
+-	die ("Bitmap not dirty");
++	reiser3_die ("Bitmap not dirty");
+ 
+ //    id_map_flush(proper_id_map (fs), fs);
+     id_map_flush(semantic_id_map (fs), fs);
+diff -uraN ../reiserfsprogs-3.6.19/fsck/pass0.c ./fsck/pass0.c
+--- ../reiserfsprogs-3.6.19/fsck/pass0.c	2004-10-04 19:11:34.000000000 +0200
++++ ./fsck/pass0.c	2011-05-02 15:15:46.901806471 +0200
+@@ -144,7 +144,7 @@
+ 	    return 0;
+ 	}
+ 	
+-	die ("stat_data item of the wrong length");
++	reiser3_die ("stat_data item of the wrong length");
+     }
+     
+     if (symlink && is_direct_ih(ih) && (key_format(&ih->ih_key) != KEY_FORMAT_1)) {	
+@@ -1529,7 +1529,7 @@
+ 
+     if (fsck_mode (fs) == DO_TEST) {
+ 	/* just to test pass0_correct_leaf */
+-	bh = bread (fs->fs_dev, fsck_data (fs)->rebuild.test, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, fsck_data (fs)->rebuild.test, fs->fs_blocksize);
+ 
+ 	if (!bh) {
+ 	    /* we were reading one block at time, and failed, so mark block bad */
+@@ -1564,7 +1564,7 @@
+ 
+ 	print_how_far (fsck_progress_file (fs), &done, total, 1, fsck_quiet (fs));
+ 
+-	bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    /* we were reading one block at time, and failed, so mark block bad */
+ 	    fsck_progress ("%s: Reading of the block %lu failed\n", __FUNCTION__, i);
+@@ -1686,7 +1686,7 @@
+     unsigned long block = 0; /* FIXME: start point could be used */
+ 
+     if (reiserfs_bitmap_find_zero_bit (fsck_allocable_bitmap (fs), &block)) {
+-	die ("alloc_block: Allocable blocks counter is wrong");
++	reiser3_die ("alloc_block: Allocable blocks counter is wrong");
+ 	return 0;
+     }
+     reiserfs_bitmap_set_bit (fsck_allocable_bitmap (fs), block);
+@@ -1844,7 +1844,7 @@
+ 
+     if (!is_new_sb_location (fs->fs_super_bh->b_blocknr, fs->fs_blocksize) &&
+     	!is_old_sb_location (fs->fs_super_bh->b_blocknr, fs->fs_blocksize))
+-	die ("init_source_bitmap: Wrong super block location, you must run --rebuild-sb.");
++	reiser3_die ("init_source_bitmap: Wrong super block location, you must run --rebuild-sb.");
+ 
+     block = get_journal_start_must (fs);
+ 
+diff -uraN ../reiserfsprogs-3.6.19/fsck/pass1.c ./fsck/pass1.c
+--- ../reiserfsprogs-3.6.19/fsck/pass1.c	2004-10-04 18:19:22.000000000 +0200
++++ ./fsck/pass1.c	2011-05-02 15:15:47.151806415 +0200
+@@ -19,7 +19,7 @@
+     bh = getblk (dev, blocknr, size);
+     if (buffer_uptodate (bh))
+ 	return bh;
+-//    die ("make_buffer: uptodate buffer found");
++//    reiser3_die ("make_buffer: uptodate buffer found");
+     memcpy (bh->b_data, data, size);
+     misc_set_bit (BH_Uptodate, (char *)&bh->b_state);
+     return bh;
+@@ -145,7 +145,7 @@
+ 
+     retval = fix_nodes (/*tb.transaction_handle,*/ M_INTERNAL, &tb, ih);
+     if (retval != CARRY_ON)
+-	die ("insert_pointer: fix_nodes failed with retval == %d", retval);
++	reiser3_die ("insert_pointer: fix_nodes failed with retval == %d", retval);
+     
+     /* child_pos: we insert after position child_pos: this feature of the insert_child */
+     /* there is special case: we insert pointer after
+@@ -292,7 +292,7 @@
+ 	    goto cannot_insert;
+ 	
+ 	if (uget_lkey (&path) != 0 || PATH_LAST_POSITION (&path) != 0)
+-	    die ("try_to_insert_pointer_to_leaf: bad search result");
++	    reiser3_die ("try_to_insert_pointer_to_leaf: bad search result");
+ 	
+ 	path.pos_in_item = 0;
+ 	goto insert;
+@@ -496,7 +496,7 @@
+ 
+     if (!is_new_sb_location (fs->fs_super_bh->b_blocknr, fs->fs_blocksize) &&
+     	!is_old_sb_location (fs->fs_super_bh->b_blocknr, fs->fs_blocksize))
+-	die ("init_new_bitmap: Wrong super block location, you must run --rebuild-sb.");
++	reiser3_die ("init_new_bitmap: Wrong super block location, you must run --rebuild-sb.");
+ 
+     block = get_journal_start_must (fs);
+ 
+@@ -551,7 +551,7 @@
+ 	    continue;
+ 
+ 	if (is_good_unformatted (i) && is_bad_unformatted (i))
+-	    die ("find_allocable_blocks: The block (%lu) is masr as good and as bad at once.", i);
++	    reiser3_die ("find_allocable_blocks: The block (%lu) is masr as good and as bad at once.", i);
+ 
+ 	if (is_good_unformatted (i) || is_bad_unformatted (i)) {
+ 	    /* blocks which were pointed once or more thn onec from indirect
+@@ -677,7 +677,7 @@
+ 	print_how_far (fsck_progress_file (fs), &done, total, 1, fsck_quiet (fs));
+ 
+ 	/* at least one of nr_to_read blocks is to be checked */
+-	bh = bread (fs->fs_dev, i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, i, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    /* we were reading one block at time, and failed, so mark
+ 	       block bad */
+@@ -688,14 +688,14 @@
+ 	what_node = who_is_this (bh->b_data, bh->b_size);
+ 	if ( what_node != THE_LEAF ) {
+ 	    check_memory_msg();
+-	    die ("build_the_tree: Nothing but leaves are expected. Block %lu - %s\n", 
++	    reiser3_die ("build_the_tree: Nothing but leaves are expected. Block %lu - %s\n", 
+ 		i, which_block(what_node));
+ 	}
+ 	
+ 	if (is_block_used (i) && !(block_of_journal (fs, i) &&
+ 				   fsck_data(fs)->rebuild.use_journal_area))
+ 	    /* block is in new tree already */
+-	    die ("build_the_tree: The leaf (%lu) is in the tree already\n", i);
++	    reiser3_die ("build_the_tree: The leaf (%lu) is in the tree already\n", i);
+ 		    
+ 	/* fprintf (block_list, "leaf %d\n", i + j);*/
+ 	pass_1_stat (fs)->leaves ++;
+@@ -712,7 +712,7 @@
+ 	}
+ 
+ 	if (is_leaf_bad (bh)) {
+-	    /* FIXME: will die */
++	    /* FIXME: will reiser3_die */
+ 	    fsck_log ("is_leaf_bad: WARNING: The leaf (%lu) is formatted badly. Will be handled on the the pass2.\n", 
+ 		bh->b_blocknr);
+ 	    mark_block_uninsertable (bh->b_blocknr);
+@@ -729,7 +729,7 @@
+ 		
+ 		block = alloc_block ();
+ 		if (!block)
+-		    die ("could not allocate block");
++		    reiser3_die ("could not allocate block");
+ 		new_bh = getblk (bh->b_dev, block, bh->b_size);
+ 		memcpy (new_bh->b_data, bh->b_data, bh->b_size);
+ 		mark_buffer_uptodate (new_bh, 1);
+diff -uraN ../reiserfsprogs-3.6.19/fsck/pass2.c ./fsck/pass2.c
+--- ../reiserfsprogs-3.6.19/fsck/pass2.c	2004-10-01 20:02:51.000000000 +0200
++++ ./fsck/pass2.c	2011-05-02 15:15:47.108806255 +0200
+@@ -494,7 +494,7 @@
+         while ((j < fsck_uninsertables(fs)->bm_bit_size) && 
+ 	       reiserfs_bitmap_find_zero_bit(fsck_uninsertables(fs), &j) == 0) 
+ 	{
+-	    bh = bread (fs->fs_dev, j, fs->fs_blocksize);
++	    bh = reiser3_new_bread (fs->fs_dev, j, fs->fs_blocksize);
+ 	    if (bh == 0) {
+ 	        fsck_log ("pass_2: Reading of the block (%lu) failed on the device 0x%x\n",
+ 		      j, fs->fs_dev);
+@@ -626,7 +626,7 @@
+ 
+     if (get_sb_root_block (fs->fs_ondisk_sb) == ~(__u32)0 || 
+ 	get_sb_root_block (fs->fs_ondisk_sb) == 0)
+-	die ( "\nNo reiserfs metadata found.  If you are sure that you had the reiserfs\n"
++	reiser3_die ( "\nNo reiserfs metadata found.  If you are sure that you had the reiserfs\n"
+ 		"on this partition,  then the start  of the partition  might be changed\n"
+ 		"or all data were wiped out. The start of the partition may get changed\n"
+ 		"by a partitioner  if you have used one.  Then you probably rebuilt the\n"
+diff -uraN ../reiserfsprogs-3.6.19/fsck/semantic_check.c ./fsck/semantic_check.c
+--- ../reiserfsprogs-3.6.19/fsck/semantic_check.c	2004-09-24 09:49:40.000000000 +0200
++++ ./fsck/semantic_check.c	2011-05-02 15:15:46.987807736 +0200
+@@ -72,7 +72,7 @@
+ void del_path_key()
+ {
+     if (tail_key == NULL)
+-        die("Wrong path_key structure");
++        reiser3_die("Wrong path_key structure");
+ 
+     if (tail_key->prev == NULL)
+     {
+diff -uraN ../reiserfsprogs-3.6.19/fsck/semantic_rebuild.c ./fsck/semantic_rebuild.c
+--- ../reiserfsprogs-3.6.19/fsck/semantic_rebuild.c	2004-09-15 15:54:22.000000000 +0200
++++ ./fsck/semantic_rebuild.c	2011-05-02 15:15:46.818805449 +0200
+@@ -72,7 +72,7 @@
+     } else {
+ 	screen_curr_pos-=len+1;
+ 	if (screen_curr_pos < 0 )
+-	    die("%s: Get out of buffer's data!\n", __FUNCTION__);
++	    reiser3_die("%s: Get out of buffer's data!\n", __FUNCTION__);
+ 
+ 	screen_savebuffer[screen_curr_pos]=0;
+ 	printf("\r");
+diff -uraN ../reiserfsprogs-3.6.19/fsck/super.c ./fsck/super.c
+--- ../reiserfsprogs-3.6.19/fsck/super.c	2004-10-13 15:05:15.000000000 +0200
++++ ./fsck/super.c	2011-05-02 15:15:47.016806375 +0200
+@@ -28,7 +28,7 @@
+     getline (&answer, &n, stdin);
+     version = atoi (answer);
+     if (version < 1 || version > 4)
+-        die ("rebuild_sb: wrong version");
++        reiser3_die ("rebuild_sb: wrong version");
+     return version;
+ }
+ 
+@@ -82,10 +82,10 @@
+ 	else 
+ 	    version = magic == 2 ? 3 : 4;	
+     } else 
+-	die("Super block in the wong block(%d).\n", fs->fs_super_bh->b_blocknr);
++	reiser3_die("Super block in the wong block(%d).\n", fs->fs_super_bh->b_blocknr);
+     
+     if (version == 0) 
+-	die ("FS format must be figured out here.\n");
++	reiser3_die ("FS format must be figured out here.\n");
+ 
+     if (get_sb_block_count (sb) > count_blocks (filename, fs->fs_blocksize)) 
+ 	super_error(-1, "Invalid block count found in the super block.\n");
+diff -uraN ../reiserfsprogs-3.6.19/fsck/ubitmap.c ./fsck/ubitmap.c
+--- ../reiserfsprogs-3.6.19/fsck/ubitmap.c	2004-02-17 12:35:12.000000000 +0100
++++ ./fsck/ubitmap.c	2011-05-02 15:15:47.123806686 +0200
+@@ -56,7 +56,7 @@
+     if (is_block_used (block)) {
+ 	if (check_hardware)
+ 	    check_memory_msg();
+-	die ("mark_block_used: (%lu) used already", block);
++	reiser3_die ("mark_block_used: (%lu) used already", block);
+     }
+ 
+     reiserfs_bitmap_set_bit (fsck_new_bitmap (fs), block);
+@@ -66,7 +66,7 @@
+ void mark_block_free (unsigned long block)
+ {
+     if (!is_block_used (block))
+-	die ("mark_block_free: (%lu) is free already", block);
++	reiser3_die ("mark_block_free: (%lu) is free already", block);
+ 
+     reiserfs_bitmap_clear_bit (fsck_new_bitmap (fs), block);
+ }
+@@ -82,7 +82,7 @@
+ void mark_block_uninsertable (unsigned long block)
+ {
+     if (is_block_uninsertable (block))
+-	die ("mark_block_uninsertable: (%lu) is uninsertable already", block);
++	reiser3_die ("mark_block_uninsertable: (%lu) is uninsertable already", block);
+ 
+     reiserfs_bitmap_clear_bit (fsck_uninsertables (fs), block);
+     /* we do not need thsi actually */
+@@ -98,11 +98,11 @@
+     int i;
+ 
+     if (!are_there_allocable_blocks (amount_needed))
+-	die ("out of disk space");
++	reiser3_die ("out of disk space");
+     for (i = 0; i < amount_needed; i ++) {
+ 	free_blocknrs[i] = alloc_block ();
+ 	if (!free_blocknrs[i])
+-	    die ("reiserfs_new_blocknrs: 0 is allocated");
++	    reiser3_die ("reiserfs_new_blocknrs: 0 is allocated");
+ 	mark_block_used (free_blocknrs[i], 0);
+     }
+     return CARRY_ON;
+diff -uraN ../reiserfsprogs-3.6.19/fsck/ufile.c ./fsck/ufile.c
+--- ../reiserfsprogs-3.6.19/fsck/ufile.c	2004-10-04 23:12:28.000000000 +0200
++++ ./fsck/ufile.c	2011-05-02 15:15:46.744806672 +0200
+@@ -53,7 +53,7 @@
+ 
+     // we do not know what length this item should be
+     unfm_ptr = d32_get ((__u32 *)get_item (path), I_UNFM_NUM (ih) - 1);
+-    if (unfm_ptr && (unfm_bh = bread (bh->b_dev, unfm_ptr, bh->b_size))) {
++    if (unfm_ptr && (unfm_bh = reiser3_new_bread (bh->b_dev, unfm_ptr, bh->b_size))) {
+         /* we can read the block */
+ 	buf = unfm_bh->b_data;
+ 	
+@@ -205,7 +205,7 @@
+     do {
+ 	retval = usearch_by_position (fs, key, key_version, &path);
+ 	if (retval == POSITION_FOUND && path.pos_in_item != 0)
+-	    die ("are_file_items_correct: All bytes we look for must be first items byte (position 0).");
++	    reiser3_die ("are_file_items_correct: All bytes we look for must be first items byte (position 0).");
+ 
+ 	switch (retval) {
+ 	case POSITION_FOUND:/**/
+@@ -404,7 +404,7 @@
+ 	}
+     } while (1);
+ 
+-    die ("are_file_items_correct: Cannot reach here");
++    reiser3_die ("are_file_items_correct: Cannot reach here");
+     return 0;
+ }
+ 
+@@ -635,7 +635,7 @@
+ 	pathrelse (path);
+ 	set_offset (file_format, &key, (get_offset (&key) & ~(fs->fs_blocksize - 1)) + 1);	
+ 	if (reiserfs_search_by_key_4 (fs, &key, path) != ITEM_FOUND)
+-	    die ("direct2indirect: can not find first part of tail");
++	    reiser3_die ("direct2indirect: can not find first part of tail");
+     }
+ 
+     unbh = reiserfsck_get_new_buffer (unfm ? unfm : block_to_start (path));
+@@ -735,7 +735,7 @@
+     zero_number = offset - end_of_data;
+ 
+     if (unfm_ptr && !not_data_block (fs, unfm_ptr)) {
+-	unbh = bread (fs->fs_dev, unfm_ptr, fs->fs_blocksize);
++	unbh = reiser3_new_bread (fs->fs_dev, unfm_ptr, fs->fs_blocksize);
+ 	if (!is_block_used (unfm_ptr))
+ 	    reiserfs_panic ("%s: block %lu: The unformatted node %u, pointed by the file %k, is marked as unused", 
+ 		__FUNCTION__, bh->b_blocknr, unfm_ptr, &ih->ih_key);
+@@ -825,7 +825,7 @@
+ 	if (!was_in_tree) {
+ 	    for (i = 0; i < count; i++ ) {
+ 		if (still_bad_unfm_ptr_2 (d32_get (ni, i)))
+-		    die ("reiserfsck_append_file: Trying to insert a pointer to illegal block (%u)", d32_get (ni, i));
++		    reiser3_die ("reiserfsck_append_file: Trying to insert a pointer to illegal block (%u)", d32_get (ni, i));
+ 		mark_block_used (d32_get (ni, i), 0);
+ 	    }
+ 	}
+@@ -900,9 +900,9 @@
+ 
+     if (unfm_ptr != 0 && unfm_ptr < get_sb_block_count (fs->fs_ondisk_sb)) {
+ 	/**/
+-	unbh = bread (fs->fs_dev, unfm_ptr, bh->b_size);
++	unbh = reiser3_new_bread (fs->fs_dev, unfm_ptr, bh->b_size);
+ 	if (!is_block_used (unfm_ptr))
+-	    die ("overwrite_by_direct_item: block %lu, item %d, pointer %d: The pointed block"
++	    reiser3_die ("overwrite_by_direct_item: block %lu, item %d, pointer %d: The pointed block"
+ 		"(%u) being overwritten is marked as unused.", bh->b_blocknr, PATH_LAST_POSITION(path), 
+ 		path->pos_in_item, unfm_ptr);
+ 	if (unbh == 0)
+@@ -914,13 +914,13 @@
+ 	    d32_put ((__u32 *)B_I_PITEM(bh, ih), path->pos_in_item,  unbh->b_blocknr);
+ 	    mark_buffer_dirty (bh);
+ 	} else {
+-	    die ("overwrite_by_direct_item: Could not allocate a new block for new data");
++	    reiser3_die ("overwrite_by_direct_item: Could not allocate a new block for new data");
+ 	}
+     }
+ 
+     offset = (get_offset (&comingih->ih_key) % bh->b_size) - 1;
+     if (offset + coming_len > bh->b_size)
+-    	die ("overwrite_by_direct_item: The length of the file after insertion (offset=%lu, length=%u)"
++    	reiser3_die ("overwrite_by_direct_item: The length of the file after insertion (offset=%lu, length=%u)"
+ 	    "will exceed the maximal possible length.", ( long unsigned ) get_offset (&comingih->ih_key), 
+ 	     ( unsigned ) coming_len);
+ 
+@@ -960,15 +960,15 @@
+     unfm_os_list = find_overwritten_unfm (unfm_in_tree, bytes_in_unfm, &unoverwritten_segment);
+     if (unfm_os_list) {
+ 	/*    add_event (UNFM_OVERWRITING_UNFM);*/
+-	bh_in_tree = bread (fs->fs_dev, unfm_in_tree, fs->fs_blocksize);
+-	coming_bh = bread (fs->fs_dev, coming_unfm, fs->fs_blocksize);
++	bh_in_tree = reiser3_new_bread (fs->fs_dev, unfm_in_tree, fs->fs_blocksize);
++	coming_bh = reiser3_new_bread (fs->fs_dev, coming_unfm, fs->fs_blocksize);
+ 	if (bh_in_tree == 0 || coming_bh == 0)
+ 	    return;
+ 	
+ 	while (get_unoverwritten_segment (unfm_os_list, &unoverwritten_segment)) {
+ 	    if (unoverwritten_segment.ous_begin < 0 || unoverwritten_segment.ous_end > bytes_in_unfm - 1 ||
+ 		unoverwritten_segment.ous_begin > unoverwritten_segment.ous_end)
+-		die ("overwrite_unfm_by_unfm: invalid segment found (%d %d)", unoverwritten_segment.ous_begin, unoverwritten_segment.ous_end);
++		reiser3_die ("overwrite_unfm_by_unfm: invalid segment found (%d %d)", unoverwritten_segment.ous_begin, unoverwritten_segment.ous_end);
+ 	    
+ 	    memcpy (bh_in_tree->b_data + unoverwritten_segment.ous_begin, coming_bh->b_data + unoverwritten_segment.ous_begin,
+ 		    unoverwritten_segment.ous_end - unoverwritten_segment.ous_begin + 1);
+@@ -1055,7 +1055,7 @@
+ 	    unfm_ptr = d32_get ((__u32 *)item, *pos_in_coming_item);
+ 	    if (!was_in_tree) {
+ 		if (still_bad_unfm_ptr_2 (unfm_ptr))
+-		    die ("reiserfsck_overwrite_file: The pointer to the unformatted block (%u)"
++		    reiser3_die ("reiserfsck_overwrite_file: The pointer to the unformatted block (%u)"
+ 			" points to the bad area.", unfm_ptr);
+ 	    }
+ 	}
+diff -uraN ../reiserfsprogs-3.6.19/fsck/uobjectid.c ./fsck/uobjectid.c
+--- ../reiserfsprogs-3.6.19/fsck/uobjectid.c	2004-06-17 21:57:39.000000000 +0200
++++ ./fsck/uobjectid.c	2011-05-02 15:15:46.777807073 +0200
+@@ -120,7 +120,7 @@
+     if (map->index[i] != (void *)1 && map->index[i] != (void *)0) {
+ 	id = misc_find_first_zero_bit(map->index[i], BM_INTERVAL);
+ 	if (id >= BM_INTERVAL)
+-	    die ("Id is out of interval size, interval looks corrupted.");
++	    reiser3_die ("Id is out of interval size, interval looks corrupted.");
+ 	
+ 	id += i * BM_INTERVAL;
+     } else if (first != ~(__u32)0) {
+@@ -128,7 +128,7 @@
+ 	if (id == 0) 
+ 	    id = 2;
+     } else 
+-	die ("%s: No more free objectid is available.", __FUNCTION__);
++	reiser3_die ("%s: No more free objectid is available.", __FUNCTION__);
+ 
+     id_map_mark(map, id);
+ 
+@@ -219,19 +219,19 @@
+ 	sb_objectid_map[i] = cpu_to_le32(id);
+ 	if (id == 0) {
+ 	    if (i % 2)
+-		die ("%s: Used interval is not closed on flushing.", __FUNCTION__);
++		reiser3_die ("%s: Used interval is not closed on flushing.", __FUNCTION__);
+ 	    break;
+ 	}
+     }
+ 
+     if (map->index[map->last_used] == (void *)0)
+-	die ("Object id map looks corrupted - last used interval cannot be zeroed.");
++	reiser3_die ("Object id map looks corrupted - last used interval cannot be zeroed.");
+     
+     i++;
+     
+     if (i == max) {
+ 	if (id == 0)
+-	    die ("Objectid interval does not contain any set bit what is expected.");
++	    reiser3_die ("Objectid interval does not contain any set bit what is expected.");
+ 	
+ 	if (map->index[map->last_used] == (void *)1) {
+ 	    prev_id = BM_INTERVAL - 1;
+@@ -253,7 +253,7 @@
+ 	    }
+ 
+ 	    if (prev_id == ~(__u32)0)
+-		die ("Objectid interval does not contain any set bit what is expected.");
++		reiser3_die ("Objectid interval does not contain any set bit what is expected.");
+ 
+ 	    prev_id++;
+ 	}
+@@ -278,7 +278,7 @@
+     sb_objectid_map = (__u32 *)((char *)(fs->fs_ondisk_sb) + sb_size);
+ 
+     if (map->m_page_count != 1)
+-	die ("fetch_objectid_map: can not fetch long map");
++	reiser3_die ("fetch_objectid_map: can not fetch long map");
+     
+     make_id_space(map, 0);
+     memcpy (map->m_begin, sb_objectid_map, get_sb_oid_cursize (fs->fs_ondisk_sb) * sizeof (__u32));
+diff -uraN ../reiserfsprogs-3.6.19/fsck/ustree.c ./fsck/ustree.c
+--- ../reiserfsprogs-3.6.19/fsck/ustree.c	2004-05-25 00:11:43.000000000 +0200
++++ ./fsck/ustree.c	2011-05-02 15:15:46.845806718 +0200
+@@ -15,7 +15,7 @@
+     if (fix_nodes (/*tb.transaction_handle,*/ M_PASTE, &tb, 0/*ih*/) != CARRY_ON)
+ 	//fix_nodes(options, tree_balance, ih_to_option, body_to_option)
+ 	
+-	die ("reiserfsck_paste_into_item: fix_nodes failed");
++	reiser3_die ("reiserfsck_paste_into_item: fix_nodes failed");
+     
+     do_balance (/*tb.transaction_handle,*/ &tb, 0, body, M_PASTE, 0/*zero num*/);
+ }
+@@ -27,7 +27,7 @@
+     
+     init_tb_struct (&tb, fs, path, IH_SIZE + get_ih_item_len(ih));
+     if (fix_nodes (/*tb.transaction_handle,*/ M_INSERT, &tb, ih/*, body*/) != CARRY_ON)
+-	die ("reiserfsck_insert_item: fix_nodes failed");
++	reiser3_die ("reiserfsck_insert_item: fix_nodes failed");
+     do_balance (/*tb.transaction_handle,*/ &tb, ih, body, M_INSERT, 0/*zero num*/);
+ }
+ 
+@@ -65,7 +65,7 @@
+     init_tb_struct (&tb, fs, path, -(IH_SIZE + get_ih_item_len(ih)));
+ 
+     if (fix_nodes (/*tb.transaction_handle,*/ M_DELETE, &tb, 0/*ih*/) != CARRY_ON)
+-	die ("reiserfsck_delete_item: fix_nodes failed");
++	reiser3_die ("reiserfsck_delete_item: fix_nodes failed");
+     
+     do_balance (/*tb.transaction_handle,*/ &tb, 0, 0, M_DELETE, 0/*zero num*/);
+ }
+@@ -77,7 +77,7 @@
+     struct item_head * ih;
+ 
+     if (cut_size >= 0)
+-	die ("reiserfsck_cut_from_item: cut size == %d", cut_size);
++	reiser3_die ("reiserfsck_cut_from_item: cut size == %d", cut_size);
+ 
+     if (is_indirect_ih (ih = PATH_PITEM_HEAD (path))) {
+ 	struct buffer_head *bh = PATH_PLAST_BUFFER (path);
+@@ -99,7 +99,7 @@
+     init_tb_struct (&tb, fs, path, cut_size);
+ 
+     if (fix_nodes (/*tb.transaction_handle,*/ M_CUT, &tb, 0) != CARRY_ON)
+-	die ("reiserfsck_cut_from_item: fix_nodes failed");
++	reiser3_die ("reiserfsck_cut_from_item: fix_nodes failed");
+ 
+     do_balance (/*tb.transaction_handle,*/ &tb, 0, 0, M_CUT, 0/*zero num*/);
+ }
+@@ -113,23 +113,23 @@
+     struct buffer_head * bh;
+ 
+     if (offset < FIRST_PATH_ELEMENT_OFFSET)
+-	die ("uget_rkey: illegal offset in the path (%d)", offset);
++	reiser3_die ("uget_rkey: illegal offset in the path (%d)", offset);
+ 
+     while (offset-- > FIRST_PATH_ELEMENT_OFFSET) {
+ 	if (! buffer_uptodate (PATH_OFFSET_PBUFFER (path, offset)))
+-	    die ("uget_rkey: parent is not uptodate");
++	    reiser3_die ("uget_rkey: parent is not uptodate");
+ 
+ 	// Parent at the path is not in the tree now.
+ 	if (! B_IS_IN_TREE (bh = PATH_OFFSET_PBUFFER (path, offset)))
+-	    die ("uget_rkey: buffer on the path is not in tree");
++	    reiser3_die ("uget_rkey: buffer on the path is not in tree");
+ 
+ 	// Check whether position in the parrent is correct.
+ 	if ((pos = PATH_OFFSET_POSITION (path, offset)) > B_NR_ITEMS (bh))
+-	    die ("uget_rkey: invalid position (%d) in the path", pos);
++	    reiser3_die ("uget_rkey: invalid position (%d) in the path", pos);
+ 
+ 	// Check whether parent at the path really points to the child.
+ 	if (get_dc_child_blocknr (B_N_CHILD (bh, pos)) != PATH_OFFSET_PBUFFER (path, offset + 1)->b_blocknr)
+-	    die ("uget_rkey: invalid block number (%d). Must be %ld",
++	    reiser3_die ("uget_rkey: invalid block number (%d). Must be %ld",
+ 		 get_dc_child_blocknr (B_N_CHILD (bh, pos)), PATH_OFFSET_PBUFFER (path, offset + 1)->b_blocknr);
+ 	
+ 	// Return delimiting key if position in the parent is not the last one.
+@@ -162,7 +162,7 @@
+         return -1;
+ 
+     if (pos > B_NR_ITEMS (parent))
+-        die ("get_child: no child found, should not happen: %d of %d", pos, B_NR_ITEMS (parent));
++        reiser3_die ("get_child: no child found, should not happen: %d of %d", pos, B_NR_ITEMS (parent));
+     return get_dc_child_blocknr (B_N_CHILD (parent, pos));
+ 
+ }
+@@ -199,14 +199,14 @@
+ 
+ 
+     if (block >= get_sb_block_count (fs->fs_ondisk_sb) || not_data_block (fs, block)) {
+-	die ("\nBad root block %lu. (--rebuild-tree did not complete)\n", block);
++	reiser3_die ("\nBad root block %lu. (--rebuild-tree did not complete)\n", block);
+     }
+ 
+     while ( 1 ) {
+ 	problem = 0;
+ 
+         if (path[h])
+-            die ("pass_through_tree: empty slot expected");
++            reiser3_die ("pass_through_tree: empty slot expected");
+         if (h)
+             print (cur[h - 1], total[h - 1]);
+ 
+@@ -223,10 +223,10 @@
+ 	    }
+ 	    problem = 1;		
+ 	} else {
+-	    path[h] = bread (fs->fs_dev, block, fs->fs_blocksize);
++	    path[h] = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+ 	    if (path[h] == 0)
+ 		/* FIXME: handle case when read failed */
+-		die ("pass_through_tree: unable to read %lu block on device 0x%x\n",
++		reiser3_die ("pass_through_tree: unable to read %lu block on device 0x%x\n",
+ 			block, fs->fs_dev);
+ 
+ 	    if (action1)
+diff -uraN ../reiserfsprogs-3.6.19/include/io.h ./include/io.h
+--- ../reiserfsprogs-3.6.19/include/io.h	2004-03-15 12:14:02.000000000 +0100
++++ ./include/io.h	2011-05-02 15:15:46.249807587 +0200
+@@ -67,7 +67,7 @@
+ 
+ struct buffer_head * find_buffer (int dev, unsigned long block, unsigned long size);
+ struct buffer_head * get_hash_table(dev_t dev, unsigned long block, int size);
+-struct buffer_head * bread (int dev, unsigned long block, size_t size);
++struct buffer_head * reiser3_new_bread (int dev, unsigned long block, size_t size);
+ struct buffer_head * reiserfs_bread (int dev, unsigned long block, int size, int *repeat);
+ int bwrite (struct buffer_head * bh);
+ void brelse (struct buffer_head * bh);
+diff -uraN ../reiserfsprogs-3.6.19/include/misc.h ./include/misc.h
+--- ../reiserfsprogs-3.6.19/include/misc.h	2004-10-13 15:05:15.000000000 +0200
++++ ./include/misc.h	2011-05-02 15:15:46.159806326 +0200
+@@ -35,7 +35,7 @@
+ #define INVAL_PTR	(void *)-1
+ 
+ void check_memory_msg(void);
+-void die (char * fmt, ...) __attribute__ ((format (printf, 1, 2)));
++void reiser3_die (char * fmt, ...) __attribute__ ((format (printf, 1, 2)));
+ void * getmem (int size);
+ void *mem_alloc(int size);
+ void freemem (void * p);
+@@ -57,7 +57,7 @@
+     __u32 flags;	/* Mount flags. */
+ } mount_hint_t;
+ 
+-struct mntent *misc_mntent(char *device);
++struct mntent *reiser3_misc_mntent(char *device);
+ int misc_device_mounted(char *device);
+ 	
+ void misc_print_credit(FILE *out);
+@@ -125,7 +125,7 @@
+ \
+     /* make sure that given value can be put in 'count' bits */\
+     if (val > (1 << count))\
+-	die ("set_bit_field: val %d is too big for %d bits", val, count);\
++	reiser3_die ("set_bit_field: val %d is too big for %d bits", val, count);\
+ \
+     p = (__u##XX *)vp;\
+     tmp = le##XX##_to_cpu (*p);\
+diff -uraN ../reiserfsprogs-3.6.19/lib/io.c ./lib/io.c
+--- ../reiserfsprogs-3.6.19/lib/io.c	2004-08-19 11:51:22.000000000 +0200
++++ ./lib/io.c	2011-05-02 15:15:46.117805527 +0200
+@@ -136,7 +136,7 @@
+     int index = bh->b_blocknr % NR_HASH_QUEUES;
+ 
+     if (bh->b_hash_prev || bh->b_hash_next)
+-	die ("insert_into_hash_queue: hash queue corrupted");
++	reiser3_die ("insert_into_hash_queue: hash queue corrupted");
+ 
+     if (g_a_hash_queues[index]) {
+ 	g_a_hash_queues[index]->b_hash_prev = bh;
+@@ -154,7 +154,7 @@
+ 
+     if (bh == g_a_hash_queues[bh->b_blocknr % NR_HASH_QUEUES]) {
+ 	if (bh->b_hash_prev != 0)
+-	    die ("remove_from_hash_queue: hash queue corrupted");
++	    reiser3_die ("remove_from_hash_queue: hash queue corrupted");
+ 	g_a_hash_queues[bh->b_blocknr % NR_HASH_QUEUES] = bh->b_hash_next;
+     }
+     if (bh->b_hash_next)
+@@ -173,7 +173,7 @@
+     struct buffer_head * last = 0;
+ 
+     if (bh->b_prev || bh->b_next)
+-	die ("put_buffer_list_end: buffer list corrupted");
++	reiser3_die ("put_buffer_list_end: buffer list corrupted");
+ 
+     if (*list == 0) {
+ 	bh->b_next = bh;
+@@ -226,12 +226,12 @@
+ 	addr = mmap (0, len, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+ 	if (addr == MAP_FAILED) {
+ 	    if (errno != ENOMEM)
+-		die ("mmap failed: %s\n", strerror(errno));
++		reiser3_die ("mmap failed: %s\n", strerror(errno));
+ 	    break;
+ 	}
+ 	if (mlock (addr, len) != 0) {
+ 	    if (errno == EPERM)
+-		die ("No permission to run mlock");
++		reiser3_die ("No permission to run mlock");
+ 	    break;
+ 	}
+ 
+@@ -277,7 +277,7 @@
+ 	memset (tmp, 0, sizeof (struct buffer_head));
+ 	tmp->b_data = getmem (size);
+ 	if (tmp->b_data == 0)
+-	    die ("grow_buffers: no memory for new buffer data");
++	    reiser3_die ("grow_buffers: no memory for new buffer data");
+ 	tmp->b_dev = -1;
+ 	tmp->b_size = size;
+ 	put_buffer_list_head (&g_free_buffers, tmp);
+@@ -318,7 +318,7 @@
+ 
+     for (;;) {
+ 	if (!next)
+-	    die ("get_free_buffer: buffer list is corrupted");
++	    reiser3_die ("get_free_buffer: buffer list is corrupted");
+ 	if (next->b_count == 0 && buffer_clean (next) && next->b_size == size) {
+ 	    remove_from_hash_queue (next);
+ 	    remove_from_buffer_list (list, next);
+@@ -345,7 +345,7 @@
+ 	return 0;
+     for (;;) {
+ 	if (!next)
+-	    die ("sync_buffers: buffer list is corrupted");
++	    reiser3_die ("sync_buffers: buffer list is corrupted");
+  
+ 	if (next->b_dev == dev && buffer_dirty (next) && buffer_uptodate (next)) {
+ 	    if ((to_write == 0 || next->b_count == 0) && !buffer_do_not_flush (next)) {
+@@ -378,7 +378,7 @@
+ void flush_buffers (int dev)
+ {
+     if (dev == -1)
+-	die ("flush_buffers: device is not specified");
++	reiser3_die ("flush_buffers: device is not specified");
+ 
+     sync_buffers (&Buffer_list_head, dev, 0/*all*/);
+     buffer_soft_limit = BUFFER_SOFT_LIMIT;
+@@ -419,7 +419,7 @@
+ 	bh = get_free_buffer (&g_free_buffers, size);
+ 	if (bh == NULL) {
+ 	    show_buffers (dev, size);
+-	    die ("getblk: no free buffers after grow_buffers "
++	    reiser3_die ("getblk: no free buffers after grow_buffers "
+ 		 "and refill (%d)", g_nr_buffers);
+ 	}
+     }
+@@ -447,7 +447,7 @@
+ 	return;
+     
+     if (bh->b_count == 0)
+-	die ("brelse: can not free a free buffer %lu", bh->b_blocknr);
++	reiser3_die ("brelse: can not free a free buffer %lu", bh->b_blocknr);
+     
+     /*checkmem (bh->b_data, get_mem_size (bh->b_data));*/
+     
+@@ -484,7 +484,7 @@
+ }
+ 
+ 
+-struct buffer_head * bread (int dev, unsigned long block, size_t size)
++struct buffer_head * reiser3_new_bread (int dev, unsigned long block, size_t size)
+ {
+     struct buffer_head * bh;
+     int ret;
+@@ -502,15 +502,15 @@
+     ret = f_read(bh);
+     
+     if (ret > 0) {
+-	die ("%s: End of file, cannot read the block (%lu).\n", 
++	reiser3_die ("%s: End of file, cannot read the block (%lu).\n", 
+ 	     __FUNCTION__, block);
+     } else if (ret < 0) {
+ 	/* BAD BLOCK LIST SUPPORT
+-	 * die ("%s: Cannot read a block # %lu. Specify list of badblocks\n",*/
++	 * reiser3_die ("%s: Cannot read a block # %lu. Specify list of badblocks\n",*/
+ 
+ 	if (errno == EIO) {
+ 	    check_hd_msg();
+-	    die ("%s: Cannot read the block (%lu): (%s).\n", 
++	    reiser3_die ("%s: Cannot read the block (%lu): (%s).\n", 
+ 		 __FUNCTION__, block, strerror(errno));
+ 	} else	{
+ 	    fprintf (stderr, "%s: Cannot read the block (%lu): (%s).\n", 
+@@ -907,7 +907,7 @@
+     count += _check_and_free_buffer_list(g_free_buffers);
+ 
+     if (count != g_nr_buffers)
+-       die ("check_and_free_buffer_mem: found %d buffers, must be %d", 
++       reiser3_die ("check_and_free_buffer_mem: found %d buffers, must be %d", 
+ 	    count, g_nr_buffers);
+ 
+     /* free buffer heads */
+diff -uraN ../reiserfsprogs-3.6.19/lib/misc.c ./lib/misc.c
+--- ../reiserfsprogs-3.6.19/lib/misc.c	2004-10-13 15:05:15.000000000 +0200
++++ ./lib/misc.c	2011-05-02 15:15:46.063806032 +0200
+@@ -44,7 +44,7 @@
+ STAT_FIELD(size, off_t);
+ STAT_FIELD(blocks, blkcnt_t);
+ 
+-void die (char * fmt, ...)
++void reiser3_die (char * fmt, ...)
+ {
+     static char buf[1024];
+     va_list args;
+@@ -79,14 +79,14 @@
+   
+     begin = p - strlen (MEM_BEGIN) - 1 - sizeof (int);
+     if (strcmp (begin, MEM_BEGIN))
+-	die ("checkmem: memory corrupted - invalid head sign");
++	reiser3_die ("checkmem: memory corrupted - invalid head sign");
+ 
+     if (*(int *)(begin + strlen (MEM_BEGIN) + 1) != size)
+-	die ("checkmem: memory corrupted - invalid size");
++	reiser3_die ("checkmem: memory corrupted - invalid size");
+ 
+     end = begin + size + CONTROL_SIZE - strlen (MEM_END) - 1;
+     if (strcmp (end, MEM_END))
+-	die ("checkmem: memory corrupted - invalid end sign");
++	reiser3_die ("checkmem: memory corrupted - invalid end sign");
+ }
+ 
+ 
+@@ -95,7 +95,7 @@
+     char * mem;
+ 
+     if ((mem = mem_alloc(size)) == NULL)
+-	die ("getmem: no more memory (%d)", size);
++	reiser3_die ("getmem: no more memory (%d)", size);
+     
+     memset (mem, 0, size);
+ //    checkmem (mem, size);
+@@ -109,7 +109,7 @@
+ 
+     p = (char *)malloc (CONTROL_SIZE + size);
+     if (!p)
+-	die ("getmem: no more memory (%d)", size);
++	reiser3_die ("getmem: no more memory (%d)", size);
+ 
+     /* Write the MEM_BEGIN magic in the beginning of allocated memory. */
+     strcpy (p, MEM_BEGIN);
+@@ -141,7 +141,7 @@
+     }
+     p = realloc (p, allocated + expand_by);
+     if (!p)
+-	die ("expandmem: no more memory (%d)", size);
++	reiser3_die ("expandmem: no more memory (%d)", size);
+     if (!vp) {
+ 	strcpy (p, MEM_BEGIN);
+     }
+@@ -285,7 +285,7 @@
+ 	return 0;
+ }
+ 
+-struct mntent *misc_mntent(char *device) {
++struct mntent *reiser3_misc_mntent(char *device) {
+ 	int proc = 0, path = 0, root = 0;
+ 	
+ 	struct mntent *mnt;
+@@ -357,7 +357,7 @@
+ 	}
+ 	
+ 	/* Lookup the mount entry. */
+-	if ((mnt = misc_mntent(device)) == NULL) {
++	if ((mnt = reiser3_misc_mntent(device)) == NULL) {
+ 		return MF_NOT_MOUNTED;
+ 	} else if (mnt == INVAL_PTR) {
+ 		return 0;
+@@ -517,7 +517,7 @@
+ 	    size = (size / MAX_BS) * MAX_BS / blocksize;
+ 	    sz = size;
+ 	    if ((__u64)sz != size)
+-		    die ("count_blocks: block device too large");
++		    reiser3_die ("count_blocks: block device too large");
+ 
+ 	    close(fd);
+ 	    return sz;
+@@ -721,7 +721,7 @@
+ #endif
+ 	
+     if (fstat(dma_info->fd, &dma_info->st))
+-	die("stat on device failed\n");
++	reiser3_die("stat on device failed\n");
+    
+     get_dma_support(dma_info);
+    
+diff -uraN ../reiserfsprogs-3.6.19/mkreiserfs/mkreiserfs.c ./mkreiserfs/mkreiserfs.c
+--- ../reiserfsprogs-3.6.19/mkreiserfs/mkreiserfs.c	2004-09-30 23:04:21.000000000 +0200
++++ ./mkreiserfs/mkreiserfs.c	2011-05-02 15:15:45.965806175 +0200
+@@ -148,7 +148,7 @@
+ {
+     struct buffer_head * bh;
+     
+-    bh = bread (dev, 0, 64 * 1024);
++    bh = reiser3_new_bread (dev, 0, 64 * 1024);
+     if (!bh) {
+ 	    reiserfs_exit(1, "Unable to read first blocks of the device");
+     }
+@@ -458,7 +458,7 @@
+     Journal_size = str2int (str);
+ /*
+     if (Journal_size < JOURNAL_MIN_SIZE)
+-		die ("%s: wrong journal size specified: %lu. Should be at least %u",
++		reiser3_die ("%s: wrong journal size specified: %lu. Should be at least %u",
+ 			 program_name, 
+ 			 Journal_size + 1, JOURNAL_MIN_SIZE + 1);
+ */
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/bitmap.c ./reiserfscore/bitmap.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/bitmap.c	2004-08-19 12:10:45.000000000 +0200
++++ ./reiserfscore/bitmap.c	2011-05-02 15:15:47.529806230 +0200
+@@ -249,10 +249,10 @@
+     block = fs->fs_super_bh->b_blocknr + 1;
+ 
+     while (to_copy) {
+-	bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    reiserfs_warning (stderr, "reiserfs_fetch_ondisk_bitmap: "
+-			      "bread failed reading bitmap (%lu)\n", block);
++			      "reiser3_new_bread failed reading bitmap (%lu)\n", block);
+ 	    
+ 	    bh = getblk (fs->fs_dev, block, fs->fs_blocksize); 
+ 	    if (!bh) {
+@@ -319,9 +319,9 @@
+     char * p;
+ 
+     /* make sure that the device is big enough */
+-    bh = bread (fs->fs_dev, bm->bm_bit_size - 1, fs->fs_blocksize);
++    bh = reiser3_new_bread (fs->fs_dev, bm->bm_bit_size - 1, fs->fs_blocksize);
+     if (!bh) {
+-	reiserfs_warning (stderr, "reiserfs_flush_to_ondisk_bitmap: bread failed for block %lu\n",
++	reiserfs_warning (stderr, "reiserfs_flush_to_ondisk_bitmap: reiser3_new_bread failed for block %lu\n",
+ 			  bm->bm_bit_size - 1);
+ /*
+ 	bh = getblk (fs->fs_dev, bm->bm_bit_size - 1, fs->fs_blocksize);
+@@ -343,7 +343,7 @@
+     block = fs->fs_super_bh->b_blocknr + 1;
+ 
+     while (to_copy) {
+-	/* we bread to make sure that filesystem contains enough blocks */
++	/* we reiser3_new_bread to make sure that filesystem contains enough blocks */
+ 	bh = getblk (fs->fs_dev, block, fs->fs_blocksize);
+ 	if (!bh) {
+ 	    reiserfs_exit (1, "Getblk failed for (%lu)\n", block);
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/fix_node.c ./reiserfscore/fix_node.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/fix_node.c	2004-10-01 18:54:22.000000000 +0200
++++ ./reiserfscore/fix_node.c	2011-05-02 15:15:47.692806693 +0200
+@@ -1140,7 +1140,7 @@
+ 	  p_n_blocknr++, n_counter++ ) { 
+ 	p_s_new_bh = getblk (fs->fs_dev, *p_n_blocknr, fs->fs_blocksize);
+ 	if (p_s_new_bh->b_count > 1) {
+-	    die ("get_empty_nodes: not free empty buffer");
++	    reiser3_die ("get_empty_nodes: not free empty buffer");
+ 	}
+ 	
+ 	/* Put empty buffers into the array. */
+@@ -2113,7 +2113,7 @@
+ 	n_child_position = ( p_s_bh == p_s_tb->FL[n_h] ) ? p_s_tb->lkey[n_h] :
+ 	    get_blkh_nr_items (B_BLK_HEAD(p_s_tb->FL[n_h]));
+ 	n_son_number = get_dc_child_blocknr (B_N_CHILD (p_s_tb->FL[n_h], n_child_position));
+-	p_s_bh = bread(fs->fs_dev, n_son_number, fs->fs_blocksize);
++	p_s_bh = reiser3_new_bread(fs->fs_dev, n_son_number, fs->fs_blocksize);
+ 	if (!p_s_bh)
+ 	    return IO_ERROR;
+ 	brelse (p_s_tb->L[n_h]);
+@@ -2124,7 +2124,7 @@
+ 	p_s_bh = PATH_OFFSET_PBUFFER(p_s_tb->tb_path, n_path_offset);
+ 	n_child_position = ( p_s_bh == p_s_tb->FR[n_h] ) ? p_s_tb->rkey[n_h] + 1 : 0;
+ 	n_son_number = get_dc_child_blocknr (B_N_CHILD (p_s_tb->FR[n_h], n_child_position));
+-	p_s_bh = bread(fs->fs_dev, n_son_number, fs->fs_blocksize);
++	p_s_bh = reiser3_new_bread(fs->fs_dev, n_son_number, fs->fs_blocksize);
+ 	if (!p_s_bh)
+ 	    return IO_ERROR;
+ 
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/ibalance.c ./reiserfscore/ibalance.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/ibalance.c	2004-02-17 13:20:40.000000000 +0100
++++ ./reiserfscore/ibalance.c	2011-05-02 15:15:47.560806523 +0200
+@@ -873,7 +873,7 @@
+ 	    /* this is a little different from original do_balance:
+ 	       here we insert the minimal keys in the tree, that has never happened when file system works */
+ 	    if (tb->CFL[h-1] || insert_num != 1 || h != 1)
+-		die ("balance_internal: invalid child_pos");
++		reiser3_die ("balance_internal: invalid child_pos");
+ 	    /* insert_child (tb->S[h], tb->S[h-1], child_pos, insert_num, B_N_ITEM_HEAD(tb->S[0],0), insert_ptr);*/
+ 	    internal_insert_childs (tb->tb_fs, &bi, child_pos, insert_num,
+ 			B_N_PITEM_HEAD (PATH_PLAST_BUFFER (tb->tb_path), 0), insert_ptr);
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/journal.c ./reiserfscore/journal.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/journal.c	2004-10-13 15:05:15.000000000 +0200
++++ ./reiserfscore/journal.c	2011-05-02 15:15:47.599806580 +0200
+@@ -56,13 +56,13 @@
+     unsigned long block;
+     unsigned int trans_half, i;
+ 
+-    d_bh = bread (fs->fs_journal_dev, trans->desc_blocknr, fs->fs_blocksize);
++    d_bh = reiser3_new_bread (fs->fs_journal_dev, trans->desc_blocknr, fs->fs_blocksize);
+ 
+     if (!d_bh || who_is_this (d_bh->b_data, d_bh->b_size) != THE_JDESC)
+ 	goto error_desc_brelse;
+ 
+     /* read expected commit block and compare with descriptor block */
+-    c_bh = bread (fs->fs_journal_dev, commit_expected (fs, d_bh), fs->fs_blocksize);
++    c_bh = reiser3_new_bread (fs->fs_journal_dev, commit_expected (fs, d_bh), fs->fs_blocksize);
+     if (!c_bh)
+ 	goto error_desc_brelse;
+  
+@@ -104,7 +104,7 @@
+ 	return 0;
+ 
+     /* read expected commit block and compare with descriptor block */
+-    c_bh = bread (fs->fs_journal_dev, commit_expected (fs, d_bh), fs->fs_blocksize);
++    c_bh = reiser3_new_bread (fs->fs_journal_dev, commit_expected (fs, d_bh), fs->fs_blocksize);
+     if (!c_bh)
+ 	return 0;
+  
+@@ -140,7 +140,7 @@
+ 
+     trans_nr = 0;
+     for (j_cur = 0; j_cur < j_size; j_cur ++) {
+-	d_bh = bread (fs->fs_journal_dev, j_start + j_cur, fs->fs_blocksize);
++	d_bh = reiser3_new_bread (fs->fs_journal_dev, j_start + j_cur, fs->fs_blocksize);
+ 	if (!transaction_check_desc (fs, d_bh)) {
+ 	    brelse (d_bh);
+ 	    continue;
+@@ -200,15 +200,15 @@
+ 	return found;
+ 	
+     /* make sure that 'trans' is a valid transaction */
+-    d_bh = bread (fs->fs_journal_dev, trans->desc_blocknr, fs->fs_blocksize);
++    d_bh = reiser3_new_bread (fs->fs_journal_dev, trans->desc_blocknr, fs->fs_blocksize);
+     if (!transaction_check_desc (fs, d_bh))
+-	die ("next_transaction: valid transaction is expected");
++	reiser3_die ("next_transaction: valid transaction is expected");
+ 
+     block = next_desc_expected (fs, d_bh);
+     j_offset = block - j_start;
+ 
+     while (1) {
+-	next_d_bh = bread (fs->fs_journal_dev, block, fs->fs_blocksize);
++	next_d_bh = reiser3_new_bread (fs->fs_journal_dev, block, fs->fs_blocksize);
+ 	if (transaction_check_desc (fs, next_d_bh))
+ 	    break;
+ 
+@@ -240,7 +240,7 @@
+ {
+     struct buffer_head * j_bh, * bh;
+ 
+-    j_bh = bread (fs->fs_journal_dev, in_journal, fs->fs_blocksize);
++    j_bh = reiser3_new_bread (fs->fs_journal_dev, in_journal, fs->fs_blocksize);
+     if (!j_bh) {
+ 	fprintf (stderr, "replay_one_transaction: transaction %lu: reading %lu block failed\n",
+ 		 trans->trans_id, in_journal);
+@@ -276,13 +276,13 @@
+     unsigned int i, trans_half;
+     unsigned long block;
+  
+-    d_bh = bread (fs->fs_journal_dev, trans->desc_blocknr, fs->fs_blocksize);
++    d_bh = reiser3_new_bread (fs->fs_journal_dev, trans->desc_blocknr, fs->fs_blocksize);
+     if (!d_bh) {
+ 	reiserfs_warning (stdout, "reading descriptor block %lu failed\n", trans->desc_blocknr);
+ 	return;
+     }
+ 
+-    c_bh = bread (fs->fs_journal_dev, trans->commit_blocknr, fs->fs_blocksize);
++    c_bh = reiser3_new_bread (fs->fs_journal_dev, trans->commit_blocknr, fs->fs_blocksize);
+     if (!c_bh) {
+ 	reiserfs_warning (stdout, "reading commit block %lu failed\n", trans->commit_blocknr);
+ 	brelse (d_bh);
+@@ -523,13 +523,13 @@
+     }
+     
+     /* read journal header */
+-    fs->fs_jh_bh = bread (fs->fs_journal_dev, 
++    fs->fs_jh_bh = reiser3_new_bread (fs->fs_journal_dev, 
+ 			  get_jp_journal_1st_block (sb_jp (sb)) + 
+ 			  get_jp_journal_size (sb_jp (sb)), 
+ 			  fs->fs_blocksize);
+ 
+     if (!fs->fs_jh_bh) {
+-	reiserfs_warning (stderr, "reiserfs_open_journal: bread failed "
++	reiserfs_warning (stderr, "reiserfs_open_journal: reiser3_new_bread failed "
+ 			  "reading journal  header.\n");
+ 	close(fs->fs_journal_dev);
+ 	return -1;
+@@ -700,7 +700,7 @@
+     flush_buffers (fs->fs_journal_dev);
+     invalidate_buffers (fs->fs_journal_dev);
+     if (close (fs->fs_journal_dev))
+-	die ("reiserfs_reopen_journal: closed failed: %s", strerror(errno));
++	reiser3_die ("reiserfs_reopen_journal: closed failed: %s", strerror(errno));
+ 
+     fs->fs_journal_dev = open (fs->fs_j_file_name, flag 
+ #if defined(O_LARGEFILE)
+@@ -708,11 +708,11 @@
+ #endif
+ 			       );
+     if (fs->fs_journal_dev == -1)
+-	die ("reiserfs_reopen_journal: could not reopen journal device");
++	reiser3_die ("reiserfs_reopen_journal: could not reopen journal device");
+ 
+-    fs->fs_jh_bh = bread (fs->fs_journal_dev, jh_block, fs->fs_blocksize);
++    fs->fs_jh_bh = reiser3_new_bread (fs->fs_journal_dev, jh_block, fs->fs_blocksize);
+     if (!fs->fs_jh_bh)
+-	die ("reiserfs_reopen_journal: reading journal header failed");
++	reiser3_die ("reiserfs_reopen_journal: reading journal header failed");
+ }
+ 
+ 
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/node_formats.c ./reiserfscore/node_formats.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/node_formats.c	2004-09-29 17:15:58.000000000 +0200
++++ ./reiserfscore/node_formats.c	2011-05-02 15:15:47.465806746 +0200
+@@ -1292,7 +1292,7 @@
+     } else if (i == get_sb_oid_maxsize (fs->fs_ondisk_sb)) {
+ 	objectid_map[i - 1] = cpu_to_le32 (objectid + 1);
+     } else
+-	die ("mark_objectid_as_used: objectid map corrupted");
++	reiser3_die ("mark_objectid_as_used: objectid map corrupted");
+     
+     return;
+ }
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/prints.c ./reiserfscore/prints.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/prints.c	2004-09-16 14:23:11.000000000 +0200
++++ ./reiserfscore/prints.c	2011-05-02 15:15:47.742806233 +0200
+@@ -923,9 +923,9 @@
+     reiserfs_warning (fp, "Bitmap blocks are:\n");
+     block = fs->fs_super_bh->b_blocknr + 1;
+     for (i = 0; i < bmap_nr; i ++) {
+-	bh = bread (fs->fs_dev, block, fs->fs_blocksize);
++	bh = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+ 	if (!bh) {
+-	    reiserfs_warning (stderr, "print_bmap: bread failed for %d: %lu\n", i, block);
++	    reiserfs_warning (stderr, "print_bmap: reiser3_new_bread failed for %d: %lu\n", i, block);
+ 	    continue;
+ 	}
+ 	if (i == bmap_nr - 1)
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/reiserfslib.c ./reiserfscore/reiserfslib.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/reiserfslib.c	2004-10-04 22:39:35.000000000 +0200
++++ ./reiserfscore/reiserfslib.c	2011-05-02 15:15:47.425805743 +0200
+@@ -85,9 +85,9 @@
+     /* reiserfs super block is either in 16-th or in 2-nd 4k block of the
+        device */
+     for (i = 2; i < 17; i += 14) {
+-	bh = bread (fd, i, 4096);
++	bh = reiser3_new_bread (fd, i, 4096);
+ 	if (!bh) {
+-	    reiserfs_warning (stderr, "reiserfs_open: bread failed reading block %d\n", i);
++	    reiserfs_warning (stderr, "reiserfs_open: reiser3_new_bread failed reading block %d\n", i);
+ 	} else {
+ 	    sb = (struct reiserfs_super_block *)bh->b_data;
+ 	    
+@@ -122,7 +122,7 @@
+ 	/* A few checks of found super block. */
+ 	struct buffer_head *tmp_bh;
+ 	
+-	tmp_bh = bread (fd, get_sb_block_count(sb) - 1, get_sb_block_size(sb));
++	tmp_bh = reiser3_new_bread (fd, get_sb_block_count(sb) - 1, get_sb_block_size(sb));
+ 	
+ 	if (!tmp_bh) {
+ 	    reiserfs_warning (stderr, "\n%s: Your partition is not big enough to contain the \n"
+@@ -144,9 +144,9 @@
+     if (fs->fs_blocksize != 4096) {
+ 	i = bh->b_blocknr * 4096 / fs->fs_blocksize;
+ 	brelse (bh);
+-	bh = bread (fd, i, fs->fs_blocksize);
++	bh = reiser3_new_bread (fd, i, fs->fs_blocksize);
+ 	if (!bh) {
+-	    reiserfs_warning (stderr, "reiserfs_open: bread failed reading block %d, size %d\n",
++	    reiserfs_warning (stderr, "reiserfs_open: reiser3_new_bread failed reading block %d, size %d\n",
+ 			      i, fs->fs_blocksize);
+ 	    freemem (fs);
+ 	    return 0;
+@@ -331,7 +331,7 @@
+     
+     invalidate_buffers (fs->fs_dev);
+     if (close (fs->fs_dev))
+-	die ("reiserfs_reopen: closed failed: %s", strerror(errno));
++	reiser3_die ("reiserfs_reopen: closed failed: %s", strerror(errno));
+     
+     fs->fs_dev = open (fs->fs_file_name, flag 
+ #if defined(O_LARGEFILE)
+@@ -339,11 +339,11 @@
+ #endif
+ 		       );
+     if (fs->fs_dev == -1)
+-	die ("reiserfs_reopen: could not reopen device: %s", strerror(errno));
++	reiser3_die ("reiserfs_reopen: could not reopen device: %s", strerror(errno));
+ 
+-    fs->fs_super_bh = bread (fs->fs_dev, super_block, fs->fs_blocksize);
++    fs->fs_super_bh = reiser3_new_bread (fs->fs_dev, super_block, fs->fs_blocksize);
+     if (!fs->fs_super_bh)
+-	die ("reiserfs_reopen: reading super block failed");
++	reiser3_die ("reiserfs_reopen: reading super block failed");
+     fs->fs_ondisk_sb = (struct reiserfs_super_block *)fs->fs_super_bh->b_data;
+     fs->fs_flags = flag; /* O_RDONLY or O_RDWR */
+     
+@@ -415,7 +415,7 @@
+ {
+     if (fs->block_allocator)
+ 	return fs->block_allocator (fs, free_blocknrs, start, amount_needed);
+-    die ("block allocator is not defined\n");
++    reiser3_die ("block allocator is not defined\n");
+     return 0;
+ }
+ 
+@@ -424,7 +424,7 @@
+ {
+     if (fs->block_deallocator)
+ 	return fs->block_deallocator (fs, block);
+-    die ("block deallocator is not defined\n");
++    reiser3_die ("block deallocator is not defined\n");
+     return 0;
+ }
+ 
+@@ -444,7 +444,7 @@
+     path->path_length = ILLEGAL_PATH_ELEMENT_OFFSET;
+     while (1) {
+ 	curr = PATH_OFFSET_PELEMENT (path, ++ path->path_length);
+-	bh = curr->pe_buffer = bread (fs->fs_dev, block, fs->fs_blocksize);
++	bh = curr->pe_buffer = reiser3_new_bread (fs->fs_dev, block, fs->fs_blocksize);
+         if (bh == 0) {
+ 	    path->path_length --;
+ 	    pathrelse (path);
+@@ -593,25 +593,25 @@
+     struct buffer_head * bh;
+ 
+     if (offset < FIRST_PATH_ELEMENT_OFFSET)
+-	die ("uget_lkey: illegal offset in the path (%d)", offset);
++	reiser3_die ("uget_lkey: illegal offset in the path (%d)", offset);
+ 
+ 
+     /* While not higher in path than first element. */
+     while (offset-- > FIRST_PATH_ELEMENT_OFFSET) {
+ 	if (! buffer_uptodate (PATH_OFFSET_PBUFFER (path, offset)) )
+-	    die ("uget_lkey: parent is not uptodate");
++	    reiser3_die ("uget_lkey: parent is not uptodate");
+ 	
+ 	/* Parent at the path is not in the tree now. */
+ 	if (! B_IS_IN_TREE (bh = PATH_OFFSET_PBUFFER (path, offset)))
+-	    die ("uget_lkey: buffer on the path is not in tree");
++	    reiser3_die ("uget_lkey: buffer on the path is not in tree");
+ 
+ 	/* Check whether position in the parent is correct. */
+ 	if ((pos = PATH_OFFSET_POSITION (path, offset)) > B_NR_ITEMS (bh))
+-	    die ("uget_lkey: invalid position (%d) in the path", pos);
++	    reiser3_die ("uget_lkey: invalid position (%d) in the path", pos);
+ 
+ 	/* Check whether parent at the path really points to the child. */
+ 	if (get_dc_child_blocknr (B_N_CHILD (bh, pos)) != PATH_OFFSET_PBUFFER (path, offset + 1)->b_blocknr)
+-	    die ("uget_lkey: invalid block number (%d). Must be %ld",
++	    reiser3_die ("uget_lkey: invalid block number (%d). Must be %ld",
+ 		 get_dc_child_blocknr (B_N_CHILD (bh, pos)), PATH_OFFSET_PBUFFER (path, offset + 1)->b_blocknr);
+ 	
+ 	/* Return delimiting key if position in the parent is not equal to zero. */
+@@ -629,23 +629,23 @@
+     struct buffer_head * bh;
+ 
+     if (offset < FIRST_PATH_ELEMENT_OFFSET)
+-	die ("uget_rkey: illegal offset in the path (%d)", offset);
++	reiser3_die ("uget_rkey: illegal offset in the path (%d)", offset);
+ 
+     while (offset-- > FIRST_PATH_ELEMENT_OFFSET) {
+ 	if (! buffer_uptodate (PATH_OFFSET_PBUFFER (path, offset)))
+-	    die ("uget_rkey: parent is not uptodate");
++	    reiser3_die ("uget_rkey: parent is not uptodate");
+ 
+ 	/* Parent at the path is not in the tree now. */
+ 	if (! B_IS_IN_TREE (bh = PATH_OFFSET_PBUFFER (path, offset)))
+-	    die ("uget_rkey: buffer on the path is not in tree");
++	    reiser3_die ("uget_rkey: buffer on the path is not in tree");
+ 
+ 	/* Check whether position in the parrent is correct. */
+ 	if ((pos = PATH_OFFSET_POSITION (path, offset)) > B_NR_ITEMS (bh))
+-	    die ("uget_rkey: invalid position (%d) in the path", pos);
++	    reiser3_die ("uget_rkey: invalid position (%d) in the path", pos);
+ 
+ 	/* Check whether parent at the path really points to the child. */
+ 	if (get_dc_child_blocknr (B_N_CHILD (bh, pos)) != PATH_OFFSET_PBUFFER (path, offset + 1)->b_blocknr)
+-	    die ("uget_rkey: invalid block number (%d). Must be %ld",
++	    reiser3_die ("uget_rkey: invalid block number (%d). Must be %ld",
+ 		 get_dc_child_blocknr (B_N_CHILD (bh, pos)), PATH_OFFSET_PBUFFER (path, offset + 1)->b_blocknr);
+ 	
+ 	/* Return delimiting key if position in the parent is not the last one. */
+@@ -831,7 +831,7 @@
+     
+     init_tb_struct (&tb, fs, path, IH_SIZE + get_ih_item_len(ih));
+     if (fix_nodes (M_INSERT, &tb, ih) != CARRY_ON)
+-	die ("reiserfs_insert_item: fix_nodes failed");
++	reiser3_die ("reiserfs_insert_item: fix_nodes failed");
+ 
+     do_balance (&tb, ih, body, M_INSERT, 0/*zero num*/);
+ }
+@@ -1319,7 +1319,7 @@
+ 			-(IH_SIZE + get_ih_item_len(PATH_PITEM_HEAD(badblock_path))));
+ 
+ 	if (fix_nodes (M_DELETE, &tb, 0) != CARRY_ON)
+-		die ("%s: fix_nodes failed", __FUNCTION__);
++		reiser3_die ("%s: fix_nodes failed", __FUNCTION__);
+ 
+ 	do_balance (/*tb.transaction_handle,*/ &tb, 0, 0, M_DELETE, 0/*zero num*/);
+ }
+@@ -1394,7 +1394,7 @@
+ 				IH_SIZE + get_ih_item_len(&badblock_ih));
+ 		
+ 		if (fix_nodes (M_INSERT, &tb, &badblock_ih) != CARRY_ON)
+-		    die ("reiserfsck_insert_item: fix_nodes failed");
++		    reiser3_die ("reiserfsck_insert_item: fix_nodes failed");
+ 		
+ 		do_balance (&tb, &badblock_ih, (void *)&ni , M_INSERT, 0);
+ 
+@@ -1407,7 +1407,7 @@
+ 		init_tb_struct (&tb, fs, &badblock_path, UNFM_P_SIZE);
+ 		
+ 		if (fix_nodes (M_PASTE, &tb, 0) != CARRY_ON)
+-		    die ("reiserfsck_paste_into_item: fix_nodes failed");
++		    reiser3_die ("reiserfsck_paste_into_item: fix_nodes failed");
+ 
+ 		do_balance (&tb, 0, (const char *)&ni, M_PASTE, 0);
+ 		break;
+diff -uraN ../reiserfsprogs-3.6.19/reiserfscore/stree.c ./reiserfscore/stree.c
+--- ../reiserfsprogs-3.6.19/reiserfscore/stree.c	2004-10-01 18:17:53.000000000 +0200
++++ ./reiserfscore/stree.c	2011-05-02 15:15:47.628808260 +0200
+@@ -344,7 +344,7 @@
+ 	/* Read the next tree node, and set the last element in the
+            path to have a pointer to it. */
+ 	if ( ! (p_s_bh = p_s_last_element->pe_buffer =
+-		bread (fs->fs_dev, n_block_number, n_block_size)) ) {
++		reiser3_new_bread (fs->fs_dev, n_block_number, n_block_size)) ) {
+ 	    p_s_search_path->path_length --;
+ 	    pathrelse(p_s_search_path);
+ 	    return IO_ERROR;
+diff -uraN ../reiserfsprogs-3.6.19/resize_reiserfs/do_shrink.c ./resize_reiserfs/do_shrink.c
+--- ../reiserfsprogs-3.6.19/resize_reiserfs/do_shrink.c	2004-08-19 13:27:54.000000000 +0200
++++ ./resize_reiserfs/do_shrink.c	2011-05-02 15:15:46.545805502 +0200
+@@ -59,10 +59,10 @@
+ 		return 0;
+ 	
+ 	/* move wrong block */ 
+-	bh = bread(fs->fs_dev, block, fs->fs_blocksize);
++	bh = reiser3_new_bread(fs->fs_dev, block, fs->fs_blocksize);
+ 
+ 	if (!bh)
+-	    reiserfs_exit (1, "move_generic_block: bread failed.\n");
++	    reiserfs_exit (1, "move_generic_block: reiser3_new_bread failed.\n");
+ 
+ 	reiserfs_bitmap_find_zero_bit(bmp, &unused_block);
+ 	if (unused_block == 0 || unused_block >= bnd) {
+@@ -106,9 +106,9 @@
+ 	int node_is_internal = 0;
+ 	unsigned int i, j;
+ 	
+-	bh = bread(fs->fs_dev, block, fs->fs_blocksize);
++	bh = reiser3_new_bread(fs->fs_dev, block, fs->fs_blocksize);
+ 	if (!bh)
+-	    reiserfs_exit (1, "move_formatted_block: bread failed");
++	    reiserfs_exit (1, "move_formatted_block: reiser3_new_bread failed");
+ 	
+ 	if (is_leaf_node (bh)) {
+ 		
+diff -uraN ../reiserfsprogs-3.6.19/resize_reiserfs/fe.c ./resize_reiserfs/fe.c
+--- ../reiserfsprogs-3.6.19/resize_reiserfs/fe.c	2004-02-17 12:35:12.000000000 +0100
++++ ./resize_reiserfs/fe.c	2011-05-02 15:15:46.573817982 +0200
+@@ -11,15 +11,15 @@
+ 	char buf[40];
+ 	
+ 	/* Find the mount entry. */
+-	if ((mnt = misc_mntent(devname)) == NULL)
+-		die ("resize_reiserfs: can't find mount entry\n");
++	if ((mnt = reiser3_misc_mntent(devname)) == NULL)
++		reiser3_die ("resize_reiserfs: can't find mount entry\n");
+ 
+ 	sprintf(buf,"resize=%lld", blocks);
+ 
+ 	if (mount(mnt->mnt_fsname, mnt->mnt_dir, mnt->mnt_type,
+ 		  (unsigned long)(MS_MGC_VAL << 16 | MS_REMOUNT), buf)) 
+ 	{
+-		die ("resize_reiserfs: remount failed: %s\n", 
++		reiser3_die ("resize_reiserfs: remount failed: %s\n", 
+ 		     strerror(errno));
+ 	}
+ 
+diff -uraN ../reiserfsprogs-3.6.19/resize_reiserfs/resize.h ./resize_reiserfs/resize.h
+--- ../reiserfsprogs-3.6.19/resize_reiserfs/resize.h	2004-08-19 13:27:00.000000000 +0200
++++ ./resize_reiserfs/resize.h	2011-05-02 15:15:46.608807284 +0200
+@@ -29,7 +29,7 @@
+  exit(16);\
+ }
+ 
+-#define DIE(form, args...) die("%s: " form "\n", g_progname , ## args)
++#define DIE(form, args...) reiser3_die("%s: " form "\n", g_progname , ## args)
+ 
+ /* reiserfs_resize.c */
+ extern struct buffer_head * g_sb_bh;
+diff -uraN ../reiserfsprogs-3.6.19/tune/tune.c ./tune/tune.c
+--- ../reiserfsprogs-3.6.19/tune/tune.c	2004-08-19 13:23:57.000000000 +0200
++++ ./tune/tune.c	2011-05-02 15:15:47.199807029 +0200
+@@ -175,7 +175,7 @@
+         print_how_far (stderr, &done, len, 1, 1/*be quiet*/);
+         bh = getblk (fs->fs_journal_dev, start + i, fs->fs_blocksize);
+ 	if (!bh)
+-	    die ("zero_journal: getblk failed");
++	    reiser3_die ("zero_journal: getblk failed");
+         memset (bh->b_data, 0, bh->b_size);
+         mark_buffer_dirty (bh);
+         mark_buffer_uptodate (bh, 1);
+@@ -195,7 +195,7 @@
+ 
+     val = (int) strtol (str, &tmp, 0);
+     if (*tmp)
+-	die ("%s: strtol is unable to make an integer of %s\n", program_name, str);
++	reiser3_die ("%s: strtol is unable to make an integer of %s\n", program_name, str);
+     return val;
+ }
+ 

@@ -1,0 +1,52 @@
+--- ../reiserfsprogs-3.6.19/lib/misc.c	2004-10-13 15:05:15.000000000 +0200
++++ lib/misc.c	2019-08-13 22:40:02.607964293 +0200
+@@ -29,7 +29,7 @@
+ /* End Debian mods */
+ 
+ #define STAT_FIELD(Field, Type)						\
+-inline Type misc_device_##Field(char *device) {				\
++Type misc_device_##Field(char *device) {				\
+ 	struct stat st;							\
+ 									\
+ 	if (stat(device, &st) == 0)					\
+--- ../reiserfsprogs-3.6.19/debugreiserfs/pack.c	2004-05-25 00:50:01.000000000 +0200
++++ debugreiserfs/pack.c	2019-08-13 22:41:28.063963219 +0200
+@@ -24,19 +24,19 @@
+ unsigned long had_to_be_sent; /* how many bytes were to be sent */
+ 
+ 
+-inline void set_pi_type( struct packed_item *pi, __u32 val )
++void set_pi_type( struct packed_item *pi, __u32 val )
+ {
+     set_bit_field_XX (32, pi, val, 0, 2);
+ }
+ 
+ 
+-inline __u32 get_pi_type( const struct packed_item *pi )
++__u32 get_pi_type( const struct packed_item *pi )
+ {
+     get_bit_field_XX (32, pi, 0, 2);
+ }
+ 
+ 
+-inline void set_pi_mask( struct packed_item *pi, __u32 val )
++void set_pi_mask( struct packed_item *pi, __u32 val )
+ {
+     set_bit_field_XX (32, pi, val, 2, 18);
+ }
+@@ -48,13 +48,13 @@
+ }
+ 
+ 
+-inline void set_pi_item_len( struct packed_item *pi, __u32 val )
++void set_pi_item_len( struct packed_item *pi, __u32 val )
+ {
+     set_bit_field_XX (32, pi, val, 20, 12);
+ }
+ 
+ 
+-inline __u32 get_pi_item_len( const struct packed_item *pi )
++__u32 get_pi_item_len( const struct packed_item *pi )
+ {
+     get_bit_field_XX (32, pi, 20, 12);
+ }

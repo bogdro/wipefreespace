@@ -1,0 +1,253 @@
+diff -uraN ../mfstool-0.5/depcomp ./depcomp
+--- ../mfstool-0.5/depcomp	2004-11-02 18:17:01.000000000 +0100
++++ ./depcomp	2011-04-27 18:39:08.695775827 +0200
+@@ -129,7 +129,7 @@
+       -e 's/^['$alpha']:\/[^:]*: / /' < "$tmpdepfile" >> "$depfile"
+ ## This next piece of magic avoids the `deleted header file' problem.
+ ## The problem is that when a header file which appears in a .P file
+-## is deleted, the dependency causes make to die (because there is
++## is deleted, the dependency causes make to die (because there is
+ ## typically no way to rebuild the header).  We avoid this by adding
+ ## dummy dependencies for each header file.  Too bad gcc doesn't do
+ ## this for us directly.
+diff -uraN ../mfstool-0.5/inode.c ./inode.c
+--- ../mfstool-0.5/inode.c	2005-02-18 18:09:24.000000000 +0100
++++ ./inode.c	2011-04-27 18:39:15.411776315 +0200
+@@ -56,7 +56,7 @@
+     dofread(goto_blk(fs->fp,iblks[blk / MINIX2_ZONESZ]),iblks,sizeof iblks);
+     return iblks[blk % MINIX2_ZONESZ];
+   }
+-  die("file bigger than maximum size");
++  mfstool_die("file bigger than maximum size");
+   return -1;
+ }
+
+@@ -88,7 +88,7 @@
+     dofread(goto_blk(fs->fp,iblks[blk / MINIX_ZONESZ]),iblks,sizeof iblks);
+     return iblks[blk % MINIX_ZONESZ];
+   }
+-  die("file bigger than maximum size");
++  mfstool_die("file bigger than maximum size");
+   return -1;
+ }
+
+@@ -152,7 +152,7 @@
+     dofwrite(goto_blk(fs->fp,izone),iblks,sizeof iblks);
+     return;
+   }
+-  die("file bigger than maximum size");
++  mfstool_die("file bigger than maximum size");
+ }
+
+ /**
+@@ -214,7 +214,7 @@
+     dofwrite(goto_blk(fs->fp,izone),iblks,sizeof iblks);
+     return;
+   }
+-  die("file bigger than maximum size");
++  mfstool_die("file bigger than maximum size");
+ }
+
+ /**
+@@ -285,7 +285,7 @@
+     ino->i_dbl_indr_zone = 0;
+     return;
+   }
+-  die("file bigger than maximum size");
++  mfstool_die("file bigger than maximum size");
+ }
+
+ /**
+@@ -356,7 +356,7 @@
+     ino->i_dbl_indr_zone = 0;
+     return;
+   }
+-  die("file bigger than maximum size");
++  mfstool_die("file bigger than maximum size");
+ }
+
+ /**
+diff -uraN ../mfstool-0.5/protos.h ./protos.h
+--- ../mfstool-0.5/protos.h	2005-02-18 18:27:56.000000000 +0100
++++ ./protos.h	2011-04-27 18:39:08.840778433 +0200
+@@ -9,7 +9,7 @@
+ struct minix_fs_dat *open_fs(const char *fn, int chk);
+ struct minix_fs_dat *close_fs(struct minix_fs_dat *fs);
+ void fatalmsg(const char *s, ...);
+-void die(const char *s, ...);
++void mfstool_die(const char *s, ...);
+ FILE *goto_blk(FILE *fp, int blk);
+ void *dofwrite(FILE *fp, void *buff, int cnt);
+ void *dofread(FILE *fp, void *buff, int cnt);
+diff -uraN ../mfstool-0.5/reader.c ./reader.c
+--- ../mfstool-0.5/reader.c	2005-02-18 18:09:24.000000000 +0100
++++ ./reader.c	2011-04-27 18:39:15.420777024 +0200
+@@ -100,7 +100,7 @@
+   int uid,gid,mode,inode;
+   if (argc != 3) fatalmsg("Usage: %s [image file] [output file]\n",argv[0]);
+   fp = fopen(argv[2],"wb");
+-  if (!fp) die(argv[2]);
++  if (!fp) mfstool_die(argv[2]);
+   inode = readfile(fs,fp,argv[1],S_IFREG,0);
+   /* We want to copy also the modes ... */
+   if (VERSION_2(fs)) {
+@@ -118,7 +118,7 @@
+     mode = ino->i_mode & 07777;
+   }
+   fclose(fp);
+-  if (!(opt_squash || getuid())) chown(argv[2],uid,gid);
++  if (!(0 || getuid())) chown(argv[2],uid,gid);
+   chmod(argv[2],mode);
+   utime(argv[2],&tb);
+ }
+diff -uraN ../mfstool-0.5/super.c ./super.c
+--- ../mfstool-0.5/super.c	2005-02-18 18:09:24.000000000 +0100
++++ ./super.c	2011-04-27 18:39:15.430775220 +0200
+@@ -45,7 +45,7 @@
+       for (j = 0; j < 8 ; j++) {
+         if ((bmap[i] & (1<<j)) == 0) return (i<<3) + j;
+       }
+-      die("Internal error!");
++      mfstool_die("Internal error!");
+     }
+   }
+   fatalmsg("No free slots in bitmap found");
+@@ -114,7 +114,7 @@
+   fs->ino.v1 = domalloc(INODE_BUFFER_SIZE(fs),0);
+   mark_inode(fs,MINIX_ROOT_INO);
+   set_inode(fs,MINIX_ROOT_INO,S_IFDIR | 0755, 2,
+-		opt_squash ? 0 : getuid(), opt_squash ? 0 : getgid(),
++		0 ? 0 : getuid(), 0 ? 0 : getgid(),
+ 		2 * DIRSIZE(fs),NOW,NOW,NOW,0);
+   rootblkp = get_free_block(fs);
+   if (VERSION_2(fs)) {
+@@ -128,8 +128,8 @@
+    * Initialise file
+    */
+   fs->fp = fopen(fn,"w+b");
+-  if (!fs->fp) die(fn);
+-  if (fseek(fs->fp,fsize * BLOCK_SIZE-1,SEEK_SET)) die("fseek");
++  if (!fs->fp) mfstool_die(fn);
++  if (fseek(fs->fp,fsize * BLOCK_SIZE-1,SEEK_SET)) mfstool_die("fseek");
+   putc(0,fs->fp);
+   fflush(fs->fp);
+
+@@ -158,7 +158,7 @@
+   struct minix_fs_dat *fs = domalloc(sizeof(struct minix_fs_dat),0);
+
+   fs->fp = fopen(fn,"r+b");
+-  if (!fs->fp) die(fn);
++  if (!fs->fp) mfstool_die(fn);
+
+   /*
+    * Read super block
+@@ -174,7 +174,7 @@
+     fatalmsg("invalid magic fs-type %x",FSMAGIC(fs));
+   }
+   if (MINIX_VALID_FS != fs->msb.s_state) {
+-    if (chk) die("Filesystem in an unknown state");
++    if (chk) mfstool_die("Filesystem in an unknown state");
+     fprintf(stderr,"Warning: %s in an unknown state\n",fn);
+   }
+
+diff -uraN ../mfstool-0.5/utils.c ./utils.c
+--- ../mfstool-0.5/utils.c	2005-02-18 18:09:24.000000000 +0100
++++ ./utils.c	2011-04-27 18:39:15.435775726 +0200
+@@ -31,9 +31,9 @@
+ #include "protos.h"
+
+ /**
+- * Print an error message and die.
++ * Print an error message and die.
+  * @param s - string format
+- * @effect This function causes the program to die
++ * @effect This function causes the program to die
+  */
+ void fatalmsg(const char *s,...) {
+   va_list p;
+@@ -47,9 +47,9 @@
+ /**
+  * Like fatalmsg but also show the errno message.
+  * @param s - string format
+- * @effect This function causes the program to die.
++ * @effect This function causes the program to die.
+  */
+-void die(const char *s,...) {
++void mfstool_die(const char *s,...) {
+   va_list p;
+   va_start(p,s);
+   vfprintf(stderr,s,p);
+@@ -70,7 +70,7 @@
+ FILE *goto_blk(FILE *fp,int blk) {
+   fflush(fp);
+   if (fseek(fp,blk*BLOCK_SIZE,SEEK_SET)) {
+-    die("fseek");
++    mfstool_die("fseek");
+   }
+   return fp;
+ }
+@@ -84,7 +84,7 @@
+  */
+ void *dofwrite(FILE *fp,void *buff,int cnt) {
+   if (cnt != fwrite(buff,1,cnt,fp)) {
+-    die("fwrite");
++    mfstool_die("fwrite");
+   }
+   return buff;
+ }
+@@ -98,7 +98,7 @@
+  */
+ void *dofread(FILE *fp,void *buff,int cnt) {
+   if (cnt != fread(buff,1,cnt,fp)) {
+-    die("fread");
++    mfstool_die("fread");
+   }
+   return buff;
+ }
+@@ -112,7 +112,7 @@
+ void *domalloc(unsigned long size,int elm) {
+   void *ptr = malloc(size);
+   if (!ptr) {
+-    die("malloc");
++    mfstool_die("malloc");
+   }
+   if (elm >= 0) {
+     memset(ptr,elm,size);
+@@ -124,7 +124,7 @@
+  * Wrapper around getuid
+  */
+ int dogetuid(void) {
+-  if (opt_squash) return 0;
++  if (0) return 0;
+   return getuid();
+ }
+
+@@ -132,6 +132,6 @@
+  * Wrapper around getgid
+  */
+ int dogetgid(void) {
+-  if (opt_squash) return 0;
++  if (0) return 0;
+   return getgid();
+ }
+diff -uraN ../mfstool-0.5/writer.c ./writer.c
+--- ../mfstool-0.5/writer.c	2005-02-18 18:09:24.000000000 +0100
++++ ./writer.c	2011-04-27 18:39:15.445776163 +0200
+@@ -224,14 +224,14 @@
+   int inode;
+
+   if (argc != 3) fatalmsg("Usage: %s [input file] [image file]\n",argv[0]);
+-  if (stat(argv[1],&sb)) die("stat(%s)",argv[1]);
++  if (stat(argv[1],&sb)) mfstool_die("stat(%s)",argv[1]);
+   if (!S_ISREG(sb.st_mode)) fatalmsg("%s: not a regular file\n",argv[1]);
+
+   fp = fopen(argv[1],"rb");
+-  if (!fp) die(argv[1]);
++  if (!fp) mfstool_die(argv[1]);
+
+   inode = make_node(fs,argv[2],sb.st_mode,
+-			opt_squash ? 0 : sb.st_uid,opt_squash ? 0 : sb.st_gid,
++			0 ? 0 : sb.st_uid,0 ? 0 : sb.st_gid,
+ 			sb.st_size,sb.st_atime,sb.st_mtime,sb.st_ctime,NULL);
+
+   writefile(fs,fp,inode);

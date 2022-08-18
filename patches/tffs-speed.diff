@@ -1,0 +1,11 @@
+--- ../tffs-lib-read-only-orig/src/hai_file.c	2016-11-11 13:51:05.727570923 +0100
++++ src/hai_file.c	2016-12-04 16:12:30.208527463 +0100
+@@ -70,7 +70,7 @@
+ 	if (write(pdev->fd, ptr, pdev->sector_size) < 0)
+ 		return ERR_HAI_WRITE;
+ 
+-	fsync(pdev->fd);
++	/*fsync(pdev->fd);*/
+ 	return HAI_OK;
+ }
+ 
