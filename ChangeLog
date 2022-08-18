@@ -1,3 +1,37 @@
+2007-10-21	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Version 0.7
+	  More GNU Coding Style ('info standards'). More enum using.
+	  Operating buffer is now local to each function, not global.
+	* wipefreespace.c: new option: --background. Including copyright
+	  info for used libraries. More portable signal checking. Typo fixed.
+	  Ignoring empty arguments. Environment not cleared anymore (required
+	  for XFS support).
+	* wipefreespace.h: new enum entry CURR_NONE instead of using a zero
+	  all the time.
+	* wfs_ntfs.c (destroy_record): wiping deleted files' name's length
+	  and data length (it won't be posiible to tell how long was the
+	  file name and how much data was inside).
+	* info doc: new option added. Full texts of the Licenses added. Added
+	  a note saying that signal handling needs 'volatile' to work. Added
+	  what to do if compiling fails. Added the SIGCHLD signal. Added XFS
+	  info in compiling requirements. Added a chapter about filesystem
+	  support.
+	* ext23.c (e2_count_blocks): using parameters instead of globals.
+	* ext23.c (e2_wipe_unrm_dir): zeroing deleted files' name's length.
+	* configure.ac: Better portability.
+	* wfs_ntfs.c: Memory leak fixed. Better parameters checking. Better
+	  error handling.
+	* wfs_signal.{c,h}: New files for signal-related stuff. Catching
+	  (and ignoring) SIGCHLD.
+	* wfs_ntfs.c, ext23.c: Sync() now only run in *_flush() functions.
+	  Better parameters checking.
+	* wfs_xfs.{c,h}: XFS filesystem support based on xfsprogs. Only free
+	  space wiping is supported (no development library).
+	* wrappers.c: ensuring an error code is set (not only by returning
+	  values), when an error occurred.
+	* README: added XFS info, some minor corrections.
+
 2007-07-01	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Version 0.6

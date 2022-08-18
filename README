@@ -1,19 +1,41 @@
 This is the README file for wipefreespace, a program for secure wiping
  of free space on file systems.
 
+Read the info documentation (type 'info doc/wipefreespace.info') to get more
+ information.
+
 Author: Bogdan Drozdowski, bogdandr @ op . pl
-License: GPLv2
+License: GPLv3
 
 Requirements for compiling the full version:
+
 - a non-root account. Please, NEVER compile or 'make' anything as root.
-- a working C compiler
+
+- a working C compiler. XFS and NTFS support require the 'long long'
+  data type.
+
 - development package for the C library (like glibc-devel and glibc-headers)
+  XFS support reuires the following headers: unistd.h, fcntl.h, mntent.h
+  (but sys/wait.h, sched.h and paths.h can be useful, too) and the following
+  functions: fork(), execvp(), dup2(), close(), pipe() and one of waitpid(),
+  wait() or kill() (sleep() can be useful, too).
+
 - development package for the ext2 file system library, libext2fs (usually
   included in something like e2fsprogs-devel). If you don't have anything
   like this installed or available (check twice), then go to
   	http://e2fsprogs.sf.net/
   Then compile and install that package.
+
+- development package for the NTFS file system library, libntfs (usually
+  included in something like ntfsprogs-devel). If you don't have anything
+  like this installed or available (check twice), then go to
+  	http://www.linux-ntfs.org/
+  Then compile and install that package.
+
 - the 'make' program
+
+- xfsprogs installed and in your PATH variable, if you want XFS support.
+  Get these at http://oss.sgi.com/projects/xfs/
 
 Type './configure' to configure the program for your system.
 
@@ -40,11 +62,13 @@ Building an RPM package:
 
 Translating the docs to your language:
 
-Type `msginit -i wipefreespace.pot -o XX.po', substituting your
+ Type `msginit -i wipefreespace.pot -o XX.po', substituting your
 2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the
 'gettext' package installed. You can manually copy the file
 e2wipefreespace.pot to XX.po and manually add the following header, if
-you wish (you have to fill in all the fields):
+you wish.
+ In the resulting XX.po file you have to fill in all the fields
+marked with capital letters in the header:
 
 # YOUR LANGUAGE translations for wipefreespace package.
 # Copyright (C) 2007 Bogdan 'bogdro' Drozdowski

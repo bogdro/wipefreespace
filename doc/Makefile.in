@@ -36,7 +36,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 subdir = doc
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in texinfo.tex
+DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(wipefreespace_TEXINFOS) texinfo.tex
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/gettext.m4 \
 	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/lib-ld.m4 \
@@ -132,6 +133,8 @@ SYSCAP_FALSE = @SYSCAP_FALSE@
 SYSCAP_TRUE = @SYSCAP_TRUE@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
+XFS_FALSE = @XFS_FALSE@
+XFS_TRUE = @XFS_TRUE@
 XGETTEXT = @XGETTEXT@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_RANLIB = @ac_ct_RANLIB@
@@ -172,7 +175,7 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 info_TEXINFOS = wipefreespace.texi
-e2wipefreespace_TEXINFOS = wipefreespace.texi
+wipefreespace_TEXINFOS = wipefreespace.texi
 man_MANS = wipefreespace.1
 all: all-am
 
@@ -251,10 +254,10 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	    rm -rf $(@:.html=); else rm -Rf $(@:.html=.htp) $@; fi; \
 	  exit 1; \
 	fi
-$(srcdir)/wipefreespace.info: wipefreespace.texi 
-wipefreespace.dvi: wipefreespace.texi 
-wipefreespace.pdf: wipefreespace.texi 
-wipefreespace.html: wipefreespace.texi 
+$(srcdir)/wipefreespace.info: wipefreespace.texi $(wipefreespace_TEXINFOS)
+wipefreespace.dvi: wipefreespace.texi $(wipefreespace_TEXINFOS)
+wipefreespace.pdf: wipefreespace.texi $(wipefreespace_TEXINFOS)
+wipefreespace.html: wipefreespace.texi $(wipefreespace_TEXINFOS)
 .dvi.ps:
 	$(DVIPS) -o $@ $<
 

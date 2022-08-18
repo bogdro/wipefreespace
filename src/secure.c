@@ -3,11 +3,11 @@
  *	-- security-related procedures.
  *
  * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v2+
+ * License: GNU General Public License, v3+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * as published by the Free Software Foundation; either version 3
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -23,7 +23,7 @@
  *		USA
  */
 
-#include "cfg.h"
+#include "wfs_cfg.h"
 #include "wipefreespace.h"
 
 #include <stdio.h>	/* stdout & stderr */
@@ -54,100 +54,113 @@
  * Clears the (POSIX) capabilities of the program.
  * \return 0 on success, other values otherwise.
  */
-int ATTR((warn_unused_result)) wfs_clearcap(void) {
+int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
+wfs_clear_cap (error_type * const error)
+{
 
 	int res;
 #ifdef HAVE_SYS_CAPABILITY_H
 	cap_t my_capab;
 #endif
 
-	error.errcode.gerror = WFS_SUCCESS;
+	error->errcode.gerror = WFS_SUCCESS;
 
 #ifdef HAVE_SYS_CAPABILITY_H
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	my_capab = cap_init();
+	my_capab = cap_init ();
 	if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
 		&& (errno == 0)
 # endif
-	) {
+	   )
+	{
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
-		res = cap_set_proc(my_capab);
+		res = cap_set_proc (my_capab);
 		if ( (res != 0)
 # ifdef HAVE_ERRNO_H
 			|| (errno != 0)
 # endif
-		) {
+		   )
+		{
 # ifdef HAVE_ERRNO_H
-			error.errcode.gerror = errno;
+			error->errcode.gerror = errno;
 # else
-			error.errcode.gerror = 1L;
+			error->errcode.gerror = 1L;
 # endif
 
 		}
 
-	} else {	/* cap_init() failed. Get current capabilities and clear them. */
+	}
+	else
+	{	/* cap_init() failed. Get current capabilities and clear them. */
 
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
-		my_capab = cap_get_proc();
+		my_capab = cap_get_proc ();
 		if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
 			&& (errno == 0)
 # endif
-		) {
+		   )
+		{
 
 # ifdef HAVE_ERRNO_H
 			errno = 0;
 # endif
-			res = cap_clear(my_capab);
+			res = cap_clear (my_capab);
 
 			if ( (res != 0)
 # ifdef HAVE_ERRNO_H
 				|| (errno != 0)
 # endif
-			) {
+			   )
+			{
 # ifdef HAVE_ERRNO_H
-				error.errcode.gerror = errno;
+				error->errcode.gerror = errno;
 # else
-				error.errcode.gerror = 1L;
+				error->errcode.gerror = 1L;
 # endif
 
-			} else {	/* cap_clear() success */
+			}
+			else
+			{	/* cap_clear() success */
 
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
-				res = cap_set_proc(my_capab);
+				res = cap_set_proc (my_capab);
 				if ( (res != 0)
 # ifdef HAVE_ERRNO_H
 					|| (errno != 0)
 # endif
-				) {
+				   )
+				{
 # ifdef HAVE_ERRNO_H
-					error.errcode.gerror = errno;
+					error->errcode.gerror = errno;
 # else
-					error.errcode.gerror = 1L;
+					error->errcode.gerror = 1L;
 # endif
 				}
 			}
-		} else {	/* cap_get_proc() failed. */
+		}
+		else
+		{	/* cap_get_proc() failed. */
 # ifdef HAVE_ERRNO_H
-			error.errcode.gerror = errno;
+			error->errcode.gerror = errno;
 # else
-			error.errcode.gerror = 1L;
+			error->errcode.gerror = 1L;
 # endif
 		}
 	}
 #endif /* HAVE_SYS_CAPABILITY_H */
 
-	return error.errcode.gerror;
+	return error->errcode.gerror;
 }
 
 /**
@@ -155,7 +168,9 @@ int ATTR((warn_unused_result)) wfs_clearcap(void) {
  * \param stdout_open Pointer to an int, which will get the value 0 if standard output is not open.
  * \param stderr_open Pointer to an int, which will get the value 0 if standard error output is not open.
  */
-void ATTR((nonnull)) wfs_checkstds(int *stdout_open, int *stderr_open) {
+void WFS_ATTR ((nonnull))
+wfs_check_stds (int *stdout_open, int *stderr_open)
+{
 
 	int res;
 
@@ -163,7 +178,8 @@ void ATTR((nonnull)) wfs_checkstds(int *stdout_open, int *stderr_open) {
 	struct stat stat_buf;
 #endif
 
-	if ( stdout_open != NULL ) {
+	if ( stdout_open != NULL )
+	{
 		*stdout_open = 1;
 
 #ifdef HAVE_SYS_STAT_H
@@ -172,36 +188,39 @@ void ATTR((nonnull)) wfs_checkstds(int *stdout_open, int *stderr_open) {
 		errno = 0;
 # endif
 # ifdef HAVE_UNISTD_H
-		res = fstat(STDOUT_FILENO, &stat_buf);
+		res = fstat (STDOUT_FILENO, &stat_buf);
 # else
-		res = fstat(1, &stat_buf);
+		res = fstat (1, &stat_buf);
 # endif
 		if ( (res < 0)
 # ifdef HAVE_ERRNO_H
 			|| (errno != 0)
 # endif
-		 ) {
+		   )
+		{
 			*stdout_open = 0;
 		}
 	}
 
 
-	if ( stderr_open != NULL ) {
+	if ( stderr_open != NULL )
+	{
 		*stderr_open = 1;
 
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
 # ifdef HAVE_UNISTD_H
-		res = fstat(STDERR_FILENO, &stat_buf);
+		res = fstat (STDERR_FILENO, &stat_buf);
 # else
-		res = fstat(2, &stat_buf);
+		res = fstat (2, &stat_buf);
 # endif
 		if ( (res < 0)
 # ifdef HAVE_ERRNO_H
 			|| (errno != 0)
 # endif
-		 ) {
+		   )
+		{
 			*stderr_open = 0;
 		}
 	}
@@ -216,12 +235,15 @@ void ATTR((nonnull)) wfs_checkstds(int *stdout_open, int *stderr_open) {
  * Checks if the program is being run setuid(root).
  * \return 0 if not.
  */
-int ATTR((warn_unused_result)) wfs_checksuid(void) {
+int WFS_ATTR ((warn_unused_result))
+wfs_check_suid (void)
+{
 
 	int ret = WFS_SUCCESS;
 
 #if (defined HAVE_UNISTD_H) && (defined HAVE_GETEUID) && (defined HAVE_GETUID)
-	if ( (geteuid() != getuid()) && (geteuid() == 0) ) {
+	if ( (geteuid () != getuid () ) && (geteuid () == 0) )
+	{
 
 		ret = WFS_SUID;
 	}
@@ -234,10 +256,12 @@ int ATTR((warn_unused_result)) wfs_checksuid(void) {
 /**
  * Clears the environment.
  */
-void wfs_clearenv(void) {
+void
+wfs_clear_env (void)
+{
 
 #if (defined HAVE_CLEARENV)
-	(void)clearenv();
+	clearenv ();
 #elif (defined HAVE_UNISTD_H)
 	environ = NULL;
 #endif

@@ -18,6 +18,8 @@ on the given ext2/3 and NTFS file systems. Write permissions are required for th
 be setuid(root).
 
 .SH OPTIONS
+.IP "--background"
+Continue work in the background, if possible. If succeded, no messages will be displayed.
 .IP "-b|--superblock OFFSET"
 Superblock offset on the given filesystems
 .IP "-B|--blocksize SIZE"
@@ -97,11 +99,11 @@ bogdro /AT/ rudy . mif . pg . gda . pl
 [PL] http://rudy.mif.pg.gda.pl/~bogdro/
 
 .SH "SEE ALSO"
-.BR shred (1)
+.BR shred (1),
+info libsecrm
 
 The 'info' documentation is more descriptive and is the main one. Type
 
 .B 	info wipefreespace
 
 to read it.
-

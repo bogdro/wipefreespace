@@ -3,11 +3,11 @@
  *	-- NTFS file system-specific functions, header file.
  *
  * Copyright (C) 2007 Bogdan Drozdowski, bogdandr (at) op.pl
- * License: GNU General Public License, v2+
+ * License: GNU General Public License, v3+
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * as published by the Free Software Foundation; either version 3
  * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -24,22 +24,36 @@
  */
 
 #ifndef WFS_HEADER_NTFS
-# define WFS_HEADER_NTFS
+# define WFS_HEADER_NTFS 1
 
-# ifndef ATTR
-#  define ATTR(x)
-# endif
+# include "wipefreespace.h"
 
-extern int ATTR((warn_unused_result)) wfs_ntfswipe_part ( wfs_fsid_t FS );
-extern int ATTR((warn_unused_result)) wfs_ntfswipe_fs ( wfs_fsid_t FS );
-extern int ATTR((warn_unused_result)) wfs_ntfswipe_unrm ( wfs_fsid_t FS, fselem_t node );
-extern int ATTR((warn_unused_result)) wfs_ntfscheckerr ( wfs_fsid_t FS );
-extern int ATTR((warn_unused_result)) wfs_ntfsisdirty ( wfs_fsid_t FS );
-extern int ATTR((warn_unused_result)) wfs_ntfsgetblocksize ( wfs_fsid_t FS );
-extern int ATTR((warn_unused_result)) ATTR((nonnull)) wfs_ntfschkmount ( const char*const devname );
-extern int ATTR((warn_unused_result)) ATTR((nonnull)) wfs_ntfsopenfs ( const char*const devname,
-	wfs_fsid_t *FS, int *whichfs, fsdata* data );
-extern int wfs_ntfsclosefs ( wfs_fsid_t FS );
-extern int wfs_ntfsflushfs ( wfs_fsid_t FS );
+extern errcode_enum WFS_ATTR ((warn_unused_result)) wfs_ntfs_wipe_part	(const wfs_fsid_t FS,
+	error_type * const error);
+
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_ntfs_wipe_fs (const wfs_fsid_t FS, error_type * const error );
+
+extern errcode_enum WFS_ATTR ((warn_unused_result)) wfs_ntfs_wipe_unrm	( const wfs_fsid_t FS,
+	const fselem_t node, error_type * const error);
+
+extern int WFS_ATTR ((warn_unused_result)) wfs_ntfs_check_err	( const wfs_fsid_t FS );
+
+extern int WFS_ATTR ((warn_unused_result)) wfs_ntfs_is_dirty	( const wfs_fsid_t FS );
+
+extern unsigned int WFS_ATTR ((warn_unused_result)) wfs_ntfs_get_block_size ( const wfs_fsid_t FS );
+
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_ntfs_chk_mount ( const char * const dev_name, error_type * const error );
+
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_ntfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS,
+	CURR_FS * const which_fs, const fsdata * const data, error_type * const error );
+
+extern errcode_enum WFS_ATTR ((nonnull)) wfs_ntfs_close_fs ( const wfs_fsid_t FS,
+	error_type * const error );
+
+extern errcode_enum WFS_ATTR ((nonnull)) wfs_ntfs_flush_fs ( const wfs_fsid_t FS,
+	error_type * const error );
 
 #endif	/* WFS_HEADER_NTFS */

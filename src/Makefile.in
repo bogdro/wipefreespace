@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 
-SOURCES = $(libwfsntfs_a_SOURCES) $(wipefreespace_SOURCES)
+SOURCES = $(libwfsntfs_a_SOURCES) $(libwfsxfs_a_SOURCES) $(wipefreespace_SOURCES)
 
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -43,6 +43,9 @@ bin_PROGRAMS = wipefreespace$(EXEEXT)
 @EXT2FS_TRUE@am__append_1 = ext23.h ext23.c
 #wipefreespace_LDADD += -lext2fs
 @NTFS_TRUE@am__append_2 = libwfsntfs.a
+#wipefreespace_LDADD += -lntfs
+@XFS_TRUE@am__append_3 = libwfsxfs.a
+@ISGCC_TRUE@@XFS_TRUE@am__append_4 = -std=gnu99
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -64,20 +67,26 @@ libwfsntfs_a_LIBADD =
 am__libwfsntfs_a_SOURCES_DIST = wfs_ntfs.h wfs_ntfs.c
 @NTFS_TRUE@am_libwfsntfs_a_OBJECTS = libwfsntfs_a-wfs_ntfs.$(OBJEXT)
 libwfsntfs_a_OBJECTS = $(am_libwfsntfs_a_OBJECTS)
+libwfsxfs_a_AR = $(AR) $(ARFLAGS)
+libwfsxfs_a_LIBADD =
+am__libwfsxfs_a_SOURCES_DIST = wfs_xfs.h wfs_xfs.c
+@XFS_TRUE@am_libwfsxfs_a_OBJECTS = libwfsxfs_a-wfs_xfs.$(OBJEXT)
+libwfsxfs_a_OBJECTS = $(am_libwfsxfs_a_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am__wipefreespace_SOURCES_DIST = wipefreespace.c wrappers.c \
-	wipefreespace.h wrappers.h cfg.h ../config.h secure.c secure.h \
-	ext23.h ext23.c
+	wipefreespace.h wrappers.h wfs_cfg.h ../config.h secure.c \
+	secure.h wfs_signal.c wfs_signal.h ext23.h ext23.c
 @EXT2FS_TRUE@am__objects_1 = ext23.$(OBJEXT)
 am_wipefreespace_OBJECTS = wipefreespace.$(OBJEXT) wrappers.$(OBJEXT) \
-	secure.$(OBJEXT) $(am__objects_1)
+	secure.$(OBJEXT) wfs_signal.$(OBJEXT) $(am__objects_1)
 wipefreespace_OBJECTS = $(am_wipefreespace_OBJECTS)
 am__DEPENDENCIES_1 =
 @NTFS_TRUE@am__DEPENDENCIES_2 = libwfsntfs.a
+@XFS_TRUE@am__DEPENDENCIES_3 = libwfsxfs.a
 wipefreespace_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_2)
+	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -85,8 +94,10 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libwfsntfs_a_SOURCES) $(wipefreespace_SOURCES)
+SOURCES = $(libwfsntfs_a_SOURCES) $(libwfsxfs_a_SOURCES) \
+	$(wipefreespace_SOURCES)
 DIST_SOURCES = $(am__libwfsntfs_a_SOURCES_DIST) \
+	$(am__libwfsxfs_a_SOURCES_DIST) \
 	$(am__wipefreespace_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
@@ -156,6 +167,8 @@ SYSCAP_FALSE = @SYSCAP_FALSE@
 SYSCAP_TRUE = @SYSCAP_TRUE@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
+XFS_FALSE = @XFS_FALSE@
+XFS_TRUE = @XFS_TRUE@
 XGETTEXT = @XGETTEXT@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_RANLIB = @ac_ct_RANLIB@
@@ -196,21 +209,25 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 wipefreespace_SOURCES = wipefreespace.c wrappers.c wipefreespace.h \
-	wrappers.h cfg.h ../config.h secure.c secure.h $(am__append_1)
-wipefreespace_LDADD = $(INTLLIBS) $(am__append_2)
+	wrappers.h wfs_cfg.h ../config.h secure.c secure.h \
+	wfs_signal.c wfs_signal.h $(am__append_1)
+wipefreespace_LDADD = $(INTLLIBS) $(am__append_2) $(am__append_3)
 localedir = $(datadir)/locale
 INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
-@ISGCC_TRUE@AM_CFLAGS = -Wall -Wextra -Wfloat-equal -Wbad-function-cast		\
-@ISGCC_TRUE@		-Wsign-compare -Wunreachable-code -Wpointer-arith	\
-@ISGCC_TRUE@		-Wcast-qual -Wcast-align -Wstrict-prototypes 		\
-@ISGCC_TRUE@		-Wformat-security -Wformat-nonliteral -Wnested-externs	\
-@ISGCC_TRUE@		-Wshadow -Wconversion -Wdeclaration-after-statement	\
-@ISGCC_TRUE@		-Wundef -Wpadded -Wredundant-decls -Wfatal-errors	\
-@ISGCC_TRUE@  		-pedantic
-
+@ISGCC_TRUE@AM_CFLAGS = -Wall -Wextra -Wfloat-equal \
+@ISGCC_TRUE@	-Wbad-function-cast -Wsign-compare \
+@ISGCC_TRUE@	-Wunreachable-code -Wpointer-arith -Wcast-qual \
+@ISGCC_TRUE@	-Wcast-align -Wstrict-prototypes -Wformat-security \
+@ISGCC_TRUE@	-Wformat-nonliteral -Wnested-externs -Wshadow \
+@ISGCC_TRUE@	-Wconversion -Wdeclaration-after-statement -Wundef \
+@ISGCC_TRUE@	-Wpadded -Wredundant-decls -Wfatal-errors \
+@ISGCC_TRUE@	-pedantic -g $(am__append_4)
 @NTFS_TRUE@noinst_LIBRARIES = libwfsntfs.a
+@XFS_TRUE@noinst_LIBRARIES = libwfsxfs.a
 @NTFS_TRUE@libwfsntfs_a_SOURCES = wfs_ntfs.h wfs_ntfs.c
 @ISGCC_TRUE@@NTFS_TRUE@libwfsntfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)
+@XFS_TRUE@libwfsxfs_a_SOURCES = wfs_xfs.h wfs_xfs.c
+@ISGCC_TRUE@@XFS_TRUE@libwfsxfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)
 all: all-am
 
 .SUFFIXES:
@@ -251,6 +268,10 @@ libwfsntfs.a: $(libwfsntfs_a_OBJECTS) $(libwfsntfs_a_DEPENDENCIES)
 	-rm -f libwfsntfs.a
 	$(libwfsntfs_a_AR) libwfsntfs.a $(libwfsntfs_a_OBJECTS) $(libwfsntfs_a_LIBADD)
 	$(RANLIB) libwfsntfs.a
+libwfsxfs.a: $(libwfsxfs_a_OBJECTS) $(libwfsxfs_a_DEPENDENCIES) 
+	-rm -f libwfsxfs.a
+	$(libwfsxfs_a_AR) libwfsxfs.a $(libwfsxfs_a_OBJECTS) $(libwfsxfs_a_LIBADD)
+	$(RANLIB) libwfsxfs.a
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(mkdir_p) "$(DESTDIR)$(bindir)"
@@ -286,7 +307,9 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ext23.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libwfsntfs_a-wfs_ntfs.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libwfsxfs_a-wfs_xfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/secure.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_signal.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wipefreespace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrappers.Po@am__quote@
 
@@ -317,6 +340,20 @@ libwfsntfs_a-wfs_ntfs.obj: wfs_ntfs.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='wfs_ntfs.c' object='libwfsntfs_a-wfs_ntfs.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libwfsntfs_a_CFLAGS) $(CFLAGS) -c -o libwfsntfs_a-wfs_ntfs.obj `if test -f 'wfs_ntfs.c'; then $(CYGPATH_W) 'wfs_ntfs.c'; else $(CYGPATH_W) '$(srcdir)/wfs_ntfs.c'; fi`
+
+libwfsxfs_a-wfs_xfs.o: wfs_xfs.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libwfsxfs_a_CFLAGS) $(CFLAGS) -MT libwfsxfs_a-wfs_xfs.o -MD -MP -MF "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Tpo" -c -o libwfsxfs_a-wfs_xfs.o `test -f 'wfs_xfs.c' || echo '$(srcdir)/'`wfs_xfs.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Tpo" "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Po"; else rm -f "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='wfs_xfs.c' object='libwfsxfs_a-wfs_xfs.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libwfsxfs_a_CFLAGS) $(CFLAGS) -c -o libwfsxfs_a-wfs_xfs.o `test -f 'wfs_xfs.c' || echo '$(srcdir)/'`wfs_xfs.c
+
+libwfsxfs_a-wfs_xfs.obj: wfs_xfs.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libwfsxfs_a_CFLAGS) $(CFLAGS) -MT libwfsxfs_a-wfs_xfs.obj -MD -MP -MF "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Tpo" -c -o libwfsxfs_a-wfs_xfs.obj `if test -f 'wfs_xfs.c'; then $(CYGPATH_W) 'wfs_xfs.c'; else $(CYGPATH_W) '$(srcdir)/wfs_xfs.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Tpo" "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Po"; else rm -f "$(DEPDIR)/libwfsxfs_a-wfs_xfs.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='wfs_xfs.c' object='libwfsxfs_a-wfs_xfs.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libwfsxfs_a_CFLAGS) $(CFLAGS) -c -o libwfsxfs_a-wfs_xfs.obj `if test -f 'wfs_xfs.c'; then $(CYGPATH_W) 'wfs_xfs.c'; else $(CYGPATH_W) '$(srcdir)/wfs_xfs.c'; fi`
 uninstall-info-am:
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
@@ -487,7 +524,13 @@ uninstall-am: uninstall-binPROGRAMS uninstall-info-am
 	tags uninstall uninstall-am uninstall-binPROGRAMS \
 	uninstall-info-am
 
-#wipefreespace_LDADD += -lntfs
+#####wipefreespace_SOURCES += wfs_xfs.h wfs_xfs.c
+#####wipefreespace_LDADD += -lxfs
+
+#if REISERFS
+#wipefreespace_SOURCES += wfs_reiser.h wfs_reiser.c
+#wipefreespace_LDADD += -lcore -lmisc -luuid
+#endif
 
 #if COMERR
 #wipefreespace_LDADD += -lcom_err
