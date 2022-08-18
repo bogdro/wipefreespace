@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wiping functions, header file.
  *
- * Copyright (C) 2011-2017 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2018 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or

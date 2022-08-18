@@ -1,3 +1,14 @@
+2018-01-14	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 2.2.2
+	  HFS+ filesystem support fixes. Thanks goes to Gregory Grosse for
+	  reporting the problems.
+	* src/wfs_secure.c, src/wfs_signal.c: removed unnecessary HFSP-related
+	  declarations
+	* patches/tffs-overflow-fix.diff: fixed line endings in the patch.
+	* src/wfs_hfsp.c: removed unnecessary declaration of wfs_hfsp_sig().
+	  It was meant only to fix compiler warnings, but caused problems.
+
 2017-09-17	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 2.2.1

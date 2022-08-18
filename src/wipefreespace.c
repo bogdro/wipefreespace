@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2017 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2018 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -145,7 +145,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2017 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2018 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\

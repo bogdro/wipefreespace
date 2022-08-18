@@ -1,7 +1,7 @@
 # English translations for wipefreespace package.
-# Copyright (C) 2017 Bogdan bogdro Drozdowski
+# Copyright (C) 2018 Bogdan bogdro Drozdowski
 # This file is distributed under the same license as the wipefreespace package.
-# Automatically generated, 2017.
+# Automatically generated, 2018.
 #
 # All this catalog "translates" are quotation characters.
 # The msgids must be ASCII and therefore cannot contain real quotation
@@ -30,10 +30,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace 2.2.1\n"
+"Project-Id-Version: wipefreespace 2.2.2\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2017-09-14 19:15+0200\n"
-"PO-Revision-Date: 2017-09-14 19:15+0200\n"
+"POT-Creation-Date: 2018-01-14 15:06+0100\n"
+"PO-Revision-Date: 2018-01-14 15:06+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "MIME-Version: 1.0\n"
