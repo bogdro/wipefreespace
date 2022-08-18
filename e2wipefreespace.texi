@@ -1,11 +1,11 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename e2wipefreespace.info
-@settitle e2wipefreespace manual 0.2
+@settitle e2wipefreespace manual 0.3
 @c %**end of header
 
 @copying
-This manual is for e2wipefreespace, version 0.2.
+This manual is for e2wipefreespace, version 0.3.
 @end copying
 
 @titlepage
@@ -33,7 +33,9 @@ This manual is for e2wipefreespace, version 0.2.
 
 @menu
 * What is e2wipefreespace?::		About the program.
+* How to compile?::			How to compile the program.
 * Command line syntax and options::	Details of command line options.
+* Return values::			Program's return values.
 * Author::				How to contact me.
 * Copying::				License - your rights and freedoms.
 @end menu
@@ -41,7 +43,7 @@ This manual is for e2wipefreespace, version 0.2.
 
 
 
-@node What is e2wipefreespace?, Command line syntax and options, Top, Top
+@node What is e2wipefreespace?, How to compile?, Top, Top
 @comment  node-name, next,      previous,  up
 @chapter What is e2wipefreespace?
 
@@ -64,13 +66,10 @@ This program works in a similar way to the @command{shred} program, but instead 
 it overwrites (just like @command{shred}) the free space on a ext2/3 partition, hopefully without
 doing any harm to existing files.
 
+This program also tries to wipe the remaining space in blocks partially used by existing files.
+
 THE PROGRAM HAS BEEN TESTED, BUT IT MAY NOW OR LATER CONTAIN ERRORS, WHICH MAY LEAD TO DATA LOSS.
 ALWAYS BACKUP YOUR DATA BEFORE USING THIS PROGRAM. READ THE LICENSE FOR A WARRANTY (THERE IS NONE).
-
-NOTE: Erased files may still be left on the drive, if their space was assigned to other files,
-but is not fully used by the new files. This program can not yet help in such cases. If the
-data was really confidential and someone else has access to the drive, backup all your data
-and shred the whole partition or drive.
 
 NOTE: Erased files' names will still be on the drive, this program can not yet remove them.
 
@@ -78,9 +77,45 @@ NOTE: Erased files' names will still be on the drive, this program can not yet r
 
 
 
+@node How to compile?, Command line syntax and options, What is e2wipefreespace?, Top
+@chapter How to compile the program?
+
+Requirements for compiling:@*
+@itemize
+@item a gcc-compatible C compiler@*
+@item development package for the C library (like glibc-devel and glibc-headers)@*
+@item development package for the ext2 file system library, libext2fs (usually
+included in something like e2fsprogs-devel). If you don't have anything
+like this installed or available (check twice), then go to@*
+  	@indicateurl{http://e2fsprogs.sf.net/}@*
+Then compile and install that package.@*
+@item the 'make' program (you may however compile it by hand, if you wish)@*
+@end itemize
+
+Type 'make' to compile the program. If you don't have or don't want to use 'make', a simple
+
+	cc -o e2wipefreespace e2wipefreespace.c -lext2fs -lcom_err
+
+should do.
+
+Type 'make doc' to compile the "info" documentation. This requires the
+ 'makeinfo' program (usually comes in a 'texinfo' package) and the texinfo.tex
+ file (usually comes in a TeX package, like 'tetex'). The manual command is
+
+	makeinfo e2wipefreespace.texi && gzip -f -9 e2wipefreespace.info
+
+Type 'make static' to compile a static binary (this may be big). You can use the
+command
+
+	cc -static -o e2wipefreespace e2wipefreespace.c -lext2fs -lcom_err
+
+instead, if you wish.
 
 
-@node Command line syntax and options, Author, What is e2wipefreespace?, Top
+
+
+
+@node Command line syntax and options, Return values, How to compile?, Top
 @chapter Command line syntax and options
 
 Basic syntax is:
@@ -100,6 +135,11 @@ Superblock offset on the given filesystems (usually detected automatically).
 @noindent @option{-B block_size}@*@option{--blocksize block_size}@*
 @quotation
 Block size on the given filesystems (usually detected automatically).
+@end quotation
+
+@noindent @option{-f}@*@option{--force}@*
+@quotation
+Forces the program to do its job even when the file system has errors.
 @end quotation
 
 @noindent @option{-h}@*@option{--help}@*
@@ -130,7 +170,37 @@ Print version number and exit.
 
 
 
-@node Author, Copying, Command line syntax and options, Top
+
+
+@node Return values, Author, Command line syntax and options, Top
+@chapter Return values
+
+The e2wipefreespace program can return any of the following values:
+
+@itemize
+@item 0: All actions succeded (no errors).
+@item 1: Only version number, help or licence information was requested and printed, no action.
+@item -1: Bad/missing command line syntax.
+@item -2: Unable to check if the file system is mounted. Cannot continue.
+@item -3: The file system was mounted in read-write mode. Cannot continue.
+@item -4: Unable to open the file system.
+@item -5: Unable to read block bitmap from the file system (thus, unable to determine, which
+blocks are unused).
+@item -6: Memory allocation failed.
+@item -7: The file system contained errors and the option @option{--force} was not given.
+@item -8: Closing the file system failed.
+@item -9: Opening i-node scan failed. Thus, the program was unable to wipe free space in
+partially used blocks and remove undelete data.
+@item -10: Iterating over blocks failed.Thus, the program was unable to wipe free space in
+partially used blocks.
+@item -11: I-node write failed.
+@item -100: A signal was caught and the program was forced to exit.
+@end itemize
+
+NOTE: Actually, the negative values are substracted from 256, so -1 could be shown as 255,
+-2 as 254 and so on.
+
+@node Author, Copying, Return values, Top
 @chapter Author
 
 To contact me, try one of these adresses: @*

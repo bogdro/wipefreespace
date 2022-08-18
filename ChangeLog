@@ -1,10 +1,24 @@
+2007-04-08	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Version 0.3
+	  Various security fixes (checking of argc&argv and a safer
+	  signal handler). New option --force makes the program continue
+	  even if the file system contains errors. Separate function for
+	  wiping blocks. Doc comments. Small code cleanup. Makefile upgrade
+	  with the 'static' target and more warning options. More file
+	  system checking. Wiping free space in partially used blocks.
+	  Documentation (README & info) update. Includes compiled gzipped
+	  'info' documentation. Block wiping corrected (flushing added).
+	  Flushing verbose messages - in case of crashes the last message
+	  shown is important for tracking.
+
 2007-04-01	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Version 0.2
 	  Adds generating the error table. Adds flushing the file system
 	  before starting if it's marked dirty or invalid. Adds a second
 	  try for opening the file system, when exclusive access is
-	  impossible. Adds a 'verbose' option.
+	  impossible. Adds a 'verbose' option. Makefile fixed.
 
 2007-03-24	Bogdan Drozdowski <bogdandr@op.pl>
 
