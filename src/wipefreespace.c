@@ -46,7 +46,7 @@
 #endif
 
 #ifdef HAVE_STRING_H
-# if (!STDC_HEADERS) && (defined HAVE_MEMORY_H)
+# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
 #  include <memory.h>
 # endif
 # include <string.h>
@@ -59,12 +59,26 @@
 # error Getopt missing.
 #endif
 
+/*
 #ifdef HAVE_MALLOC_H
 # include <malloc.h>
 #endif
-
+*/
+/*
 #ifdef HAVE_TIME_H
-# include <time.h>	/* time() for randomization purposes */
+# include <time.h>	* time() for randomization purposes *
+#endif
+*/
+
+#if TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -85,14 +99,24 @@
 
 #ifdef HAVE_COM_ERR_H
 # include <com_err.h>
-#elif defined HAVE_ET_COM_ERR_H
-# include <et/com_err.h>
+#else
+# if defined HAVE_ET_COM_ERR_H
+#  include <et/com_err.h>
+# endif
 #endif
 
 #include "wipefreespace.h"
 #include "wrappers.h"
 #include "secure.h"
 #include "wfs_signal.h"
+
+#ifdef WFS_REISER
+# ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+# else
+#  include <wait.h>
+# endif
+#endif
 
 #define	PROGRAM_NAME	PACKAGE
 /*"wipefreespace"*/
@@ -129,6 +153,7 @@ const char * const err_msg_diriter = N_("during iterating over a directory on");
 const char * const err_msg_nowork  = N_("Nothing selected for wiping.");
 const char * const err_msg_suid    = N_("PLEASE do NOT set this program's suid bit. Use sgid instead.");
 const char * const err_msg_capset  = N_("during setting capabilities");
+const char * const err_msg_fork    = N_("during creation of child process");
 
 /* Messages displayed when verbose mode is on */
 const char * const msg_signal      = N_("Setting signal handlers");
@@ -214,13 +239,15 @@ show_error ( const error_type err, const char * const msg, const char * const ex
 {
 	if ( (stderr_open == 0)  || (msg == NULL) || (extra == NULL) ) return;
 
-#if (defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)
+#if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
+# if (defined WFS_EXT2)
 	if ( (err.whichfs == CURR_EXT2FS) /*|| (err.whichfs == CURR_NONE)*/ )
 	{
 		com_err ( wfs_progname, err.errcode.e2error, ERR_MSG_FORMATL, _(err_msg),
 			err.errcode.e2error, _(msg), extra );
 	}
 	else
+# endif
 	{
 		com_err ( wfs_progname, err.errcode.gerror, ERR_MSG_FORMAT, _(err_msg),
 			err.errcode.gerror, _(msg), extra );
@@ -387,13 +414,15 @@ fill_buffer (
 	{
 #ifdef HAVE_MEMCPY
 		memcpy (buffer + i, buffer, i);
-#elif defined HAVE_STRING_H
-		strncpy ((char *) (buffer + i), (char *) buffer, i);
 #else
+# if defined HAVE_STRING_H
+		strncpy ((char *) (buffer + i), (char *) buffer, i);
+# else
 		for ( j=0; j < i; j++ )
 		{
 			buffer [ i + j ] = buffer[j];
 		}
+# endif
 #endif
 	}
         if ( sig_recvd != 0 ) return;
@@ -401,13 +430,15 @@ fill_buffer (
 	{
 #ifdef HAVE_MEMCPY
 		memcpy (buffer + i, buffer, buflen - i);
-#elif defined HAVE_STRING_H
-		strncpy ((char *) (buffer + i), (char *) buffer, buflen - i);
 #else
+# if defined HAVE_STRING_H
+		strncpy ((char *) (buffer + i), (char *) buffer, buflen - i);
+# else
 		for ( j=0; j<buflen - i; j++ )
 		{
 			buffer [ i + j ] = buffer[j];
 		}
+# endif
 #endif
 	}
 }
@@ -425,6 +456,10 @@ main ( int argc, char* argv[] )
 	const char *e2libver = NULL;
 #endif
 	error_type error;
+#ifdef WFS_REISER
+	pid_t rfs_child;
+	int child_status;
+#endif
 
 	wfs_check_stds (&stdout_open, &stderr_open);
 
@@ -447,10 +482,12 @@ main ( int argc, char* argv[] )
 	{
 #ifdef HAVE_LIBGEN_H
 		wfs_progname = basename (argv[0]);
-#elif (defined HAVE_STRING_H)
-		wfs_progname = strrchr (argv[0], (int)'/');
 #else
+# if (defined HAVE_STRING_H)
+		wfs_progname = strrchr (argv[0], (int)'/');
+# else
 		wfs_progname = argv[0];
+# endif
 #endif
 		if ( wfs_progname == NULL )
 		{
@@ -730,7 +767,60 @@ main ( int argc, char* argv[] )
 			continue;
 		}
 		error.whichfs = curr_fs;
-
+#ifdef WFS_REISER
+		if ( curr_fs == CURR_REISERFS )
+		{
+# ifdef HAVE_ERRNO_H
+			errno = 0;
+# endif
+			rfs_child = fork ();
+			if ( rfs_child < 0 )
+			{
+# ifdef HAVE_ERRNO_H
+				error.errcode.gerror = errno;
+# else
+				error.errcode.gerror = 1L;
+# endif
+		        	show_error ( error, err_msg_fork, fsname );
+				wfs_optind++;
+				ret = WFS_FORKERR;
+	        		wfs_close_fs ( fs, curr_fs, &error );
+				continue;
+			}
+			else if ( rfs_child > 0 )
+			{
+				/* parent process simply waits for the child */
+				while ( 1 == 1 )
+				{
+# ifdef HAVE_WAITPID
+					waitpid (rfs_child, &child_status, 0);
+# else
+					wait (&child_status);
+# endif
+# ifdef WIFEXITED
+					if ( WIFEXITED (child_status) )
+					{
+						ret = WEXITSTATUS (child_status);
+						break;
+					}
+# endif
+# ifdef WIFSIGNALED
+					if ( WIFSIGNALED (child_status) )
+					{
+						ret = WFS_SIGNAL;
+						break;
+					}
+# endif
+# if (!defined WIFEXITED) && (!defined WIFSIGNALED)
+					break;
+# endif
+				};
+				wfs_optind++;
+				continue;
+			}
+			/* child process continues execution from here: */
+		}
+#endif
 	        if ( sig_recvd != 0 )
 	        {
 	        	wfs_close_fs ( fs, curr_fs, &error );
@@ -810,9 +900,16 @@ main ( int argc, char* argv[] )
 		res = wfs_close_fs ( fs, curr_fs, &error );
 		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
 
+#ifdef WFS_REISER
+		if ( curr_fs == CURR_REISERFS )
+		{
+			/* child process here */
+			return ret;
+		}
+#endif
 		wfs_optind++;	/* next device */
 
-#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H)
+#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
 		sync ();
 #endif
 

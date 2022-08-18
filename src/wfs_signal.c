@@ -33,7 +33,7 @@
 #endif
 
 #ifdef HAVE_STRING_H
-# if (!STDC_HEADERS) && (defined HAVE_MEMORY_H)
+# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
 #  include <memory.h>
 # endif
 # include <string.h>
@@ -62,8 +62,17 @@ static struct sigaction sa/* = { .sa_handler = &term_signal_received }*/;
 static const int signals[] =
 {
 	SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGPIPE,
-	SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGTTIN, SIGTTOU, SIGBUS, SIGPOLL, SIGPROF,
-	SIGSYS, SIGTRAP, SIGXCPU, SIGXFSZ, SIGPWR, SIGVTALRM, SIGUNUSED
+	SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGTTIN, SIGTTOU, SIGBUS, SIGPROF,
+	SIGSYS, SIGTRAP, SIGXCPU, SIGXFSZ, SIGVTALRM
+# ifdef SIGPOLL
+	, SIGPOLL
+# endif
+# ifdef SIGPWR
+	, SIGPWR
+# endif
+# ifdef SIGUNUSED
+	, SIGUNUSED
+# endif
 # if defined SIGEMT
 	, SIGEMT
 # endif
@@ -76,6 +85,7 @@ static const int signals[] =
 };
 
 volatile sig_atomic_t sig_recvd = 0;		/* non-zero after signal received */
+volatile sig_atomic_t sigchld_recvd = 0;	/* non-zero after SIGCHLD signal received */
 
 # ifndef RETSIGTYPE
 #  define RETSIGTYPE void
@@ -87,7 +97,7 @@ volatile sig_atomic_t sig_recvd = 0;		/* non-zero after signal received */
  * \param signum Signal number.
  */
 static RETSIGTYPE
-term_signal_received ( const int signum )
+term_signal_received (const int signum)
 {
 	sig_recvd = signum;
 # ifdef RETSIG_ISINT
@@ -96,9 +106,9 @@ term_signal_received ( const int signum )
 }
 
 static RETSIGTYPE
-child_signal_received ( const int signum WFS_ATTR((unused)) )
+child_signal_received (const int signum)
 {
-	/* Do nothing, but don't ignore the signal. Used in XFS stuff with fork() etc. */
+	sigchld_recvd = signum;
 # ifdef RETSIG_ISINT
 	return 0;
 # endif

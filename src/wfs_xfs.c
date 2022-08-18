@@ -25,28 +25,7 @@
 
 #include "wfs_cfg.h"
 
-/*
 #define _FILE_OFFSET_BITS 64
-#define _LARGEFILE64_SOURCE 1
-
-#if (defined HAVE_XFS_LIBXFS_H) && (defined HAVE_LIBXFS)
-# include <xfs/libxfs.h>
-# include <xfs/path.h>
-#elif (defined HAVE_LIBXFS_H) && (defined HAVE_LIBXFS)
-# include <libxfs.h>
-# include <path.h>
-#else
-# error Something wrong. XFS requested, but libxfs.h or XFS library missing.
-#endif
-
-#ifdef HAVE_SYS_STAT_H
-# define __USE_FILE_OFFSET64 1
-# include <sys/stat.h>
-#endif
-*/
-
-#define _FILE_OFFSET_BITS 64
-#define __USE_FILE_OFFSET64 1
 #define _LARGEFILE64_SOURCE 1
 
 #ifdef HAVE_GETMNTENT_R
@@ -89,22 +68,57 @@
 # include <errno.h>
 #endif
 
-#ifdef HAVE_MALLOC_H
-# include <malloc.h>
-#else
+#ifdef HAVE_STDLIB_H
 # include <stdlib.h>
 #endif
 
+/*
+#ifdef HAVE_MALLOC_H
+# include <malloc.h>
+#endif
+*/
+
 #ifdef HAVE_STRING_H
-# if (!STDC_HEADERS) && (defined HAVE_MEMORY_H)
+# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
 #  include <memory.h>
 # endif
 # include <string.h>	/* strncpy() */
 #endif
 
 #ifdef HAVE_UNISTD_H
-# include <unistd.h>	/* access(), close(), dup2(), fork() */
+# include <unistd.h>	/* access(), close(), dup2(), fork(), sync() */
 #endif
+
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+
+#ifdef HAVE_SYS_WAIT_H
+# include <sys/wait.h>
+#endif
+#ifndef WEXITSTATUS
+# define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
+#endif
+#ifndef WIFEXITED
+# define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
+#endif
+
+#ifdef HAVE_SCHED_H
+# include <sched.h>
+#endif
+
+#include "wipefreespace.h"
+#include "wfs_xfs.h"
+#include "wfs_signal.h"
+
+#define PIPE_R 0
+#define PIPE_W 1
+#define XFSBUFSIZE 240
+#define MNTBUFLEN 4096
 
 #ifndef STDOUT_FILENO
 # define STDOUT_FILENO	1
@@ -121,30 +135,18 @@
 # define O_EXCL		0200
 #endif
 
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
+#ifndef MNTOPT_RW
+# define MNTOPT_RW	"rw"
 #endif
 
-#ifdef HAVE_SYS_WAIT_H
-# include <sys/wait.h>
-#endif
-
-#ifdef HAVE_FCNTL_H
-# include <fcntl.h>
-#endif
-
-#ifdef HAVE_SCHED_H
-# include <sched.h>
-#endif
-
-#include "wipefreespace.h"
-#include "wfs_xfs.h"
-#include "wfs_signal.h"
-
-#define PIPE_R 0
-#define PIPE_W 1
-#define XFSBUFSIZE 240
-
+/**
+ * Starts recursive directory search for deleted inodes
+ *	and undelete data on the given XFS filesystem.
+ * \param FS The filesystem.
+ * \param node Filesystem element at which to start.
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_xfs_wipe_unrm ( const wfs_fsid_t FS WFS_ATTR ((unused)) )
 {
@@ -152,6 +154,119 @@ wfs_xfs_wipe_unrm ( const wfs_fsid_t FS WFS_ATTR ((unused)) )
 	return WFS_SUCCESS;
 }
 
+/**
+ * Returns the buffer size needed to work on the
+ *	smallest physical unit on a XFS filesystem.
+ * \param FS The filesystem.
+ * \return Block size on the filesystem.
+ */
+static size_t WFS_ATTR ((warn_unused_result))
+wfs_xfs_get_block_size ( const wfs_fsid_t FS )
+{
+	return FS.xxfs.wfs_xfs_blocksize;
+}
+
+
+
+/**
+ * Gets the mount point of the given device (if mounted).
+ * \param dev_name Device to check.
+ * \param error Pointer to error variable.
+ * \param mnt_point Array for the mount point.
+ * \param is_rw Pointer to a variavle which will tell if the filesystem
+ *	is mounted in read+write mode (=1 if yes).
+ * \return 0 in case of no errors, other values otherwise.
+ */
+static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+wfs_xfs_get_mnt_point (
+	const char * const dev_name
+#ifndef HAVE_MNTENT_H
+	WFS_ATTR ((unused))
+#endif
+	, error_type * const error,
+	char * const mnt_point, int * const is_rw )
+{
+#ifdef HAVE_MNTENT_H
+	FILE *mnt_f;
+	struct mntent *mnt, mnt_copy;
+# ifdef HAVE_GETMNTENT_R
+	char buffer[MNTBUFLEN];
+# endif
+#endif
+/*
+	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL) || (is_rw == NULL) )
+		return WFS_BADPARAM;
+*/
+	*is_rw = 1;
+	strcpy (mnt_point, "");
+
+#ifdef HAVE_MNTENT_H
+# ifdef HAVE_ERRNO_H
+	errno = 0;
+# endif
+	mnt_f = setmntent (_PATH_MOUNTED, "r");
+	if (mnt_f == NULL)
+	{
+# ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+# endif
+		return WFS_MNTCHK;
+	}
+	do
+	{
+# ifdef HAVE_ERRNO_H
+		errno = 0;
+# endif
+# ifndef HAVE_GETMNTENT_R
+		mnt = getmntent (mnt_f);
+		memcpy ( &mnt_copy, mnt, sizeof (struct mntent) );
+# else
+		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, MNTBUFLEN);
+# endif
+		if ( mnt == NULL ) break;
+		if ( strcmp (dev_name, mnt->mnt_fsname) == 0 ) break;
+
+	} while ( 1==1 );
+
+	endmntent (mnt_f);
+	if ( (mnt == NULL)
+# ifdef HAVE_ERRNO_H
+		&& (errno == 0)
+# endif
+	   )
+	{
+		*is_rw = 0;
+		return WFS_SUCCESS;	/* seems not to be mounted */
+	}
+# ifdef HAVE_HASMNTOPT
+	if (hasmntopt (mnt, MNTOPT_RW) != NULL)
+	{
+		error->errcode.gerror = 1L;
+		*is_rw = 1;
+		strcpy (mnt_point, mnt->mnt_dir);
+		return WFS_MNTRW;
+	}
+# else
+	error->errcode.gerror = 1L;
+	*is_rw = 1;
+	strcpy (mnt_point, mnt->mnt_dir);
+	return WFS_MNTRW;	/* can't check for r/w, so don't do anything */
+# endif
+	*is_rw = 0;
+	strcpy (mnt_point, mnt->mnt_dir);
+	return WFS_SUCCESS;
+#else	/* ! HAVE_MNTENT_H */
+	error->errcode.gerror = 1L;
+	return WFS_MNTCHK;	/* can't check, so don't do anything */
+#endif	/* HAVE_MNTENT_H */
+}
+
+/**
+ * Wipes the free space on the given XFS filesystem.
+ * \param FS The filesystem.
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 {
@@ -194,11 +309,11 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 	}
 	strncpy ( args_db[4], FS.xxfs.dev_name, strlen (FS.xxfs.dev_name) + 1 );
 	/* we need the mount point here, not the FS device */
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
 	if ( FS.xxfs.mnt_point != NULL )
 	{
+#ifdef HAVE_ERRNO_H
+		errno = 0;
+#endif
 		args_freeze[2] = (char *) malloc ( strlen (FS.xxfs.mnt_point) + 1 );
 		if ( args_freeze[2] == NULL )
 		{
@@ -216,7 +331,7 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	buffer = (unsigned char *) malloc ( FS.xxfs.wfs_xfs_blocksize );
+	buffer = (unsigned char *) malloc ( wfs_xfs_get_block_size (FS) );
 	if ( buffer == NULL )
 	{
 #ifdef HAVE_ERRNO_H
@@ -256,6 +371,9 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 		/* Freeze the filesystem */
 # ifdef HAVE_ERRNO_H
 		errno = 0;
+# endif
+# ifdef HAVE_SIGNAL_H
+		sigchld_recvd = 0;
 # endif
 		p_f = fork ();
 		if ( p_f < 0 )
@@ -300,7 +418,10 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 			/* if we got here, exec() failed and there's nothing to do. */
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
-			/* Commit suicide or wait for getting killed */
+
+			/* NOTE: needed or the parent will wait forever */
+			exit (EXIT_FAILURE);
+			/* Commit suicide or wait for getting killed *
 #if (defined HAVE_GETPID) && (defined HAVE_KILL)
 			kill (getpid (), SIGKILL);
 #endif
@@ -308,24 +429,40 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 			{
 #ifdef HAVE_SCHED_YIELD
 				sched_yield ();
+#elif (defined HAVE_SLEEP)
+				sleep (5);
 #endif
 			}
-			/*return WFS_EXECERR;*/
+			*return WFS_EXECERR;*/
 		}
 		else
 		{
 			/* parent */
 #ifdef HAVE_WAITPID
 			waitpid (p_f, NULL, 0);
-#elif defined HAVE_WAIT
-			wait (NULL);
 #else
-# ifdef HAVE_SLEEP
-			sleep (5);
+# if defined HAVE_WAIT
+			wait (NULL);
 # else
-			for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
-# endif
+#  if (defined HAVE_SIGNAL_H)
+			while (sigchld_recvd == 0)
+			{
+#   ifdef HAVE_SCHED_YIELD
+				sched_yield ();
+#   elif (defined HAVE_SLEEP)
+				sleep (1);
+#   endif
+			}
+			sigchld_recvd = 0;
+#  else
+#   ifdef HAVE_SLEEP
+			sleep (5);
+#   else
+			for ( i=0; i < (1<<30); i++ );
+#   endif
 			kill (p_f, SIGKILL);
+#  endif	/* HAVE_SIGNAL_H */
+# endif
 #endif
 		}
 	}	/* if ( FS.xxfs.mnt_point != NULL )  */
@@ -333,6 +470,9 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 	/* parent, continued */
 # ifdef HAVE_ERRNO_H
 	errno = 0;
+# endif
+# ifdef HAVE_SIGNAL_H
+	sigchld_recvd = 0;
 # endif
 	p_db = fork ();
 	if ( p_db < 0 )
@@ -355,7 +495,10 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 		/* if we got here, exec() failed and there's nothing to do. */
 		close (pipe_fd[PIPE_R]);
 		close (pipe_fd[PIPE_W]);
-		/* Commit suicide or wait for getting killed */
+
+		/* NOTE: needed or the parent will wait forever */
+		exit (EXIT_FAILURE);
+		/* Commit suicide or wait for getting killed *
 #if (defined HAVE_GETPID) && (defined HAVE_KILL)
 		kill (getpid (), SIGKILL);
 #endif
@@ -363,9 +506,11 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 		{
 #ifdef HAVE_SCHED_YIELD
 			sched_yield ();
+#elif (defined HAVE_SLEEP)
+			sleep (5);
 #endif
 		}
-		/*return WFS_EXECERR;*/
+		*return WFS_EXECERR;*/
 	}
 	else
 	{
@@ -461,18 +606,18 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 			{
 				/* NOTE: this must be inside */
 				if ( lseek64 (fs_fd, (off64_t) (agno * FS.xxfs.wfs_xfs_agblocks + agoff) *
-					FS.xxfs.wfs_xfs_blocksize, SEEK_SET ) !=
+					wfs_xfs_get_block_size (FS), SEEK_SET ) !=
 						(off64_t) (agno * FS.xxfs.wfs_xfs_agblocks + agoff) *
-						FS.xxfs.wfs_xfs_blocksize
+						wfs_xfs_get_block_size (FS)
 				   )
 				{
 					break;
 				}
-				fill_buffer ( i, buffer, FS.xxfs.wfs_xfs_blocksize, selected );
+				fill_buffer ( i, buffer, wfs_xfs_get_block_size (FS), selected );
 				for ( j=0; (j < length) && (sig_recvd == 0); j++ )
 				{
-					if ( write (fs_fd, buffer, FS.xxfs.wfs_xfs_blocksize)
-						!= (ssize_t) FS.xxfs.wfs_xfs_blocksize
+					if ( write (fs_fd, buffer, wfs_xfs_get_block_size (FS))
+						!= (ssize_t) wfs_xfs_get_block_size (FS)
 					   )
 					{
 						break;
@@ -494,21 +639,38 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 		close (fs_fd);
 #ifdef HAVE_WAITPID
 		waitpid (p_db, NULL, 0);
-#elif defined HAVE_WAIT
-		wait (NULL);
 #else
-# ifdef HAVE_SLEEP
-		sleep (5);
+# if defined HAVE_WAIT
+		wait (NULL);
 # else
-		for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
-# endif
+#  if (defined HAVE_SIGNAL_H)
+		while (sigchld_recvd == 0)
+		{
+#   ifdef HAVE_SCHED_YIELD
+			sched_yield ();
+#   elif (defined HAVE_SLEEP)
+			sleep (1);
+#   endif
+		}
+		sigchld_recvd = 0;
+#  else
+#   ifdef HAVE_SLEEP
+		sleep (5);
+#   else
+		for ( i=0; i < (1<<30); i++ );
+#   endif
 		kill (p_db, SIGKILL);
+#  endif	/* HAVE_SIGNAL_H */
+# endif
 #endif
 	} /* parent if fork() for xfs_db succeded */
 
 	if ( FS.xxfs.mnt_point != NULL )
 	{
 		/* un-freeze the filesystem */
+# ifdef HAVE_SIGNAL_H
+		sigchld_recvd = 0;
+# endif
 		p_uf = fork ();
 		if ( p_uf < 0 )
 		{
@@ -543,7 +705,10 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 			/* if we got here, exec() failed and there's nothing to do. */
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
-			/* Commit suicide or wait for getting killed */
+
+			/* NOTE: needed or the parent will wait forever */
+			exit (EXIT_FAILURE);
+			/* Commit suicide or wait for getting killed *
 #if (defined HAVE_GETPID) && (defined HAVE_KILL)
 			kill (getpid (), SIGKILL);
 #endif
@@ -551,24 +716,40 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 			{
 #ifdef HAVE_SCHED_YIELD
 				sched_yield ();
+#elif (defined HAVE_SLEEP)
+				sleep (5);
 #endif
 			}
-			/*return WFS_EXECERR;*/
+			*return WFS_EXECERR;*/
 		}
 		else
 		{
 		/* parent */
 #ifdef HAVE_WAITPID
 			waitpid (p_uf, NULL, 0);
-#elif defined HAVE_WAIT
-			wait (NULL);
 #else
-# ifdef HAVE_SLEEP
-			sleep (5);
+# if defined HAVE_WAIT
+			wait (NULL);
 # else
-			for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
-# endif
+#  if (defined HAVE_SIGNAL_H)
+			while (sigchld_recvd == 0)
+			{
+#   ifdef HAVE_SCHED_YIELD
+				sched_yield ();
+#   elif (defined HAVE_SLEEP)
+				sleep (1);
+#   endif
+			}
+			sigchld_recvd = 0;
+#  else
+#   ifdef HAVE_SLEEP
+			sleep (5);
+#   else
+			for ( i=0; i < (1<<30); i++ );
+#   endif
 			kill (p_uf, SIGKILL);
+#  endif	/* HAVE_SIGNAL_H */
+# endif
 #endif
 		}
 	} /* if ( FS.xxfs.mnt_point != NULL ) */
@@ -583,6 +764,13 @@ wfs_xfs_wipe_fs	( const wfs_fsid_t FS, error_type * const error )
 	return ret_wfs;
 }
 
+
+/**
+ * Wipes the free space in partially used blocks on the given XFS filesystem.
+ * \param FS The filesystem.
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_xfs_wipe_part ( const wfs_fsid_t FS WFS_ATTR ((unused)) )
 {
@@ -596,6 +784,12 @@ wfs_xfs_wipe_part ( const wfs_fsid_t FS WFS_ATTR ((unused)) )
 	return WFS_SUCCESS;
 }
 
+
+/**
+ * Checks if the XFS filesystem has errors.
+ * \param FS The filesystem.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 int WFS_ATTR ((warn_unused_result))
 wfs_xfs_check_err ( const wfs_fsid_t FS )
 {
@@ -607,7 +801,7 @@ wfs_xfs_check_err ( const wfs_fsid_t FS )
 	pid_t p;
 	char *  args[] = { "xfs_check", "   ", NULL, NULL }; /* xfs_check [-f] dev/file */
 	char buffer[XFSBUFSIZE];
-	char *pos;
+	char *pos = NULL;
 
 #ifdef HAVE_STAT_H
 	struct stat s;
@@ -632,6 +826,9 @@ wfs_xfs_check_err ( const wfs_fsid_t FS )
 	fcntl (pipe_fd[PIPE_R], F_SETFL, fcntl (pipe_fd[PIPE_R], F_GETFL) | O_NONBLOCK );
 	fcntl (pipe_fd[PIPE_W], F_SETFL, fcntl (pipe_fd[PIPE_W], F_GETFL) | O_NONBLOCK );
 
+# ifdef HAVE_SIGNAL_H
+	sigchld_recvd = 0;
+# endif
 	p = fork ();
 	if ( p < 0 )
 	{
@@ -651,7 +848,10 @@ wfs_xfs_check_err ( const wfs_fsid_t FS )
 		/* if we got here, exec() failed and there's nothing to do. */
 		close (pipe_fd[PIPE_R]);
 		close (pipe_fd[PIPE_W]);
-		/* Commit suicide or wait for getting killed */
+
+		/* NOTE: needed or the parent will wait forever */
+		exit (EXIT_FAILURE);
+		/* Commit suicide or wait for getting killed *
 #if (defined HAVE_GETPID) && (defined HAVE_KILL)
 		kill (getpid (), SIGKILL);
 #endif
@@ -659,23 +859,39 @@ wfs_xfs_check_err ( const wfs_fsid_t FS )
 		{
 #ifdef HAVE_SCHED_YIELD
 			sched_yield ();
+#elif (defined HAVE_SLEEP)
+			sleep (5);
 #endif
 		}
-		/*return WFS_EXECERR;*/
+		*return WFS_EXECERR;*/
 	}
 	else
 	{
 #ifdef HAVE_WAITPID
 		waitpid (p, NULL, 0);
-#elif defined HAVE_WAIT
-		wait (NULL);
 #else
-# ifdef HAVE_SLEEP
-		sleep (5);
+# if defined HAVE_WAIT
+		wait (NULL);
 # else
-		for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
-# endif
+#  if (defined HAVE_SIGNAL_H)
+		while (sigchld_recvd == 0)
+		{
+#   ifdef HAVE_SCHED_YIELD
+			sched_yield ();
+#   elif (defined HAVE_SLEEP)
+			sleep (1);
+#   endif
+		}
+		sigchld_recvd = 0;
+#  else
+#   ifdef HAVE_SLEEP
+		sleep (5);
+#   else
+		for ( i=0; i < (1<<30); i++ );
+#   endif
 		kill (p, SIGKILL);
+#  endif	/* HAVE_SIGNAL_H */
+# endif
 #endif
 		pipe_r = fdopen (pipe_fd[PIPE_R], "r");
 		/* any output means error. */
@@ -717,6 +933,11 @@ wfs_xfs_check_err ( const wfs_fsid_t FS )
 	return WFS_SUCCESS;
 }
 
+/**
+ * Checks if the XFS filesystem is dirty (has unsaved changes).
+ * \param FS The filesystem.
+ * \return 0 if clean, other values otherwise.
+ */
 int WFS_ATTR ((warn_unused_result))
 wfs_xfs_is_dirty ( const wfs_fsid_t FS )
 {
@@ -725,98 +946,23 @@ wfs_xfs_is_dirty ( const wfs_fsid_t FS )
 	return wfs_xfs_check_err (FS);
 }
 
-int WFS_ATTR ((warn_unused_result))
-wfs_xfs_get_block_size ( const wfs_fsid_t FS )
-{
-	return FS.xxfs.wfs_xfs_blocksize;
-}
-
-static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_xfs_get_mnt_point ( const char * const dev_name, error_type * const error,
-	char * const mnt_point, int * const is_rw )
-{
-#ifdef HAVE_MNTENT_H
-	FILE *mnt_f;
-	struct mntent *mnt, mnt_copy;
-# ifdef HAVE_GETMNTENT_R
-#  define MNTBUFLEN 4096
-	char buffer[MNTBUFLEN];
-# endif
-#endif
-/*
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL) || (is_rw == NULL) )
-		return WFS_BADPARAM;
-*/
-	*is_rw = 1;
-	strcpy (mnt_point, "");
-
-#ifdef HAVE_MNTENT_H
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
-	mnt_f = setmntent (_PATH_MOUNTED, "r");
-	if (mnt_f == NULL)
-	{
-# ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
-# endif
-		return WFS_MNTCHK;
-	}
-	do
-	{
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
-# ifndef HAVE_GETMNTENT_R
-		mnt = getmntent (mnt_f);
-		memcpy ( &mnt_copy, mnt, sizeof (struct mntent) );
-# else
-		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, MNTBUFLEN);
-# endif
-		if ( mnt == NULL ) break;
-		if ( strcmp (dev_name, mnt->mnt_fsname) == 0 ) break;
-
-	} while ( 1==1 );
-
-	endmntent (mnt_f);
-	if ( (mnt == NULL)
-# ifdef HAVE_ERRNO_H
-		&& (errno == 0)
-# endif
-	   )
-	{
-		*is_rw = 0;
-		return WFS_SUCCESS;	/* seems not to be mounted */
-	}
-# ifdef HAVE_HASMNTOPT
-	if (hasmntopt (mnt, "rw") != NULL)
-	{
-		error->errcode.gerror = 1L;
-		*is_rw = 1;
-		strcpy (mnt_point, mnt->mnt_dir);
-		return WFS_MNTRW;
-	}
-# else
-	error->errcode.gerror = 1L;
-	*is_rw = 1;
-	strcpy (mnt_point, mnt->mnt_dir);
-	return WFS_MNTRW;	/* can't check for r/w, so don't do anything */
-# endif
-	*is_rw = 0;
-	strcpy (mnt_point, mnt->mnt_dir);
-	return WFS_SUCCESS;
-#else	/* ! HAVE_MNTENT_H */
-	error->errcode.gerror = 1L;
-	return WFS_MNTCHK;	/* can't check, so don't do anything */
-#endif	/* HAVE_MNTENT_H */
-}
-
+/**
+ * Checks if the given XFS filesystem is mounted in read-write mode.
+ * \param devname Device name, like /dev/hdXY
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_xfs_chk_mount ( const char * const dev_name, error_type * const error )
 {
 	errcode_enum res;
 	int is_rw;
 	char buffer[MNTBUFLEN];
+
+	if ( error == NULL )
+	{
+		return WFS_BADPARAM;
+	}
 
 	res = wfs_xfs_get_mnt_point (dev_name, error, buffer, &is_rw);
 	if ( res != WFS_SUCCESS )
@@ -836,6 +982,16 @@ wfs_xfs_chk_mount ( const char * const dev_name, error_type * const error )
 	}
 }
 
+/**
+ * Opens a XFS filesystem on the given device.
+ * \param dev_name Device name, like /dev/hdXY
+ * \param FS Pointer to where the result will be put.
+ * \param whichfs Pointer to an int saying which fs is curently in use.
+ * \param data Pointer to fsdata structure containing information
+ *	which may be needed to open the filesystem.
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * const whichfs,
 		  const fsdata * const data WFS_ATTR ((unused)), error_type * const error )
@@ -916,6 +1072,9 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
+# ifdef HAVE_SIGNAL_H
+	sigchld_recvd = 0;
+# endif
 	p = fork ();
 	if ( p < 0 )
 	{
@@ -939,7 +1098,10 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 		/* if we got here, exec() failed and there's nothing to do. */
 		close (pipe_fd[PIPE_R]);
 		close (pipe_fd[PIPE_W]);
-		/* Commit suicide or wait for getting killed */
+
+		/* NOTE: needed or the parent will wait forever */
+		exit (EXIT_FAILURE);
+		/* Commit suicide or wait for getting killed *
 #if (defined HAVE_GETPID) && (defined HAVE_KILL)
 		kill (getpid (), SIGKILL);
 #endif
@@ -947,24 +1109,40 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 		{
 #ifdef HAVE_SCHED_YIELD
 			sched_yield ();
+#elif (defined HAVE_SLEEP)
+			sleep (5);
 #endif
 		}
-		/*return WFS_EXECERR;*/
+		*return WFS_EXECERR;*/
 	}
 	else
 	{
 		/* parent */
 #ifdef HAVE_WAITPID
 		waitpid (p, NULL, 0);
-#elif defined HAVE_WAIT
-		wait (NULL);
 #else
-# ifdef HAVE_SLEEP
-		sleep (5);
+# if defined HAVE_WAIT
+		wait (NULL);
 # else
-		for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
-# endif
+#  if (defined HAVE_SIGNAL_H)
+		while (sigchld_recvd == 0)
+		{
+#   ifdef HAVE_SCHED_YIELD
+			sched_yield ();
+#   elif (defined HAVE_SLEEP)
+			sleep (1);
+#   endif
+		}
+		sigchld_recvd = 0;
+#  else
+#   ifdef HAVE_SLEEP
+		sleep (5);
+#   else
+		for ( i=0; i < (1<<30); i++ );
+#   endif
 		kill (p, SIGKILL);
+#  endif	/* HAVE_SIGNAL_H */
+# endif
 #endif
 		pipe_r = fdopen (pipe_fd[PIPE_R], "r");
 		while ( ((blocksize_set == 0) || (agblocks_set == 0)) && (sig_recvd == 0) )
@@ -1012,18 +1190,30 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 #endif
 			   )
 			{
+			/* NOTE: already taken care of.
 #ifdef HAVE_WAITPID
 				waitpid (p, NULL, 0);
 #elif defined HAVE_WAIT
 				wait (NULL);
+#elif (defined HAVE_SIGNAL_H)
+				while (sigchld_recvd == 0)
+				{
+# ifdef HAVE_SCHED_YIELD
+					sched_yield ();
+# elif (defined HAVE_SLEEP)
+					sleep (1);
+# endif
+				}
+				sigchld_recvd = 0;
 #else
 # ifdef HAVE_SLEEP
 				sleep (5);
 # else
-				for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
+				for ( i=0; i < (1<<30); i++ );
 # endif
 				kill (p, SIGKILL);
 #endif
+			*/
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (FS->xxfs.dev_name);
@@ -1038,21 +1228,33 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 			}
 			if ( pos1 != NULL )
 			{
-				res = sscanf (pos1, search1 "%lu", &(FS->xxfs.wfs_xfs_blocksize) );
+				res = sscanf (pos1, search1 "%u", &(FS->xxfs.wfs_xfs_blocksize) );
 				if ( res != 1 )
 				{
+				/* NOTE: already taken care of
 #ifdef HAVE_WAITPID
 					waitpid (p, NULL, 0);
 #elif defined HAVE_WAIT
 					wait (NULL);
+#elif (defined HAVE_SIGNAL_H)
+					while (sigchld_recvd == 0)
+					{
+# ifdef HAVE_SCHED_YIELD
+						sched_yield ();
+# elif (defined HAVE_SLEEP)
+						sleep (1);
+# endif
+					}
+					sigchld_recvd = 0;
 #else
 # ifdef HAVE_SLEEP
 					sleep (5);
 # else
-					for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
+					for ( i=0; i < (1<<30); i++ );
 # endif
 					kill (p, SIGKILL);
 #endif
+				*/
 					close (pipe_fd[PIPE_R]);
 					close (pipe_fd[PIPE_W]);
 					free (FS->xxfs.dev_name);
@@ -1065,18 +1267,30 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 				res = sscanf (pos2, search2 "%llu", &(FS->xxfs.wfs_xfs_agblocks) );
 				if ( res != 1 )
 				{
+				/* NOTE: already taken care of
 #ifdef HAVE_WAITPID
 					waitpid (p, NULL, 0);
 #elif defined HAVE_WAIT
 					wait (NULL);
+#elif (defined HAVE_SIGNAL_H)
+					while (sigchld_recvd == 0)
+					{
+# ifdef HAVE_SCHED_YIELD
+						sched_yield ();
+# elif (defined HAVE_SLEEP)
+						sleep (1);
+# endif
+					}
+					sigchld_recvd = 0;
 #else
 # ifdef HAVE_SLEEP
 					sleep (5);
 # else
-					for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
+					for ( i=0; i < (1<<30); i++ );
 # endif
 					kill (p, SIGKILL);
 #endif
+				*/
 					close (pipe_fd[PIPE_R]);
 					close (pipe_fd[PIPE_W]);
 					free (FS->xxfs.dev_name);
@@ -1087,18 +1301,30 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 		}	/* while */
 		close (pipe_fd[PIPE_R]);
 		close (pipe_fd[PIPE_W]);
+		/* NOTE: already taken care of
 #ifdef HAVE_WAITPID
 		waitpid (p, NULL, 0);
 #elif defined HAVE_WAIT
 		wait (NULL);
+#elif (defined HAVE_SIGNAL_H)
+		while (sigchld_recvd == 0)
+		{
+# ifdef HAVE_SCHED_YIELD
+			sched_yield ();
+# elif (defined HAVE_SLEEP)
+			sleep (1);
+# endif
+		}
+		sigchld_recvd = 0;
 #else
 # ifdef HAVE_SLEEP
 		sleep (5);
 # else
-		for (i=0; (i < (1<<31)-1) && (sig_recvd == 0); i++ );
+		for ( i=0; i < (1<<30); i++ );
 # endif
 		kill (p, SIGKILL);
 #endif
+		*/
 	}	/* else - parent */
 
 	if (sig_recvd != 0) return WFS_SIGNAL;
@@ -1132,6 +1358,12 @@ wfs_xfs_open_fs ( const char * const dev_name, wfs_fsid_t* const FS, CURR_FS * c
 	return WFS_SUCCESS;
 }
 
+/**
+ * Closes the ReiserFS filesystem.
+ * \param FS The filesystem.
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum
 wfs_xfs_close_fs ( wfs_fsid_t FS, error_type * const error
 #ifndef HAVE_ERRNO_H
@@ -1147,7 +1379,10 @@ wfs_xfs_close_fs ( wfs_fsid_t FS, error_type * const error
 #ifdef HAVE_ERRNO_H
 	if ( errno != 0 )
 	{
-		error->errcode.gerror = errno;
+		if ( error != NULL )
+		{
+			error->errcode.gerror = errno;
+		}
 		return WFS_FSCLOSE;
 	}
 	else
@@ -1155,11 +1390,16 @@ wfs_xfs_close_fs ( wfs_fsid_t FS, error_type * const error
 		return WFS_SUCCESS;
 }
 
+/**
+ * Flushes the ReiserFS filesystem.
+ * \param FS The ReiserFS filesystem.
+ * \return 0 in case of no errors, other values otherwise.
+ */
 errcode_enum
 wfs_xfs_flush_fs ( const wfs_fsid_t FS WFS_ATTR ((unused)) )
 {
 	/* Better than nothing */
-#if (!defined __STRICT_ANSI__)
+#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
 	sync ();
 #endif
 	return WFS_SUCCESS;

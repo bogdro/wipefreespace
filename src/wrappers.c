@@ -37,7 +37,7 @@
 #include "wrappers.h"
 
 #ifdef WFS_EXT2
-# include "ext23.h"
+# include "wfs_ext23.h"
 #endif
 
 #ifdef WFS_NTFS
@@ -48,6 +48,10 @@
 # include "wfs_xfs.h"
 #endif
 
+#ifdef WFS_REISER
+# include "wfs_reiser.h"
+#endif
+
 /**
  * Starts recursive directory search for deleted inodes and undelete data.
  * \param FS The filesystem.
@@ -55,11 +59,12 @@
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wipe_unrm ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wipe_unrm ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 {
-
 	errcode_enum ret_wfs = WFS_SUCCESS;
+#if (defined WFS_EXT2) || (defined WFS_REISER)
 	fselem_t elem;
+#endif
 
 	if ( which_fs == CURR_EXT2FS )
 	{
@@ -80,6 +85,14 @@ wipe_unrm ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const erro
 		ret_wfs = wfs_xfs_wipe_unrm (FS);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		elem.rfs_elem = root_dir_key;
+		ret_wfs = wfs_reiser_wipe_unrm (FS, elem, error);
+#endif
+	}
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -98,7 +111,7 @@ wipe_unrm ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const erro
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wipe_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wipe_fs ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
@@ -120,6 +133,13 @@ wipe_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error 
 		ret_wfs = wfs_xfs_wipe_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		ret_wfs = wfs_reiser_wipe_fs (FS, error);
+#endif
+	}
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -160,6 +180,13 @@ wipe_part ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const erro
 		ret_wfs = wfs_xfs_wipe_part (FS);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		ret_wfs = wfs_reiser_wipe_part (FS, error);
+#endif
+	}
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -191,7 +218,7 @@ wfs_open_fs ( const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * cons
 #ifdef WFS_NTFS
 	if ( ret_wfs != WFS_SUCCESS )
 	{
-		error->errcode.e2error = WFS_SUCCESS;
+		error->errcode.gerror = WFS_SUCCESS;
 		ret_wfs = wfs_ntfs_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
@@ -202,6 +229,14 @@ wfs_open_fs ( const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * cons
 		ret_wfs = wfs_xfs_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
+#ifdef WFS_REISER
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		error->errcode.gerror = WFS_SUCCESS;
+		ret_wfs = wfs_reiser_open_fs (dev_name, FS, which_fs, data, error);
+	}
+#endif
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -226,10 +261,19 @@ wfs_chk_mount ( const char * const dev_name, error_type * const error )
 
 #ifdef WFS_EXT2
 	ret_wfs = wfs_e2_chk_mount ( dev_name, error );
-#elif (defined WFS_NTFS)
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
+#if (defined WFS_NTFS)
 	ret_wfs = wfs_ntfs_chk_mount ( dev_name, error );
-#elif (defined WFS_XFS)
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
+#if (defined WFS_XFS)
 	ret_wfs = wfs_xfs_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
+#if (defined WFS_REISER)
+	ret_wfs = wfs_reiser_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
 	return ret_wfs;
 }
@@ -263,6 +307,13 @@ wfs_close_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const e
 		ret_wfs = wfs_xfs_close_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		ret_wfs = wfs_reiser_close_fs (FS, error);
+#endif
+	}
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -282,7 +333,7 @@ wfs_close_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const e
  * \return 0 in case of no errors, other values otherwise.
  */
 int WFS_ATTR ((warn_unused_result))
-wfs_check_err ( const wfs_fsid_t FS, const CURR_FS which_fs )
+wfs_check_err ( wfs_fsid_t FS, const CURR_FS which_fs )
 {
 	if ( which_fs == CURR_EXT2FS )
 	{
@@ -302,6 +353,13 @@ wfs_check_err ( const wfs_fsid_t FS, const CURR_FS which_fs )
 		return wfs_xfs_check_err (FS);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		return wfs_reiser_check_err (FS);
+#endif
+	}
+
 	return WFS_SUCCESS;
 }
 
@@ -312,7 +370,7 @@ wfs_check_err ( const wfs_fsid_t FS, const CURR_FS which_fs )
  * \return 0 in case of no errors, other values otherwise.
  */
 int WFS_ATTR ((warn_unused_result))
-wfs_is_dirty ( const wfs_fsid_t FS, const CURR_FS which_fs )
+wfs_is_dirty ( wfs_fsid_t FS, const CURR_FS which_fs )
 {
 	if ( which_fs == CURR_EXT2FS )
 	{
@@ -332,6 +390,12 @@ wfs_is_dirty ( const wfs_fsid_t FS, const CURR_FS which_fs )
 		return wfs_xfs_is_dirty (FS);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		return wfs_reiser_is_dirty (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -343,7 +407,7 @@ wfs_is_dirty ( const wfs_fsid_t FS, const CURR_FS which_fs )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
-wfs_flush_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wfs_flush_fs ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	if ( which_fs == CURR_EXT2FS )
@@ -364,6 +428,13 @@ wfs_flush_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const e
 		ret_wfs = wfs_xfs_flush_fs (FS);
 #endif
 	}
+	else if ( which_fs == CURR_REISERFS )
+	{
+#ifdef WFS_REISER
+		ret_wfs = wfs_reiser_flush_fs (FS);
+#endif
+	}
+
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
 #ifdef HAVE_ERRNO_H
@@ -373,39 +444,9 @@ wfs_flush_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const e
 #endif
 	}
 
-#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H)
+#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
 	sync ();
 #endif
 	return ret_wfs;
-}
-
-/**
- * Returns the buffer size needed to work on the smallest physical unit on a filesystem
- * \param FS The filesystem.
- * \param whichfs Tells which fs is curently in use.
- * \return Block size on the filesystem. Deafults to 4096 if not available.
- */
-int WFS_ATTR ((warn_unused_result))
-wfs_get_block_size ( const wfs_fsid_t FS, const CURR_FS which_fs )
-{
-	if ( which_fs == CURR_EXT2FS )
-	{
-#ifdef WFS_EXT2
-		return wfs_e2_get_block_size (FS);
-#endif
-	}
-	else if ( which_fs == CURR_NTFS )
-	{
-#ifdef WFS_NTFS
-		return wfs_ntfs_get_block_size (FS);
-#endif
-	}
-	else if ( which_fs == CURR_XFS )
-	{
-#ifdef WFS_XFS
-		return wfs_xfs_get_block_size (FS);
-#endif
-	}
-	return 512;
 }
 

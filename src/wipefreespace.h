@@ -26,6 +26,12 @@
 #ifndef WFS_HEADER
 # define WFS_HEADER 1
 
+# ifdef STAT_MACROS_BROKEN
+#  if STAT_MACROS_BROKEN
+#   error Stat macros broken. Change your C library.
+#  endif
+# endif
+
 # undef WFS_ATTR
 # ifdef __GNUC__
 #  define WFS_ATTR(x)	__attribute__(x)
@@ -79,7 +85,8 @@ enum CURR_FS
 	CURR_NONE	= 0,
 	CURR_EXT2FS,
 	CURR_NTFS,
-	CURR_XFS
+	CURR_XFS,
+	CURR_REISERFS
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -145,6 +152,27 @@ typedef long off64_t;
 #  define	WFS_XFS		1
 # endif
 
+# if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)	\
+	&& (defined HAVE_UNISTD_H) && (defined HAVE_FORK)	\
+	&& (							\
+	      (defined HAVE_WAITPID)				\
+	   || (defined HAVE_WAIT)				\
+	)
+#  ifdef HAVE_ASM_TYPES_H
+#   include <asm/types.h>
+#  else
+typedef unsigned int __u32;
+typedef short int __u16;
+#  endif
+
+#  include <reiserfs_lib.h>
+#  define	WFS_REISER	1
+# else
+#  undef	WFS_REISER
+# endif
+
+
+
 # ifdef HAVE_GETTEXT
 #  ifndef _
 #   define 	_(String)		gettext (String)
@@ -163,11 +191,11 @@ typedef long off64_t;
 typedef int sig_atomic_t;
 # endif
 
-struct error_type {
-
+struct error_type
+{
 	CURR_FS whichfs;
 
-	union {
+	union errcode {
 		/* general error, if more specific type unavailable */
 		errcode_enum	gerror;
 # ifdef 	WFS_EXT2
@@ -180,8 +208,8 @@ struct error_type {
 
 typedef struct error_type error_type;
 
-union wfs_fsid_t {
-
+union wfs_fsid_t
+{
 # ifdef 	WFS_EXT2
 	ext2_filsys	e2fs;
 # endif
@@ -189,29 +217,41 @@ union wfs_fsid_t {
 	ntfs_volume	ntfs;
 # endif
 # ifdef		WFS_XFS
-	struct wfs_xfs {
-		unsigned long wfs_xfs_blocksize;
-		unsigned long long wfs_xfs_agblocks;
+	struct wfs_xfs
+	{
+		/* size of 1 block is from sector size to 65536. Max is system page size */
+		size_t wfs_xfs_blocksize;
+		unsigned long long int wfs_xfs_agblocks;
 		char * dev_name;
 		char * mnt_point;
 	} xxfs;
 # endif
+# ifdef		WFS_REISER
+	reiserfs_filsys_t * rfs;
+# endif
+
 	/* TODO: to be expanded, when other FS come into the program */
 
+
+
+
+# if (!defined WFS_EXT2) && (!defined WFS_NTFS) && (!defined WFS_REISER)
+	char dummy;	/* Make this union non-empty */
+# endif
 };
 
 typedef union wfs_fsid_t wfs_fsid_t;
 
-struct wipedata {
-
+struct wipedata
+{
 	unsigned long int	passno;
 	wfs_fsid_t		filesys;
 };
 
 typedef struct wipedata wipedata;
 
-union fselem_t {
-
+union fselem_t
+{
 # ifdef 	WFS_EXT2
 	ext2_ino_t	e2elem;
 # endif
@@ -221,15 +261,26 @@ union fselem_t {
 # ifdef		WFS_XFS
 	/* Nothing. XFS has no undelete capability. */
 # endif
+# ifdef		WFS_REISER
+	struct key	rfs_elem;
+# endif
+
 	/* TODO: to be expanded, when other FS come into the program */
 
+
+
+
+# if (!defined WFS_EXT2) && (!defined WFS_NTFS) && (!defined WFS_REISER)
+	char dummy;	/* Make this union non-empty */
+# endif
 };
 
 typedef union fselem_t fselem_t;
 
-union fsdata {
-
-	struct wipe_e2data {
+union fsdata
+{
+	struct wipe_e2data
+	{
 		int super_off;
 		unsigned int blocksize;
 	} e2fs;
@@ -270,6 +321,7 @@ extern const char * const err_msg_blkiter;
 extern const char * const err_msg_diriter;
 extern const char * const err_msg_nowork;
 extern const char * const err_msg_suid;
+extern const char * const err_msg_fork;
 
 extern const char * fsname;
 extern const char * const sig_unk;

@@ -5,13 +5,13 @@ Read the info documentation (type 'info doc/wipefreespace.info') to get more
  information.
 
 Author: Bogdan Drozdowski, bogdandr @ op . pl
-License: GPLv3
+License: GPLv3+
 
 Requirements for compiling the full version:
 
 - a non-root account. Please, NEVER compile or 'make' anything as root.
 
-- a working C compiler. XFS and NTFS support require the 'long long'
+- a working C compiler. XFS, ReiserFS and NTFS support require the 'long long'
   data type.
 
 - development package for the C library (like glibc-devel and glibc-headers)
@@ -37,7 +37,13 @@ Requirements for compiling the full version:
 - xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/
 
-Type './configure' to configure the program for your system.
+- development package for reiserfsprogs (header files and compiled static
+  libraries from the package). ReiserFS requires the fork() function
+  (unistd.h) and one of: waitpid(), wait() (sys/wait.h).
+
+Type './configure' to configure the program for your system.  If you do not
+wish support for a filesystem, give the '--enable-FS=no' to ./configure
+(FS=EXT23, NTFS, XFS, REISERFS). Run './configure --help' for details.
 
 Type 'make' to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program

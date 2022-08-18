@@ -1,3 +1,24 @@
+2008-01-12	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Wipefreespace version 0.8
+	  Big portability corrections. The program now compiles on OpenBSD.
+	* wfs_xfs.c: using exit() in child processes. If waitpid() and wait()
+	  not available, using SIGCHLD to wait for child processes (if
+	  signals are enabled) and the old sleep+kill method (if signals
+	  disabled). More checking for NULL. Comments for all the functions.
+	* configure.ac: better portability. Printing summary. Checking for
+	  sync(). Options for enabling only specific filesystems.
+	* Makefile.am: added new macro and desktop file to EXTRA_DIST.
+	* docs/info: telling about Konqueror context menu entry created with
+	  the distributed desktop file, wipefreespace.desktop.
+	* src/Makefile.am: getting rid of hard-coded CFLAGS.
+	* wfs_ext23.{c,h}: new names for ext23.{c,h}.
+	* wfs_ext23.c (e2_do_block): Better badblock list checking.
+	* wfs_xfs.c (wfs_xfs_get_mnt_point): Slightly better portability.
+	* wfs_reiser.{c,h}: ReiserFSv3 support. Docs updated with this info.
+	* wrappers.c (wfs_open_fs): corrected NTFS part which had EXT2/3
+	  elements.
+
 2007-10-21	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Version 0.7

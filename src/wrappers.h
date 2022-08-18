@@ -36,10 +36,10 @@ extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 	wfs_chk_mount ( const char * const dev_name, error_type * const error );
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wipe_unrm ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error );
+	wipe_unrm ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error );
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wipe_fs	( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error );
+	wipe_fs	( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error );
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 	wipe_part ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error );
@@ -47,16 +47,13 @@ extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 extern errcode_enum WFS_ATTR ((nonnull))	wfs_close_fs	( const wfs_fsid_t FS,
 		const CURR_FS which_fs, error_type * const error );
 
-extern errcode_enum WFS_ATTR ((nonnull))	wfs_flush_fs	( const wfs_fsid_t FS,
+extern errcode_enum WFS_ATTR ((nonnull))	wfs_flush_fs	( wfs_fsid_t FS,
 		const CURR_FS which_fs, error_type * const error );
 
-extern int WFS_ATTR ((warn_unused_result))	wfs_check_err	( const wfs_fsid_t FS,
+extern int WFS_ATTR ((warn_unused_result))	wfs_check_err	( wfs_fsid_t FS,
 		const CURR_FS which_fs );
 
-extern int WFS_ATTR ((warn_unused_result))	wfs_is_dirty	( const wfs_fsid_t FS,
-		const CURR_FS which_fs );
-
-extern int WFS_ATTR ((warn_unused_result))	wfs_get_block_size	( const wfs_fsid_t FS,
+extern int WFS_ATTR ((warn_unused_result))	wfs_is_dirty	( wfs_fsid_t FS,
 		const CURR_FS which_fs );
 
 #endif	/* WFS_HEADER_WRAP */

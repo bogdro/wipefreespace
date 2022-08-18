@@ -30,6 +30,7 @@
 # include "wipefreespace.h"
 
 extern volatile sig_atomic_t sig_recvd;
+extern volatile sig_atomic_t sigchld_recvd;
 
 extern void wfs_set_sigh (error_type * const error, const int opt_verbose);
 

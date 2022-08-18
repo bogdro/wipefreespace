@@ -1,11 +1,11 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename wipefreespace.info
-@settitle wipefreespace manual 0.7
+@settitle wipefreespace manual 0.8
 @c %**end of header
 
 @copying
-This manual is for wipefreespace, version 0.7
+This manual is for wipefreespace, version 0.8
 @end copying
 
 @titlepage
@@ -38,7 +38,7 @@ This manual is for wipefreespace, version 0.7
 * What is wipefreespace?::		About the program.
 * How to compile?::			How to compile the program.
 * Filesystems support::			What the program does with filesystems.
-* Command line syntax and options::	Details of command line options.
+* Usage::				How to use this thing.
 * Return values::			Program's return values.
 * Signals::				Behaviour upon receiving signals.
 * Author::				How to contact me.
@@ -55,12 +55,14 @@ This manual is for wipefreespace, version 0.7
 @comment  node-name, next,      previous,  up
 @chapter What is wipefreespace?
 
-This program is used for secure erasing of free space on ext2, ext3 and NTFS partitions.
+This program is used for secure erasing of free space on ext2, ext3, NTFS, XFS
+and ReiserFSv3 partitions.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
 area, the file can physically stay on the drive for a long time. The file contents
-can be found by e.g. dumping the whole drive with the @command{dd} program to a file and looking at the
+can be found by e.g. dumping the whole drive with the @command{dd} program to a file
+and looking at the
 generated image. This may seem not so dangerous, but if you delete confidential information
 (files with passwords, credit card numbers, encryption keys), any person with phyical access
 to the drive can read that information and use it against you.
@@ -68,9 +70,11 @@ to the drive can read that information and use it against you.
 ALWAYS USE THE @command{shred} (or similar) PROGRAM TO ERASE CONFIDENTIAL DATA.
 
 Sometimes you may delete confidential data
-the normal way by accident (or have no other choice). In such case normally you would have to shred the
+the normal way by accident (or have no other choice). In such case normally you would have
+to shred the
 whole partition, which may be a big problem. This is where @command{wipefreespace} comes in.
-This program works in a similar way to the @command{shred} program, but instead of shreding regular files,
+This program works in a similar way to the @command{shred} program, but instead of shreding
+regular files,
 it overwrites (just like @command{shred}) the free space on a partition, hopefully without
 doing any harm to existing files.
 
@@ -96,19 +100,20 @@ device/file permissions. This is MUCH safer.
 
 
 @node How to compile?, Filesystems support, What is wipefreespace?, Top
+@comment  node-name, next,      previous,  up
 @chapter How to compile the program?
 
 Requirements for compiling the full version of the program:@*
 @itemize
 @item a non-root account. Please, @strong{NEVER} compile or 'make' anything as root.
-@item a working C compiler (with the 'long long' data type for XFS and NTFS support)
+@item a working C compiler (with the 'long long' data type for XFS, NTFS and ReiserFS support)
 @item development package for the C library (like glibc-devel and glibc-headers).
 XFS support requires the following headers:@*@*
 @itemize
 @item unistd.h
 @item fcntl.h
 @item mntent.h
-@item sys/wait.h (not required, acutally, but a good thing to have)
+@item wait.h or sys/wait.h (not required, acutally, but a good thing to have)
 @item sched.h (not required, acutally, but a good thing to have)
 @item paths.h (not required, acutally, but a good thing to have)
 @end itemize
@@ -124,28 +129,48 @@ and the following functions:@*@*
 @item one of: waitpid(), wait() or kill()
 @end itemize
 @*
+ReiserFSv3 support requires the following headers:@*@*
+@itemize
+@item unistd.h
+@item wait.h or sys/wait.h
+@end itemize
+@*
+and the following functions:@*@*
+@itemize
+@item fork()
+@item one of: waitpid() or wait()
+@end itemize
+@*
 @item the 'make' program
 @end itemize
 
 You'll also need at least one of the following filesystem packages:
 
 @itemize
+
 @item development package for the ext2 file system library, libext2fs (usually
 included in something like e2fsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
    	@indicateurl{http://e2fsprogs.sf.net/}@*
 Then compile and install that package.
+
 @item development package for the NTFS file system library, libntfs (usually
 included in something like ntfsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
    	@indicateurl{http://www.linux-ntfs.org/}@*
 Then compile and install that package.
+
 @item xfsprogs installed and in your PATH variable (devel package unusable, so
 not required). Can be downloaded from@*
 	@indicateurl{http://oss.sgi.com/projects/xfs/}@*
+
+@item development package for the ReiserFS file system library (usually
+included in something like reiserfsprogs-devel).
 @end itemize
 
-Type './configure' to configure the program for your system.
+Type './configure' to configure the program for your system. If you do not
+with support for a filesystem, give the @option{--enable-FS=no} to ./configure
+(FS=EXT23, NTFS, XFS, REISERFS). Run @command{./configure --help} for details.
 
 Type 'make' to compile the program.
  Documentation is compiled, but may be recompiled, if you have the 'makeinfo'
@@ -169,12 +194,14 @@ To create an RPM package:@*
 @end enumerate
 
 @c ==================================================================
-@node Filesystems support, Command line syntax and options, How to compile?, Top
+@node Filesystems support, Usage, How to compile?, Top
+@comment  node-name, next,      previous,  up
 @chapter Filesystems support
 
 Currently, wipefreespace does the following actions on supported filesystems:
 
 @enumerate
+
 @item Ext2/3 (native, working libraries from e2fsprogs):
 @itemize
 @item wiping the free space
@@ -182,26 +209,62 @@ Currently, wipefreespace does the following actions on supported filesystems:
 @item wiping deleted files' data (part of free space or partially used blocks),
 wiping deleted files' names and setting deleted files' names' lengths once to zero
 @end itemize
+
 @item NTFS (libntfs: not official - not written by the filesystem's creators, written without
 any specifications)
 @itemize
 @item wiping the free space
 @item wiping space in partially used blocks
 @item wiping deleted files' names, deleted files' names' lengths (wiping, not zeroing once),
-wiping deleted files' data
+wiping deleted files' data (part of free space or partially used blocks)
 @end itemize
+
 @item XFS (only supported by executing xfs_db from xfsprogs, because I haven't found any
 usable development library):
 @itemize
 @item wiping the free space
 @end itemize
+
+@item ReiserFS (using the library from reiserfsprogs, but that library is not a
+part of any official development package):
+@itemize
+@item wiping the free space
+@item wiping space in partially used blocks, but only if the block has just 1 item
+@item wiping deleted files' names
+@item wiping the journal
+@end itemize
+
 @end enumerate
 
 @c ==================================================================
 
+@node Usage, Return values, Filesystems support, Top
+@comment  node-name, next,      previous,  up
+@chapter Usage
 
-@node Command line syntax and options, Return values, Filesystems support, Top
-@chapter Command line syntax and options
+@menu
+* Konqueror::				Konqueror's context menu.
+* Command line syntax and options::	Running from the command line.
+@end menu
+
+
+@node Konqueror, Command line syntax and options, Usage, Usage
+@comment  node-name, next,      previous,  up
+@section Konqueror
+
+Copy the wipefreespace.desktop file from the distribution tarball to
+$KDEHOME/share/apps/konqueror/servicemenus/, creating the directory if necessary.
+$KDEHOME is usually $HOME/.kde. Then, restart Konqueror. A new context menu entry
+under the "Actions" submenu should be available for block devices and all files
+(a filesystem can reside inside a regular file).
+@sp 1
+
+@strong{NOTE}: This will probably work only under KDE3. KDE4 gets rid of DCOP and
+Konqueror itself may be changed.
+
+@node Command line syntax and options, , Konqueror, Usage
+@comment  node-name, next,      previous,  up
+@section Command line syntax and options
 
 Basic syntax is:
 
@@ -282,7 +345,8 @@ exit with "Bad/missing command line syntax" error code.
 @c ==================================================================
 
 
-@node Return values, Signals, Command line syntax and options, Top
+@node Return values, Signals, Usage, Top
+@comment  node-name, next,      previous,  up
 @chapter Return values
 
 The wipefreespace program can return any of the following values:
@@ -325,6 +389,7 @@ but the previous weren't, their errors are currently lost.
 
 
 @node Signals, Author, Return values, Top
+@comment  node-name, next,      previous,  up
 @chapter Signals
 
 The program will terminate normally (that is: will flush and close the file system and
@@ -355,6 +420,7 @@ data type. If you are using GCC, no worries.
 
 
 @node Author, Copying, Signals, Top
+@comment  node-name, next,      previous,  up
 @chapter Author
 
 Bogdan 'bogdro' Drozdowski.
@@ -379,6 +445,7 @@ or look at my website:@*
 
 
 @node Copying, Translating, Author, Top
+@comment  node-name, next,      previous,  up
 @chapter Copying
 
  Libsecrm is licensed under the GNU GPL v3. This documentation is licensed
@@ -393,6 +460,7 @@ under the GNU FDL v1.2.
 
 
 @node GNU General Public License version 3, GNU Free Documentation License version 1.2, Copying, Copying
+@comment  node-name, next,      previous,  up
 @section GNU General Public License
 
 @c The GNU General Public License.
@@ -1117,6 +1185,7 @@ first, please read @url{http://www.gnu.org/philosophy/why-not-lgpl.html}.
 @c ==================================================================
 
 @node GNU Free Documentation License version 1.2, , GNU General Public License version 3, Copying
+@comment  node-name, next,      previous,  up
 @section GNU Free Documentation License
 
 @c The GNU Free Documentation License.
@@ -1574,6 +1643,7 @@ to permit their use in free software.
 @c ==================================================================
 
 @node Translating, , Copying, Top
+@comment  node-name, next,      previous,  up
 @chapter Translating
 
 Type @command{msginit -i wipefreespace.pot -o XX.po}, substituting your

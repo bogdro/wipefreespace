@@ -43,12 +43,18 @@
 # include <sys/mount.h>	/* umount() */
 #endif
 
+/*
 #ifdef HAVE_MALLOC_H
 # include <malloc.h>
 #endif
+*/
+
+#ifdef HAVE_STDLIB_H
+# include <stdlib.h>
+#endif
 
 #ifdef HAVE_STRING_H
-# if (!STDC_HEADERS) && (defined HAVE_MEMORY_H)
+# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
 #  include <memory.h>
 # endif
 # include <string.h>	/* memset() */
@@ -75,18 +81,22 @@
 # include <ntfs/ntfs_attrib.h>	/* ntfs_attr_search_ctx() */
 # include <ntfs/ntfs_list.h>		/* list_for_each_safe() */
 # include <ntfs/ntfs_mft.h>		/* ntfs_mft_records_write() */
-#elif (defined HAVE_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
-# include <ntfs/volume.h>
-# include <ntfs/attrib.h>	/* ntfs_attr_search_ctx() */
-# include <ntfs/list.h>		/* list_for_each_safe() */
-# include <ntfs/mft.h>		/* ntfs_mft_records_write() */
-#elif (defined HAVE_VOLUME_H) && (defined HAVE_LIBNTFS)
-# include <volume.h>
-# include <attrib.h>
-# include <list.h>
-# include <mft.h>
 #else
-# error Something wrong. NTFS requested, but headers or library missing.
+# if (defined HAVE_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
+#  include <ntfs/volume.h>
+#  include <ntfs/attrib.h>	/* ntfs_attr_search_ctx() */
+#  include <ntfs/list.h>		/* list_for_each_safe() */
+#  include <ntfs/mft.h>		/* ntfs_mft_records_write() */
+# else
+#  if (defined HAVE_VOLUME_H) && (defined HAVE_LIBNTFS)
+#   include <volume.h>
+#   include <attrib.h>
+#   include <list.h>
+#   include <mft.h>
+#  else
+#   error Something wrong. NTFS requested, but headers or library missing.
+#  endif
+# endif
 #endif
 
 #include "wipefreespace.h"
@@ -179,6 +189,19 @@ struct ufile
 };
 
 /**
+ * Returns the buffer size needed to work on the smallest physical unit on a NTFS filesystem
+ * \param FS The filesystem.
+ * \return Block size on the filesystem.
+ */
+static u32 WFS_ATTR ((warn_unused_result))
+wfs_ntfs_get_block_size (const wfs_fsid_t FS)
+{
+	return FS.ntfs.cluster_size;
+	/* return ntfs_device_sector_size_get(&(FS.ntfs)); */
+}
+
+
+/**
  * Part of ntfsprogs.
  * Modified: removed logging, memset replaced by fill_buffer, signal handling.
  *
@@ -191,7 +214,8 @@ struct ufile
  *         -1  Error, something went wrong
  */
 static s64 WFS_ATTR ((nonnull))
-wipe_compressed_attribute (const ntfs_volume * const vol, ntfs_attr * const na, unsigned char * const buf)
+wipe_compressed_attribute (const ntfs_volume * const vol,
+	ntfs_attr * const na, unsigned char * const buf)
 {
 	unsigned char *mybuf = NULL;
 	s64 size, offset, ret = 0, wiped = 0;
@@ -582,6 +606,8 @@ free_file (struct ufile *file)
  *
  * \param FS The filesystem.
  * \param record The record (i-node number), which filenames & data to destroy.
+ * \param buf Buffer for wipe data.
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 static errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
@@ -1012,6 +1038,7 @@ destroy_record (const wfs_fsid_t FS, const s64 record, unsigned char * const buf
 /**
  * Wipes the free space in partially used blocks on the given NTFS filesystem.
  * \param FS The filesystem.
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
@@ -1114,6 +1141,7 @@ wfs_ntfs_wipe_part (wfs_fsid_t FS, error_type * const error)
 /**
  * Wipes the free space on the given NTFS filesystem.
  * \param FS The filesystem.
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
@@ -1189,6 +1217,7 @@ wfs_ntfs_wipe_fs (const wfs_fsid_t FS, error_type * const error)
  * Starts search for deleted inodes and undelete data on the given NTFS filesystem.
  * \param FS The filesystem.
  * \param node Directory i-node (unused, probably due to the nature of the NTFS).
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
@@ -1309,6 +1338,7 @@ done:
  * \param whichfs Pointer to an int saying which fs is curently in use.
  * \param data Pointer to fsdata structure containing information which may be needed to
  *	open the filesystem.
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
@@ -1381,6 +1411,7 @@ wfs_ntfs_open_fs (
 /**
  * Checks if the given NTFS filesystem is mounted in read-write mode.
  * \param devname Device name, like /dev/hdXY
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
@@ -1414,6 +1445,7 @@ wfs_ntfs_chk_mount ( const char * const dev_name, error_type * const error )
 /**
  * Closes the NTFS filesystem.
  * \param FS The filesystem.
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
@@ -1480,6 +1512,7 @@ wfs_ntfs_is_dirty (const wfs_fsid_t FS)
 /**
  * Flushes the NTFS filesystem.
  * \param FS The filesystem.
+ * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
@@ -1507,20 +1540,9 @@ wfs_ntfs_flush_fs (const wfs_fsid_t FS, error_type * const error )
 	{
 		show_error ( *error, err_msg_flush, fsname );
 	}
-#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H)
+#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
 	sync ();
 #endif
 	return ret;
 }
 
-/**
- * Returns the buffer size needed to work on the smallest physical unit on a NTFS filesystem
- * \param FS The filesystem.
- * \return Block size on the filesystem.
- */
-unsigned int WFS_ATTR ((warn_unused_result))
-wfs_ntfs_get_block_size (const wfs_fsid_t FS)
-{
-	return FS.ntfs.cluster_size;
-	/* return ntfs_device_sector_size_get(&(FS.ntfs)); */
-}

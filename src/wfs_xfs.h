@@ -41,13 +41,11 @@ extern int WFS_ATTR ((warn_unused_result))	wfs_xfs_check_err	( const wfs_fsid_t 
 
 extern int WFS_ATTR ((warn_unused_result))	wfs_xfs_is_dirty	( const wfs_fsid_t FS );
 
-extern int WFS_ATTR ((warn_unused_result))	wfs_xfs_get_block_size	( const wfs_fsid_t FS );
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_xfs_chk_mount ( const char * const wfs_devname, error_type * const error );
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_xfs_chk_mount ( const char * const devname, error_type * const error );
-
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_xfs_open_fs ( const char * const devname, wfs_fsid_t* const FS, CURR_FS * const whichfs,
+	wfs_xfs_open_fs ( const char * const wfs_devname, wfs_fsid_t* const FS, CURR_FS * const whichfs,
 	const fsdata * const data, error_type * const error );
 
 extern errcode_enum wfs_xfs_close_fs ( const wfs_fsid_t FS, error_type * const error );

@@ -42,11 +42,12 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	depcomp install-sh missing mkinstalldirs
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_gcc_option.m4 \
+	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/iconv.m4 \
+	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
+	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/nls.m4 \
+	$(top_srcdir)/m4/po.m4 $(top_srcdir)/m4/progtest.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -80,6 +81,7 @@ ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
 AMTAR = @AMTAR@
+AM_CFLAGS = @AM_CFLAGS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -134,6 +136,8 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 POSUB = @POSUB@
 RANLIB = @RANLIB@
+REISERFS_FALSE = @REISERFS_FALSE@
+REISERFS_TRUE = @REISERFS_TRUE@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -141,6 +145,7 @@ SYSCAP_FALSE = @SYSCAP_FALSE@
 SYSCAP_TRUE = @SYSCAP_TRUE@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
+XFS_DB = @XFS_DB@
 XFS_FALSE = @XFS_FALSE@
 XFS_TRUE = @XFS_TRUE@
 XGETTEXT = @XGETTEXT@
@@ -184,7 +189,9 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 SUBDIRS = doc src po
 ACLOCAL_AMFLAGS = -I m4
-EXTRA_DIST = config.rpath mkinstalldirs m4/ChangeLog wipefreespace.spec doc/wipefreespace.1
+EXTRA_DIST = config.rpath mkinstalldirs m4/ChangeLog wipefreespace.spec doc/wipefreespace.1	\
+	m4/ax_gcc_option.m4 wipefreespace.desktop
+
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

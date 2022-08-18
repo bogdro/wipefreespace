@@ -57,9 +57,8 @@
 int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
 wfs_clear_cap (error_type * const error)
 {
-
-	int res;
 #ifdef HAVE_SYS_CAPABILITY_H
+	int res;
 	cap_t my_capab;
 #endif
 
@@ -92,9 +91,7 @@ wfs_clear_cap (error_type * const error)
 # else
 			error->errcode.gerror = 1L;
 # endif
-
 		}
-
 	}
 	else
 	{	/* cap_init() failed. Get current capabilities and clear them. */
@@ -109,7 +106,6 @@ wfs_clear_cap (error_type * const error)
 # endif
 		   )
 		{
-
 # ifdef HAVE_ERRNO_H
 			errno = 0;
 # endif
@@ -126,11 +122,9 @@ wfs_clear_cap (error_type * const error)
 # else
 				error->errcode.gerror = 1L;
 # endif
-
 			}
 			else
 			{	/* cap_clear() success */
-
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
@@ -171,10 +165,8 @@ wfs_clear_cap (error_type * const error)
 void WFS_ATTR ((nonnull))
 wfs_check_stds (int *stdout_open, int *stderr_open)
 {
-
-	int res;
-
 #ifdef HAVE_SYS_STAT_H
+	int res;
 	struct stat stat_buf;
 #endif
 
@@ -202,7 +194,6 @@ wfs_check_stds (int *stdout_open, int *stderr_open)
 		}
 	}
 
-
 	if ( stderr_open != NULL )
 	{
 		*stderr_open = 1;
@@ -228,7 +219,6 @@ wfs_check_stds (int *stdout_open, int *stderr_open)
 
 	if ( (stdout == NULL) && (stdout_open != NULL) ) *stdout_open = 0;
 	if ( (stderr == NULL) && (stderr_open != NULL) ) *stderr_open = 0;
-
 }
 
 /**
@@ -238,7 +228,6 @@ wfs_check_stds (int *stdout_open, int *stderr_open)
 int WFS_ATTR ((warn_unused_result))
 wfs_check_suid (void)
 {
-
 	int ret = WFS_SUCCESS;
 
 #if (defined HAVE_UNISTD_H) && (defined HAVE_GETEUID) && (defined HAVE_GETUID)
@@ -248,7 +237,6 @@ wfs_check_suid (void)
 		ret = WFS_SUID;
 	}
 #endif
-
 	return ret;
 }
 
@@ -259,12 +247,15 @@ wfs_check_suid (void)
 void
 wfs_clear_env (void)
 {
-
 #if (defined HAVE_CLEARENV)
 	clearenv ();
-#elif (defined HAVE_UNISTD_H)
+#else
+# if (defined HAVE_UNISTD_H) && (defined HAVE_DECL_ENVIRON) && (HAVE_DECL_ENVIRON)
 	environ = NULL;
+# endif
+# if (defined HAVE_UNISTD_H) && (defined HAVE_DECL___ENVIRON) && (HAVE_DECL___ENVIRON)
+	__environ = NULL;
+# endif
 #endif
-
 }
 
