@@ -5,6 +5,7 @@ wipefreespace_SOURCES = wipefreespace.c wrappers.c wipefreespace.h wrappers.h wf
 wipefreespace_LDADD = $(INTLLIBS)
 localedir = $(datadir)/locale
 INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
+noinst_LIBRARIES =
 
 #if ISGCC
 #AM_CFLAGS = 	-Wall -Wextra -Wfloat-equal -Wbad-function-cast		\
@@ -23,7 +24,7 @@ endif
 
 if NTFS
 wipefreespace_LDADD += libwfsntfs.a
-noinst_LIBRARIES = libwfsntfs.a
+noinst_LIBRARIES += libwfsntfs.a
 libwfsntfs_a_SOURCES = wfs_ntfs.h wfs_ntfs.c
 #if ISGCC
 #libwfsntfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)
@@ -32,7 +33,7 @@ endif
 
 if XFS
 wipefreespace_LDADD += libwfsxfs.a
-noinst_LIBRARIES = libwfsxfs.a
+noinst_LIBRARIES += libwfsxfs.a
 libwfsxfs_a_SOURCES = wfs_xfs.h wfs_xfs.c
 #if ISGCC
 #libwfsxfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)
@@ -41,7 +42,7 @@ endif
 
 if REISERFS
 wipefreespace_LDADD += libwfsrfs.a
-noinst_LIBRARIES = libwfsrfs.a
+noinst_LIBRARIES += libwfsrfs.a
 libwfsrfs_a_SOURCES = wfs_reiser.h wfs_reiser.c
 #if ISGCC
 #libwfsxfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)

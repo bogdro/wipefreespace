@@ -1,7 +1,49 @@
+2008-06-22	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Wipefreespace version 0.9
+	  Compatibility with non-ANSI C compilers. Journal wiping. Better XFS
+	  support. Portability fixes. Better error checking.
+	* configure.ac: Better portability. Less relying on autoconf
+	  variables. Using a new macro to check compiler flags. XFS support
+	  now requires the kill() function. Added new compiler options to
+	  check for: -O1 -Wuninitialized, -Winit-self, -Wlogical-op,
+	  -fstack-protector-all, -Wno-long-long.
+	* wipefreespace.c: now using wfs_clear_cap()'s return error instead
+	  of putting 1 always. Always flushing the filesystem before starting.
+	  Colons removed from messages. A separate function for wiping one
+	  file system. Fixed ReiserFS problem with both parent and child
+	  returning instead of child closing; resetting sigchld_recvd.
+	  Checking if filesystem's name isn't NULL. Always flushing the
+	  filesystem after wiping. Changed displayed license to GPL>=3.
+	* wfs_ext23.c: wiping the journal (when wiping undelete data).
+	* wfs_ntfs.c: wiping the journal (when wiping undelete data) and
+	  flushing it before starting. Compiles with ntfsprogs-2.0.
+	* wfs_xfs.c (wfs_xfs_open_fs): checking the "inprogress" flag to see
+	  if the filesystem isn't half-way created or fsck hasn't completed.
+	  Checking for error if the given filesystem is not XFS.
+	* wfs_xfs.c (wfs_xfs_check_err): better checking if something was read
+	* wfs_xfs.c: set non-blocking mode only in check_err(), where no
+	  output is possible. More error checking, especially with dup2().
+	  Better waiting for child processes. Closing unused pipe ends.
+	* wfs_xfs.c (wfs_xfs_wipe_part): Wiping partially used blocks.
+	* wfs_ntfs.c (wfs_ntfs_is_dirty): fixed bug with the NVolWasDirty
+	  macro. Big thanks to 'marlowe' for reporting.
+	* wfs_ext23.c, wipefreespace.h: fixed bug with some inline e2fsprogs'
+	  functions seen twice by some linkers. Again big thanks to 'marlowe'
+	  for reporting.
+	* secure.c (wfs_clear_cap): allocated storage released with cap_free.
+	* secure.c (wfs_check_suid): change return type to errcode_enum.
+	* THANKS: new file with a list of all the people I'd like to thank.
+	* src/Makefile.am: fixed "make clean" not removing some libraries.
+	* wipefreespace.h: #undefing ERR_MSG_FORMATL and ERR_MSG_FORMAT before
+	  attempting to #define them.
+	* wrappers.c (wfs_open_fs): returning error by default.
+
 2008-01-12	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* Wipefreespace version 0.8
 	  Big portability corrections. The program now compiles on OpenBSD.
+	  Added ReiserFSv3.
 	* wfs_xfs.c: using exit() in child processes. If waitpid() and wait()
 	  not available, using SIGCHLD to wait for child processes (if
 	  signals are enabled) and the old sleep+kill method (if signals

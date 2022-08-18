@@ -40,7 +40,9 @@
 #  define WFS_ATTR(x)
 # endif
 
+# undef		ERR_MSG_FORMATL
 # define 	ERR_MSG_FORMATL			"(%s %ld) %s '%s'"
+# undef		ERR_MSG_FORMAT
 # define 	ERR_MSG_FORMAT			"(%s %d) %s '%s'"
 
 enum patterns
@@ -113,6 +115,13 @@ typedef long off64_t;
 #  error No dev_t
 # endif
 
+/* fix e2fsprogs inline functions - some linkers saw double definitions and
+   failed with an error message */
+# if (defined HAVE_LIBEXT2FS) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
+#  define _EXT2_USE_C_VERSIONS_	1
+#  define NO_INLINE_FUNCS	1
+# endif
+
 # if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS)
 #  include <ext2fs/ext2fs.h>
 #  define	WFS_EXT2	1
@@ -150,6 +159,8 @@ typedef long off64_t;
 	)
 
 #  define	WFS_XFS		1
+# else
+#  undef	WFS_XFS
 # endif
 
 # if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)	\
@@ -281,7 +292,7 @@ union fsdata
 {
 	struct wipe_e2data
 	{
-		int super_off;
+		unsigned long int super_off;
 		unsigned int blocksize;
 	} e2fs;
 
@@ -292,16 +303,33 @@ union fsdata
 typedef union fsdata fsdata;
 
 /* ========================= Common to all ================================ */
-extern void WFS_ATTR ((nonnull)) 	show_error ( const error_type err, const char*const msg,
-							const char*const extra );
+/* PARAMS is a macro used to wrap function prototypes, so that
+        compilers that don't understand ANSI C prototypes still work,
+        and ANSI C compilers can issue warnings about type mismatches. */
+# undef PARAMS
+# if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+#  define PARAMS(protos) protos
+# else
+#  define PARAMS(protos) ()
+# endif
 
-extern void WFS_ATTR ((nonnull)) 	show_msg ( const int type, const char*const msg,
-							const char*const extra );
+extern void WFS_ATTR ((nonnull)) 	show_error PARAMS((
+						const error_type	err,
+						const char * const	msg,
+						const char * const	extra ));
 
-extern void WFS_ATTR ((nonnull)) 	fill_buffer ( 	unsigned long int 		pat_no,
-							unsigned char* const 		buffer,
-							const size_t 			buflen,
-							int * const			selected );
+extern void WFS_ATTR ((nonnull)) 	show_msg PARAMS((
+						const int		type,
+						const char * const	msg,
+						const char * const	extra ));
+
+extern void WFS_ATTR ((nonnull)) 	fill_buffer PARAMS((
+						unsigned long int 	pat_no,
+						unsigned char * const 	buffer,
+						const size_t 		buflen,
+						int * const		selected ));
 
 extern const char * const err_msg;
 extern const char * const err_msg_open;

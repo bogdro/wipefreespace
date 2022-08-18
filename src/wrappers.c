@@ -30,7 +30,7 @@
 #endif
 
 #ifdef HAVE_ERRNO_H
-# include <errno.h>
+# include <errno.h>	/* EIO */
 #endif
 
 #include "wipefreespace.h"
@@ -59,7 +59,17 @@
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wipe_unrm ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wipe_unrm (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+#else
+	FS, which_fs, error )
+	wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 #if (defined WFS_EXT2) || (defined WFS_REISER)
@@ -111,7 +121,17 @@ wipe_unrm ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wipe_fs ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wipe_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+#else
+	FS, which_fs, error )
+	wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
@@ -158,7 +178,17 @@ wipe_fs ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wipe_part ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wipe_part (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+#else
+	FS, which_fs, error )
+	const wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
@@ -177,7 +207,7 @@ wipe_part ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const erro
 	else if ( which_fs == CURR_XFS )
 	{
 #ifdef WFS_XFS
-		ret_wfs = wfs_xfs_wipe_part (FS);
+		ret_wfs = wfs_xfs_wipe_part (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_REISERFS )
@@ -206,10 +236,22 @@ wipe_part ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const erro
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_open_fs ( const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const which_fs,
+wfs_open_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const which_fs,
 	const fsdata * const data, error_type * const error )
+#else
+	dev_name, FS, which_fs, data, error )
+	const char * const dev_name;
+	wfs_fsid_t * const FS;
+	CURR_FS * const which_fs;
+	const fsdata * const data;
+	error_type * const error;
+#endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	errcode_enum ret_wfs = WFS_OPENFS;
 	*which_fs = CURR_NONE;
 
 #ifdef WFS_EXT2
@@ -255,7 +297,16 @@ wfs_open_fs ( const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * cons
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_chk_mount ( const char * const dev_name, error_type * const error )
+wfs_chk_mount (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const dev_name, error_type * const error )
+#else
+	dev_name, error )
+	const char * const dev_name;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
@@ -285,7 +336,17 @@ wfs_chk_mount ( const char * const dev_name, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
-wfs_close_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wfs_close_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+#else
+	FS, which_fs, error )
+	const wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
@@ -333,7 +394,25 @@ wfs_close_fs ( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const e
  * \return 0 in case of no errors, other values otherwise.
  */
 int WFS_ATTR ((warn_unused_result))
-wfs_check_err ( wfs_fsid_t FS, const CURR_FS which_fs )
+wfs_check_err (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
+#ifndef WFS_XFS
+		WFS_ATTR((unused))
+#endif
+	 )
+#else
+	FS, which_fs, error
+#ifndef WFS_XFS
+		WFS_ATTR((unused))
+#endif
+	 )
+	wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	if ( which_fs == CURR_EXT2FS )
 	{
@@ -350,7 +429,7 @@ wfs_check_err ( wfs_fsid_t FS, const CURR_FS which_fs )
 	else if ( which_fs == CURR_XFS )
 	{
 #ifdef WFS_XFS
-		return wfs_xfs_check_err (FS);
+		return wfs_xfs_check_err (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_REISERFS )
@@ -370,7 +449,25 @@ wfs_check_err ( wfs_fsid_t FS, const CURR_FS which_fs )
  * \return 0 in case of no errors, other values otherwise.
  */
 int WFS_ATTR ((warn_unused_result))
-wfs_is_dirty ( wfs_fsid_t FS, const CURR_FS which_fs )
+wfs_is_dirty (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
+#ifndef WFS_XFS
+		WFS_ATTR((unused))
+#endif
+	 )
+#else
+	FS, which_fs, error
+#ifndef WFS_XFS
+		WFS_ATTR((unused))
+#endif
+	 )
+	wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	if ( which_fs == CURR_EXT2FS )
 	{
@@ -387,7 +484,7 @@ wfs_is_dirty ( wfs_fsid_t FS, const CURR_FS which_fs )
 	else if ( which_fs == CURR_XFS )
 	{
 #ifdef WFS_XFS
-		return wfs_xfs_is_dirty (FS);
+		return wfs_xfs_is_dirty (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_REISERFS )
@@ -407,7 +504,17 @@ wfs_is_dirty ( wfs_fsid_t FS, const CURR_FS which_fs )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
-wfs_flush_fs ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+wfs_flush_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+#else
+	FS, which_fs, error )
+	wfs_fsid_t FS;
+	const CURR_FS which_fs;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	if ( which_fs == CURR_EXT2FS )
@@ -449,4 +556,3 @@ wfs_flush_fs ( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #endif
 	return ret_wfs;
 }
-

@@ -1,11 +1,11 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename wipefreespace.info
-@settitle wipefreespace manual 0.8
+@settitle wipefreespace manual 0.9
 @c %**end of header
 
 @copying
-This manual is for wipefreespace, version 0.8
+This manual is for wipefreespace, version 0.9
 @end copying
 
 @titlepage
@@ -106,7 +106,7 @@ device/file permissions. This is MUCH safer.
 Requirements for compiling the full version of the program:@*
 @itemize
 @item a non-root account. Please, @strong{NEVER} compile or 'make' anything as root.
-@item a working C compiler (with the 'long long' data type for XFS, NTFS and ReiserFS support)
+@item a working C compiler (with the 'long long' data type for XFS, NTFS and ReiserFSv3 support)
 @item development package for the C library (like glibc-devel and glibc-headers).
 XFS support requires the following headers:@*@*
 @itemize
@@ -125,8 +125,9 @@ and the following functions:@*@*
 @item dup2()
 @item close()
 @item pipe()
+@item kill()
+@item waitpid() or wait()
 @item sleep() (not required, acutally, but a good thing to have)
-@item one of: waitpid(), wait() or kill()
 @end itemize
 @*
 ReiserFSv3 support requires the following headers:@*@*
@@ -164,8 +165,9 @@ Then compile and install that package.
 not required). Can be downloaded from@*
 	@indicateurl{http://oss.sgi.com/projects/xfs/}@*
 
-@item development package for the ReiserFS file system library (usually
-included in something like reiserfsprogs-devel).
+@item development package for the ReiserFSv3 file system library (usually
+included in something like reiserfsprogs-devel. If not available, copy the
+headers and the library from reiserfsprogs after compiling them).
 @end itemize
 
 Type './configure' to configure the program for your system. If you do not
@@ -208,6 +210,7 @@ Currently, wipefreespace does the following actions on supported filesystems:
 @item wiping space in partially used blocks
 @item wiping deleted files' data (part of free space or partially used blocks),
 wiping deleted files' names and setting deleted files' names' lengths once to zero
+@item wiping the journal
 @end itemize
 
 @item NTFS (libntfs: not official - not written by the filesystem's creators, written without
@@ -217,15 +220,18 @@ any specifications)
 @item wiping space in partially used blocks
 @item wiping deleted files' names, deleted files' names' lengths (wiping, not zeroing once),
 wiping deleted files' data (part of free space or partially used blocks)
+@item wiping the journal
 @end itemize
 
 @item XFS (only supported by executing xfs_db from xfsprogs, because I haven't found any
 usable development library):
 @itemize
 @item wiping the free space
+@item wiping undelete data (actually does nothing, because XFS doesn't have undelete capability)
+@item wiping space in partially used blocks
 @end itemize
 
-@item ReiserFS (using the library from reiserfsprogs, but that library is not a
+@item ReiserFSv3 (using the library from reiserfsprogs, but that library is not a
 part of any official development package):
 @itemize
 @item wiping the free space
@@ -273,6 +279,9 @@ Basic syntax is:
 The '/dev/XY' part stands for a device with a supported file system. Examples: /dev/hda1, /dev/fd0.
 More than one device can be given on the command line. This program also works for
 file systems created inside regular files on any host file system.
+
+@strong{NOTE}: It is best to use this program on un-mounted file systems,
+ which makes sure the journal is committed.
 
 Options:
 
@@ -377,8 +386,8 @@ is root. Read the first chapter of this documentation for an explanation and a s
 or was caught after SIGCONT was received).
 @end itemize
 
-@strong{NOTE}: Actually, the negative values are substracted from 256, so -1 could be shown as 255,
--2 as 254 and so on.
+@strong{NOTE}: Actually, the negative values are substracted from 256,
+so -1 could turn up as 255, -2 as 254 and so on.
 
 @strong{NOTE}: The error code is reset after each file system. If the last file system was wiped successfully,
 but the previous weren't, their errors are currently lost.
@@ -402,8 +411,9 @@ available (during compiling).
 
 The SIGCHLD (required for XFS support) signal is caught, but ignored.
 
-If the program receives the SIGKILL signal, it will, of course be killed. But it
-won't be able to close the file system and finish working normally. File system
+If the program receives the SIGKILL signal, it will, of course, be killed. But it
+won't be able to close the file system and finish working normally. The file system
+being worked on
 could be left in an unconsistent state, errors could show up.
 Try to avoid stopping the program this way.
 
@@ -1680,7 +1690,7 @@ Translating the documentation:
 @itemize
 @item info: simply change the wipefreespace.texi file
 @item man: Unpack the page using @command{gunzip wipefreespace.1.gz} and translate the
-resulting wipefreespace.1 file.
+resulting wipefreespace.1 file (it's a text file).
 @end itemize
 
 

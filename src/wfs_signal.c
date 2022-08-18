@@ -97,7 +97,15 @@ volatile sig_atomic_t sigchld_recvd = 0;	/* non-zero after SIGCHLD signal receiv
  * \param signum Signal number.
  */
 static RETSIGTYPE
-term_signal_received (const int signum)
+term_signal_received (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const int signum)
+#else
+	signum)
+	const int signum;
+#endif
 {
 	sig_recvd = signum;
 # ifdef RETSIG_ISINT
@@ -106,7 +114,15 @@ term_signal_received (const int signum)
 }
 
 static RETSIGTYPE
-child_signal_received (const int signum)
+child_signal_received (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const int signum)
+#else
+	signum)
+	const int signum;
+#endif
 {
 	sigchld_recvd = signum;
 # ifdef RETSIG_ISINT
@@ -118,7 +134,16 @@ child_signal_received (const int signum)
 
 /* =============================================================== */
 
-void wfs_set_sigh (error_type * const error, const int opt_verbose)
+void wfs_set_sigh (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	error_type * const error, const int opt_verbose)
+#else
+	error, opt_verbose)
+	error_type * const error;
+	const int opt_verbose;
+#endif
 {
 #ifdef HAVE_SIGNAL_H
 # define 	TMPSIZE	12
@@ -145,7 +170,7 @@ void wfs_set_sigh (error_type * const error, const int opt_verbose)
 		shndlr = signal ( signals[s], &term_signal_received );
 		if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
-			|| (errno != 0)
+/*			|| (errno != 0)*/
 #  endif
 		   )
 		{
@@ -169,7 +194,7 @@ void wfs_set_sigh (error_type * const error, const int opt_verbose)
 	shndlr = signal ( SIGCHLD, &child_signal_received );
 	if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
-		|| (errno != 0)
+/*		|| (errno != 0)*/
 #  endif
 	   )
 	{
@@ -206,7 +231,7 @@ void wfs_set_sigh (error_type * const error, const int opt_verbose)
 		res = sigaction ( signals[s], &sa, NULL);
 		if ( (res != 0)
 #  ifdef HAVE_ERRNO_H
-			|| (errno != 0)
+/*			|| (errno != 0)*/
 #  endif
 		   )
 		{
@@ -236,7 +261,7 @@ void wfs_set_sigh (error_type * const error, const int opt_verbose)
 	res = sigaction ( SIGCHLD, &sa, NULL);
 	if ( (res != 0)
 #  ifdef HAVE_ERRNO_H
-		|| (errno != 0)
+/*		|| (errno != 0)*/
 #  endif
 	   )
 	{

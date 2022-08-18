@@ -38,11 +38,11 @@ host_triplet = @host@
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
 	$(top_srcdir)/configure ABOUT-NLS AUTHORS COPYING ChangeLog \
-	INSTALL NEWS compile config.guess config.rpath config.sub \
-	depcomp install-sh missing mkinstalldirs
+	INSTALL NEWS THANKS compile config.guess config.rpath \
+	config.sub depcomp install-sh missing mkinstalldirs
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_gcc_option.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c_check_flag.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/iconv.m4 \
 	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
 	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/nls.m4 \
@@ -112,6 +112,7 @@ INTLLIBS = @INTLLIBS@
 INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 ISGCC_FALSE = @ISGCC_FALSE@
 ISGCC_TRUE = @ISGCC_TRUE@
+ISSED = @ISSED@
 LDFLAGS = @LDFLAGS@
 LIBICONV = @LIBICONV@
 LIBINTL = @LIBINTL@
@@ -138,6 +139,7 @@ POSUB = @POSUB@
 RANLIB = @RANLIB@
 REISERFS_FALSE = @REISERFS_FALSE@
 REISERFS_TRUE = @REISERFS_TRUE@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -190,7 +192,7 @@ target_alias = @target_alias@
 SUBDIRS = doc src po
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = config.rpath mkinstalldirs m4/ChangeLog wipefreespace.spec doc/wipefreespace.1	\
-	m4/ax_gcc_option.m4 wipefreespace.desktop
+	m4/ax_c_check_flag.m4 wipefreespace.desktop THANKS
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive

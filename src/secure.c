@@ -55,7 +55,15 @@
  * \return 0 on success, other values otherwise.
  */
 int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
-wfs_clear_cap (error_type * const error)
+wfs_clear_cap (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	error_type * const error)
+#else
+	error)
+	error_type * const error;
+#endif
 {
 #ifdef HAVE_SYS_CAPABILITY_H
 	int res;
@@ -72,7 +80,7 @@ wfs_clear_cap (error_type * const error)
 	my_capab = cap_init ();
 	if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
-		&& (errno == 0)
+/*		&& (errno == 0)*/
 # endif
 	   )
 	{
@@ -82,7 +90,7 @@ wfs_clear_cap (error_type * const error)
 		res = cap_set_proc (my_capab);
 		if ( (res != 0)
 # ifdef HAVE_ERRNO_H
-			|| (errno != 0)
+/*			|| (errno != 0)*/
 # endif
 		   )
 		{
@@ -92,6 +100,8 @@ wfs_clear_cap (error_type * const error)
 			error->errcode.gerror = 1L;
 # endif
 		}
+		/* don't care about any cap_free() errors right now */
+		cap_free (my_capab);
 	}
 	else
 	{	/* cap_init() failed. Get current capabilities and clear them. */
@@ -102,7 +112,7 @@ wfs_clear_cap (error_type * const error)
 		my_capab = cap_get_proc ();
 		if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
-			&& (errno == 0)
+/*			&& (errno == 0)*/
 # endif
 		   )
 		{
@@ -113,7 +123,7 @@ wfs_clear_cap (error_type * const error)
 
 			if ( (res != 0)
 # ifdef HAVE_ERRNO_H
-				|| (errno != 0)
+/*				|| (errno != 0)*/
 # endif
 			   )
 			{
@@ -131,7 +141,7 @@ wfs_clear_cap (error_type * const error)
 				res = cap_set_proc (my_capab);
 				if ( (res != 0)
 # ifdef HAVE_ERRNO_H
-					|| (errno != 0)
+/*					|| (errno != 0)*/
 # endif
 				   )
 				{
@@ -142,6 +152,8 @@ wfs_clear_cap (error_type * const error)
 # endif
 				}
 			}
+			/* don't care about any cap_free() errors right now */
+			cap_free (my_capab);
 		}
 		else
 		{	/* cap_get_proc() failed. */
@@ -163,7 +175,16 @@ wfs_clear_cap (error_type * const error)
  * \param stderr_open Pointer to an int, which will get the value 0 if standard error output is not open.
  */
 void WFS_ATTR ((nonnull))
-wfs_check_stds (int *stdout_open, int *stderr_open)
+wfs_check_stds (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	int *stdout_open, int *stderr_open)
+#else
+	stdout_open, stderr_open)
+	int *stdout_open;
+	int *stderr_open;
+#endif
 {
 #ifdef HAVE_SYS_STAT_H
 	int res;
@@ -186,7 +207,7 @@ wfs_check_stds (int *stdout_open, int *stderr_open)
 # endif
 		if ( (res < 0)
 # ifdef HAVE_ERRNO_H
-			|| (errno != 0)
+/*			|| (errno != 0)*/
 # endif
 		   )
 		{
@@ -208,7 +229,7 @@ wfs_check_stds (int *stdout_open, int *stderr_open)
 # endif
 		if ( (res < 0)
 # ifdef HAVE_ERRNO_H
-			|| (errno != 0)
+/*			|| (errno != 0)*/
 # endif
 		   )
 		{
@@ -223,17 +244,23 @@ wfs_check_stds (int *stdout_open, int *stderr_open)
 
 /**
  * Checks if the program is being run setuid(root).
- * \return 0 if not.
+ * \return WFS_SUCCESS if not.
  */
-int WFS_ATTR ((warn_unused_result))
-wfs_check_suid (void)
+errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_check_suid (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	void)
+#else
+	)
+#endif
 {
-	int ret = WFS_SUCCESS;
+	errcode_enum ret = WFS_SUCCESS;
 
 #if (defined HAVE_UNISTD_H) && (defined HAVE_GETEUID) && (defined HAVE_GETUID)
 	if ( (geteuid () != getuid () ) && (geteuid () == 0) )
 	{
-
 		ret = WFS_SUID;
 	}
 #endif
@@ -245,7 +272,14 @@ wfs_check_suid (void)
  * Clears the environment.
  */
 void
-wfs_clear_env (void)
+wfs_clear_env (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	void)
+#else
+	)
+#endif
 {
 #if (defined HAVE_CLEARENV)
 	clearenv ();

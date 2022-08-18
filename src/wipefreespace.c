@@ -28,12 +28,18 @@
  * - The linux-ntfs team
  * - Colin Plumb, for the great 'shred' program, parts of which are used here.
  *	The 'shred' utility is:
-	   Copyright (C) 1999-2006 Free Software Foundation, Inc.
-	   Copyright (C) 1997, 1998, 1999 Colin Plumb.
+ *	   Copyright (C) 1999-2006 Free Software Foundation, Inc.
+ *	   Copyright (C) 1997, 1998, 1999 Colin Plumb.
  *
  */
 
 #include "wfs_cfg.h"
+
+#ifdef STAT_MACROS_BROKEN
+# if STAT_MACROS_BROKEN
+#  error Stat macros broken. Change your C library.
+# endif
+#endif
 
 #include <stdio.h>
 
@@ -64,12 +70,8 @@
 # include <malloc.h>
 #endif
 */
-/*
-#ifdef HAVE_TIME_H
-# include <time.h>	* time() for randomization purposes *
-#endif
-*/
 
+/* time() for randomization purposes */
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
@@ -77,7 +79,9 @@
 # if HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # else
-#  include <time.h>
+#  ifdef HAVE_TIME_H
+#   include <time.h>
+#  endif
 # endif
 #endif
 
@@ -111,10 +115,21 @@
 #include "wfs_signal.h"
 
 #ifdef WFS_REISER
+# ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+# endif
 # ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
 # else
-#  include <wait.h>
+#  ifdef HAVE_WAIT_H
+#   include <wait.h>
+#  endif
+# endif
+# ifndef WEXITSTATUS
+#  define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
+# endif
+# ifndef WIFEXITED
+#  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
 # endif
 #endif
 
@@ -127,7 +142,7 @@ static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
 	"\nmodify it under the terms of the GNU General Public License"			\
-	"\nas published by the Free Software Foundation; either version 2"		\
+	"\nas published by the Free Software Foundation; either version 3"		\
 	"\nof the License, or (at your option) any later version."			\
 	"\n\nThis program is distributed in the hope that it will be useful,"		\
 	"\nbut WITHOUT ANY WARRANTY; without even the implied warranty of"		\
@@ -139,14 +154,14 @@ const char * const err_msg_open    = N_("during opening");
 const char * const err_msg_flush   = N_("while flushing");
 const char * const err_msg_close   = N_("during closing");
 const char * const err_msg_malloc  = N_("during malloc while working on");
-const char * const err_msg_checkmt = N_("during checking if the file system is mounted:");
-const char * const err_msg_mtrw    = N_("- Device is mounted in read-write mode:");
+const char * const err_msg_checkmt = N_("during checking if the file system is mounted");
+const char * const err_msg_mtrw    = N_("- Device is mounted in read-write mode");
 const char * const err_msg_rdblbm  = N_("during reading block bitmap from");
 const char * const err_msg_wrtblk  = N_("during writing of a block on");
 const char * const err_msg_rdblk   = N_("during reading of a block on");
 const char * const err_msg_rdino   = N_("during reading of an inode on");
 const char * const err_msg_signal  = N_("while trying to set a signal handler for");
-const char * const err_msg_fserr   = N_("Filesystem has errors:");
+const char * const err_msg_fserr   = N_("Filesystem has errors");
 const char * const err_msg_openscan= N_("during opening a scan of");
 const char * const err_msg_blkiter = N_("during iterating over blocks on");
 const char * const err_msg_diriter = N_("during iterating over a directory on");
@@ -235,13 +250,23 @@ static unsigned const int patterns[NPAT] =
  * \param extra Last element of the error message (fsname or signal).
  */
 WFS_ATTR ((nonnull)) void
-show_error ( const error_type err, const char * const msg, const char * const extra )
+show_error (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const error_type err, const char * const msg, const char * const extra )
+#else
+	err, msg, extra )
+	const error_type err;
+	const char * const msg;
+	const char * const extra;
+#endif
 {
 	if ( (stderr_open == 0)  || (msg == NULL) || (extra == NULL) ) return;
 
 #if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
 # if (defined WFS_EXT2)
-	if ( (err.whichfs == CURR_EXT2FS) /*|| (err.whichfs == CURR_NONE)*/ )
+	if ( err.whichfs == CURR_EXT2FS )
 	{
 		com_err ( wfs_progname, err.errcode.e2error, ERR_MSG_FORMATL, _(err_msg),
 			err.errcode.e2error, _(msg), extra );
@@ -266,7 +291,17 @@ show_error ( const error_type err, const char * const msg, const char * const ex
  * \param extra Last element of the error message (fsname or signal).
  */
 WFS_ATTR ((nonnull)) void
-show_msg ( const int type, const char * const msg, const char * const extra )
+show_msg (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const int type, const char * const msg, const char * const extra )
+#else
+	type, msg, extra )
+	const int type;
+	const char * const msg;
+	const char * const extra;
+#endif
 {
 	if ( (stdout_open == 0) || (msg == NULL) ) return;
 
@@ -287,7 +322,15 @@ show_msg ( const int type, const char * const msg, const char * const extra )
  * \param my_name Program identifier, like argv[0], if available.
  */
 static WFS_ATTR ((nonnull)) void
-print_help ( const char * const my_name )
+print_help (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const my_name )
+#else
+	my_name )
+	const char * const my_name;
+#endif
 {
 	const char /*@observer@*/ *prog;
 	if ( my_name == NULL )
@@ -337,10 +380,20 @@ print_help ( const char * const my_name )
  */
 void WFS_ATTR ((nonnull))
 fill_buffer (
-		unsigned long int 		pat_no,
-		unsigned char * const 		buffer,
-		const size_t 			buflen,
-		int * const			selected )
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	unsigned long int 		pat_no,
+	unsigned char * const 		buffer,
+	const size_t 			buflen,
+	int * const			selected )
+#else
+	pat_no,	buffer,	buflen,	selected )
+	unsigned long int 		pat_no;
+	unsigned char * const 		buffer;
+	const size_t 			buflen;
+	int * const			selected;
+#endif
 		/*@requires notnull buffer @*/ /*@sets *buffer @*/
 {
 
@@ -444,22 +497,253 @@ fill_buffer (
 }
 
 /* ======================================================================== */
-int
-main ( int argc, char* argv[] )
-{
-	int res;
-	errcode_enum ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
-	wfs_fsid_t fs;			/* The file system we're working on */
-	CURR_FS curr_fs = CURR_NONE;
-	fsdata data;
-#ifdef WFS_EXT2
-	const char *e2libver = NULL;
+
+static errcode_enum WFS_ATTR((warn_unused_result))
+wfs_wipe_filesytem (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const dev_name)
+#else
+	dev_name)
+	const char * const dev_name;
 #endif
+{
+	errcode_enum ret = WFS_SUCCESS;	/* Value returned */
+	wfs_fsid_t fs;			/* The file system we're working on */
+	fsdata data;
 	error_type error;
+	CURR_FS curr_fs = CURR_NONE;
+	int res;
 #ifdef WFS_REISER
 	pid_t rfs_child;
 	int child_status;
 #endif
+
+	error.whichfs = CURR_NONE;
+
+	if ( dev_name == NULL ) return WFS_BAD_CMDLN;
+
+	if ( strlen (dev_name) == 0 )
+	{
+		return WFS_BAD_CMDLN;
+	}
+
+	if ( (sig_recvd == 0) && (opt_verbose == 1) )
+	{
+		show_msg ( 1, msg_chkmnt, dev_name );
+	}
+
+	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+
+	/* checking if fs mounted */
+	ret = wfs_chk_mount ( dev_name, &error );
+	if ( ret != WFS_SUCCESS )
+	{
+		show_error ( error, (ret==WFS_MNTCHK)? err_msg_checkmt : err_msg_mtrw, dev_name );
+		return ret;
+	}
+
+	/* opening the file system */
+	if ( (sig_recvd == 0) && (opt_verbose == 1) )
+	{
+		show_msg ( 1, msg_openfs, dev_name );
+	}
+
+	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+
+	data.e2fs.super_off = super_off;
+	data.e2fs.blocksize = blocksize;
+	ret = wfs_open_fs ( dev_name, &fs, &curr_fs, &data, &error );
+	if ( ret != WFS_SUCCESS )
+	{
+		show_error ( error, err_msg_open, dev_name );
+		return WFS_OPENFS;
+	}
+	if ( sig_recvd != 0 )
+	{
+		wfs_close_fs ( fs, curr_fs, &error );
+		return WFS_SIGNAL;
+	}
+	error.whichfs = curr_fs;
+
+	/* We need a separate process for ReiserFSv3, because its library can call
+	   exit(), which wouldn't be good for our program */
+#ifdef WFS_REISER
+	if ( curr_fs == CURR_REISERFS )
+	{
+# ifdef HAVE_ERRNO_H
+		errno = 0;	/* used for gerror */
+# endif
+		rfs_child = fork ();
+		if ( rfs_child < 0 )
+		{
+# ifdef HAVE_ERRNO_H
+			error.errcode.gerror = errno;
+# else
+			error.errcode.gerror = 1L;
+# endif
+	        	show_error ( error, err_msg_fork, dev_name );
+        		wfs_close_fs ( fs, curr_fs, &error );
+			return WFS_FORKERR;
+		}
+		else if ( rfs_child > 0 )	/* NOTE: do NOT write '>= 0' */
+		{
+			/* parent process simply waits for the child */
+			while ( 1 == 1 )
+			{
+# ifdef HAVE_WAITPID
+				waitpid (rfs_child, &child_status, 0);
+# else
+				wait (&child_status);
+# endif
+# ifdef WIFEXITED
+				if ( WIFEXITED (child_status) )
+				{
+					ret = WEXITSTATUS (child_status);
+					break;
+				}
+# endif
+# ifdef WIFSIGNALED
+				if ( WIFSIGNALED (child_status) )
+				{
+					ret = WFS_SIGNAL;
+					break;
+				}
+# endif
+# if (!defined WIFEXITED) && (!defined WIFSIGNALED)
+				break;
+# endif
+			}
+			sigchld_recvd = 0;
+			/* parent process returns from wfs_wipe_filesytem() */
+			return ret;
+		}
+			/* child process continues execution from here: */
+	}	/* curr_fs == CURR_REISERFS */
+#endif	/* WFS_REISER */
+
+        if ( sig_recvd != 0 )
+        {
+        	wfs_close_fs ( fs, curr_fs, &error );
+#ifdef WFS_REISER
+		if ( curr_fs == CURR_REISERFS )
+		{
+			/* ReiserFS child process ends here */
+			exit (WFS_SIGNAL);
+		}
+#endif
+        	return WFS_SIGNAL;
+        }
+
+	if ( (opt_force == 0) && (wfs_check_err (fs, curr_fs, &error) != 0) )
+	{
+		show_msg ( 1, err_msg_fserr, dev_name );
+		wfs_close_fs ( fs, curr_fs, &error );
+#ifdef WFS_REISER
+		if ( curr_fs == CURR_REISERFS )
+		{
+			/* ReiserFS child process ends here */
+			exit (WFS_FSHASERROR);
+		}
+#endif
+		return WFS_FSHASERROR;
+	}
+
+	/* ALWAYS flush the file system before starting. */
+	/*if ( (sig_recvd == 0) && ( wfs_is_dirty (fs, curr_fs) != 0) )*/
+	{
+		if ( (sig_recvd == 0) && (opt_verbose == 1) )
+		{
+			show_msg ( 1, msg_flushfs, dev_name );
+		}
+		wfs_flush_fs ( fs, curr_fs, &error );
+	}
+
+        if ( sig_recvd != 0 )
+        {
+		wfs_close_fs ( fs, curr_fs, &error );
+#ifdef WFS_REISER
+		if ( curr_fs == CURR_REISERFS )
+		{
+			/* ReiserFS child process ends here */
+			exit (WFS_SIGNAL);
+		}
+#endif
+        	return WFS_SIGNAL;
+        }
+
+        /* removing undelete information */
+	if ( (opt_nounrm == 0) && (sig_recvd == 0) )
+	{
+		if ( opt_verbose == 1 )
+		{
+			show_msg ( 1, msg_wipeunrm, dev_name );
+		}
+		res = wipe_unrm (fs, curr_fs, &error);
+		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+	}
+
+	/* wiping partially occupied blocks */
+	if ( (opt_nopart == 0) && (sig_recvd == 0) )
+	{
+		if ( opt_verbose == 1 )
+		{
+			show_msg ( 1, msg_wipeused, dev_name );
+		}
+
+		res = wipe_part (fs, curr_fs, &error);
+		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+	}
+
+	if ( (opt_nowfs == 0) && (sig_recvd == 0) )
+	{
+		if ( opt_verbose == 1 )
+		{
+			show_msg ( 1, msg_wipefs, dev_name );
+		}
+		res = wipe_fs (fs, curr_fs, &error);
+		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+	}
+
+	if ( opt_verbose == 1 )
+	{
+		show_msg ( 1, msg_closefs, dev_name );
+	}
+
+	wfs_flush_fs ( fs, curr_fs, &error );
+	res = wfs_close_fs ( fs, curr_fs, &error );
+	if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+
+#ifdef WFS_REISER
+	if ( curr_fs == CURR_REISERFS )
+	{
+		/* ReiserFS child process ends here */
+		exit (ret);
+	}
+#endif
+	return ret;
+}
+
+/* ======================================================================== */
+int
+main (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	int argc, char* argv[] )
+#else
+	argc, argv )
+	int argc;
+	char* argv[];
+#endif
+{
+	int res;
+	errcode_enum ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
+#ifdef WFS_EXT2
+	const char *e2libver = NULL;
+#endif
+	error_type error;
 
 	wfs_check_stds (&stdout_open, &stderr_open);
 
@@ -509,11 +793,11 @@ main ( int argc, char* argv[] )
 	res = wfs_clear_cap (&error);
 	if ( res != WFS_SUCCESS )
 	{
-		error.errcode.gerror = 1L;
 		show_error ( error, err_msg_capset, wfs_progname );
 	}
 
-	/* NOTE: XFS support requires the $PATH environment variable right now */
+	/* NOTE: XFS support requires the $PATH environment variable right now,
+		so don't clear the environment. */
 	/*wfs_clear_env ();*/
 
 	/* Parsing the command line */
@@ -556,7 +840,7 @@ main ( int argc, char* argv[] )
 #ifdef WFS_EXT2
 				ext2fs_get_library_version ( &e2libver, NULL );
 				printf ( "Libext2fs version %s Copyright (C) Theodore Ts'o\n",
-					(e2libver!=NULL)? e2libver: "" );
+					(e2libver != NULL)? e2libver: "" );
 #endif
 #ifdef WFS_NTFS
 				printf("LibNTFS version %s, http://www.linux-ntfs.org\n",
@@ -578,7 +862,7 @@ main ( int argc, char* argv[] )
 #endif
 			if ( (npasses == 0)
 #ifdef HAVE_ERRNO_H
-				|| (errno != 0)
+/*				|| (errno != 0)*/
 #endif
 			   )
 			{
@@ -600,9 +884,9 @@ main ( int argc, char* argv[] )
 			res = sscanf ( optarg, "%u", &blocksize );
 #endif
 #ifdef HAVE_ERRNO_H
-			if ( (errno != 0)
+			if ( (res == 0)
 # ifndef HAVE_STRTOUL
-				|| (res == 0)
+/*				|| (errno != 0)*/
 # endif
 			   )
 			{
@@ -625,9 +909,9 @@ main ( int argc, char* argv[] )
 			res = sscanf ( optarg, "%u", &super_off );
 #endif
 #ifdef HAVE_ERRNO_H
-			if ( (errno != 0)
+			if ( (res == 0)
 # ifndef HAVE_STRTOUL
-				|| (res == 0)
+/*				|| (errno != 0)*/
 # endif
 			   )
 			{
@@ -699,7 +983,7 @@ main ( int argc, char* argv[] )
         if ( sig_recvd != 0 ) return WFS_SIGNAL;
 
 #if (!defined __STRICT_ANSI__) && (defined HAVE_SRANDOM)
-# ifdef HAVE_TIME_H
+# if (defined HAVE_TIME_H) || (defined HAVE_SYS_TIME_H) || (defined TIME_WITH_SYS_TIME)
 	srandom (0xabadcafe*(unsigned long) time (NULL));
 # else
 	srandom (0xabadcafe);
@@ -707,7 +991,7 @@ main ( int argc, char* argv[] )
 
 #else
 
-# ifdef HAVE_TIME_H
+# if (defined HAVE_TIME_H) || (defined HAVE_SYS_TIME_H) || (defined TIME_WITH_SYS_TIME)
 	srand (0xabadcafe*(unsigned long) time (NULL));
 # else
 	srand (0xabadcafe);
@@ -720,202 +1004,18 @@ main ( int argc, char* argv[] )
 	 */
 	while ( (wfs_optind < argc) && (sig_recvd == 0) )
 	{
-		curr_fs = CURR_NONE;
-		error.whichfs = CURR_NONE;
-
-		ret = WFS_SUCCESS;
+		if ( argv[wfs_optind] == NULL )
+		{
+			wfs_optind++;
+			continue;
+		}
 		fsname = argv[wfs_optind];
-
-                if ( strlen (fsname) == 0 )
-                {
-			wfs_optind++;
-			continue;
-                }
-
-		if ( (sig_recvd == 0) && (opt_verbose == 1) )
-		{
-			show_msg ( 1, msg_chkmnt, fsname );
-		}
-
-	        if ( sig_recvd != 0 ) return WFS_SIGNAL;
-
-		/* checking if fs mounted */
-		ret = wfs_chk_mount ( fsname, &error );
-	        if ( ret != WFS_SUCCESS )
-	        {
-	        	show_error ( error, (ret==WFS_MNTCHK)? err_msg_checkmt : err_msg_mtrw, fsname );
-			wfs_optind++;
-			continue;
-		}
-
-		/* opening the file system */
-		if ( (sig_recvd == 0) && (opt_verbose == 1) )
-		{
-			show_msg ( 1, msg_openfs, fsname );
-		}
-
-	        if ( sig_recvd != 0 ) return WFS_SIGNAL;
-
-		data.e2fs.super_off = super_off;
-		data.e2fs.blocksize = blocksize;
-	        ret = wfs_open_fs ( fsname, &fs, &curr_fs, &data, &error );
-	        if ( ret != WFS_SUCCESS )
-	        {
-	        	show_error ( error, err_msg_open, fsname );
-			wfs_optind++;
-			ret = WFS_OPENFS;
-			continue;
-		}
-		error.whichfs = curr_fs;
-#ifdef WFS_REISER
-		if ( curr_fs == CURR_REISERFS )
-		{
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-			rfs_child = fork ();
-			if ( rfs_child < 0 )
-			{
-# ifdef HAVE_ERRNO_H
-				error.errcode.gerror = errno;
-# else
-				error.errcode.gerror = 1L;
-# endif
-		        	show_error ( error, err_msg_fork, fsname );
-				wfs_optind++;
-				ret = WFS_FORKERR;
-	        		wfs_close_fs ( fs, curr_fs, &error );
-				continue;
-			}
-			else if ( rfs_child > 0 )
-			{
-				/* parent process simply waits for the child */
-				while ( 1 == 1 )
-				{
-# ifdef HAVE_WAITPID
-					waitpid (rfs_child, &child_status, 0);
-# else
-					wait (&child_status);
-# endif
-# ifdef WIFEXITED
-					if ( WIFEXITED (child_status) )
-					{
-						ret = WEXITSTATUS (child_status);
-						break;
-					}
-# endif
-# ifdef WIFSIGNALED
-					if ( WIFSIGNALED (child_status) )
-					{
-						ret = WFS_SIGNAL;
-						break;
-					}
-# endif
-# if (!defined WIFEXITED) && (!defined WIFSIGNALED)
-					break;
-# endif
-				};
-				wfs_optind++;
-				continue;
-			}
-			/* child process continues execution from here: */
-		}
-#endif
-	        if ( sig_recvd != 0 )
-	        {
-	        	wfs_close_fs ( fs, curr_fs, &error );
-	        	return WFS_SIGNAL;
-	        }
-
-		if ( (opt_force == 0) && (wfs_check_err (fs, curr_fs) != 0) )
-		{
-
-			show_msg ( 1, err_msg_fserr, fsname );
-			wfs_close_fs ( fs, curr_fs, &error );
-			wfs_optind++;
-			ret = WFS_FSHASERROR;
-			continue;
-		}
-
-		/* flush the file system before starting, if there seems to be need. */
-		if ( (sig_recvd == 0) && ( wfs_is_dirty (fs, curr_fs) != 0) )
-		{
-
-			if ( (sig_recvd == 0) && (opt_verbose == 1) )
-			{
-				show_msg ( 1, msg_flushfs, fsname );
-			}
-			wfs_flush_fs ( fs, curr_fs, &error );
-		}
-
-	        if ( sig_recvd != 0 )
-	        {
-			wfs_close_fs ( fs, curr_fs, &error );
-	        	return WFS_SIGNAL;
-	        }
-
-	        /* removing undelete information */
-		if ( (opt_nounrm == 0) && (sig_recvd == 0) )
-		{
-
-			if ( opt_verbose == 1 )
-			{
-				show_msg ( 1, msg_wipeunrm, fsname );
-			}
-
-			res = wipe_unrm (fs, curr_fs, &error);
-			if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
-		}
-
-		/* wiping partially occupied blocks */
-		if ( (opt_nopart == 0) && (sig_recvd == 0) )
-		{
-
-			if ( opt_verbose == 1 )
-			{
-				show_msg ( 1, msg_wipeused, fsname );
-			}
-
-			res = wipe_part (fs, curr_fs, &error);
-			if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
-		}
-
-		if ( (opt_nowfs == 0) && (sig_recvd == 0) )
-		{
-
-			if ( opt_verbose == 1 )
-			{
-				show_msg ( 1, msg_wipefs, fsname );
-			}
-
-			res = wipe_fs (fs, curr_fs, &error);
-			if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
-                }
-
-		if ( opt_verbose == 1 )
-		{
-			show_msg ( 1, msg_closefs, fsname );
-		}
-
-		res = wfs_close_fs ( fs, curr_fs, &error );
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
-
-#ifdef WFS_REISER
-		if ( curr_fs == CURR_REISERFS )
-		{
-			/* child process here */
-			return ret;
-		}
-#endif
-		wfs_optind++;	/* next device */
-
-#if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_SYNC)
-		sync ();
-#endif
-
+		ret = wfs_wipe_filesytem (argv[wfs_optind]);
+		if ( (ret == WFS_SIGNAL) || (sig_recvd != 0) ) break;
+		wfs_optind++;
 	} /* while optind<argc && !signal */
 
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	else return ret;	/* return the last error value or zero */
-}
+}	/* main() */
 

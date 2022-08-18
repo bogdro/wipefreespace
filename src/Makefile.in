@@ -53,18 +53,21 @@ bin_PROGRAMS = wipefreespace$(EXEEXT)
 @EXT2FS_TRUE@am__append_1 = wfs_ext23.h wfs_ext23.c
 #wipefreespace_LDADD += -lext2fs
 @NTFS_TRUE@am__append_2 = libwfsntfs.a
+@NTFS_TRUE@am__append_3 = libwfsntfs.a
 #if ISGCC
 #libwfsntfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)
 #endif
-@XFS_TRUE@am__append_3 = libwfsxfs.a
+@XFS_TRUE@am__append_4 = libwfsxfs.a
+@XFS_TRUE@am__append_5 = libwfsxfs.a
 #if ISGCC
 #libwfsxfs_a_CFLAGS = -std=gnu99 $(AM_CFLAGS)
 #endif
-@REISERFS_TRUE@am__append_4 = libwfsrfs.a
+@REISERFS_TRUE@am__append_6 = libwfsrfs.a
+@REISERFS_TRUE@am__append_7 = libwfsrfs.a
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_gcc_option.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c_check_flag.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/iconv.m4 \
 	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
 	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/nls.m4 \
@@ -161,6 +164,7 @@ INTLLIBS = @INTLLIBS@
 INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 ISGCC_FALSE = @ISGCC_FALSE@
 ISGCC_TRUE = @ISGCC_TRUE@
+ISSED = @ISSED@
 LDFLAGS = @LDFLAGS@
 LIBICONV = @LIBICONV@
 LIBINTL = @LIBINTL@
@@ -187,6 +191,7 @@ POSUB = @POSUB@
 RANLIB = @RANLIB@
 REISERFS_FALSE = @REISERFS_FALSE@
 REISERFS_TRUE = @REISERFS_TRUE@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -239,13 +244,11 @@ target_alias = @target_alias@
 wipefreespace_SOURCES = wipefreespace.c wrappers.c wipefreespace.h \
 	wrappers.h wfs_cfg.h ../config.h secure.c secure.h \
 	wfs_signal.c wfs_signal.h $(am__append_1)
-wipefreespace_LDADD = $(INTLLIBS) $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+wipefreespace_LDADD = $(INTLLIBS) $(am__append_2) $(am__append_4) \
+	$(am__append_6)
 localedir = $(datadir)/locale
 INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
-@NTFS_TRUE@noinst_LIBRARIES = libwfsntfs.a
-@REISERFS_TRUE@noinst_LIBRARIES = libwfsrfs.a
-@XFS_TRUE@noinst_LIBRARIES = libwfsxfs.a
+noinst_LIBRARIES = $(am__append_3) $(am__append_5) $(am__append_7)
 @NTFS_TRUE@libwfsntfs_a_SOURCES = wfs_ntfs.h wfs_ntfs.c
 @XFS_TRUE@libwfsxfs_a_SOURCES = wfs_xfs.h wfs_xfs.c
 @REISERFS_TRUE@libwfsrfs_a_SOURCES = wfs_reiser.h wfs_reiser.c

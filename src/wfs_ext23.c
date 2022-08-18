@@ -37,9 +37,12 @@
 # endif
 #endif
 
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
+/* fix e2fsprogs inline functions - some linkers saw double definitions and
+   failed with an error message */
+# if (defined HAVE_LIBEXT2FS) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
+#  define _EXT2_USE_C_VERSIONS_	1
+#  define NO_INLINE_FUNCS	1
+# endif
 
 #if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS)
 # include <ext2fs/ext2fs.h>
@@ -68,6 +71,13 @@
 # include <errno.h>
 #endif
 
+#ifdef HAVE_STRING_H
+# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
+#  include <memory.h>
+# endif
+# include <string.h>	/* memset() */
+#endif
+
 #include "wipefreespace.h"
 #include "wfs_ext23.h"
 #include "wfs_signal.h"
@@ -76,6 +86,7 @@ struct wfs_e2_block_data
 {
 	struct ext2_inode *ino;
 	unsigned char * buf;
+	int isjournal;
 };
 
 /**
@@ -84,9 +95,17 @@ struct wfs_e2_block_data
  * \return Block size on the filesystem.
  */
 static size_t WFS_ATTR ((warn_unused_result))
-wfs_e2_get_block_size ( const wfs_fsid_t FS )
+wfs_e2_get_block_size (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS )
+#else
+	FS)
+	const wfs_fsid_t FS;
+#endif
 {
-	return EXT2_BLOCK_SIZE (FS.e2fs->super);
+	return (size_t) EXT2_BLOCK_SIZE (FS.e2fs->super);
 }
 
 /**
@@ -99,10 +118,20 @@ wfs_e2_get_block_size ( const wfs_fsid_t FS )
  */
 static int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
 e2_do_block (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
 		const ext2_filsys		FS,
-		const blk_t * const 		BLOCKNR,
+		blk_t * const	 		BLOCKNR,
 		const int			BLOCKCNT,
 		void * const			PRIVATE)
+#else
+		FS, BLOCKNR, BLOCKCNT, PRIVATE)
+		const ext2_filsys		FS;
+		blk_t * const	 		BLOCKNR;
+		const int			BLOCKCNT;
+		void * const			PRIVATE;
+#endif
 		/*@requires notnull FS, BLOCKNR @*/
 {
 	unsigned long int j;
@@ -112,12 +141,14 @@ e2_do_block (
 	int selected[NPAT];
 	error_type error;
 	struct wfs_e2_block_data *bd;
+	static int first_journ = 1;
 
 	if ( (BLOCKNR == NULL) || (PRIVATE == NULL) ) return BLOCK_ABORT;
 
 	FSID.e2fs = FS;
 	bd = (struct wfs_e2_block_data *)PRIVATE;
 
+	/* for partial wiping: */
 	if ( (bd->ino != NULL) && (sig_recvd == 0) )
 	{
 		buf_start = (size_t) (wfs_e2_get_block_size (FSID) -
@@ -147,7 +178,6 @@ e2_do_block (
 
 	for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
 	{
-
 		fill_buffer ( j, bd->buf + buf_start /* buf OK */,
 			wfs_e2_get_block_size (FSID) - buf_start, selected );
 		if ( sig_recvd != 0 )
@@ -155,7 +185,12 @@ e2_do_block (
 			returns = BLOCK_ABORT;
 		       	break;
 		}
-		error.errcode.e2error = io_channel_write_blk (FS->io, *BLOCKNR, 1, bd->buf);
+		error.errcode.e2error = 0;
+		/* do NOT overwrite the first block of the journal */
+		if ( ((bd->isjournal != 0) && (first_journ == 0)) || (bd->isjournal == 0) )
+		{
+			error.errcode.e2error = io_channel_write_blk (FS->io, *BLOCKNR, 1, bd->buf);
+		}
 		if ( (error.errcode.e2error != 0) )
 		{
 			/* check if block is marked as bad. If there is no 'badblocks' list
@@ -178,6 +213,51 @@ e2_do_block (
 			error.errcode.gerror = wfs_e2_flush_fs ( FSID, &error );
 		}
 	}
+	if ( bd->isjournal != 0 )
+	{
+		/* skip the first block of the journal */
+		if ( first_journ != 0 )
+		{
+			first_journ--;
+		}
+		else
+		{
+#ifdef HAVE_MEMSET
+			memset ( bd->buf + buf_start, 0, wfs_e2_get_block_size (FSID) - buf_start );
+#else
+			for ( j=0; j < wfs_e2_get_block_size (FSID) - buf_start; j++ )
+			{
+				bd->buf[buf_start+j] = '\0';
+			}
+#endif
+			if ( sig_recvd != 0 )
+			{
+				returns = BLOCK_ABORT;
+			}
+			error.errcode.e2error = io_channel_write_blk (FS->io, *BLOCKNR, 1, bd->buf);
+			if ( (error.errcode.e2error != 0) )
+			{
+				/* check if block is marked as bad. If there is no 'badblocks' list
+				   or the block is marked OK, then print the error. */
+				if (FS->badblocks == NULL)
+				{
+					show_error ( error, err_msg_wrtblk, fsname );
+					returns = BLOCK_ABORT;
+				}
+				else if (ext2fs_badblocks_list_test (FS->badblocks, *BLOCKNR) == 0)
+				{
+					show_error ( error, err_msg_wrtblk, fsname );
+					returns = BLOCK_ABORT;
+				}
+			}
+			/* Flush after each writing, if more than 1 overwriting needs to be done.
+			   Allow I/O bufferring (efficiency), if just one pass is needed. */
+			if ( (npasses > 1) && (sig_recvd == 0) )
+			{
+				error.errcode.gerror = wfs_e2_flush_fs ( FSID, &error );
+			}
+		}
+	}
 	if ( sig_recvd != 0 )
 	{
 		return BLOCK_ABORT;
@@ -193,17 +273,32 @@ e2_do_block (
  * a time and saves the last one.
  * \param FS The filesystem which the block is on (unused).
  * \param BLOCKNR Pointer to physical block number.
- * \param BLOCKCNT Block type (<0 for metadata blocks, >=0 is the number of the block in the i-node), unused.
+ * \param BLOCKCNT Block type (<0 for metadata blocks, >=0 is the number
+ *	of the block in the i-node), unused.
  * \param PRIVATE Private data (unused).
  * \return This function always returns 0.
  */
 static int WFS_ATTR ((nonnull))
 e2_count_blocks (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
 		/*@unused@*/ 		const ext2_filsys	FS WFS_ATTR ((unused)),
 					blk_t * const		BLOCKNR,
 		/*@unused@*/ 		const int		BLOCKCNT WFS_ATTR ((unused)),
 					void *			PRIVATE
 		)
+#else
+		/*@unused@*/ 		FS WFS_ATTR ((unused)),
+					BLOCKNR,
+		/*@unused@*/ 		BLOCKCNT WFS_ATTR ((unused)),
+					PRIVATE
+		)
+		/*@unused@*/ 		const ext2_filsys	FS;
+					blk_t * const		BLOCKNR;
+		/*@unused@*/ 		const int		BLOCKCNT;
+					void *			PRIVATE;
+#endif
 		/*@requires notnull BLOCKNR, PRIVATE @*/
 {
 	if ( (BLOCKNR == NULL) || (PRIVATE == NULL) ) return BLOCK_ABORT;
@@ -225,6 +320,9 @@ e2_count_blocks (
  */
 static WFS_ATTR ((nonnull)) int
 e2_wipe_unrm_dir (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
 			ext2_ino_t		dir,
 			int			entry,
 	 		struct ext2_dir_entry*	DIRENT,
@@ -232,6 +330,22 @@ e2_wipe_unrm_dir (
 	/*@unused@*/	int 			BLOCKSIZE WFS_ATTR ((unused)),
 			char* const		BUF,
        			void* const		PRIVATE )
+#else
+			dir,
+			entry,
+	 		DIRENT,
+			OFFSET,
+	/*@unused@*/	BLOCKSIZE WFS_ATTR ((unused)),
+			BUF,
+       			PRIVATE )
+			ext2_ino_t		dir;
+			int			entry;
+	 		struct ext2_dir_entry*	DIRENT;
+			int 			OFFSET;
+	/*@unused@*/	int 			BLOCKSIZE;
+			char* const		BUF;
+       			void* const		PRIVATE;
+#endif
 	/*@requires notnull DIRENT, BUF, PRIVATE @*/
 {
 	const wipedata * wd;
@@ -318,7 +432,16 @@ e2_wipe_unrm_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_e2_wipe_part ( wfs_fsid_t FS, error_type * const error )
+wfs_e2_wipe_part (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, error_type * const error )
+#else
+	FS, error )
+	wfs_fsid_t FS;
+	error_type * const error;
+#endif
 {
 	ext2_inode_scan ino_scan = 0;
 	ext2_ino_t ino_number = 0;
@@ -345,6 +468,7 @@ wfs_e2_wipe_part ( wfs_fsid_t FS, error_type * const error )
 #endif
 		return WFS_MALLOC;
 	}
+	block_data.isjournal = 0;
 
 	error->errcode.e2error = ext2fs_open_inode_scan ( FS.e2fs, 0, &ino_scan );
 	if ( error->errcode.e2error != 0 )
@@ -422,7 +546,16 @@ wfs_e2_wipe_part ( wfs_fsid_t FS, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_e2_wipe_fs ( const wfs_fsid_t FS, error_type * const error )
+wfs_e2_wipe_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS, error_type * const error )
+#else
+	FS, error )
+	const wfs_fsid_t FS;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	blk_t blno;			/* block number */
@@ -446,6 +579,7 @@ wfs_e2_wipe_fs ( const wfs_fsid_t FS, error_type * const error )
 		return WFS_MALLOC;
 	}
 	block_data.ino = NULL;
+	block_data.isjournal = 0;
 
 	/* read the bitmap of blocks */
 	error->errcode.e2error = ext2fs_read_block_bitmap ( FS.e2fs );
@@ -479,6 +613,73 @@ wfs_e2_wipe_fs ( const wfs_fsid_t FS, error_type * const error )
 }
 
 /**
+ * Wipes the journal on an ext2/3 filesystem.
+ * \param FS The ext2/3 filesystem.
+ * \param error Pointer to error variable.
+ * \return 0 in case of no errors, other values otherwise.
+ */
+static errcode_enum WFS_ATTR ((nonnull))
+wfs_e2_wipe_journal (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS, error_type * const error )
+#else
+	FS, error )
+	const wfs_fsid_t FS;
+	error_type * const error;
+#endif
+{
+	errcode_enum ret_journ = WFS_SUCCESS;
+	struct wfs_e2_block_data block_data;
+
+	if ( error == NULL )
+	{
+		return WFS_BADPARAM;
+	}
+
+	if ( EXT2_HAS_COMPAT_FEATURE (FS.e2fs->super, EXT3_FEATURE_COMPAT_HAS_JOURNAL)
+		!= EXT3_FEATURE_COMPAT_HAS_JOURNAL)
+	{
+		return ret_journ;
+	}
+	/* do nothing if external journal */
+	if ( FS.e2fs->super->s_journal_inum == 0 )
+	{
+		return ret_journ;
+	}
+
+#ifdef HAVE_ERRNO_H
+	errno = 0;
+#endif
+	block_data.buf = (unsigned char *) malloc ( wfs_e2_get_block_size (FS) );
+	if ( block_data.buf == NULL )
+	{
+#ifdef HAVE_ERRNO_H
+		error->errcode.gerror = errno;
+#else
+		error->errcode.gerror = 12L;	/* ENOMEM */
+#endif
+		return WFS_MALLOC;
+	}
+	block_data.ino = NULL;
+	block_data.isjournal = 1;
+
+	error->errcode.e2error = ext2fs_block_iterate (FS.e2fs,
+		FS.e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
+		BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
+	if ( error->errcode.e2error != 0 )
+	{
+		show_error ( *error, err_msg_blkiter, fsname );
+		ret_journ = WFS_BLKITER;
+	}
+
+	free (block_data.buf);
+	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	return ret_journ;
+}
+
+/**
  * Starts recursive directory search for deleted inodes and undelete data on the given Ext2/3 fs.
  * \param FS The filesystem.
  * \param node Directory i-node number.
@@ -486,10 +687,21 @@ wfs_e2_wipe_fs ( const wfs_fsid_t FS, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_e2_wipe_unrm ( const wfs_fsid_t FS, const fselem_t node, error_type * const error )
+wfs_e2_wipe_unrm (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS, const fselem_t node, error_type * const error )
+#else
+	FS, node, error )
+	const wfs_fsid_t FS;
+	const fselem_t node;
+	error_type * const error;
+#endif
 {
 	unsigned long int j;
 	wipedata wd;
+	errcode_enum ret = WFS_SUCCESS;
 
 	if ( error == NULL )
 	{
@@ -497,7 +709,7 @@ wfs_e2_wipe_unrm ( const wfs_fsid_t FS, const fselem_t node, error_type * const 
 	}
 
 	wd.filesys = FS;
-	for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
+	for ( j = 0; (j < npasses) && (sig_recvd == 0) && (ret == WFS_SUCCESS); j++ )
 	{
 
 		wd.passno = j;
@@ -507,18 +719,17 @@ wfs_e2_wipe_unrm ( const wfs_fsid_t FS, const fselem_t node, error_type * const 
 		if ( error->errcode.e2error != 0 )
 		{
 			show_error ( *error, err_msg_diriter, fsname );
-			return WFS_DIRITER;
+			ret = WFS_DIRITER;
 		}
-		if ( (npasses > 1) && (sig_recvd == 0) )
+		if ( (npasses > 1) && (sig_recvd == 0) && (ret == WFS_SUCCESS) )
 		{
 			error->errcode.gerror = wfs_e2_flush_fs ( FS, error );
 		}
 	}
+	if ( ret == WFS_SUCCESS ) ret = wfs_e2_wipe_journal (FS, error);
 
-	return WFS_SUCCESS;
+	return ret;
 }
-
-
 
 /**
  * Opens an ext2/3 filesystem on the given device.
@@ -531,8 +742,20 @@ wfs_e2_wipe_unrm ( const wfs_fsid_t FS, const fselem_t node, error_type * const 
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_e2_open_fs ( const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
+wfs_e2_open_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
 	const fsdata * const data, error_type * const error )
+#else
+	dev_name, FS, whichfs, data, error )
+	const char * const dev_name;
+	wfs_fsid_t * const FS;
+	CURR_FS * const whichfs;
+	const fsdata * const data;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret = WFS_SUCCESS;
 
@@ -570,7 +793,16 @@ wfs_e2_open_fs ( const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * c
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-wfs_e2_chk_mount ( const char * const dev_name, error_type * const error )
+wfs_e2_chk_mount (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const char * const dev_name, error_type * const error )
+#else
+	dev_name, error )
+	const char * const dev_name;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret = WFS_SUCCESS;
 	int mtflags = 0;		/* Mount flags */
@@ -604,7 +836,16 @@ wfs_e2_chk_mount ( const char * const dev_name, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
-wfs_e2_close_fs ( wfs_fsid_t FS, error_type * const error )
+wfs_e2_close_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, error_type * const error )
+#else
+	FS, error )
+	wfs_fsid_t FS;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret = WFS_SUCCESS;
 
@@ -628,7 +869,15 @@ wfs_e2_close_fs ( wfs_fsid_t FS, error_type * const error )
  * \return 0 in case of no errors, other values otherwise.
  */
 int WFS_ATTR ((warn_unused_result))
-wfs_e2_check_err ( const wfs_fsid_t FS )
+wfs_e2_check_err (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS )
+#else
+	FS )
+	const wfs_fsid_t FS;
+#endif
 {
 	return (FS.e2fs->super->s_state & EXT2_ERROR_FS);
 }
@@ -640,7 +889,15 @@ wfs_e2_check_err ( const wfs_fsid_t FS )
  * \return 0 if clean, other values otherwise.
  */
 int WFS_ATTR ((warn_unused_result))
-wfs_e2_is_dirty ( const wfs_fsid_t FS )
+wfs_e2_is_dirty (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	const wfs_fsid_t FS )
+#else
+	FS )
+	const wfs_fsid_t FS;
+#endif
 {
 	return ( ((FS.e2fs->super->s_state & EXT2_VALID_FS) == 0) ||
 		((FS.e2fs->flags & EXT2_FLAG_DIRTY) != 0) ||
@@ -655,7 +912,16 @@ wfs_e2_is_dirty ( const wfs_fsid_t FS )
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((nonnull))
-wfs_e2_flush_fs ( const wfs_fsid_t FS, error_type * const error )
+wfs_e2_flush_fs (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined(WIN32) || defined(__cplusplus)
+	wfs_fsid_t FS, error_type * const error )
+#else
+	FS, error )
+	wfs_fsid_t FS;
+	error_type * const error;
+#endif
 {
 	errcode_enum ret = WFS_SUCCESS;
 
@@ -675,4 +941,3 @@ wfs_e2_flush_fs ( const wfs_fsid_t FS, error_type * const error )
 #endif
 	return ret;
 }
-

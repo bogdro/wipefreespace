@@ -32,6 +32,6 @@
 extern volatile sig_atomic_t sig_recvd;
 extern volatile sig_atomic_t sigchld_recvd;
 
-extern void wfs_set_sigh (error_type * const error, const int opt_verbose);
+extern void wfs_set_sigh PARAMS((error_type * const error, const int opt_verbose));
 
 #endif	/* WFS_SIG_H */

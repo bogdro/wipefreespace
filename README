@@ -1,6 +1,9 @@
 This is the README file for wipefreespace, a program for secure wiping
  of free space on file systems.
 
+NOTE: it is best to use this program on un-mounted file systems, which
+ makes sure the journal is committed.
+
 Read the info documentation (type 'info doc/wipefreespace.info') to get more
  information.
 
@@ -17,8 +20,8 @@ Requirements for compiling the full version:
 - development package for the C library (like glibc-devel and glibc-headers)
   XFS support reuires the following headers: unistd.h, fcntl.h, mntent.h
   (but sys/wait.h, sched.h and paths.h can be useful, too) and the following
-  functions: fork(), execvp(), dup2(), close(), pipe() and one of waitpid(),
-  wait() or kill() (sleep() can be useful, too).
+  functions: fork(), execvp(), dup2(), close(), pipe(), kill() and
+  waitpid() or wait() (sleep() can be useful, too).
 
 - development package for the ext2 file system library, libext2fs (usually
   included in something like e2fsprogs-devel). If you don't have anything
