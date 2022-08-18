@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -102,10 +102,13 @@
 # include <limits.h>	/* PIPE_BUF */
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_xfs_sig(a,b,c,d)
 #include "wipefreespace.h"
 #include "wfs_xfs.h"
 #include "wfs_signal.h"
 #include "wfs_util.h"
+#include "wfs_wiping.h"
 
 #define PIPE_R 0
 #define PIPE_W 1
@@ -129,6 +132,9 @@
 
 /*#define XFS_HAS_SHARED_BLOCKS 1 */
 
+/* ======================================================================== */
+
+#ifdef WFS_WANT_PART
 /**
  * Flushes the given pipe so that hopefully the data sent will be
  *  received at the other end.
@@ -136,21 +142,21 @@
  */
 static void
 flush_pipe_output (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const int fd)
-#else
+# else
 	fd )
 	const int fd;
-#endif
+# endif
 {
 	int i;
 	for (i=0; i < PIPE_BUF; i++)
 	{
 		write (fd, "\n", 1);
 	}
-#if (defined HAVE_FSYNC) && (defined HAVE_UNISTD_H)
+# if (defined HAVE_FSYNC) && (defined HAVE_UNISTD_H)
 	fsync (fd);
-#endif
+# endif
 }
 
 /**
@@ -159,30 +165,32 @@ flush_pipe_output (
  */
 static void
 flush_pipe_input (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const int fd)
-#else
+# else
 	fd )
 	const int fd;
-#endif
+# endif
 {
 	int r;
 	char c;
 	/* set non-blocking mode to quit as soon as the pipe is empty */
-#ifdef HAVE_FCNTL_H
+# ifdef HAVE_FCNTL_H
 	r = fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) | O_NONBLOCK );
 	if ( r != 0 ) return;
-#endif
+# endif
 	do
 	{
 		r = read (fd, &c, 1);
 	} while (r == 1);
 	/* set blocking mode again */
-#ifdef HAVE_FCNTL_H
+# ifdef HAVE_FCNTL_H
 	fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) & ~ O_NONBLOCK );
-#endif
+# endif
 }
+#endif /* WFS_WANT_PART */
 
+#ifdef WFS_WANT_UNRM
 /**
  * Starts recursive directory search for deleted inodes
  *	and undelete data on the given XFS filesystem.
@@ -193,12 +201,12 @@ flush_pipe_input (
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_xfs_wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS WFS_ATTR ((unused)) )
-#else
+# else
 	FS )
 	const wfs_fsid_t FS WFS_ATTR ((unused));
-#endif
+# endif
 {
 	unsigned int prev_percent = 0;
 	/*
@@ -209,7 +217,9 @@ wfs_xfs_wipe_unrm (
 	show_progress (PROGRESS_UNRM, 100, &prev_percent);
 	return WFS_SUCCESS;
 }
+#endif /* WFS_WANT_UNRM */
 
+#if (defined WFS_WANT_WFS) || (defined WFS_WANT_PART)
 /**
  * Returns the buffer size needed to work on the
  *	smallest physical unit on a XFS filesystem.
@@ -218,17 +228,19 @@ wfs_xfs_wipe_unrm (
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_xfs_get_block_size (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
-#else
+# else
 	FS )
 	const wfs_fsid_t FS;
-#endif
+# endif
 {
 	return FS.xxfs.wfs_xfs_blocksize;
 }
+#endif /* (defined WFS_WANT_WFS) || (defined WFS_WANT_PART) */
 
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given XFS filesystem.
  * \param FS The filesystem.
@@ -236,17 +248,17 @@ wfs_xfs_get_block_size (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_xfs_wipe_fs	(
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	unsigned long int i;
 	int res;
@@ -255,12 +267,12 @@ wfs_xfs_wipe_fs	(
 	struct child_id child_freeze, child_unfreeze, child_xfsdb;
 	errcode_enum ret_child;
 	/* 	 xfs_freeze -f (freeze) | -u (unfreeze) mount-point */
-#define FSNAME_POS_FREEZE 2
+# define FSNAME_POS_FREEZE 2
 	char * args_freeze[] = { "xfs_freeze", "-f", NULL, NULL };
-#define FSNAME_POS_UNFREEZE 2
+# define FSNAME_POS_UNFREEZE 2
 	char * args_unfreeze[] = { "xfs_freeze", "-u", NULL, NULL };
 	/*	 xfs_db  -c 'freesp -d' dev_name */
-#define FSNAME_POS_FREESP 7
+# define FSNAME_POS_FREESP 7
 	char *  args_db[] = { "xfs_db", "-i", "-c", "freesp -d", "-c", "quit", "--",
 		NULL, NULL };
 	char read_buffer[WFS_XFSBUFSIZE];
@@ -270,19 +282,21 @@ wfs_xfs_wipe_fs	(
 	int selected[NPAT];
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	int bytes_read;
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
 	struct timeval tv;
 	fd_set set;
-#endif
-#ifndef HAVE_MEMSET
+# endif
+# ifndef HAVE_MEMSET
 	size_t offset;
-#endif
+# endif
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_block = 0;
 	int select_fails = 0;
+	size_t mnt_point_len;
+	size_t dev_name_len;
 
 	if ( error == NULL )
 	{
@@ -291,70 +305,71 @@ wfs_xfs_wipe_fs	(
 	}
 
 	/* Copy the file system name info the right places */
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
-	args_db[FSNAME_POS_FREESP] = (char *) malloc ( strlen (FS.xxfs.dev_name) + 1 );
+# endif
+	dev_name_len = strlen (FS.xxfs.dev_name);
+	args_db[FSNAME_POS_FREESP] = (char *) malloc ( dev_name_len + 1 );
 	if ( args_db[FSNAME_POS_FREESP] == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_WFS, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
-	strncpy ( args_db[FSNAME_POS_FREESP], FS.xxfs.dev_name, strlen (FS.xxfs.dev_name) + 1 );
+	strncpy ( args_db[FSNAME_POS_FREESP], FS.xxfs.dev_name, dev_name_len + 1 );
 	/* we need the mount point here, not the FS device */
 	if ( FS.xxfs.mnt_point != NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		errno = 0;
-#endif
-		args_freeze[FSNAME_POS_FREEZE] = (char *) malloc ( strlen (FS.xxfs.mnt_point) + 1 );
+# endif
+		mnt_point_len = strlen (FS.xxfs.mnt_point);
+		args_freeze[FSNAME_POS_FREEZE] = (char *) malloc ( mnt_point_len + 1 );
 		if ( args_freeze[FSNAME_POS_FREEZE] == NULL )
 		{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-#else
+# else
 			error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 			free (args_db[FSNAME_POS_FREESP]);
 			show_progress (PROGRESS_WFS, 100, &prev_percent);
 			return WFS_MALLOC;
 		}
-		strncpy ( args_freeze[FSNAME_POS_FREEZE], FS.xxfs.mnt_point, strlen(FS.xxfs.mnt_point)+1);
-#ifdef HAVE_ERRNO_H
+		strncpy ( args_freeze[FSNAME_POS_FREEZE], FS.xxfs.mnt_point, mnt_point_len + 1);
+# ifdef HAVE_ERRNO_H
 		errno = 0;
-#endif
-		args_unfreeze[FSNAME_POS_UNFREEZE] = (char *) malloc ( strlen (FS.xxfs.mnt_point) + 1 );
+# endif
+		args_unfreeze[FSNAME_POS_UNFREEZE] = (char *) malloc ( mnt_point_len + 1 );
 		if ( args_unfreeze[FSNAME_POS_UNFREEZE] == NULL )
 		{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-#else
+# else
 			error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 			free (args_freeze[FSNAME_POS_FREEZE]);
 			free (args_db[FSNAME_POS_FREESP]);
 			show_progress (PROGRESS_WFS, 100, &prev_percent);
 			return WFS_MALLOC;
 		}
-		strncpy ( args_unfreeze[FSNAME_POS_UNFREEZE], FS.xxfs.mnt_point,
-			strlen (FS.xxfs.mnt_point) + 1 );
+		strncpy ( args_unfreeze[FSNAME_POS_UNFREEZE], FS.xxfs.mnt_point, mnt_point_len + 1 );
 	}
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buffer = (unsigned char *) malloc ( wfs_xfs_get_block_size (FS) );
 	if ( buffer == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		free (args_unfreeze[FSNAME_POS_UNFREEZE]);
 		free (args_freeze[FSNAME_POS_FREEZE]);
 		free (args_db[FSNAME_POS_FREESP]);
@@ -362,21 +377,21 @@ wfs_xfs_wipe_fs	(
 		return WFS_MALLOC;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	res = pipe (pipe_fd);
 	if ( (res < 0)
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
-#endif
+# endif
 		 )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 1L;
-#endif
+# endif
 		free (buffer);
 		free (args_unfreeze[FSNAME_POS_UNFREEZE]);
 		free (args_freeze[FSNAME_POS_FREEZE]);
@@ -397,9 +412,9 @@ wfs_xfs_wipe_fs	(
 	if ( FS.xxfs.mnt_point != NULL )
 	{
 		/* Freeze the filesystem */
-#ifdef HAVE_SIGNAL_H
+# ifdef HAVE_SIGNAL_H
 		sigchld_recvd = 0;
-#endif
+# endif
 		child_freeze.program_name = args_freeze[0];
 		child_freeze.args = args_freeze;
 		child_freeze.stdin_fd = -1;
@@ -409,11 +424,11 @@ wfs_xfs_wipe_fs	(
 		if ( ret_child != WFS_SUCCESS )
 		{
 			/* error */
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-#else
+# else
 			error->errcode.gerror = 1L;
-#endif
+# endif
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
 			free (buffer);
@@ -428,12 +443,12 @@ wfs_xfs_wipe_fs	(
 	}	/* if ( FS.xxfs.mnt_point != NULL )  */
 
 	/* parent, continued */
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
-#ifdef HAVE_SIGNAL_H
+# endif
+# ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
-#endif
+# endif
 	child_xfsdb.program_name = args_db[0];
 	child_xfsdb.args = args_db;
 	child_xfsdb.stdin_fd = -1;
@@ -443,33 +458,33 @@ wfs_xfs_wipe_fs	(
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 1L;
-#endif
+# endif
 		/* can't return from here - have to un-freeze first */
 		ret_wfs = WFS_FORKERR;
 	}
 	/* parent */
-#ifdef HAVE_SLEEP
+# ifdef HAVE_SLEEP
 	sleep (1);
-#else
+# else
 	for (i=0; (i < (1<<30)) && (sig_recvd == 0); i++ );
-#endif
+# endif
 	/* open the FS */
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	fs_fd = open64 (FS.xxfs.dev_name, O_WRONLY | O_EXCL
-#ifdef O_BINARY
+# ifdef O_BINARY
 		| O_BINARY
-#endif
+# endif
 		);
 	if ( (fs_fd < 0)
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
-#endif
+# endif
 	   )
 	{
 		/* can't return from here - have to un-freeze first */
@@ -489,10 +504,10 @@ wfs_xfs_wipe_fs	(
 # endif
 		do
 		{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			errno = 0;
-#endif
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+# endif
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -503,7 +518,7 @@ wfs_xfs_wipe_fs	(
 			tv.tv_usec = 0;
 			if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
 			{
-#endif
+# endif
 				bytes_read = read (pipe_fd[PIPE_R], &(read_buffer[res]), 1);
 				if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
 				{
@@ -511,7 +526,7 @@ wfs_xfs_wipe_fs	(
 				}
 				res++;
 				select_fails = 0;
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -533,19 +548,19 @@ wfs_xfs_wipe_fs	(
 					break;
 				}
 			}
-#endif
+# endif
 		}
 		while (    (res < WFS_XFSBUFSIZE)
 			&& (bytes_read == 1)
 			&& (sig_recvd == 0)
 			);
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		/*if ( errno == EAGAIN ) continue;*/
-#endif
+# endif
 		if ( (res < 0) || (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 /*			|| ( errno != 0 )*/
-#endif
+# endif
 			)
 		{
 			/* can't return from here - have to un-freeze first */
@@ -626,14 +641,14 @@ wfs_xfs_wipe_fs	(
 				break;
 			}
 			/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset ( buffer, 0, wfs_xfs_get_block_size (FS) );
-#else
+# else
 			for ( j=0; j < wfs_xfs_get_block_size (FS); j++ )
 			{
 				buffer[j] = '\0';
 			}
-#endif
+# endif
 			if ( sig_recvd == 0 )
 			{
 				for ( j=0; (j < length) && (sig_recvd == 0); j++ )
@@ -675,9 +690,9 @@ wfs_xfs_wipe_fs	(
 	if ( FS.xxfs.mnt_point != NULL )
 	{
 		/* un-freeze the filesystem */
-#ifdef HAVE_SIGNAL_H
+# ifdef HAVE_SIGNAL_H
 		sigchld_recvd = 0;
-#endif
+# endif
 		child_unfreeze.program_name = args_unfreeze[0];
 		child_unfreeze.args = args_unfreeze;
 		child_unfreeze.stdin_fd = -1;
@@ -687,11 +702,11 @@ wfs_xfs_wipe_fs	(
 		if ( ret_child != WFS_SUCCESS )
 		{
 			/* error */
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-#else
+# else
 			error->errcode.gerror = 1L;
-#endif
+# endif
 			ret_wfs = WFS_FORKERR;
 		}
 		/* parent */
@@ -708,8 +723,9 @@ wfs_xfs_wipe_fs	(
 	if (sig_recvd != 0) return WFS_SIGNAL;
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
-
+#ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given XFS filesystem.
  * \param FS The filesystem.
@@ -718,29 +734,29 @@ wfs_xfs_wipe_fs	(
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_xfs_wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS
-# ifdef XFS_HAS_SHARED_BLOCKS
+#  ifdef XFS_HAS_SHARED_BLOCKS
 	WFS_ATTR ((unused))
-# endif
+#  endif
 	, error_type * const error
-# ifdef XFS_HAS_SHARED_BLOCKS
+#  ifdef XFS_HAS_SHARED_BLOCKS
 	WFS_ATTR ((unused))
-# endif
+#  endif
 	)
-#else
+# else
 	FS, error)
 	const wfs_fsid_t FS
-# ifdef XFS_HAS_SHARED_BLOCKS
+#  ifdef XFS_HAS_SHARED_BLOCKS
 		WFS_ATTR ((unused))
-# endif
+#  endif
 	;
 	error_type * const error
-# ifdef XFS_HAS_SHARED_BLOCKS
+#  ifdef XFS_HAS_SHARED_BLOCKS
 		WFS_ATTR ((unused))
-# endif
+#  endif
 	;
-#endif
+# endif
 {
 	/*
 	xfs_db> blockget -n
@@ -761,7 +777,7 @@ wfs_xfs_wipe_part (
 		data offset 0 startblock 1215 (0/1215) count 7 flag 0
 	 */
 	errcode_enum ret_part = WFS_SUCCESS;
-#ifndef XFS_HAS_SHARED_BLOCKS
+# ifndef XFS_HAS_SHARED_BLOCKS
 
 	unsigned long int i;
 	int res;
@@ -771,10 +787,10 @@ wfs_xfs_wipe_part (
 	struct child_id child_ncheck, child_xfsdb;
 	errcode_enum ret_child;
 	/*	 xfs_db   dev_name */
-# define FSNAME_POS_PART_NCHECK 9
+#  define FSNAME_POS_PART_NCHECK 9
 	char * args_db_ncheck[] = { "xfs_db", "-i", "-c", "blockget -n",
 		"-c", "ncheck", "-c", "quit", "--", NULL, NULL };
-# define FSNAME_POS_PART_DB 3
+#  define FSNAME_POS_PART_DB 3
 	char * args_db[] = { "xfs_db", "-i", "--", NULL, NULL };
 	char read_buffer[WFS_XFSBUFSIZE];
 	char * pos1 = NULL;
@@ -789,16 +805,18 @@ wfs_xfs_wipe_part (
 	unsigned int offset;
 	char inode_cmd[40];
 	int bytes_read;
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
 	fd_set set;
 	struct timeval tv;
-# endif
+#  endif
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_inode = 0;
 	int select_fails = 0;
+	size_t dev_name_len;
+	size_t mnt_point_len;
 
 	if ( error == NULL )
 	{
@@ -807,71 +825,72 @@ wfs_xfs_wipe_part (
 	}
 
 	/* Copy the file system name info the right places */
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
-	args_db[FSNAME_POS_PART_DB] = (char *) malloc ( strlen (FS.xxfs.dev_name) + 1 );
+#  endif
+	dev_name_len = strlen (FS.xxfs.dev_name);
+	args_db[FSNAME_POS_PART_DB] = (char *) malloc ( dev_name_len + 1 );
 	if ( args_db[FSNAME_POS_PART_DB] == NULL )
 	{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-# endif
+#  endif
 		show_progress (PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
-	strncpy ( args_db[FSNAME_POS_PART_DB], FS.xxfs.dev_name, strlen (FS.xxfs.dev_name) + 1 );
+	strncpy ( args_db[FSNAME_POS_PART_DB], FS.xxfs.dev_name, dev_name_len + 1 );
 
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
-	args_db_ncheck[FSNAME_POS_PART_NCHECK] = (char *) malloc ( strlen (FS.xxfs.dev_name) + 1 );
+#  endif
+	args_db_ncheck[FSNAME_POS_PART_NCHECK] = (char *) malloc ( dev_name_len + 1 );
 	if ( args_db_ncheck[FSNAME_POS_PART_NCHECK] == NULL )
 	{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-# endif
+#  endif
 		free (args_db[FSNAME_POS_PART_DB]);
 		show_progress (PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
-	strncpy ( args_db_ncheck[FSNAME_POS_PART_NCHECK], FS.xxfs.dev_name, strlen (FS.xxfs.dev_name)+1 );
+	strncpy ( args_db_ncheck[FSNAME_POS_PART_NCHECK], FS.xxfs.dev_name, dev_name_len + 1 );
 
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
+#  endif
 	buffer = (unsigned char *) malloc ( wfs_xfs_get_block_size (FS) );
 	if ( buffer == NULL )
 	{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-# endif
+#  endif
 		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
 		free (args_db[FSNAME_POS_PART_DB]);
 		show_progress (PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
 
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
+#  endif
 	res = pipe (pipe_from_ino_db);
 	if ( (res < 0)
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
-# endif
+#  endif
 		 )
 	{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 1L;
-# endif
+#  endif
 		free (buffer);
 		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
 		free (args_db[FSNAME_POS_PART_DB]);
@@ -879,21 +898,21 @@ wfs_xfs_wipe_part (
 		return WFS_PIPEERR;
 	}
 
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
+#  endif
 	res = pipe (pipe_to_blk_db);
 	if ( (res < 0)
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
-# endif
+#  endif
 		 )
 	{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 1L;
-# endif
+#  endif
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		free (buffer);
@@ -903,21 +922,21 @@ wfs_xfs_wipe_part (
 		return WFS_PIPEERR;
 	}
 
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
+#  endif
 	res = pipe (pipe_from_blk_db);
 	if ( (res < 0)
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
-# endif
+#  endif
 		 )
 	{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 1L;
-# endif
+#  endif
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		close (pipe_to_blk_db[PIPE_R]);
@@ -930,12 +949,12 @@ wfs_xfs_wipe_part (
 	}
 
 	/* open the first xfs_db process - it will read used inode's numbers */
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
-# ifdef HAVE_SIGNAL_H
+#  endif
+#  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
-# endif
+#  endif
 	child_ncheck.program_name = args_db_ncheck[0];
 	child_ncheck.args = args_db_ncheck;
 	child_ncheck.stdin_fd = -1;
@@ -945,11 +964,11 @@ wfs_xfs_wipe_part (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 1L;
-# endif
+#  endif
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		close (pipe_to_blk_db[PIPE_R]);
@@ -964,12 +983,12 @@ wfs_xfs_wipe_part (
 	}
 	/* parent */
 	/* open a second xfs_db process - this one will read inodes' block info */
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
-# ifdef HAVE_SIGNAL_H
+#  endif
+#  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
-# endif
+#  endif
 	child_xfsdb.program_name = args_db[0];
 	child_xfsdb.args = args_db;
 	child_xfsdb.stdin_fd = pipe_to_blk_db[PIPE_R];
@@ -979,11 +998,11 @@ wfs_xfs_wipe_part (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-# else
+#  else
 		error->errcode.gerror = 1L;
-# endif
+#  endif
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		wfs_wait_for_child (&child_ncheck);
@@ -999,18 +1018,18 @@ wfs_xfs_wipe_part (
 	}
 	/* parent */
 	/* open the FS */
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 	errno = 0;
-# endif
+#  endif
 	fs_fd = open64 (FS.xxfs.dev_name, O_WRONLY | O_EXCL
-# ifdef O_BINARY
+#  ifdef O_BINARY
 		| O_BINARY
-# endif
+#  endif
 		);
 	if ( (fs_fd < 0)
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*		|| (errno != 0)*/
-# endif
+#  endif
 	   )
 	{
 		ret_part = WFS_OPENFS;
@@ -1018,21 +1037,21 @@ wfs_xfs_wipe_part (
 	while ( (sig_recvd == 0) && (fs_fd >= 0) /*&& (ret_part == WFS_SUCCESS)*/ )
 	{
 		/* read just 1 line with inode-file pair */
-# ifdef HAVE_MEMSET
+#  ifdef HAVE_MEMSET
 		memset (read_buffer, 0, sizeof (read_buffer) );
-# else
+#  else
 		for ( offset = 0; offset < sizeof (read_buffer); offset++ )
 		{
 			read_buffer[offset] = '\0';
 		}
-# endif
+#  endif
 		res = 0;
 		do
 		{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 			errno = 0;
-# endif
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  endif
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -1043,7 +1062,7 @@ wfs_xfs_wipe_part (
 			tv.tv_usec = 0;
 			if ( select ( pipe_from_ino_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
 			{
-# endif
+#  endif
 				bytes_read = read (pipe_from_ino_db[PIPE_R], &(read_buffer[res]), 1);
 				if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
 				{
@@ -1051,7 +1070,7 @@ wfs_xfs_wipe_part (
 				}
 				res++;
 				select_fails = 0;
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -1073,19 +1092,19 @@ wfs_xfs_wipe_part (
 					break;
 				}
 			}
-# endif
+#  endif
 		}
 		while (	   (res < WFS_XFSBUFSIZE)
 			&& (bytes_read == 1)
 			&& (sig_recvd == 0)
 			);
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		/*if ( errno == EAGAIN ) continue;*/
-# endif
+#  endif
 		if ( (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*			|| ( errno != 0 )*/
-# endif
+#  endif
 		   )
 		{
 			ret_part = WFS_INOREAD;
@@ -1102,11 +1121,11 @@ wfs_xfs_wipe_part (
 			continue;	/* stop ony when child stops writing */
 		}
 		/* request inode data from the second xfs_db */
-# ifdef HAVE_SNPRINTF
-		snprintf (inode_cmd, sizeof (inode_cmd), "inode %llu\nprint\n", inode);
-# else
+#  ifdef HAVE_SNPRINTF
+		snprintf (inode_cmd, sizeof (inode_cmd)-1, "inode %llu\nprint\n", inode);
+#  else
 		sprintf (inode_cmd, "inode %llu\nprint\n", inode);
-# endif
+#  endif
 		inode_cmd[sizeof (inode_cmd)-1] = '\0';
 		res = write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd) );
 		if ( res <= 0 )
@@ -1122,21 +1141,21 @@ wfs_xfs_wipe_part (
 		while (((got_mode_line == 0) || (got_size_line == 0)) && (sig_recvd == 0))
 		{
 			/* read just 1 line */
-# ifdef HAVE_MEMSET
+#  ifdef HAVE_MEMSET
 			memset (read_buffer, 0, sizeof (read_buffer) );
-# else
+#  else
 			for ( offset = 0; offset < sizeof (read_buffer); offset++ )
 			{
 				read_buffer[offset] = '\0';
 			}
-# endif
+#  endif
 			res = 0;
 			do
 			{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 				errno = 0;
-# endif
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  endif
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -1147,7 +1166,7 @@ wfs_xfs_wipe_part (
 				tv.tv_usec = 0;
 				if ( select ( pipe_from_blk_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
 				{
-# endif
+#  endif
 					bytes_read = read (pipe_from_blk_db[PIPE_R],
 						&(read_buffer[res]), 1);
 					if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
@@ -1156,7 +1175,7 @@ wfs_xfs_wipe_part (
 					}
 					res++;
 					select_fails = 0;
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -1185,26 +1204,26 @@ wfs_xfs_wipe_part (
 					flush_pipe_output (pipe_to_blk_db[PIPE_W]);
 					bytes_read = 1;	/* just a marker */
 				}
-# endif
+#  endif
 			}
 			while (    (res < WFS_XFSBUFSIZE)
 			 	&& (bytes_read == 1)
 			 	&& (sig_recvd == 0)
 				);
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 			/*if ( errno == EAGAIN ) continue;*/
-# endif
+#  endif
 			if ( (res < 0) || (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
 				|| (bytes_read < 0)
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*				|| ( errno != 0 )*/
-# endif
+#  endif
 			   )
 			{
 				break;
 			}
-# define modeline "core.mode = "
-# define sizeline "core.size = "
+#  define modeline "core.mode = "
+#  define sizeline "core.size = "
 			read_buffer[WFS_XFSBUFSIZE-1] = '\0';
 			pos1 = strstr (read_buffer, modeline);
 			pos2 = strstr (read_buffer, sizeline);
@@ -1252,21 +1271,21 @@ wfs_xfs_wipe_part (
 		do
 		{
 			/* read just 1 line */
-# ifdef HAVE_MEMSET
+#  ifdef HAVE_MEMSET
 			memset (read_buffer, 0, sizeof (read_buffer) );
-# else
+#  else
 			for ( offset = 0; offset < sizeof (read_buffer); offset++ )
 			{
 				read_buffer[offset] = '\0';
 			}
-# endif
+#  endif
 			res = 0;
 			do
 			{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 				errno = 0;
-# endif
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  endif
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -1277,7 +1296,7 @@ wfs_xfs_wipe_part (
 				tv.tv_usec = 0;
 				if ( select ( pipe_from_blk_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
 				{
-# endif
+#  endif
 					bytes_read = read (pipe_from_blk_db[PIPE_R],
 						&(read_buffer[res]), 1);
 					if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
@@ -1286,7 +1305,7 @@ wfs_xfs_wipe_part (
 					}
 					res++;
 					select_fails = 0;
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
 	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
  		&& (defined HAVE_UNISTD_H)))				\
 	&& (defined HAVE_SELECT))
@@ -1321,20 +1340,20 @@ wfs_xfs_wipe_part (
 					flush_pipe_output (pipe_to_blk_db[PIPE_W]);
 					bytes_read = 1;	/* just a marker */
 				}
-# endif
+#  endif
 			}
 			while (    (res < WFS_XFSBUFSIZE)
 		 		&& (bytes_read == 1)
 		 		&& (sig_recvd == 0)
 		  		);
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 			/*if ( errno == EAGAIN ) continue;*/
-# endif
+#  endif
 			if ( (res < 0) || (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
 				|| (bytes_read < 0)
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 /*				|| ( errno != 0 )*/
-# endif
+#  endif
 			   )
 			{
 				break;
@@ -1427,14 +1446,14 @@ wfs_xfs_wipe_part (
 					break;
 				}
 				/* last pass with zeros: */
-# ifdef HAVE_MEMSET
+#  ifdef HAVE_MEMSET
 				memset ( buffer, 0, wfs_xfs_get_block_size (FS) );
-# else
+#  else
 				for ( i=0; i < wfs_xfs_get_block_size (FS); i++ )
 				{
 					buffer[i] = '\0';
 				}
-# endif
+#  endif
 				if ( sig_recvd == 0 )
 				{
 					if ( write (fs_fd, buffer, (size_t)length_to_wipe)
@@ -1482,10 +1501,10 @@ wfs_xfs_wipe_part (
 	free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
 	free (args_db[FSNAME_POS_PART_DB]);
 	if (sig_recvd != 0) return WFS_SIGNAL;
-#endif /* XFS_HAS_SHARED_BLOCKS */
+# endif /* XFS_HAS_SHARED_BLOCKS */
 	return ret_part;
 }
-
+#endif /* WFS_WANT_PART */
 
 /**
  * Checks if the XFS filesystem has errors.
@@ -1521,6 +1540,7 @@ wfs_xfs_check_err (
 #ifndef HAVE_MEMSET
 	size_t offset;
 #endif
+	size_t dev_name_len;
 
 #ifdef HAVE_STAT_H
 	struct stat s;
@@ -1538,7 +1558,8 @@ wfs_xfs_check_err (
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	args[FSNAME_POS_CHECK] = (char *) malloc ( strlen (FS.xxfs.dev_name) + 1 );
+	dev_name_len = strlen (FS.xxfs.dev_name);
+	args[FSNAME_POS_CHECK] = (char *) malloc ( dev_name_len + 1 );
 	if ( args[FSNAME_POS_CHECK] == NULL )
 	{
 #ifdef HAVE_ERRNO_H
@@ -1548,7 +1569,7 @@ wfs_xfs_check_err (
 #endif
 		return WFS_MALLOC;
 	}
-	strncpy ( args[FSNAME_POS_CHECK], FS.xxfs.dev_name, strlen (FS.xxfs.dev_name) + 1 );
+	strncpy ( args[FSNAME_POS_CHECK], FS.xxfs.dev_name, dev_name_len + 1 );
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
@@ -1799,6 +1820,8 @@ wfs_xfs_open_fs (
 	size_t offset;
 #endif
 	int select_fails = 0;
+	size_t namelen;
+	size_t buffer_len;
 
 	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL) || (error == NULL))
 	{
@@ -1806,6 +1829,7 @@ wfs_xfs_open_fs (
 	}
 	*whichfs = CURR_NONE;
 	FS->xxfs.mnt_point = NULL;
+	namelen = strlen (dev_name);
 
 	/* first check if 0x58465342 signature present, to save resources if different filesystem */
 #ifdef HAVE_ERRNO_H
@@ -1843,7 +1867,7 @@ wfs_xfs_open_fs (
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	FS->xxfs.dev_name = (char *) malloc ( strlen (dev_name) + 1 );
+	FS->xxfs.dev_name = (char *) malloc ( namelen + 1 );
 	if ( FS->xxfs.dev_name == NULL )
 	{
 #ifdef HAVE_ERRNO_H
@@ -1853,12 +1877,12 @@ wfs_xfs_open_fs (
 #endif
 		return WFS_MALLOC;
 	}
-	strncpy ( FS->xxfs.dev_name, dev_name, strlen (dev_name) + 1 );
+	strncpy ( FS->xxfs.dev_name, dev_name, namelen + 1 );
 	/* Copy the file system name info the right places */
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	args[FSNAME_POS_OPEN] = (char *) malloc ( strlen (FS->xxfs.dev_name) + 1 );
+	args[FSNAME_POS_OPEN] = (char *) malloc ( namelen + 1 );
 	if ( args[FSNAME_POS_OPEN] == NULL )
 	{
 #ifdef HAVE_ERRNO_H
@@ -1870,7 +1894,7 @@ wfs_xfs_open_fs (
 		FS->xxfs.dev_name = NULL;
 		return WFS_MALLOC;
 	}
-	strncpy ( args[FSNAME_POS_OPEN], FS->xxfs.dev_name, strlen (FS->xxfs.dev_name) + 1 );
+	strncpy ( args[FSNAME_POS_OPEN], FS->xxfs.dev_name, namelen + 1 );
 
 #if (defined HAVE_UNISTD_H) && (defined HAVE_ACCESS)
 # ifdef HAVE_ERRNO_H
@@ -2177,15 +2201,17 @@ wfs_xfs_open_fs (
 		return WFS_SIGNAL;
 	}
 	/* just in case, after execvp */
-	strncpy ( FS->xxfs.dev_name, dev_name, strlen (dev_name) + 1 );
+	strncpy ( FS->xxfs.dev_name, dev_name, namelen + 1 );
 
 	mnt_ret = wfs_xfs_get_mnt_point (dev_name, error, buffer, sizeof (buffer), &is_rw);
-	if ( (mnt_ret == WFS_SUCCESS) && (strlen (buffer) > 0) )
+	if ( (mnt_ret == WFS_SUCCESS) && (buffer[0] != '\0' /*strlen (buffer) > 0*/) )
 	{
 #ifdef HAVE_ERRNO_H
 		errno = 0;
 #endif
-		FS->xxfs.mnt_point = (char *) malloc ( strlen (buffer) + 1 );
+		buffer[WFS_XFSBUFSIZE] = '\0';
+		buffer_len = strlen (buffer);
+		FS->xxfs.mnt_point = (char *) malloc ( buffer_len + 1 );
 		if ( FS->xxfs.mnt_point == NULL )
 		{
 #ifdef HAVE_ERRNO_H
@@ -2200,7 +2226,7 @@ wfs_xfs_open_fs (
 			FS->xxfs.dev_name = NULL;
 			return WFS_MALLOC;
 		}
-		strncpy ( FS->xxfs.mnt_point, buffer, strlen (buffer) + 1 );
+		strncpy ( FS->xxfs.mnt_point, buffer, buffer_len + 1 );
 	}
 
 	free (args[FSNAME_POS_OPEN]);

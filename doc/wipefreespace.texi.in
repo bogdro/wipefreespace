@@ -57,7 +57,7 @@ This manual is for wipefreespace, version @VERSION@
 @chapter What is wipefreespace?
 
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
-ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2 and JFS partitions.
+ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2, JFS and HFS+ partitions.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
@@ -77,7 +77,7 @@ whole partition, which may be a big problem. This is where @command{wipefreespac
 This program works in a similar way to the @command{shred} program, but instead of shreding
 regular files,
 it overwrites (just like @command{shred}) the free space on a partition, hopefully without
-doing any harm to existing files.
+doing any harm to existing files. The wiped blocks are @strong{NOT} marked as used at any stage.
 
 This program also tries to wipe the remaining space in blocks partially used by existing files and
 wipe deleted elements' names.
@@ -213,7 +213,10 @@ then compile the program (./configure && make), then perform@*
   	ar surf libminixfs.a `ls *.o | egrep -v main`.@*
 Then copy the files libminixfs.a, minix_fs.h and protos.h to a directory
 where the C compiler can find them (or put the correct -I and -L options
-in the compiler flags).
+in the compiler flags). You can use the provided patches to do this
+instead of the sed command:@*
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff}
+
 
 @item JFS: jfsutils and libuuid (the <uuid/uuid.h> header file). Go to@*
 	http://jfs.sourceforge.net/@*
@@ -227,6 +230,14 @@ Compile jfsutils, then copy all the jfs_*.h header files from the
 "include" subdirectory and the libfs.a file to a directory where the
 C compiler can find them (or put the correct -I and -L options in the
 compiler flags).
+
+@item HFS+: the "hfsplus" package. Go to@*
+https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz@*
+to get it. Before compiling, apply the patch:@*
+	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff@*
+After compiling, install all the libraries and ALL the header files
+from the libhfsp/src/ directory where the C compiler can find them (or
+put the correct -I and -L options in the compiler flags).
 
 @end itemize
 
@@ -245,6 +256,9 @@ in the root directory of either reiserfsprogs or reiser4progs (but
 @strong{NOT} both, because this would bring back the same problem, but with a
 different name). Type the command as above, just without the leading and trailing
 apostrophes. The command must be run @strong{BEFORE} compiling the reiserfs programs.
+You can use the provided patches to do this:@*
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff}
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser4-1.0.7.diff}
 
 @strong{WARNING}: If both ReiserFSv3 and MinixFS are enabled, the program
 may refuse to link if the compiler doesn't support the command line option
@@ -258,11 +272,43 @@ You can fix either of these libraries yourself, by running
 in the root directory of either reiserfsprogs or mfstool (but
 @strong{NOT} both, because this would bring back the same problem, but with a
 different name). Type the command as above. The command must be run
-BEFORE compiling reiserfs/mfstool.
+BEFORE compiling reiserfs/mfstool. You can use the provided patches
+to do this:@*
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff}@*
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff}
 
-Type './configure' to configure the program for your system. If you do not
-with support for a filesystem, give the @option{--enable-FS=no} option to ./configure
-(FS=EXT234, NTFS, XFS, REISERFS, REISER4, MINIX, JFS).
+@strong{WARNING}: If both ReiserFSv3 and JFS are enabled, you @strong{MUST} either disable
+the support for either of these filesystems (you can compile two
+versions of the program) or fix either of these libraries yourself,
+by running
+@*@*
+@command{find . -type f -exec sed -i 's/bread/new_bread/g' '@{@}' \;}
+@*@*
+in the root directory of either reiserfsprogs or jfsutils (but
+NOT both, because this would bring back the same problem, but with a
+different name). Type the command as above. The command must be run
+BEFORE compiling reiserfs/jfsutils. You can use the provided patches
+to do this:@*
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/jfsutils-1.1.11.diff}@*
+@command{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff}@*
+
+Even if your linker/compiler accepts the "-Wl,-z -Wl,muldefs" option, it
+ won't help in this case.
+
+The patches for ntfsprogs are optional. Whether or not they will be included
+in the official release of ntfsprogs, wipefreespace still will compile.
+
+Type './configure' to configure the program for your system.
+
+If you do not wish support for a filesystem, give the @option{--enable-FS=no}
+option to ./configure (FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT,
+MINIX, JFS, HFSP).
+
+If you do not wish support for a particular wiping operation, give the
+@option{--enable-OPER=no} option to ./configure (OPER=wfs, unrm, part - these
+are wiping free space, undelete data and partially-used blocks,
+respectively). You cannot disable all of these.
+
 Run @command{./configure --help} for details.
 
 Type 'make' to compile the program.
@@ -281,12 +327,21 @@ if possible.
 To create an RPM package:@*
 @enumerate
 @item copy the wipefreespace.spec file to /usr/src/redhat/SPECS
-@item copy the source package wipefreespace-version.tar.gz to /usr/src/redhat/SOURCES
+@item copy the source package wipefreespace-@VERSION@.tar.gz to /usr/src/redhat/SOURCES
 @item type @command{rpmbuild -bb /usr/src/redhat/SPECS/wipefreespace.spec}
 @item get the rpms from /usr/src/redhat/RPMS/i386
 @end enumerate
 
 @strong{NOTE}: some systems may use other directories than these.
+
+To create an RPM package (the new way):
+
+@enumerate
+@item copy the wipefreespace.spec file to $HOME/rpmbuild/SPECS
+@item copy the source package wipefreespace-@VERSION@.tar.gz to $HOME/rpmbuild/SOURCES
+@item type @command{rpmbuild -bb $HOME/rpmbuild/SPECS/wipefreespace.spec}
+@item get the rpms from $HOME/rpmbuild/RPMS/i386
+@end enumerate
 
 @c ==================================================================
 @node Filesystems support, Usage, How to compile?, Top
@@ -300,7 +355,7 @@ Currently, wipefreespace does the following actions on supported filesystems:
 @item Ext2/3/4 (native, working libraries from e2fsprogs):
 @itemize
 @item wiping the free space
-@item wiping space in partially used blocks
+@item wiping free space in partially used blocks
 @item wiping deleted files' data (part of free space or partially used blocks),
 wiping deleted files' names and setting deleted files' names' lengths once to zero
 @item wiping the journal
@@ -310,7 +365,7 @@ wiping deleted files' names and setting deleted files' names' lengths once to ze
 any specifications)
 @itemize
 @item wiping the free space
-@item wiping space in partially used blocks
+@item wiping free space in partially used blocks
 @item wiping deleted files' names, deleted files' names' lengths (wiping, not zeroing once),
 wiping deleted files' data (part of free space or partially used blocks)
 @item wiping the journal
@@ -321,14 +376,14 @@ usable development library):
 @itemize
 @item wiping the free space
 @item wiping undelete data (actually does nothing, because XFS doesn't have undelete capability)
-@item wiping space in partially used blocks
+@item wiping free space in partially used blocks
 @end itemize
 
 @item ReiserFSv3 (using the library from reiserfsprogs, but that library is not a
 part of any official development package):
 @itemize
 @item wiping the free space
-@item wiping space in partially used blocks, but only if the block has just 1 item
+@item wiping free space in partially used blocks, but only if the block has just 1 item
 @item wiping deleted files' names
 @item wiping the journal
 @end itemize
@@ -336,7 +391,7 @@ part of any official development package):
 @item ReiserFSv4 (using the library from reiser4progs-devel):
 @itemize
 @item wiping the free space
-@item @strong{NOT} wiping space in partially used blocks (because blocks can be shared
+@item @strong{NOT} wiping free space in partially used blocks (because blocks can be shared
 by more than 1 object)
 @item @strong{NOT} wiping deleted files' names (but the filesystem itself seems to do it)
 @item wiping the journal
@@ -345,14 +400,14 @@ by more than 1 object)
 @item FAT12/16/32 (using the library from tffs-lib):
 @itemize
 @item wiping the free space
-@item wiping space in partially used blocks
+@item wiping free space in partially used blocks
 @item wiping deleted files' names
 @end itemize
 
 @item MinixFS (using the mfstool program as a library):
 @itemize
 @item wiping the free space
-@item wiping space in partially used blocks
+@item wiping free space in partially used blocks
 @item wiping deleted files' names
 @end itemize
 
@@ -360,6 +415,12 @@ by more than 1 object)
 @itemize
 @item wiping the free space
 @item wiping the journal (log)
+@end itemize
+
+@item HFS+ (using the library from hfsplus):
+@itemize
+@item wiping the free space
+@item wiping free space in partially used blocks
 @end itemize
 
 @end enumerate
@@ -550,6 +611,7 @@ is root. Read the first chapter of this documentation for an explanation and a s
 @item -22: Fork error (XFS or ReiserFSv3).
 @item -23: Exec error (XFS).
 @item -24: Seek error (mostly ReiserFSv4).
+@item -25: Block reading failed.
 @item -100: A signal was caught and the program was forced to exit.
 @item 128+N: The program was terminated by signal number N (the signal either wasn't caught
 or was caught after SIGCONT was received).
@@ -1525,7 +1587,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2010 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2011 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*
@@ -1534,7 +1596,7 @@ msgid ""@*
 msgstr ""@*
 "Project-Id-Version: wipefreespace @VERSION@\n"@*
 "Report-Msgid-Bugs-To: \n"@*
-"POT-Creation-Date: 2010-08-03 15:28+0200\n"@*
+"POT-Creation-Date: 2011-08-03 15:28+0200\n"@*
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"@*
 "Last-Translator: FULL NAME <EMAILADDRESS>\n"@*
 "Language-Team: LANGUAGE <EMAILADDRESS>\n"@*

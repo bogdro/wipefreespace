@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -27,6 +27,8 @@
 
 #include "wfs_cfg.h"
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_fat_sig(a,b,c,d)
 #include "wipefreespace.h"
 
 #if (defined HAVE_TFFS_H) && (defined HAVE_LIBTFFS)
@@ -70,6 +72,14 @@
 # include <fcntl.h>	/* open() */
 #endif
 
+#ifdef HAVE_MALLOC_H
+# include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+# include <stdlib.h>
+#endif
+
 #ifndef O_RDONLY
 # define O_RDONLY	0
 #endif
@@ -77,22 +87,27 @@
 #include "wfs_fat.h"
 #include "wfs_signal.h"
 #include "wfs_util.h"
+#include "wfs_wiping.h"
 
-#ifndef WFS_ANSIC
+
+/* ============================================================= */
+
+#ifdef WFS_WANT_WFS
+# ifndef WFS_ANSIC
 static unsigned short int _get_fat_entry_len PARAMS ((const tfat_t * const pfat));
-#endif
+# endif
 
 static unsigned short int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 _get_fat_entry_len (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const tfat_t * const pfat)
-#else
+# else
 	pfat)
 	const tfat_t * const pfat;
-#endif
+# endif
 {
 	if ( pfat == NULL )
 	{
@@ -115,19 +130,19 @@ _get_fat_entry_len (
 	return 0;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static unsigned int _get_fat_entry PARAMS ((const tfat_t * const pfat, const unsigned int clus));
-#endif
+# endif
 
 static unsigned int
 _get_fat_entry (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const tfat_t * const pfat, const unsigned int clus)
-#else
+# else
 	pfat, clus)
 	const tfat_t * const pfat;
 	const unsigned int clus;
-#endif
+# endif
 {
 	tffs_t * ptffs;
 	void * pclus;
@@ -176,22 +191,22 @@ _get_fat_entry (
 	return entry_val;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static int _read_fat_sector PARAMS ((tfat_t * pfat, int fat_sec));
-#endif
+# endif
 
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 _read_fat_sector (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	tfat_t * pfat, int fat_sec)
-#else
+# else
 	pfat, fat_sec)
 	tfat_t * pfat;
 	int fat_sec;
-#endif
+# endif
 {
 	tffs_t * ptffs;
 
@@ -232,22 +247,22 @@ _read_fat_sector (
 	return TRUE;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static int _write_fat_sector PARAMS ((tfat_t * pfat, int fat_sec));
-#endif
+# endif
 
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 _write_fat_sector (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	tfat_t * pfat, int fat_sec)
-#else
+# else
 	pfat, fat_sec)
 	tfat_t * pfat;
 	int fat_sec;
-#endif
+# endif
 {
 	tffs_t * ptffs;
 
@@ -279,19 +294,19 @@ _write_fat_sector (
 	return TRUE;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static int _is_entry_free PARAMS ((const tfat_t * const pfat, const unsigned int entry_val));
-#endif
+# endif
 
 static int
 _is_entry_free (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const tfat_t * const pfat, const unsigned int entry_val)
-#else
+# else
 	pfat, entry_val)
 	const tfat_t * const pfat;
 	const unsigned int entry_val;
-#endif
+# endif
 {
 	/*
 	if ( pfat == NULL )
@@ -319,22 +334,22 @@ _is_entry_free (
 	return FALSE;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static int _clus2fatsec PARAMS ((tfat_t * pfat, unsigned int clus));
-#endif
+# endif
 
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 _clus2fatsec (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	tfat_t * pfat, unsigned int clus)
-#else
+# else
 	pfat, clus)
 	tfat_t * pfat;
 	unsigned int clus;
-#endif
+# endif
 {
 	if ( pfat == NULL )
 	{
@@ -354,22 +369,22 @@ _clus2fatsec (
 		/ pfat->ptffs->pbs->byts_per_sec);
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static int _lookup_free_clus PARAMS ((tfat_t * pfat, unsigned int * pfree_clus));
-#endif
+# endif
 
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 _lookup_free_clus (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	tfat_t * pfat, unsigned int * pfree_clus)
-#else
+# else
 	pfat, pfree_clus)
 	tfat_t * pfat;
 	uint32 * pfree_clus;
-#endif
+# endif
 {
 	tffs_t * ptffs;
 	unsigned int cur_clus;
@@ -425,23 +440,25 @@ _lookup_free_clus (
 
 	return ret;
 }
+#endif /* WFS_WANT_WFS */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_PART
+# ifndef WFS_ANSIC
 static void _file_seek PARAMS ((tfile_t * pfile, unsigned int offset));
-#endif
+# endif
 
 static void
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 _file_seek (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	tfile_t * pfile, unsigned int offset)
-#else
+# else
 	pfile, offset)
 	tfile_t * pfile;
 	unsigned int offset;
-#endif
+# endif
 {
 	unsigned int cur_offset = offset;
 	if ( pfile == NULL )
@@ -466,25 +483,27 @@ _file_seek (
 	}
 	pfile->cur_sec_offset = cur_offset;
 }
+#endif /* WFS_WANT_PART */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_UNRM
+# ifndef WFS_ANSIC
 static int _get_dirent PARAMS ((tdir_t * pdir, dir_entry_t * pdirent));
-#endif
+# endif
 
 static int
 _get_dirent (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	tdir_t * pdir, dir_entry_t * pdirent)
-#else
+# else
 	pdir, pdirent)
 	tdir_t * pdir;
 	dir_entry_t * pdirent;
-#endif
+# endif
 {
 	int ret = DIRENTRY_OK;
-#ifndef HAVE_MEMCPY
+# ifndef HAVE_MEMCPY
 	size_t j;
-#endif
+# endif
 	/*
 	if ( (pdir == NULL) || (pdirent == NULL) )
 	{
@@ -502,15 +521,15 @@ _get_dirent (
 
 	if (pdir->cur_dir_entry < (pdir->ptffs->pbs->byts_per_sec / sizeof (dir_entry_t)))
 	{
-#ifdef HAVE_MEMCPY
+# ifdef HAVE_MEMCPY
 		memcpy (pdirent, (dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry, sizeof (dir_entry_t));
-#else
+# else
 		for ( j=0; j < sizeof (dir_entry_t); j++ )
 		{
 			((char *)pdirent)[j] =
 				((char *)((dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry))[j];
 		}
-#endif
+# endif
 		pdir->cur_dir_entry++;
 	}
 	else
@@ -524,17 +543,17 @@ _get_dirent (
 			pdir->cur_dir_entry = 0;
 			if ((ret = dir_read_sector (pdir)) == DIR_OK)
 			{
-#ifdef HAVE_MEMCPY
+# ifdef HAVE_MEMCPY
 				memcpy (pdirent, (dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry,
 					sizeof (dir_entry_t));
-#else
+# else
 				for ( j=0; j < sizeof (dir_entry_t); j++ )
 				{
 					((char *)pdirent)[j] =
 						((char *)((dir_entry_t *)pdir->secbuf
 							+ pdir->cur_dir_entry))[j];
 				}
-#endif
+# endif
 				pdir->cur_dir_entry++;
 			}
 			else
@@ -550,23 +569,23 @@ _get_dirent (
 	return ret;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static int wfs_fat_dirent_find PARAMS ((const wfs_fsid_t FS, tdir_t * pdir, error_type * const error));
-#endif
+# endif
 
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_dirent_find (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, tdir_t * pdir, error_type * const error)
-#else
+# else
 	FS, pdir, error)
 	const wfs_fsid_t FS;
 	tdir_t * pdir;
 	error_type * const error;
-#endif
+# endif
 {
 	int ret;
 	dir_entry_t dirent;
@@ -638,31 +657,31 @@ wfs_fat_dirent_find (
 				/* last pass with zeros: */
 				if ( dirent.dir_attr == ATTR_LONG_NAME )
 				{
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 					memset ((dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry-1,
 						'\0', 13 /*dirent.h->long_dir_entry_t*/
 							* 2 /*sizeof UTF-16 character */);
-#else
+# else
 					for ( j=0; j < 13 /*dirent.h->long_dir_entry_t*/
 							* 2 /*sizeof UTF-16 character */; j++ )
 					{
 						(char*)((dir_entry_t*)pdir->secbuf
 							+pdir->cur_dir_entry-1)[j]='\0';
 					}
-#endif
+# endif
 				}
 				else
 				{
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 					memset ((dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry-1,
 						'\0', sizeof (dirent.dir_name));
-#else
+# else
 					for ( j=0; j < sizeof (dirent.dir_name); j++ )
 					{
 						(char*)((dir_entry_t*)pdir->secbuf
 							+pdir->cur_dir_entry-1)[j]='\0';
 					}
-#endif
+# endif
 				}
 				if ( sig_recvd != 0 )
 				{
@@ -696,11 +715,12 @@ wfs_fat_dirent_find (
 	}
 	return ret;
 }
+#endif /* WFS_WANT_UNRM */
 
-
-#ifndef WFS_ANSIC
+#if (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART)
+# ifndef WFS_ANSIC
 static size_t WFS_ATTR ((warn_unused_result)) wfs_fat_get_block_size PARAMS ((const wfs_fsid_t FS));
-#endif
+# endif
 
 /**
  * Returns the buffer size needed to work on the smallest physical unit on a FAT filesystem.
@@ -709,12 +729,12 @@ static size_t WFS_ATTR ((warn_unused_result)) wfs_fat_get_block_size PARAMS ((co
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_fat_get_block_size (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
-#else
+# else
 	FS)
 	const wfs_fsid_t FS;
-#endif
+# endif
 {
 	if ( FS.fat == NULL )
 	{
@@ -727,11 +747,13 @@ wfs_fat_get_block_size (
 	/* this is required, because space for files is allocated in clusters, not in sectors */
 	return (size_t)(((tffs_t *)(FS.fat))->pbs->byts_per_sec * ((tffs_t *)(FS.fat))->pbs->sec_per_clus);
 }
+#endif /* (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART) */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_PART
+# ifndef WFS_ANSIC
 static errcode_enum wfs_fat_wipe_file_tail PARAMS ((wfs_fsid_t FS,
 	error_type * const error, tfile_handle_t file, unsigned char * buf));
-#endif
+# endif
 
 /**
  * Wipes the free space after the given file's data.
@@ -741,19 +763,19 @@ static errcode_enum wfs_fat_wipe_file_tail PARAMS ((wfs_fsid_t FS,
  * \param buf The buffer to use.
  */
 static errcode_enum
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_wipe_file_tail (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, tfile_handle_t file, unsigned char * buf)
-#else
+# else
 	FS, error, file, buf)
 	wfs_fsid_t FS;
 	error_type * const error;
 	tfile_handle_t file;
 	unsigned char * buf;
-#endif
+# endif
 {
 	unsigned long int j;
 	int selected[NPAT];
@@ -800,14 +822,14 @@ wfs_fat_wipe_file_tail (
 	if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 		memset ( buf, 0, bufsize );
-#else
+# else
 		for ( j=0; j < bufsize; j++ )
 		{
 			buf[j] = '\0';
 		}
-#endif
+# endif
 		if ( sig_recvd == 0 )
 		{
 			/* wipe the space after the file */
@@ -838,10 +860,10 @@ wfs_fat_wipe_file_tail (
 	return ret_tail;
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static errcode_enum wfs_fat_wipe_file_tails_in_dir PARAMS ((wfs_fsid_t FS,
 	error_type * const error, tdir_handle_t dir, unsigned char * buf));
-#endif
+# endif
 
 /**
  * Recurisvely wipes the free space after the files in the given directory.
@@ -851,19 +873,19 @@ static errcode_enum wfs_fat_wipe_file_tails_in_dir PARAMS ((wfs_fsid_t FS,
  * \param buf The buffer to use.
  */
 static errcode_enum
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_wipe_file_tails_in_dir (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, tdir_handle_t dir, unsigned char * buf)
-#else
+# else
 	FS, error, dir, buf)
 	wfs_fsid_t FS;
 	error_type * const error;
 	tdir_handle_t dir;
 	unsigned char * buf;
-#endif
+# endif
 {
 	int dir_res = TFFS_OK;
 	errcode_enum ret_part_dir = WFS_SUCCESS;
@@ -946,17 +968,17 @@ wfs_fat_wipe_file_tails_in_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_part = WFS_SUCCESS;
 	tdir_handle_t dirh;
@@ -977,17 +999,17 @@ wfs_fat_wipe_part (
 		return WFS_DIRITER;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( wfs_fat_get_block_size (FS) );
 	if ( buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -996,7 +1018,9 @@ wfs_fat_wipe_part (
 	free (buf);
 	return ret_part;
 }
+#endif /* WFS_WANT_PART */
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given FAT filesystem.
  * \param FS The filesystem.
@@ -1004,17 +1028,17 @@ wfs_fat_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_wipe_fs (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	unsigned int cluster = 0;
@@ -1090,14 +1114,14 @@ wfs_fat_wipe_fs (
 		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset ( pfat->secbuf, 0, bytes_per_sector );
-#else
+# else
 			for ( j=0; j < bytes_per_sector; j++ )
 			{
 				pfat->secbuf[j] = '\0';
 			}
-#endif
+# endif
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;
@@ -1134,11 +1158,13 @@ wfs_fat_wipe_fs (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_UNRM
+# ifndef WFS_ANSIC
 static errcode_enum wfs_fat_wipe_unrm_dir PARAMS ((wfs_fsid_t FS,
 	error_type * const error, tdir_handle_t dir, unsigned char * buf));
-#endif
+# endif
 
 /**
  * Recurisvely wipes the deleted files' names in the given directory.
@@ -1148,19 +1174,19 @@ static errcode_enum wfs_fat_wipe_unrm_dir PARAMS ((wfs_fsid_t FS,
  * \param buf The buffer to use.
  */
 static errcode_enum
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_wipe_unrm_dir (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, tdir_handle_t dir, unsigned char * buf)
-#else
+# else
 	FS, error, dir, buf)
 	wfs_fsid_t FS;
 	error_type * const error;
 	tdir_handle_t dir;
 	unsigned char * buf;
-#endif
+# endif
 {
 	errcode_enum ret_unrm_dir = WFS_SUCCESS;
 	int dir_res = TFFS_OK;
@@ -1226,17 +1252,17 @@ wfs_fat_wipe_unrm_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_fat_wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_unrm = WFS_SUCCESS;
 	tdir_handle_t dirh;
@@ -1257,17 +1283,17 @@ wfs_fat_wipe_unrm (
 		return WFS_DIRITER;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( wfs_fat_get_block_size (FS) );
 	if ( buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_UNRM, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -1277,6 +1303,7 @@ wfs_fat_wipe_unrm (
 
 	return ret_unrm;
 }
+#endif /* WFS_WANT_UNRM */
 
 /**
  * Opens a FAT filesystem on the given device.
@@ -1315,8 +1342,9 @@ wfs_fat_open_fs (
 	union bootsec
 	{
 		boot_sector_t pbs;
-		unsigned char bytes[512];
+		unsigned char bytes[512]; /* to make sure we have at leat 512 bytes in "union bootsec" */
 	} bsec;
+	size_t namelen;
 
 	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL) || (error == NULL))
 	{
@@ -1325,6 +1353,7 @@ wfs_fat_open_fs (
 
 	*whichfs = CURR_NONE;
 	FS->fat = NULL;
+	namelen = strlen (dev_name);
 
 #ifdef HAVE_FCNTL_H
 	/* first check some basic things, to save resources if different filesystem */
@@ -1366,7 +1395,7 @@ wfs_fat_open_fs (
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	dev_name_copy = (char *) malloc ( strlen (dev_name) + 1 );
+	dev_name_copy = (char *) malloc ( namelen + 1 );
 	if ( dev_name_copy == NULL )
 	{
 #ifdef HAVE_ERRNO_H
@@ -1378,9 +1407,9 @@ wfs_fat_open_fs (
 	}
 
 #ifdef HAVE_MEMCPY
-	memcpy ( dev_name_copy, dev_name, strlen (dev_name) + 1 );
+	memcpy ( dev_name_copy, dev_name, namelen + 1 );
 #else
-	for ( i=0; i < strlen (dev_name) + 1; i++ )
+	for ( i=0; i < namelen + 1; i++ )
 	{
 		dev_name_copy[i] = dev_name[i];
 	}

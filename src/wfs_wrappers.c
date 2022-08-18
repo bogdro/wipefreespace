@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -35,6 +35,8 @@
 # include <errno.h>	/* EIO */
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_wrap_sig(a,b,c,d)
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 
@@ -70,6 +72,13 @@
 # include "wfs_jfs.h"
 #endif
 
+#ifdef WFS_HFSP
+# include "wfs_hfsp.h"
+#endif
+
+/* ======================================================================== */
+
+#ifdef WFS_WANT_UNRM
 /**
  * Starts recursive directory search for deleted inodes and undelete data.
  * \param FS The filesystem.
@@ -77,93 +86,102 @@
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
-#else
+# else
 	FS, which_fs, error )
 	wfs_fsid_t FS;
 	const CURR_FS which_fs;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
-#if (defined WFS_EXT234) || (defined WFS_REISER) \
+# if (defined WFS_EXT234) || (defined WFS_REISER) \
 	|| (defined WFS_NTFS) || (defined WFS_REISER4)
 	fselem_t elem;
-#endif
+# endif
 
 	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT234
+# ifdef WFS_EXT234
 		elem.e2elem = EXT2_ROOT_INO;
 		ret_wfs = wfs_e234_wipe_unrm (FS, elem, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_NTFS )
 	{
-#ifdef WFS_NTFS
+# ifdef WFS_NTFS
 		elem.ntfselem = NULL; /* unused anyway */
 		ret_wfs = wfs_ntfs_wipe_unrm (FS, elem, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_XFS )
 	{
-#ifdef WFS_XFS
+# ifdef WFS_XFS
 		ret_wfs = wfs_xfs_wipe_unrm (FS);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_REISERFS )
 	{
-#ifdef WFS_REISER
+# ifdef WFS_REISER
 		elem.rfs_elem = root_dir_key;
 		ret_wfs = wfs_reiser_wipe_unrm (FS, elem, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_REISER4 )
 	{
-#ifdef WFS_REISER4
+# ifdef WFS_REISER4
 		if ( FS.r4->tree == NULL )
 			elem.r4node = NULL;
 		else
 			elem.r4node = FS.r4->tree->root;
 		ret_wfs = wfs_r4_wipe_unrm (FS, elem, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_FATFS )
 	{
-#ifdef WFS_FATFS
+# ifdef WFS_FATFS
 		ret_wfs = wfs_fat_wipe_unrm (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_MINIXFS )
 	{
-#ifdef WFS_MINIXFS
+# ifdef WFS_MINIXFS
 		elem.minix_ino = MINIX_ROOT_INO;
 		ret_wfs = wfs_minixfs_wipe_unrm (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_JFS )
 	{
-#ifdef WFS_JFS
+# ifdef WFS_JFS
 		ret_wfs = wfs_jfs_wipe_unrm (FS, elem, error);
-#endif
+# endif
+	}
+	else if ( which_fs == CURR_HFSP )
+	{
+# ifdef WFS_HFSP
+		record_init_cnid (&(elem.hfsp_dirent), &(FS.hfsp_volume.catalog), HFSP_ROOT_CNID);
+		ret_wfs = wfs_hfsp_wipe_unrm (FS, elem, error);
+# endif
 	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = EIO;
-#else
+# else
 		error->errcode.gerror = 5L;	/* EIO */
-#endif
+# endif
 	}
 	return ret_wfs;
 }
+#endif /* WFS_WANT_UNRM */
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given filesystem.
  * \param FS The filesystem.
@@ -171,81 +189,89 @@ wipe_unrm (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wipe_fs (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
-#else
+# else
 	FS, which_fs, error )
 	wfs_fsid_t FS;
 	const CURR_FS which_fs;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
 	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT234
+# ifdef WFS_EXT234
 		ret_wfs = wfs_e234_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_NTFS )
 	{
-#ifdef WFS_NTFS
+# ifdef WFS_NTFS
 		ret_wfs = wfs_ntfs_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_XFS )
 	{
-#ifdef WFS_XFS
+# ifdef WFS_XFS
 		ret_wfs = wfs_xfs_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_REISERFS )
 	{
-#ifdef WFS_REISER
+# ifdef WFS_REISER
 		ret_wfs = wfs_reiser_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_REISER4 )
 	{
-#ifdef WFS_REISER4
+# ifdef WFS_REISER4
 		ret_wfs = wfs_r4_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_FATFS )
 	{
-#ifdef WFS_FATFS
+# ifdef WFS_FATFS
 		ret_wfs = wfs_fat_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_MINIXFS )
 	{
-#ifdef WFS_MINIXFS
+# ifdef WFS_MINIXFS
 		ret_wfs = wfs_minixfs_wipe_fs (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_JFS )
 	{
-#ifdef WFS_JFS
+# ifdef WFS_JFS
 		ret_wfs = wfs_jfs_wipe_fs (FS, error);
-#endif
+# endif
+	}
+	else if ( which_fs == CURR_HFSP )
+	{
+# ifdef WFS_HFSP
+		ret_wfs = wfs_hfsp_wipe_fs (FS, error);
+# endif
 	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = EIO;
-#else
+# else
 		error->errcode.gerror = 5L;	/* EIO */
-#endif
+# endif
 	}
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
+#ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given filesystem.
  * \param FS The filesystem.
@@ -253,80 +279,87 @@ wipe_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
-#else
+# else
 	FS, which_fs, error )
 	const wfs_fsid_t FS;
 	const CURR_FS which_fs;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
 	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT234
+# ifdef WFS_EXT234
 		ret_wfs = wfs_e234_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_NTFS )
 	{
-#ifdef WFS_NTFS
+# ifdef WFS_NTFS
 		ret_wfs = wfs_ntfs_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_XFS )
 	{
-#ifdef WFS_XFS
+# ifdef WFS_XFS
 		ret_wfs = wfs_xfs_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_REISERFS )
 	{
-#ifdef WFS_REISER
+# ifdef WFS_REISER
 		ret_wfs = wfs_reiser_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_REISER4 )
 	{
-#ifdef WFS_REISER4
+# ifdef WFS_REISER4
 		ret_wfs = wfs_r4_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_FATFS )
 	{
-#ifdef WFS_FATFS
+# ifdef WFS_FATFS
 		ret_wfs = wfs_fat_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_MINIXFS )
 	{
-#ifdef WFS_MINIXFS
+# ifdef WFS_MINIXFS
 		ret_wfs = wfs_minixfs_wipe_part (FS, error);
-#endif
+# endif
 	}
 	else if ( which_fs == CURR_JFS )
 	{
-#ifdef WFS_JFS
+# ifdef WFS_JFS
 		ret_wfs = wfs_jfs_wipe_part (FS, error);
-#endif
+# endif
+	}
+	else if ( which_fs == CURR_HFSP )
+	{
+# ifdef WFS_HFSP
+		ret_wfs = wfs_hfsp_wipe_part (FS, error);
+# endif
 	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = EIO;
-#else
+# else
 		error->errcode.gerror = 5L;	/* EIO */
-#endif
+# endif
 	}
 	return ret_wfs;
 }
+#endif /* WFS_WANT_PART */
 
 /**
  * Opens a filesystem on the given device.
@@ -354,7 +387,6 @@ wfs_open_fs (
 {
 	errcode_enum ret_wfs = WFS_OPENFS;
 	*which_fs = CURR_NONE;
-
 #ifdef WFS_EXT234
 	ret_wfs = wfs_e234_open_fs (dev_name, FS, which_fs, data, error);
 #endif
@@ -404,12 +436,18 @@ wfs_open_fs (
 		ret_wfs = wfs_minixfs_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
-
 #ifdef WFS_REISER
 	if ( ret_wfs != WFS_SUCCESS )
 	{
 		error->errcode.gerror = WFS_SUCCESS;
 		ret_wfs = wfs_reiser_open_fs (dev_name, FS, which_fs, data, error);
+	}
+#endif
+#ifdef WFS_HFSP
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		error->errcode.gerror = WFS_SUCCESS;
+		ret_wfs = wfs_hfsp_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
@@ -474,6 +512,10 @@ wfs_chk_mount (
 #endif
 #if (defined WFS_JFS)
 	ret_wfs = wfs_jfs_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
+#if (defined WFS_HFSP)
+	ret_wfs = wfs_hfsp_chk_mount ( dev_name, error );
 	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
 	return ret_wfs;
@@ -547,6 +589,12 @@ wfs_close_fs (
 	{
 #ifdef WFS_JFS
 		ret_wfs = wfs_jfs_close_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_HFSP )
+	{
+#ifdef WFS_HFSP
+		ret_wfs = wfs_hfsp_close_fs (FS, error);
 #endif
 	}
 
@@ -635,6 +683,12 @@ wfs_check_err (
 		return wfs_jfs_check_err (FS);
 #endif
 	}
+	else if ( which_fs == CURR_HFSP )
+	{
+#ifdef WFS_HFSP
+		return wfs_hfsp_check_err (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -712,6 +766,12 @@ wfs_is_dirty (
 		return wfs_jfs_is_dirty (FS);
 #endif
 	}
+	else if ( which_fs == CURR_HFSP )
+	{
+#ifdef WFS_HFSP
+		return wfs_hfsp_is_dirty (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -783,6 +843,12 @@ wfs_flush_fs (
 	{
 #ifdef WFS_JFS
 		ret_wfs = wfs_jfs_flush_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_HFSP )
+	{
+#ifdef WFS_HFSP
+		ret_wfs = wfs_hfsp_flush_fs (FS, error);
 #endif
 	}
 

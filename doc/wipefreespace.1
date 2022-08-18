@@ -12,7 +12,7 @@ wipefreespace \- Secure cleaning of free space on filesystems.
 
 .SH DESCRIPTION
 The wipefreespace program securely cleans the free space and undelete data
-on the given ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2 and JFS file systems.
+on the given ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS and HFS+ file systems.
 Write permissions are required for the devices
 (or regular files containing the file system), but the program
 .B MUST NOT
@@ -114,6 +114,8 @@ Fork error (XFS or ReiserFSv3).
 Exec error (XFS).
 .IP \-24:
 Seek error (mostly ReiserFSv4).
+.IP \-25:
+Block reading failed.
 .IP \-100:
 A signal was caught and the program was forced to exit.
 

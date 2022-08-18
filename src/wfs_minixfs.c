@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions.
  *
- * Copyright (C) 2009-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2009-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -31,6 +31,8 @@
 #define REISER4_TREE_H 1
 /*#define REISER4_PLUGIN_H 1 - required for reiser4/types.h */
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_minix_sig(a,b,c,d)
 #include "wipefreespace.h"
 
 #include <stdio.h>
@@ -50,30 +52,49 @@
 # include <unistd.h>	/* sync() */
 #endif
 
+#ifdef HAVE_MALLOC_H
+# include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+# include <stdlib.h>
+#endif
+
+#ifdef HAVE_STRING_H
+# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+
 #include "wfs_minixfs.h"
 #include "wfs_signal.h"
 #include "wfs_util.h"
+#include "wfs_wiping.h"
+
+/* ======================================================================== */
 
 int opt_squash = 0;	/* global symbol used by the libminixfs library, has to be present */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_WFS
+# ifndef WFS_ANSIC
 static long int WFS_ATTR ((warn_unused_result)) wfs_minixfs_get_free_bit PARAMS ((
 	const u8 * const bmap, const int bitmap_size_in_blocks, const long int start_position));
-#endif
+# endif
 
 static long int WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_minixfs_get_free_bit (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const u8 * const bmap, const int bitmap_size_in_blocks, const long int start_position)
-#else
+# else
 	bmap, bitmap_size_in_blocks, start_position)
 	const u8 * const bmap;
 	const int bitmap_size_in_blocks;
 	const long int start_position;
-#endif
+# endif
 {
 	long int i, j;
 	if ( (bmap == NULL) || (bitmap_size_in_blocks == 0) ) return -1L;
@@ -91,7 +112,7 @@ wfs_minixfs_get_free_bit (
 	}
 	return -1L;
 }
-
+#endif /* WFS_WANT_WFS */
 
 /* ======================================================================== */
 
@@ -117,11 +138,12 @@ wfs_minixfs_get_block_size (
 	return BLOCK_SIZE;
 }
 
-#ifndef WFS_ANSIC
+#if (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART)
+# ifndef WFS_ANSIC
 static errcode_enum WFS_ATTR ((warn_unused_result)) wfs_minixfs_wipe_dir PARAMS ((
 	wfs_fsid_t FS, error_type * const error, const int dir_ino,
 	unsigned int * const prev_percent, unsigned char * buf, const int wipe_part ));
-#endif
+# endif
 
 /**
  * Wipes the free space in partially used blocks in files in the given directory i-node.
@@ -134,14 +156,14 @@ static errcode_enum WFS_ATTR ((warn_unused_result)) wfs_minixfs_wipe_dir PARAMS 
  * \return 0 in case of no errors, other values otherwise.
  */
 static errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_minixfs_wipe_dir (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error, const int dir_ino,
 	unsigned int * const prev_percent, unsigned char * buf, const int wipe_part )
-#else
+# else
 	FS, error, dir_ino, prev_percent, buf, wipe_part )
 	wfs_fsid_t FS;
 	error_type * const error;
@@ -149,7 +171,7 @@ wfs_minixfs_wipe_dir (
 	unsigned int * const prev_percent;
 	unsigned char * buf;
 	const int wipe_part;
-#endif
+# endif
 {
 	errcode_enum ret_part = WFS_SUCCESS;
 	unsigned long int j;
@@ -168,12 +190,26 @@ wfs_minixfs_wipe_dir (
 
 	if ( (error == NULL) || (FS.minix == NULL) )
 	{
-		show_progress (PROGRESS_PART, 100, prev_percent);
+		if ( wipe_part != 0 )
+		{
+			show_progress (PROGRESS_PART, 100, prev_percent);
+		}
+		else
+		{
+			show_progress (PROGRESS_UNRM, 100, prev_percent);
+		}
 		return WFS_BADPARAM;
 	}
 	if ( (dir_ino == -1) || (dir_ino > INODES (FS.minix)) )
 	{
-		show_progress (PROGRESS_PART, 100, prev_percent);
+		if ( wipe_part != 0 )
+		{
+			show_progress (PROGRESS_PART, 100, prev_percent);
+		}
+		else
+		{
+			show_progress (PROGRESS_UNRM, 100, prev_percent);
+		}
 		return WFS_BADPARAM;
 	}
 	direntsize = DIRSIZE (FS.minix);	/* after the check for FS.minix == NULL */
@@ -255,14 +291,14 @@ wfs_minixfs_wipe_dir (
 					if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 					{
 						/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 						memset ( &blk[j+2], 0, direntsize-2);
-#else
+# else
 						for ( k=0; k < direntsize-2 && (sig_recvd == 0); k++ )
 						{
 							blk[j+2+k] = '\0';
 						}
-#endif
+# endif
 						if ( sig_recvd == 0 )
 						{
 							error->errcode.gerror = 0;
@@ -323,15 +359,15 @@ wfs_minixfs_wipe_dir (
 		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset ( &buf[was_read], 0,
 				(unsigned int)(wfs_minixfs_get_block_size (FS) - (size_t)was_read) );
-#else
+# else
 			for ( j=0; j < (unsigned int)(wfs_minixfs_get_block_size (FS) - (size_t)was_read); j++ )
 			{
 				buf[was_read+j] = '\0';
 			}
-#endif
+# endif
 			if ( sig_recvd == 0 )
 			{
 				error->errcode.gerror = 0;
@@ -350,7 +386,9 @@ wfs_minixfs_wipe_dir (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_part;
 }
+#endif /* (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART) */
 
+#ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given Minix filesystem.
  * \param FS The filesystem.
@@ -358,33 +396,33 @@ wfs_minixfs_wipe_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_minixfs_wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	unsigned int prev_percent = 0;
 	unsigned char * buf;
 	errcode_enum ret_part;
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( wfs_minixfs_get_block_size (FS) );
 	if ( buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -394,7 +432,9 @@ wfs_minixfs_wipe_part (
 	show_progress (PROGRESS_PART, 100, &prev_percent);
 	return ret_part;
 }
+#endif /* WFS_WANT_PART */
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given Minix filesystem.
  * \param FS The filesystem.
@@ -402,17 +442,17 @@ wfs_minixfs_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_minixfs_wipe_fs (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	long int start_pos = 0;
@@ -429,17 +469,18 @@ wfs_minixfs_wipe_fs (
 		return WFS_BADPARAM;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( wfs_minixfs_get_block_size (FS) );
 	if ( buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
+		show_progress (PROGRESS_WFS, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
 
@@ -460,16 +501,16 @@ wfs_minixfs_wipe_fs (
 				break;
 			}
 			error->errcode.gerror = 0;
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			errno = 0;
-#endif
+# endif
 			written = fwrite (buf, 1, wfs_minixfs_get_block_size (FS),
 				goto_blk (FS.minix->fp, current_block));
 			if ( written != wfs_minixfs_get_block_size (FS) )
 			{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 				if ( error != NULL ) error->errcode.gerror = errno;
-#endif
+# endif
 				show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 				ret_wfs = WFS_BLKWR;
 				break;
@@ -484,30 +525,30 @@ wfs_minixfs_wipe_fs (
 		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset ( buf, 0, wfs_minixfs_get_block_size (FS) );
-#else
+# else
 			for ( j=0; j < wfs_minixfs_get_block_size (FS); j++ )
 			{
 				buf[j] = '\0';
 			}
-#endif
+# endif
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;
 				break;
 			}
 			error->errcode.gerror = 0;
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			errno = 0;
-#endif
+# endif
 			written = fwrite (buf, 1, wfs_minixfs_get_block_size (FS),
 				goto_blk (FS.minix->fp, current_block));
 			if ( written != wfs_minixfs_get_block_size (FS) )
 			{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 				if ( error != NULL ) error->errcode.gerror = errno;
-#endif
+# endif
 				show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 				ret_wfs = WFS_BLKWR;
 				break;
@@ -529,7 +570,9 @@ wfs_minixfs_wipe_fs (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
+#ifdef WFS_WANT_UNRM
 /**
  * Starts recursive directory search for deleted files and undelete data on the given Minix fs.
  * \param FS The filesystem.
@@ -537,33 +580,33 @@ wfs_minixfs_wipe_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_minixfs_wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_unrm = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	unsigned char * buf;
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( wfs_minixfs_get_block_size (FS) );
 	if ( buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_UNRM, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -573,6 +616,7 @@ wfs_minixfs_wipe_unrm (
 	show_progress (PROGRESS_UNRM, 100, &prev_percent);
 	return ret_unrm;
 }
+#endif /* WFS_WANT_UNRM */
 
 /**
  * Opens a Minix filesystem on the given device.
@@ -645,6 +689,7 @@ wfs_minixfs_open_fs (
 		free (FS->minix);
 		return WFS_OPENFS;
 	}
+	rewind (FS->minix->fp);
 
 	dofread (goto_blk (FS->minix->fp, MINIX_SUPER_BLOCK),
 		&(FS->minix->msb), sizeof (struct minix_super_block));

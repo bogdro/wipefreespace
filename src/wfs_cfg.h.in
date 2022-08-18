@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- configuration header file.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -116,6 +116,9 @@
 #  define STDC_HEADERS		1
 
 #  undef WFS_WANT_RANDOM
+#  define WFS_WANT_WFS		1
+#  define WFS_WANT_UNRM		1
+#  define WFS_WANT_PART		1
 
 /* Non-glibc stuff: */
 #  define HAVE_EXT2FS_EXT2FS_H		1
@@ -125,6 +128,8 @@
 #  define HAVE_LIBCORE			1	/* ReiserFSv3 */
 #  define HAVE_LIBEXT2FS		1
 #  define HAVE_LIBFS			1	/* JFS */
+#  define HAVE_LIBHFSP			1	/* HFS+ */
+#  define HAVE_LIBHFSP_H		1	/* HFS+ */
 #  define HAVE_LIBMINIXFS		1
 #  define HAVE_LIBMISC			1	/* ReiserFSv3 */
 #  define HAVE_LIBNTFS			1

@@ -114,6 +114,9 @@
 /* Define to 1 if you have the <hdreg.h> header file. */
 #undef HAVE_HDREG_H
 
+/* Whether you have the hfsplus/libhfsp.h header. */
+#undef HAVE_HFSPLUS_LIBHFSP_H
+
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
 
@@ -152,6 +155,12 @@
 
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H
+
+/* Define to 1 if you have the `hfsp' library (-lhfsp). */
+#undef HAVE_LIBHFSP
+
+/* Whether you have the libhfsp.h header. */
+#undef HAVE_LIBHFSP_H
 
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
@@ -407,8 +416,17 @@
 /* Version number of package */
 #undef VERSION
 
+/* If wiping partially-used blocks has been enabled. */
+#undef WFS_WANT_PART
+
 /* If shred-like wiping method was chosen instead of full Gutmann method. */
 #undef WFS_WANT_RANDOM
+
+/* If wiping undelete data has been enabled. */
+#undef WFS_WANT_UNRM
+
+/* If wiping free space has been enabled. */
+#undef WFS_WANT_WFS
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

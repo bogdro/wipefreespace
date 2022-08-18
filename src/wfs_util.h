@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions, header file.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -50,6 +50,19 @@ struct child_id
 	int stderr_fd;
 };
 
+/* This structure helps to run ioctl()s once per device */
+struct fs_ioctl
+{
+	int how_many;		/* how many ioctl tries were on this device. Incremented
+				   on begin, decremented on fs close. When reaches zero,
+				   caching is brought back to its previous state. */
+	int was_enabled;
+	char fs_name[WFS_MNTBUFLEN];	/* space for "/dev/hda" */
+};
+
+typedef struct fs_ioctl fs_ioctl;
+
+
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 	wfs_check_mounted PARAMS ((const char * const dev_name, error_type * const error));
 
@@ -65,6 +78,14 @@ extern void WFS_ATTR ((nonnull))
 
 extern int WFS_ATTR ((nonnull))
 	wfs_has_child_exited PARAMS ((const struct child_id * const id));
+
+extern char * convert_fs_to_name PARAMS ((const CURR_FS fs));
+
+extern void WFS_ATTR ((nonnull)) enable_drive_cache PARAMS ((const char dev_name[],
+	const int total_fs, fs_ioctl ioctls[]));
+
+extern void WFS_ATTR ((nonnull)) disable_drive_cache PARAMS ((const char dev_name[],
+	const int total_fs, fs_ioctl ioctls[]));
 
 #endif	/* WFS_UTIL_H */
 

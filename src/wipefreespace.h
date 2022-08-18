@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -88,6 +88,7 @@ enum errcode_enum
 	WFS_FORKERR		= -22,
 	WFS_EXECERR		= -23,
 	WFS_SEEKERR		= -24,
+	WFS_BLKRD		= -25,
 	WFS_SIGNAL		= -100
 };
 
@@ -103,7 +104,8 @@ enum CURR_FS
 	CURR_REISER4,
 	CURR_FATFS,
 	CURR_MINIXFS,
-	CURR_JFS
+	CURR_JFS,
+	CURR_HFSP
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -260,7 +262,7 @@ typedef unsigned short int __u16;
 #  undef	WFS_MINIXFS
 # endif
 
-#if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
+# if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
 #  include <stdio.h>	/* FILE */
 #  include <jfs/jfs_types.h>
 #  include <jfs/jfs_superblock.h>
@@ -273,6 +275,20 @@ typedef unsigned short int __u16;
 #   define	WFS_JFS		1
 #  else
 #   undef	WFS_JFS
+#  endif
+# endif
+
+# if (defined HAVE_HFSPLUS_LIBHFSP_H) && (defined HAVE_LIBHFSP)
+#  include <hfsplus/libhfsp.h>
+#  include <hfsplus/record.h>
+#  define	WFS_HFSP	1
+# else
+#  if (defined HAVE_LIBHFSP_H) && (defined HAVE_LIBHFSP)
+#   include <libhfsp.h>
+#   include <record.h>
+#   define	WFS_HFSP	1
+#  else
+#   undef	WFS_HFSP
 #  endif
 # endif
 
@@ -357,6 +373,9 @@ struct wfs_fsid_t
 		struct superblock super;
 	} jfs;
 # endif
+# ifdef		WFS_HFSP
+	struct volume	hfsp_volume;
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
 };
@@ -400,6 +419,9 @@ union fselem_t
 # endif
 # ifdef		WFS_JFS
 	/* Nothing. Undelete on JFS not supported. */
+# endif
+# ifdef		WFS_HFSP
+	record		hfsp_dirent;
 # endif
 
 	/* TODO: to be expanded, when other FS come into the program */
@@ -452,10 +474,6 @@ extern void WFS_ATTR ((nonnull))
 extern void WFS_ATTR ((nonnull))
 	show_msg PARAMS((const int type, const char * const msg,
 		const char * const extra, const wfs_fsid_t FS ));
-
-extern void WFS_ATTR ((nonnull))
-	fill_buffer PARAMS((unsigned long int pat_no, unsigned char * const buffer,
-		const size_t buflen, int * const selected, const wfs_fsid_t FS ));
 
 # define PROGRESS_WFS	0
 # define PROGRESS_PART	1

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -51,8 +51,12 @@
 # include <signal.h>
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_signal_sig(a,b,c,d)
 #include "wipefreespace.h"
 #include "wfs_signal.h"
+
+/* ======================================================================== */
 
 /* These have to be public and always defined: */
 volatile sig_atomic_t sig_recvd = 0;		/* non-zero after signal received */

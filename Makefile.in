@@ -110,7 +110,6 @@ distuninstallcheck_listfiles = find . -type f -print
 distcleancheck_listfiles = find . -type f -print
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
-AM_CFLAGS = @AM_CFLAGS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -226,7 +225,8 @@ top_srcdir = @top_srcdir@
 SUBDIRS = doc src po
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = config.rpath mkinstalldirs m4/ChangeLog wipefreespace.spec.in \
-	m4/ax_c_check_flag.m4 wipefreespace.desktop wipefreespace-kde4.desktop THANKS
+	m4/ax_c_check_flag.m4 wipefreespace.desktop wipefreespace-kde4.desktop \
+	THANKS patches
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- JFS file system-specific functions.
  *
- * Copyright (C) 2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2010-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -58,11 +58,16 @@
 # include <string.h>
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_jfs_sig(a,b,c,d)
 #include "wipefreespace.h"
 
 #if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
 # include <jfs/jfs_types.h>
 # include <jfs/jfs_superblock.h>
+# ifndef __le32_to_cpu /* NTFS defines its own versions */
+#  include <jfs/jfs_byteorder.h>
+# endif
 # include <jfs/jfs_filsys.h>
 # include <jfs/jfs_dmap.h>
 # include <jfs/jfs_logmgr.h>
@@ -70,6 +75,9 @@
 # if (defined HAVE_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
 #  include <jfs_types.h>
 #  include <jfs_superblock.h>
+#  ifndef __le32_to_cpu /* NTFS defines its own versions */
+#   include <jfs_byteorder.h>
+#  endif
 #  include <jfs_filsys.h>
 #  include <jfs_dmap.h>
 #  include <jfs_logmgr.h>
@@ -88,6 +96,7 @@
 #include "wfs_jfs.h"
 #include "wfs_signal.h"
 #include "wfs_util.h"
+#include "wfs_wiping.h"
 
 /* ============================================================= */
 /* JFS external symbols, but declared nowhere. */
@@ -161,10 +170,11 @@ alloc_wrksp (
 
 /* ============================================================= */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_WFS
+# ifndef WFS_ANSIC
 static int WFS_ATTR ((warn_unused_result)) is_block_free PARAMS ((
 	const int64_t block, struct dmap * * const map, const int64_t nmaps));
-#endif
+# endif
 
 /**
  * Checks if the given block is free (unused).
@@ -173,14 +183,14 @@ static int WFS_ATTR ((warn_unused_result)) is_block_free PARAMS ((
  */
 static int WFS_ATTR ((warn_unused_result))
 is_block_free (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const int64_t block, struct dmap * * const map, const int64_t nmaps)
-#else
+# else
 	block, map, nmaps)
 	const int64_t block;
 	struct dmap * * const map;
 	const int64_t nmaps;
-#endif
+# endif
 {
 	int dmap_index;
 	int blk_in_dmap;
@@ -211,10 +221,12 @@ is_block_free (
 
 	return 0;
 }
+#endif /* WFS_WANT_WFS */
 
-#ifndef WFS_ANSIC
+#if (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM)
+# ifndef WFS_ANSIC
 static size_t WFS_ATTR ((warn_unused_result)) wfs_jfs_get_block_size PARAMS ((const wfs_fsid_t FS));
-#endif
+# endif
 
 /**
  * Returns the buffer size needed to work on the
@@ -224,20 +236,20 @@ static size_t WFS_ATTR ((warn_unused_result)) wfs_jfs_get_block_size PARAMS ((co
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_jfs_get_block_size (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
-#else
+# else
 	FS)
 	const wfs_fsid_t FS;
-#endif
+# endif
 {
 	return (size_t)(FS.jfs.super.s_bsize);
 }
 
-#ifndef WFS_ANSIC
+# ifndef WFS_ANSIC
 static errcode_enum wfs_jfs_wipe_block PARAMS ((const wfs_fsid_t FS, const int64_t blocknum,
 	unsigned char * const buf, const size_t bufsize, error_type * const error, FILE * fp));
-#endif
+# endif
 
 /**
  * Wipes the given block.
@@ -245,11 +257,11 @@ static errcode_enum wfs_jfs_wipe_block PARAMS ((const wfs_fsid_t FS, const int64
  */
 static errcode_enum
 wfs_jfs_wipe_block (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const int64_t blocknum,
 	unsigned char * const buf, const size_t bufsize,
 	error_type * const error, FILE * fp)
-#else
+# else
 	FS, blocknum, buf, bufsize, error, fp)
 	const wfs_fsid_t FS;
 	const int64_t blocknum;
@@ -257,7 +269,7 @@ wfs_jfs_wipe_block (
 	size_t bufsize;
 	error_type * const error;
 	FILE * fp;
-#endif
+# endif
 {
 	unsigned int j;
 	int selected[NPAT];
@@ -305,14 +317,14 @@ wfs_jfs_wipe_block (
 	if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 		memset ( buf, 0, bufsize );
-#else
+# else
 		for ( j=0; j < bufsize; j++ )
 		{
 			buf[j] = '\0';
 		}
-#endif
+# endif
 		if ( sig_recvd == 0 )
 		{
 			res = ujfs_rw_diskblocks (fp, blocknum * wfs_jfs_get_block_size (FS),
@@ -340,7 +352,9 @@ wfs_jfs_wipe_block (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return WFS_SUCCESS;
 }
+#endif /* (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM) */
 
+#ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given JFS filesystem.
  * \param FS The filesystem.
@@ -348,17 +362,17 @@ wfs_jfs_wipe_block (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_jfs_wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error WFS_ATTR ((unused)) )
-#else
+# else
 	FS, error )
 	wfs_fsid_t FS;
 	error_type * const error WFS_ATTR ((unused));
-#endif
+# endif
 {
 	errcode_enum ret_part = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
@@ -373,7 +387,9 @@ wfs_jfs_wipe_part (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_part;
 }
+#endif /* WFS_WANT_PART */
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given JFS filesystem.
  * \param FS The filesystem.
@@ -381,17 +397,17 @@ wfs_jfs_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_jfs_wipe_fs (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
@@ -415,19 +431,19 @@ wfs_jfs_wipe_fs (
 	}
 
 	bufsize = wfs_jfs_get_block_size (FS);
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	buf = (unsigned char *) malloc ( bufsize );
 	if ( buf == NULL )
 	{
 		if ( error != NULL )
 		{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-#else
+# else
 			error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		}
 		show_progress (PROGRESS_WFS, 100, &prev_percent);
 		return WFS_MALLOC;
@@ -464,19 +480,19 @@ wfs_jfs_wipe_fs (
 		free (buf);
 		return WFS_BLBITMAPREAD;
 	}
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	block_map = (struct dmap **) malloc ((size_t)ndmaps * sizeof (struct dmap *));
 	if ( block_map == NULL )
 	{
 		if ( error != NULL )
 		{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-#else
+# else
 			error->errcode.gerror = 12L;    /* ENOMEM */
-#endif
+# endif
 		}
 		show_progress (PROGRESS_WFS, 100, &prev_percent);
 		free (buf);
@@ -489,19 +505,19 @@ wfs_jfs_wipe_fs (
 	start = BMAP_OFF + PSIZE + PSIZE * (2 - level) + PSIZE;
 	for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		errno = 0;
-#endif
+# endif
 		block_map[i] = (struct dmap *) malloc (sizeof (struct dmap));
 		if ( block_map[i] == NULL )
 		{
 			if ( error != NULL )
 			{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 				error->errcode.gerror = errno;
-#else
+# else
 				error->errcode.gerror = 12L;    /* ENOMEM */
-#endif
+# endif
 			}
 			start += PSIZE;
 			continue;
@@ -513,9 +529,9 @@ wfs_jfs_wipe_fs (
 			start += PSIZE;
 			continue;
 		}
-#if __BYTE_ORDER == __BIG_ENDIAN
+# if __BYTE_ORDER == __BIG_ENDIAN
 		ujfs_swap_dmap (block_map[i]);
-#endif
+# endif
 		start += PSIZE;
 	}
 
@@ -561,7 +577,9 @@ wfs_jfs_wipe_fs (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
+#ifdef WFS_WANT_UNRM
 /**
  * Starts recursive directory search for deleted inodes
  *	and undelete data on the given JFS filesystem.
@@ -571,18 +589,18 @@ wfs_jfs_wipe_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_jfs_wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, const fselem_t node WFS_ATTR ((unused)), error_type * const error )
-#else
+# else
 	FS, node, error )
 	wfs_fsid_t FS;
 	const fselem_t node WFS_ATTR ((unused));
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_unrm = WFS_SUCCESS;
 	struct logsuper journal;
@@ -618,9 +636,9 @@ wfs_jfs_wipe_unrm (
 			if ( sig_recvd != 0 ) return WFS_SIGNAL;
 			return WFS_OPENFS;
 		}
-#if __BYTE_ORDER == __BIG_ENDIAN
+# if __BYTE_ORDER == __BIG_ENDIAN
 		ujfs_swap_logsuper (&journal);
-#endif
+# endif
 		if ( journal.magic != LOGMAGIC )
 		{
 			show_progress (PROGRESS_UNRM, 100, &prev_percent);
@@ -628,21 +646,21 @@ wfs_jfs_wipe_unrm (
 			return WFS_OPENFS;
 		}
 		bufsize = LOGPSIZE;
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		errno = 0;
-#endif
+# endif
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
 			if ( error != NULL )
 			{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 				error->errcode.gerror = errno;
-#else
+# else
 				error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 			}
-			show_progress (PROGRESS_WFS, 100, &prev_percent);
+			show_progress (PROGRESS_UNRM, 100, &prev_percent);
 			if ( sig_recvd != 0 ) return WFS_SIGNAL;
 			return WFS_MALLOC;
 		}
@@ -696,9 +714,9 @@ wfs_jfs_wipe_unrm (
 			if ( sig_recvd != 0 ) return WFS_SIGNAL;
 			return WFS_OPENFS;
 		}
-#if __BYTE_ORDER == __BIG_ENDIAN
+# if __BYTE_ORDER == __BIG_ENDIAN
 		ujfs_swap_logsuper (&journal);
-#endif
+# endif
 		if ( journal.magic != LOGMAGIC )
 		{
 			fclose (journal_fp);
@@ -715,27 +733,27 @@ wfs_jfs_wipe_unrm (
 				error->errcode.gerror = WFS_BLBITMAPREAD;
 			}
 			fclose (journal_fp);
-			show_progress (PROGRESS_WFS, 100, &prev_percent);
+			show_progress (PROGRESS_UNRM, 100, &prev_percent);
 			if ( sig_recvd != 0 ) return WFS_SIGNAL;
 			return WFS_BLBITMAPREAD;
 		}
 		bufsize = (size_t)(journal.bsize);
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		errno = 0;
-#endif
+# endif
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
 			if ( error != NULL )
 			{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 				error->errcode.gerror = errno;
-#else
+# else
 				error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 			}
 			fclose (journal_fp);
-			show_progress (PROGRESS_WFS, 100, &prev_percent);
+			show_progress (PROGRESS_UNRM, 100, &prev_percent);
 			if ( sig_recvd != 0 ) return WFS_SIGNAL;
 			return WFS_MALLOC;
 		}
@@ -766,7 +784,7 @@ wfs_jfs_wipe_unrm (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_unrm;
 }
-
+#endif /* WFS_WANT_UNRM */
 
 
 /**
@@ -823,6 +841,7 @@ wfs_jfs_open_fs (
 	}
 	else
 	{
+		rewind (FS->jfs.fs);
 		res = ujfs_get_superblk (FS->jfs.fs, &(FS->jfs.super), 1);
 		if ( res != 0 )
 		{

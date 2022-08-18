@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv4 file system-specific functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -54,6 +54,8 @@
 # include <fcntl.h>	/* O_EXCL, O_RDWR */
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_r4_sig(a,b,c,d)
 /* this must be here, as it defines blk_t: */
 #include "wipefreespace.h"
 
@@ -74,6 +76,7 @@
 #include "wfs_reiser4.h"
 #include "wfs_util.h"
 #include "wfs_signal.h"
+#include "wfs_wiping.h"
 
 
 struct wfs_r4_block_data
@@ -84,9 +87,12 @@ struct wfs_r4_block_data
 	reiser4_object_t * obj;
 };
 
-#ifndef WFS_ANSIC
+/* ======================================================================== */
+
+#if (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM)
+# ifndef WFS_ANSIC
 static size_t WFS_ATTR ((warn_unused_result)) wfs_r4_get_block_size PARAMS((const wfs_fsid_t FS));
-#endif
+# endif
 
 /**
  * Returns the buffer size needed to work on the
@@ -96,12 +102,12 @@ static size_t WFS_ATTR ((warn_unused_result)) wfs_r4_get_block_size PARAMS((cons
  */
 static size_t WFS_ATTR ((warn_unused_result))
 wfs_r4_get_block_size (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS )
-#else
+# else
 	FS)
 	const wfs_fsid_t FS;
-#endif
+# endif
 {
 	if ( FS.r4 == NULL ) return 0;
 	if ( FS.r4->status == NULL ) return 0;
@@ -110,6 +116,7 @@ wfs_r4_get_block_size (
 	/* This returns the "temporary" block size used in aal_device_open()
 	return FS.r4->device->blksize;*/
 }
+#endif /* (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM) */
 
 /* ================================== */
 #ifdef WFS_REISER4_UNSHARED_BLOCKS
@@ -193,14 +200,14 @@ wfs_r4_wipe_last_block (
 	if ( (bd->FS.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 		memset ( (unsigned char *) &(((char *)(block->data))[to_skip]), 0, to_wipe );
-#else
+# else
 		for ( j=0; j < to_wipe; j++ )
 		{
 			((unsigned char *) &(((char *)(block->data))[to_skip]))[j] = '\0';
 		}
-#endif
+# endif
 		if ( sig_recvd == 0 )
 		{
 			bd->error->errcode.r4error = aal_block_write (block);
@@ -220,11 +227,12 @@ wfs_r4_wipe_last_block (
 	return ret_part;
 }
 
-# ifndef WFS_ANSIC
+# ifdef WFS_WANT_PART
+#  ifndef WFS_ANSIC
 static errcode_enum WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_part_work PARAMS ((
 	wfs_fsid_t FS, reiser4_tree_t * const tree,
 	reiser4_object_t * const dir, error_type * const error));
-# endif
+#  endif
 
 /**
  * This is the function that actually does the wiping of the free space
@@ -234,20 +242,20 @@ static errcode_enum WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_part_work PARAMS
  * \return 0 in case of no errors, other values otherwise.
  */
 static errcode_enum WFS_ATTR ((warn_unused_result))
-# ifdef WFS_ANSIC
+#  ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-# endif
+#  endif
 wfs_r4_wipe_part_work (
-# ifdef WFS_ANSIC
+#  ifdef WFS_ANSIC
 	wfs_fsid_t FS, reiser4_tree_t * const tree,
 	reiser4_object_t * const dir, error_type * const error)
-# else
+#  else
 	FS, tree, dir, error)
 	wfs_fsid_t FS;
 	reiser4_tree_t * const tree;
 	reiser4_object_t * const dir;
 	error_type * const error;
-# endif
+#  endif
 {
 	errcode_enum ret_part = WFS_SUCCESS;
 	entry_hint_t entry;
@@ -313,17 +321,17 @@ wfs_r4_wipe_part_work (
 				return WFS_SEEKERR;
 			}
 		}
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 		errno = 0;
-# endif
+#  endif
 		buf = (unsigned char *) malloc ( wfs_r4_get_block_size (FS) );
 		if ( buf == NULL )
 		{
-# ifdef HAVE_ERRNO_H
+#  ifdef HAVE_ERRNO_H
 			error->errcode.gerror = errno;
-# else
+#  else
 			error->errcode.gerror = 12L;	/* ENOMEM */
-# endif
+#  endif
 			if ( dir == rootdir )
 			{
 				show_progress (PROGRESS_PART, 100, &prev_percent);
@@ -339,6 +347,7 @@ wfs_r4_wipe_part_work (
 			{
 				show_progress (PROGRESS_PART, 100, &prev_percent);
 			}
+			free (buf);
 			return WFS_SEEKERR;
 		}
 
@@ -369,14 +378,14 @@ wfs_r4_wipe_part_work (
 		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+#  ifdef HAVE_MEMSET
 			memset ( buf, 0, wfs_r4_get_block_size (FS) );
-#else
+#  else
 			for ( j=0; j < wfs_r4_get_block_size (FS); j++ )
 			{
 				buf[j] = '\0';
 			}
-#endif
+#  endif
 			if ( sig_recvd == 0 )
 			{
 				written = reiser4_object_write (dir, buf, to_wipe);
@@ -447,9 +456,11 @@ wfs_r4_wipe_part_work (
 	}
 	return ret_part;
 }
+# endif /* WFS_WANT_PART */
 #endif	/* WFS_REISER4_UNSHARED_BLOCKS */
 /* ================================== */
 
+#ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given Reiser4 filesystem.
  * \param FS The filesystem.
@@ -457,37 +468,37 @@ wfs_r4_wipe_part_work (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_r4_wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS
-# ifndef  WFS_REISER4_UNSHARED_BLOCKS
+#  ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
-# endif
+#  endif
 	, error_type * const error
-# ifndef  WFS_REISER4_UNSHARED_BLOCKS
+#  ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
-# endif
+#  endif
 	 )
-#else
+# else
 	FS, error)
 	wfs_fsid_t FS
-# ifndef  WFS_REISER4_UNSHARED_BLOCKS
+#  ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
-# endif
+#  endif
 	;
 	error_type * const error
-# ifndef  WFS_REISER4_UNSHARED_BLOCKS
+#  ifndef  WFS_REISER4_UNSHARED_BLOCKS
 		WFS_ATTR ((unused))
-# endif
+#  endif
 	;
-#endif
+# endif
 {
 	errcode_enum ret_part = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
-#ifdef WFS_REISER4_UNSHARED_BLOCKS
+# ifdef WFS_REISER4_UNSHARED_BLOCKS
 	reiser4_object_t * root;
 
 	if ( FS.r4 == NULL )
@@ -510,11 +521,13 @@ wfs_r4_wipe_part (
 
 	ret_part = wfs_r4_wipe_part_work (FS, FS.r4->tree, root, error);
 	reiser4_object_close (root);
-#endif	/* WFS_REISER4_UNSHARED_BLOCKS */
+# endif	/* WFS_REISER4_UNSHARED_BLOCKS */
 	show_progress (PROGRESS_PART, 100, &prev_percent);
 	return ret_part;
 }
+#endif /* WFS_WANT_PART */
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given Reiser4 filesystem.
  * \param FS The filesystem.
@@ -522,17 +535,17 @@ wfs_r4_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_r4_wipe_fs (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	count_t number_of_blocks;
@@ -614,14 +627,14 @@ wfs_r4_wipe_fs (
 			if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 			{
 				/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 				memset ( (unsigned char *) block->data, 0, wfs_r4_get_block_size (FS) );
-#else
+# else
 				for ( j=0; j < wfs_r4_get_block_size (FS); j++ )
 				{
 					((unsigned char *) block->data)[j] = '\0';
 				}
-#endif
+# endif
 				if ( sig_recvd == 0 )
 				{
 					error->errcode.r4error = aal_block_write (block);
@@ -653,25 +666,27 @@ wfs_r4_wipe_fs (
 
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_UNRM
+# ifndef WFS_ANSIC
 static errno_t WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_journal PARAMS ((
 	uint64_t start, uint64_t len, void * data));
-#endif
+# endif
 
 static errno_t WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_r4_wipe_journal (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	uint64_t start, uint64_t len, void * data)
-#else
+# else
 	start, len, data)
 	uint64_t start;
 	uint64_t len;
 	void * data;
-#endif
+# endif
 {
 	struct wfs_r4_block_data * const bd = (struct wfs_r4_block_data *) data;
 	errno_t ret_journ = WFS_SUCCESS;
@@ -679,9 +694,9 @@ wfs_r4_wipe_journal (
 	int selected[NPAT];
 	unsigned long int j;
 	aal_block_t * block;
-#if (!defined HAVE_MEMSET)
+# if (!defined HAVE_MEMSET)
 	unsigned int i;
-#endif
+# endif
 	unsigned int prev_percent = 0;
 	uint64_t curr_sector = 0;
 
@@ -731,14 +746,14 @@ wfs_r4_wipe_journal (
 		/* zero-out the first 2 blocks */
 		if ( (bd->block_number == 0) || (bd->block_number == 1) )
 		{
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset ( block->data, 0, wfs_r4_get_block_size (bd->FS) );
-#else
+# else
 			for ( i=0; i < wfs_r4_get_block_size (bd->FS); i++ )
 			{
 				((char *)block->data)[i] = '\0';
 			}
-#endif
+# endif
 			bd->error->errcode.r4error = aal_block_write (block);
 			if ( bd->error->errcode.r4error != 0 )
 			{
@@ -751,14 +766,14 @@ wfs_r4_wipe_journal (
 			if ( (bd->FS.zero_pass != 0) && (sig_recvd == 0) )
 			{
 				/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 				memset ((unsigned char *) block->data, 0, wfs_r4_get_block_size (bd->FS));
-#else
+# else
 				for ( j=0; j < wfs_r4_get_block_size (bd->FS); j++ )
 				{
 					((unsigned char *) block->data)[j] = '\0';
 				}
-#endif
+# endif
 				if ( sig_recvd == 0 )
 				{
 					bd->error->errcode.r4error = aal_block_write (block);
@@ -788,24 +803,25 @@ wfs_r4_wipe_journal (
 	return ret_journ;
 }
 
-#ifndef WFS_ANSIC
+
+# ifndef WFS_ANSIC
 static errno_t WFS_ATTR ((warn_unused_result)) wfs_r4_wipe_object PARAMS ((
 	uint64_t start, uint64_t len, void * data));
-#endif
+# endif
 
 static errno_t WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_r4_wipe_object (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	uint64_t start, uint64_t len, void * data)
-#else
+# else
 	start, len, data)
 	uint64_t start;
 	uint64_t len;
 	void * data;
-#endif
+# endif
 {
 	errno_t ret_obj = WFS_SUCCESS;
 	struct wfs_r4_block_data * const bd = (struct wfs_r4_block_data *) data;
@@ -864,14 +880,14 @@ wfs_r4_wipe_object (
 		if ( (bd->FS.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 			memset ( (unsigned char *) block->data, 0, wfs_r4_get_block_size (bd->FS) );
-#else
+# else
 			for ( j=0; j < wfs_r4_get_block_size (bd->FS); j++ )
 			{
 				((unsigned char *) block->data)[j] = '\0';
 			}
-#endif
+# endif
 			if ( sig_recvd == 0 )
 			{
 				bd->error->errcode.r4error = aal_block_write (block);
@@ -904,18 +920,18 @@ wfs_r4_wipe_object (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_r4_wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, fselem_t node, error_type * const error )
-#else
+# else
 	FS, node, error )
 	wfs_fsid_t FS;
 	fselem_t node;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_unrm = WFS_SUCCESS, ret_temp;
 	struct wfs_r4_block_data bd;
@@ -968,7 +984,7 @@ wfs_r4_wipe_unrm (
 		show_progress (PROGRESS_UNRM, 100, &prev_percent);
 		return ret_unrm;
 	}
-	for ( i=0; i < reiser4_node_items (node.r4node); i++)
+	for ( i = 0; i < reiser4_node_items (node.r4node); i++)
 	{
 		reiser4_place_assign (&place, node.r4node, i, MAX_UINT32);
 		e = reiser4_place_fetch (&place);
@@ -981,14 +997,14 @@ wfs_r4_wipe_unrm (
 		/* if not branch node, check correctness and wipe if damaged/unused */
 		if ( reiser4_item_branch (place.plug) == 0 )
 		{
-#ifdef HAVE_MEMCPY
-			memcpy (&key_copy, &(place.key), sizeof (reiser4_key_t) );
-#else
-			for ( i=0; i < sizeof (reiser4_key_t); i++ )
+# ifdef HAVE_MEMCPY
+			memcpy ( &key_copy, &(place.key), sizeof (reiser4_key_t) );
+# else
+			for ( i = 0; i < sizeof (reiser4_key_t); i++ )
 			{
 				((char*)&key_copy)[i] = ((char*)&(place.key))[i];
 			}
-#endif
+# endif
 			if ( key_copy.plug->check_struct == NULL ) continue;
 			e = key_copy.plug->check_struct (&key_copy);
 			if ( e < 0 ) continue;
@@ -1052,6 +1068,7 @@ wfs_r4_wipe_unrm (
 	show_progress (PROGRESS_UNRM, 100, &prev_percent);
 	return ret_unrm;
 }
+#endif /* WFS_WANT_UNRM */
 
 /**
  * Opens a Reiser4 filesystem on the given device.
@@ -1082,6 +1099,7 @@ wfs_r4_open_fs (
 {
 	aal_device_t * dev;
 	char * dev_name_copy;
+	size_t namelen;
 #if (!defined HAVE_MEMSET) || (!defined HAVE_MEMCPY)
 	unsigned int i;
 #endif
@@ -1093,12 +1111,13 @@ wfs_r4_open_fs (
 
 	*whichfs = CURR_NONE;
 	FS->r4 = NULL;
+	namelen = strlen (dev_name);
 
 	/* malloc a new array for dev_name */
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	dev_name_copy = (char *) malloc ( strlen (dev_name) + 1 );
+	dev_name_copy = (char *) malloc ( namelen + 1 );
 	if ( dev_name_copy == NULL )
 	{
 #ifdef HAVE_ERRNO_H
@@ -1109,14 +1128,8 @@ wfs_r4_open_fs (
 		return WFS_MALLOC;
 	}
 
-#ifdef HAVE_MEMCPY
-	memcpy ( dev_name_copy, dev_name, strlen (dev_name) + 1 );
-#else
-	for ( i=0; i < strlen (dev_name) + 1; i++ )
-	{
-		dev_name_copy[i] = dev_name[i];
-	}
-#endif
+	strncpy ( dev_name_copy, dev_name, namelen + 1 );
+	dev_name_copy[namelen] = '\0';
 
 	if ( libreiser4_init () != 0 )
 	{

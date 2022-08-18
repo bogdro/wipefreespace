@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -87,6 +87,12 @@
 # define ECHILD 10
 #endif
 
+/*
+#ifdef HAVE_MALLOC_H
+# include <malloc.h>
+#endif
+*/
+
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>	/* exit() */
 #endif
@@ -112,6 +118,35 @@
 # include <sched.h>
 #endif
 
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>	/* for open() */
+#endif
+
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>	/* for open() */
+#endif
+
+#if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H)
+# include <fcntl.h>     /* O_RDWR, open() for ioctl() */
+# include <sys/ioctl.h>
+#else
+# undef HAVE_IOCTL
+#endif
+
+#ifdef HAVE_LINUX_HDREG_H
+# include <linux/hdreg.h>
+#else
+# ifdef HAVE_HDREG_H
+#  include <hdreg.h>
+# else
+#  define HDIO_DRIVE_CMD	0x031f
+#  define HDIO_GET_WCACHE	0x030e
+#  define HDIO_SET_WCACHE	0x032b
+# endif
+#endif
+
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_util_sig(a,b,c,d)
 #include "wipefreespace.h"
 #include "wfs_util.h"
 
@@ -134,6 +169,8 @@
 #ifndef STDERR_FILENO
 # define STDERR_FILENO	2
 #endif
+
+/* ======================================================================== */
 
 /**
  * Gets the mount point of the given device (if mounted).
@@ -295,7 +332,7 @@ wfs_get_mnt_point (
 
 
 /**
- * Checks if the given XFS filesystem is mounted in read-write mode.
+ * Checks if the given filesystem is mounted in read-write mode.
  * \param devname Device name, like /dev/hdXY
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
@@ -573,4 +610,257 @@ wfs_has_child_exited (
 #endif
 	}
 	return 0;
+}
+
+#ifdef malloc
+
+# define rpl_malloc 1
+# if malloc == 1	/* replacement function requested */
+#  undef rpl_malloc
+#  undef malloc
+
+/* Replacement malloc() function */
+void *
+rpl_malloc (
+#  ifdef WFS_ANSIC
+	size_t n)
+#  else
+	n)
+	size_t n;
+#  endif
+{
+	if (n == 0) n = 1;
+	return malloc (n);
+}
+# endif
+# undef rpl_malloc
+#endif /* malloc */
+
+/**
+ * Converts the filesystem type (enum) to filesystem name.
+ * \param fs The filesystem to convert.
+ * \return The filesystem name
+ */
+char *
+convert_fs_to_name (
+#ifdef WFS_ANSIC
+	const CURR_FS fs)
+#else
+	fs)
+	const CURR_FS fs;
+#endif
+{
+	if ( fs == CURR_NONE )
+	{
+		return "<none>";
+	}
+	else if ( fs == CURR_EXT234FS )
+	{
+		return "ext2/3/4";
+	}
+	else if ( fs == CURR_NTFS )
+	{
+		return "NTFS";
+	}
+	else if ( fs == CURR_XFS )
+	{
+		return "XFS";
+	}
+	else if ( fs == CURR_REISERFS )
+	{
+		return "ReiserFSv3";
+	}
+	else if ( fs == CURR_REISER4 )
+	{
+		return "Reiser4";
+	}
+	else if ( fs == CURR_FATFS )
+	{
+		return "FAT12/16/32";
+	}
+	else if ( fs == CURR_MINIXFS )
+	{
+		return "MinixFSv1/2";
+	}
+	else if ( fs == CURR_JFS )
+	{
+		return "JFS";
+	}
+	else if ( fs == CURR_HFSP )
+	{
+		return "HFS+";
+	}
+	return "<unknown>";
+}
+
+/**
+ * Re-enables drive cache when the wiping function is about to finish.
+ * \param drive_no The number of the device in the ioctls array.
+ */
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+enable_drive_cache (
+#ifdef WFS_ANSIC
+	const char dev_name[]
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, const int total_fs
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, fs_ioctl ioctls[]
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	)
+#else
+	drive_no
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, total_fs
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, ioctls
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	)
+	const char dev_name[];
+	const int total_fs;
+	fs_ioctl ioctls[];
+#endif
+{
+#ifdef HAVE_IOCTL
+	int j;
+	int curr_ioctl = -1;
+	int ioctl_fd;
+	unsigned char hd_cmd[4];
+
+	if ( ioctls != NULL && dev_name != NULL )
+	{
+		for ( j = 0; j < total_fs; j++ )
+		{
+			if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
+			{
+				curr_ioctl = j;
+				break;
+			}
+		}
+		if ( (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
+		{
+			ioctls[curr_ioctl].how_many--;
+			if ( (ioctls[curr_ioctl].how_many == 0)
+				&& (ioctls[curr_ioctl].was_enabled != 0) )
+			{
+				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
+				if ( ioctl_fd >= 0 )
+				{
+					/* enable cache: */
+					hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
+					hd_cmd[1] = 0;
+					hd_cmd[2] = 0x02;
+					hd_cmd[3] = 0;
+					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+					close (ioctl_fd);
+				}
+			}
+		}
+	}
+#endif
+}
+
+/**
+ * Re-enables drive cache when the wiping function is about to finish.
+ * \param drive_no The number of the device in the ioctls array.
+ */
+void
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+disable_drive_cache (
+#ifdef WFS_ANSIC
+	const char dev_name[]
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, const int total_fs
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, fs_ioctl ioctls[]
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	)
+#else
+	dev_name
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, total_fs
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	, ioctls
+#ifndef HAVE_IOCTL
+		WFS_ATTR ((unused))
+#endif
+	)
+	const char dev_name[];
+	const int total_fs;
+	fs_ioctl ioctls[];
+#endif
+{
+#ifdef HAVE_IOCTL
+	int j;
+	int curr_ioctl = -1;
+	int ioctl_fd;
+	unsigned char hd_cmd[4];
+
+	if ( ioctls != NULL && dev_name != NULL )
+	{
+		for ( j = 0; j < total_fs; j++ )
+		{
+			if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
+			{
+				curr_ioctl = j;
+				break;
+			}
+		}
+		if ( (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
+		{
+			ioctls[curr_ioctl].how_many++;
+			ioctls[curr_ioctl].was_enabled = 0;
+			ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
+			if ( ioctl_fd >= 0 )
+			{
+				/* check if caching was enabled */
+				ioctl (ioctl_fd, HDIO_GET_WCACHE, &ioctls[curr_ioctl].was_enabled);
+				/* flush the drive's caches: */
+				hd_cmd[0] = 0xe7;	/* ATA_OP_FLUSHCACHE */
+				hd_cmd[1] = 0;
+				hd_cmd[2] = 0;
+				hd_cmd[3] = 0;
+				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+				hd_cmd[0] = 0xea;	/* ATA_OP_FLUSHCACHE_EXT */
+				hd_cmd[1] = 0;
+				hd_cmd[2] = 0;
+				hd_cmd[3] = 0;
+				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+				/* disable cache: */
+				hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
+				hd_cmd[1] = 0;
+				hd_cmd[2] = 0x82;
+				hd_cmd[3] = 0;
+				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
+				close (ioctl_fd);
+			}
+		}
+	}
+#endif
 }

@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -108,38 +108,14 @@
 # endif
 #endif
 
-#ifdef HAVE_LINUX_HDREG_H
-# include <linux/hdreg.h>
-#else
-# ifdef HAVE_HDREG_H
-#  include <hdreg.h>
-# else
-#  define HDIO_DRIVE_CMD	0x031f
-#  define HDIO_GET_WCACHE	0x030e
-#  define HDIO_SET_WCACHE	0x032b
-# endif
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>	/* for open() */
-#endif
-
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>	/* for open() */
-#endif
-
-#if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H)
-# include <fcntl.h>     /* O_RDWR, open() for ioctl() */
-# include <sys/ioctl.h>
-#else
-# undef HAVE_IOCTL
-#endif
-
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_main_sig(a,b,c,d)
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 #include "wfs_secure.h"
 #include "wfs_signal.h"
 #include "wfs_util.h"
+#include "wfs_wiping.h"
 
 #if (defined WFS_REISER) || (defined WFS_MINIXFS) /* after #include "wipefreespace.h" */
 # ifdef HAVE_SYS_WAIT_H
@@ -163,7 +139,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2010 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2011 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -199,18 +175,16 @@ const char * const err_msg_nocache = N_("during disabling device cache");
 const char * const err_msg_cacheon = N_("during enabling device cache");
 
 /* Messages displayed when verbose mode is on */
-const char * const msg_signal      = N_("Setting signal handlers");
-const char * const msg_chkmnt      = N_("Checking if file system is mounted");
-const char * const msg_openfs      = N_("Opening file system");
-const char * const msg_flushfs     = N_("Flushing file system");
-const char * const msg_rdblbm      = N_("Reading block bitmap from");
-const char * const msg_wipefs      = N_("Wiping free space on file system");
-const char * const msg_pattern     = N_("Using pattern");
-const char * const msg_random      = N_("random");
-const char * const msg_wipeused    = N_("Wiping unused space in used blocks on");
-const char * const msg_wipeunrm    = N_("Wiping undelete data on");
-const char * const msg_closefs     = N_("Closing file system");
-const char * const msg_nobg	   = N_("Going into background not supported or failed");
+static const char * const msg_signal   = N_("Setting signal handlers");
+static const char * const msg_chkmnt   = N_("Checking if file system is mounted");
+static const char * const msg_openfs   = N_("Opening file system");
+static const char * const msg_flushfs  = N_("Flushing file system");
+static const char * const msg_rdblbm   = N_("Reading block bitmap from");
+static const char * const msg_wipefs   = N_("Wiping free space on file system");
+static const char * const msg_wipeused = N_("Wiping unused space in used blocks on");
+static const char * const msg_wipeunrm = N_("Wiping undelete data on");
+static const char * const msg_closefs  = N_("Closing file system");
+static const char * const msg_nobg     = N_("Going into background not supported or failed");
 
 /* Command-line options. */
 static int opt_allzero = 0;
@@ -244,6 +218,7 @@ static const struct option opts[] =
 	{ "force",      no_argument,       &opt_force,   1 },
 	{ "help",       no_argument,       &opt_help,    1 },
 	{ "iterations", required_argument, &opt_number,  1 },
+	{ "last-zero",  no_argument,       &opt_zero,    1 },
 	{ "licence",    no_argument,       &opt_license, 1 },
 	{ "license",    no_argument,       &opt_license, 1 },
 	{ "nopart",     no_argument,       &opt_nopart,  1 },
@@ -254,23 +229,11 @@ static const struct option opts[] =
 	/* have to use a temp variable, to add both '-v' and '--verbose' together. */
 	{ "verbose",    no_argument,       &opt_verbose_temp, 1 },
 	{ "version",    no_argument,       &opt_version, 1 },
-	{ "zero",       no_argument,       &opt_zero,    1 },
 	{ NULL, 0, NULL, 0 }
 };
 #endif
 
 #ifdef HAVE_IOCTL
-/* This structure helps to run ioctl()s once per device */
-struct fs_ioctl
-{
-	int how_many;		/* how many ioctl tries were on this device. Incremented
-				   on begin, decremented on fs close. When reaches zero,
-				   caching is brought back to its previous state. */
-	int was_enabled;
-	char fs_name[WFS_MNTBUFLEN];	/* space for "/dev/hda" */
-};
-
-typedef struct fs_ioctl fs_ioctl;
 static fs_ioctl * ioctls = NULL;	/* array of structures */
 #endif
 
@@ -286,192 +249,8 @@ static /*@observer@*/ char *wfs_progname;	/* The name of the program */
 static int stdout_open = 1, stderr_open = 1;
 
 unsigned long int npasses = PASSES;		/* Number of passes (patterns used) */
-/* Taken from `shred' source */
-static unsigned const int patterns[NPAT] =
-{
-	0x000, 0xFFF,					/* 1-bit */
-	0x555, 0xAAA,					/* 2-bit */
-	0x249, 0x492, 0x6DB, 0x924, 0xB6D, 0xDB6,	/* 3-bit */
-	0x111, 0x222, 0x333, 0x444, 0x666, 0x777,
-	0x888, 0x999, 0xBBB, 0xCCC, 0xDDD, 0xEEE	/* 4-bit */
-#ifndef WFS_WANT_RANDOM
-	/* Gutmann method says these are used twice. */
-	, 0x555, 0xAAA, 0x249, 0x492, 0x924
-#endif
-};
 
-/**
- * Fills the given buffer with one of predefined patterns.
- * \param pat_no Pass number.
- * \param buffer Buffer to be filled.
- * \param buflen Length of the buffer.
- * \param FS The filesystem this wiping refers to.
- */
-void
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
-fill_buffer (
-#ifdef WFS_ANSIC
-	unsigned long int 		pat_no,
-	unsigned char * const 		buffer,
-	const size_t 			buflen,
-	int * const			selected,
-	const wfs_fsid_t		FS )
-#else
-	pat_no,	buffer,	buflen,	selected, FS )
-	unsigned long int 		pat_no;
-	unsigned char * const 		buffer;
-	const size_t 			buflen;
-	int * const			selected;
-	const wfs_fsid_t		FS;
-#endif
-		/*@requires notnull buffer @*/ /*@sets *buffer @*/
-{
-
-	size_t i;
-#if (!defined HAVE_MEMCPY) && (!defined HAVE_STRING_H)
-	size_t j;
-#endif
-	unsigned int bits;
-	char tmp[8];
-	int res;
-
-	if ( (buffer == NULL) || (buflen == 0) ) return;
-
-	/* De-select all patterns once every npasses calls. */
-	if ( pat_no % npasses == 0 )
-	{
-		for ( i = 0; (i < NPAT) && (sig_recvd==0); i++ ) { selected[i] = 0; }
-        }
-        if ( sig_recvd != 0 ) return;
-        pat_no %= npasses;
-
-	if ( opt_allzero != 0 )
-	{
-		bits = 0;
-	}
-	else
-	{
-		/* The first, last and middle passess will be using a random pattern */
-		if ( (pat_no == 0) || (pat_no == npasses-1) || (pat_no == npasses/2)
-#ifndef WFS_WANT_RANDOM
-			/* Gutmann method: first 4, 1 middle and last 4 passes are random */
-			|| (pat_no == 1) || (pat_no == 2) || (pat_no == 3)
-			|| (pat_no == npasses-2) || (pat_no == npasses-3) || (pat_no == npasses-4)
-#endif
-		)
-		{
-#if (!defined __STRICT_ANSI__) && (defined HAVE_RANDOM)
-			bits = (unsigned int) (random () & 0xFFF);
-#else
-			bits = (unsigned int) (rand () & 0xFFF);
-#endif
-		}
-		else
-		{	/* For other passes, one of the fixed patterns is selected. */
-			do
-			{
-#if (!defined __STRICT_ANSI__) && (defined HAVE_RANDOM)
-				i = (size_t) (random () % NPAT);
-#else
-				i = (size_t) (rand () % NPAT);
-#endif
-			}
-			while ( (selected[i] == 1) && (sig_recvd == 0) );
-			if ( sig_recvd != 0 ) return;
-			bits = patterns[i];
-			selected[i] = 1;
-		}
-    	}
-
-        if ( sig_recvd != 0 ) return;
-	/* Taken from `shred' source and modified */
-	bits |= bits << 12;
-	buffer[0] = (unsigned char) ((bits >> 4) & 0xFF);
-	buffer[1] = (unsigned char) ((bits >> 8) & 0xFF);
-	buffer[2] = (unsigned char) (bits & 0xFF);
-	/* display the patterns when at least two '-v' command line options were given */
-	if ( opt_verbose > 1 )
-	{
-		if ( ((pat_no == 0) || (pat_no == npasses-1) || (pat_no == npasses/2)
-#ifndef WFS_WANT_RANDOM
-			/* Gutmann method: first 4, 1 middle and last 4 passes are random */
-			|| (pat_no == 1) || (pat_no == 2) || (pat_no == 3)
-			|| (pat_no == npasses-2) || (pat_no == npasses-3) || (pat_no == npasses-4)
-#endif
-			) && ( opt_allzero == 0 )
-		 )
-		{
-			show_msg ( 1, msg_pattern, msg_random, FS );
-		}
-		else
-		{
-#if (!defined __STRICT_ANSI__) && (defined HAVE_SNPRINTF)
-			res = snprintf (tmp, 7, "%02x%02x%02x", buffer[0], buffer[1], buffer[2] );
-#else
-			res = sprintf (tmp, "%02x%02x%02x", buffer[0], buffer[1], buffer[2] );
-#endif
-			tmp[7] = '\0';
-			show_msg ( 1, msg_pattern, (res > 0)? tmp: "??????", FS );
-		}
-	}
-	for (i = 3; (i < buflen / 2) && (sig_recvd == 0); i *= 2)
-	{
-#ifdef HAVE_MEMCPY
-		memcpy (buffer + i, buffer, i);
-#else
-# if defined HAVE_STRING_H
-		strncpy ((char *) (buffer + i), (char *) buffer, i);
-# else
-		for ( j=0; j < i; j++ )
-		{
-			buffer [ i + j ] = buffer[j];
-		}
-# endif
-#endif
-	}
-        if ( sig_recvd != 0 ) return;
-	if (i < buflen)
-	{
-#ifdef HAVE_MEMCPY
-		memcpy (buffer + i, buffer, buflen - i);
-#else
-# if defined HAVE_STRING_H
-		strncpy ((char *) (buffer + i), (char *) buffer, buflen - i);
-# else
-		for ( j=0; j<buflen - i; j++ )
-		{
-			buffer [ i + j ] = buffer[j];
-		}
-# endif
-#endif
-	}
-}
-
-#ifdef malloc
-
-# define rpl_malloc 1
-# if malloc == 1	/* replacement function requested */
-#  undef rpl_malloc
-#  undef malloc
-
-/* Replacement malloc() function */
-void *
-rpl_malloc (
-#  ifdef WFS_ANSIC
-	size_t n)
-#  else
-	n)
-	size_t n;
-#  endif
-{
-	if (n == 0) n = 1;
-	return malloc (n);
-}
-# endif
-# undef rpl_malloc
-#endif /* malloc */
+/* ======================================================================== */
 
 /**
  * Displays an error message.
@@ -527,62 +306,7 @@ show_error (
 	fflush (stderr);
 }
 
-#ifndef WFS_ANSIC
-static char * convert_fs_to_name PARAMS ((CURR_FS fs));
-#endif
-
-/**
- * Converts the filesystem type (enum) to filesystem name.
- * \param fs The filesystem to convert.
- * \return The filesystem name
- */
-static char *
-convert_fs_to_name (
-#ifdef WFS_ANSIC
-	CURR_FS fs)
-#else
-	fs)
-	CURR_FS fs;
-#endif
-{
-	if ( fs == CURR_NONE )
-	{
-		return "<none>";
-	}
-	else if ( fs == CURR_EXT234FS )
-	{
-		return "ext2/3/4";
-	}
-	else if ( fs == CURR_NTFS )
-	{
-		return "NTFS";
-	}
-	else if ( fs == CURR_XFS )
-	{
-		return "XFS";
-	}
-	else if ( fs == CURR_REISERFS )
-	{
-		return "ReiserFSv3";
-	}
-	else if ( fs == CURR_REISER4 )
-	{
-		return "Reiser4";
-	}
-	else if ( fs == CURR_FATFS )
-	{
-		return "FAT12/16/32";
-	}
-	else if ( fs == CURR_MINIXFS )
-	{
-		return "MinixFSv1/2";
-	}
-	else if ( fs == CURR_JFS )
-	{
-		return "JFS";
-	}
-	return "<unknown>";
-}
+/* ======================================================================== */
 
 /**
  * Displays a progress message (verbose mode).
@@ -623,6 +347,8 @@ show_msg (
 	}
 	fflush (stdout);
 }
+
+/* ======================================================================== */
 
 /**
  * Displays a progress bar (verbose mode).
@@ -668,6 +394,7 @@ show_progress (
 	fflush (stdout);
 }
 
+/* ======================================================================== */
 
 /**
  * Prints the help screen.
@@ -691,7 +418,7 @@ print_help (
 		prog = PROGRAM_NAME;
 #ifdef HAVE_STRING_H
 	}
-	else if ( strlen (my_name) == 0 )
+	else if ( my_name[0] == '\0' /*strlen (my_name) == 0*/ )
 	{
 		prog = PROGRAM_NAME;
 #endif
@@ -731,51 +458,6 @@ print_help (
 
 /* ======================================================================== */
 
-#ifndef WFS_ANSIC
-static void enable_drive_cache PARAMS ((unsigned int drive_no));
-#endif
-
-/**
- * Re-enables drive cache when the wiping function is about to finish.
- * \param drive_no The number of the device in the ioctls array.
- */
-static void enable_drive_cache (
-#ifdef WFS_ANSIC
-	int drive_no, const int total_fs)
-#else
-	drive_no, total_fs)
-	int drive_no;
-	const int total_fs;
-#endif
-{
-#ifdef HAVE_IOCTL
-	int ioctl_fd;
-	unsigned char hd_cmd[4];
-	if ( (opt_ioctl != 0) && (ioctls != NULL)
-		&& (drive_no >= 0) && (drive_no < total_fs) )
-	{
-		ioctls[drive_no].how_many--;
-		if ( (ioctls[drive_no].how_many == 0)
-			&& (ioctls[drive_no].was_enabled != 0) )
-		{
-			ioctl_fd = open (ioctls[drive_no].fs_name, O_RDWR | O_EXCL);
-			if ( ioctl_fd >= 0 )
-			{
-				/* enable cache: */
-				hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-				hd_cmd[1] = 0;
-				hd_cmd[2] = 0x02;
-				hd_cmd[3] = 0;
-				ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-				close (ioctl_fd);
-			}
-		}
-	}
-#endif
-}
-
-/* ======================================================================== */
-
 static errcode_enum WFS_ATTR((warn_unused_result))
 wfs_wipe_filesytem (
 #ifdef WFS_ANSIC
@@ -794,12 +476,6 @@ wfs_wipe_filesytem (
 	errcode_enum res;
 #ifndef HAVE_MEMSET
 	size_t i;
-#endif
-#ifdef HAVE_IOCTL
-	unsigned char hd_cmd[4];
-	int curr_ioctl = -1;
-	int ioctl_fd = -1;
-	int j;
 #endif
 
 #ifdef HAVE_MEMSET
@@ -826,7 +502,7 @@ wfs_wipe_filesytem (
 
 	if ( dev_name == NULL ) return WFS_BAD_CMDLN;
 
-	if ( strlen (dev_name) == 0 )
+	if ( dev_name[0] == '\0' /*strlen (dev_name) == 0*/ )
 	{
 		return WFS_BAD_CMDLN;
 	}
@@ -858,46 +534,7 @@ wfs_wipe_filesytem (
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
 	{
-		if ( ioctls != NULL )
-		{
-			for ( j=0; j < total_fs; j++ )
-			{
-				if ( strncmp (ioctls[j].fs_name, dev_name, sizeof (ioctls[j].fs_name) - 1) == 0 )
-				{
-					curr_ioctl = j;
-					break;
-				}
-			}
-			if ( (curr_ioctl >= 0) && (curr_ioctl < total_fs) )
-			{
-				ioctls[curr_ioctl].how_many++;
-				ioctls[curr_ioctl].was_enabled = 0;
-				ioctl_fd = open (ioctls[curr_ioctl].fs_name, O_RDWR | O_EXCL);
-				if ( ioctl_fd >= 0 )
-				{
-					/* check if caching was enabled */
-					ioctl (ioctl_fd, HDIO_GET_WCACHE, &ioctls[curr_ioctl].was_enabled);
-					/* flush the drive's caches: */
-					hd_cmd[0] = 0xe7;	/* ATA_OP_FLUSHCACHE */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					hd_cmd[0] = 0xea;	/* ATA_OP_FLUSHCACHE_EXT */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					/* disable cache: */
-					hd_cmd[0] = 0xef;	/* ATA_OP_SETFEATURES */
-					hd_cmd[1] = 0;
-					hd_cmd[2] = 0x82;
-					hd_cmd[3] = 0;
-					ioctl (ioctl_fd, HDIO_DRIVE_CMD, hd_cmd);
-					close (ioctl_fd);
-				}
-			}
-		}
+		disable_drive_cache (dev_name, total_fs, ioctls);
 	}
 #endif
 	data.e2fs.super_off = super_off;
@@ -905,7 +542,12 @@ wfs_wipe_filesytem (
 	ret = wfs_open_fs ( dev_name, &fs, &curr_fs, &data, &error );
 	if ( ret != WFS_SUCCESS )
 	{
-		enable_drive_cache (curr_ioctl, total_fs);
+#ifdef HAVE_IOCTL
+		if ( opt_ioctl != 0 )
+		{
+			enable_drive_cache (dev_name, total_fs, ioctls);
+		}
+#endif
 		show_error ( error, err_msg_open, dev_name, fs );
 		return WFS_OPENFS;
 	}
@@ -919,7 +561,12 @@ wfs_wipe_filesytem (
 	if ( sig_recvd != 0 )
 	{
 		wfs_close_fs ( fs, curr_fs, &error );
-		enable_drive_cache (curr_ioctl, total_fs);
+#ifdef HAVE_IOCTL
+		if ( opt_ioctl != 0 )
+		{
+			enable_drive_cache (dev_name, total_fs, ioctls);
+		}
+#endif
 		return WFS_SIGNAL;
 	}
 
@@ -927,7 +574,12 @@ wfs_wipe_filesytem (
 	{
 		show_msg ( 1, err_msg_fserr, dev_name, fs );
 		wfs_close_fs ( fs, curr_fs, &error );
-		enable_drive_cache (curr_ioctl, total_fs);
+#ifdef HAVE_IOCTL
+		if ( opt_ioctl != 0 )
+		{
+			enable_drive_cache (dev_name, total_fs, ioctls);
+		}
+#endif
 		return WFS_FSHASERROR;
 	}
 
@@ -944,10 +596,15 @@ wfs_wipe_filesytem (
         if ( sig_recvd != 0 )
         {
 		wfs_close_fs ( fs, curr_fs, &error );
-		enable_drive_cache (curr_ioctl, total_fs);
+#ifdef HAVE_IOCTL
+		if ( opt_ioctl != 0 )
+		{
+			enable_drive_cache (dev_name, total_fs, ioctls);
+		}
+#endif
         	return WFS_SIGNAL;
         }
-
+#ifdef WFS_WANT_UNRM
         /* removing undelete information */
 	if ( (opt_nounrm == 0) && (sig_recvd == 0) )
 	{
@@ -958,7 +615,8 @@ wfs_wipe_filesytem (
 		res = wipe_unrm (fs, curr_fs, &error);
 		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
 	}
-
+#endif
+#ifdef WFS_WANT_PART
 	/* wiping partially occupied blocks */
 	if ( (opt_nopart == 0) && (sig_recvd == 0) )
 	{
@@ -970,7 +628,8 @@ wfs_wipe_filesytem (
 		res = wipe_part (fs, curr_fs, &error);
 		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
 	}
-
+#endif
+#ifdef WFS_WANT_WFS
 	if ( (opt_nowfs == 0) && (sig_recvd == 0) )
 	{
 		if ( opt_verbose > 0 )
@@ -980,7 +639,7 @@ wfs_wipe_filesytem (
 		res = wipe_fs (fs, curr_fs, &error);
 		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
 	}
-
+#endif
 	if ( opt_verbose > 0 )
 	{
 		show_msg ( 1, msg_closefs, dev_name, fs );
@@ -989,28 +648,14 @@ wfs_wipe_filesytem (
 	wfs_flush_fs ( fs, curr_fs, &error );
 	res = wfs_close_fs ( fs, curr_fs, &error );
 	if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
-	enable_drive_cache (curr_ioctl, total_fs);
+#ifdef HAVE_IOCTL
+	if ( opt_ioctl != 0 )
+	{
+		enable_drive_cache (dev_name, total_fs, ioctls);
+	}
+#endif
 	return ret;
 }
-
-/* ======================================================================== */
-#if (defined WFS_REISER) && !(defined HAVE_FORK)
-static void * wfs_wipe_filesytem_wrapper (
-# ifdef WFS_ANSIC
-	void * data)
-# else
-	data)
-	void * data;
-# endif
-{
-	wipedata * wd;
-
-	if ( data == NULL ) return NULL;
-	wd = (wipedata *) data;
-	wd->ret_val = wfs_wipe_filesytem (wd->filesys.fsname, wd->total_fs);
-	return & (wd->ret_val);
-}
-#endif
 
 /* ======================================================================== */
 int
@@ -1517,6 +1162,8 @@ main (
 		return WFS_BAD_CMDLN;
 	}
 
+	init_wiping (npasses, opt_verbose, opt_allzero);
+
 	if ( stdout_open == 0 ) opt_verbose = 0;
 
 	if ( opt_bg == 1 )
@@ -1589,6 +1236,7 @@ main (
 	}
 	wfs_optind = res;
 
+#ifdef HAVE_IOCTL
 	if ( argc > wfs_optind )
 	{
 		ioctls = (fs_ioctl *) malloc ( (size_t)(argc - wfs_optind) * sizeof (fs_ioctl) );
@@ -1605,6 +1253,7 @@ main (
 			}
 		}
 	}
+#endif
 
 	/*
 	 * Unrecognised command line options are assumed to be devices
@@ -1685,12 +1334,13 @@ main (
 		wfs_optind++;
 	} /* while optind<argc && !signal */
 
+#ifdef HAVE_IOCTL
 	if ( ioctls != NULL )
 	{
 		free (ioctls);
 	}
 	ioctls = NULL;
-
+#endif
 #if ((defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)) && (defined WFS_EXT234)
 	remove_error_table (&et_ext2_error_table);
 #endif

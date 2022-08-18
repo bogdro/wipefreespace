@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace 1.3\n"
+"Project-Id-Version: wipefreespace 1.4\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2010-09-05 15:53+0200\n"
+"POT-Creation-Date: 2011-05-30 18:03+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/wipefreespace.c:165
+#: src/wipefreespace.c:141
 msgid "version"
 msgstr ""
 
-#: src/wipefreespace.c:168
+#: src/wipefreespace.c:144
 msgid ""
 "Program for secure cleaning of free space on filesystems.\n"
 "\n"
@@ -35,157 +35,149 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/wipefreespace.c:178
+#: src/wipefreespace.c:154
 msgid "error"
 msgstr ""
 
-#: src/wipefreespace.c:179
+#: src/wipefreespace.c:155
 msgid "during opening"
 msgstr ""
 
-#: src/wipefreespace.c:180
+#: src/wipefreespace.c:156
 msgid "while flushing"
 msgstr ""
 
-#: src/wipefreespace.c:181
+#: src/wipefreespace.c:157
 msgid "during closing"
 msgstr ""
 
-#: src/wipefreespace.c:182
+#: src/wipefreespace.c:158
 msgid "during malloc while working on"
 msgstr ""
 
-#: src/wipefreespace.c:183
+#: src/wipefreespace.c:159
 msgid "during checking if the file system is mounted"
 msgstr ""
 
-#: src/wipefreespace.c:184
+#: src/wipefreespace.c:160
 msgid "- Device is mounted in read-write mode"
 msgstr ""
 
-#: src/wipefreespace.c:185
+#: src/wipefreespace.c:161
 msgid "during reading block bitmap from"
 msgstr ""
 
-#: src/wipefreespace.c:186
+#: src/wipefreespace.c:162
 msgid "during writing of a block on"
 msgstr ""
 
-#: src/wipefreespace.c:187
+#: src/wipefreespace.c:163
 msgid "during reading of a block on"
 msgstr ""
 
-#: src/wipefreespace.c:188
+#: src/wipefreespace.c:164
 msgid "during reading of an inode on"
 msgstr ""
 
-#: src/wipefreespace.c:189
+#: src/wipefreespace.c:165
 msgid "while trying to set a signal handler for"
 msgstr ""
 
-#: src/wipefreespace.c:190
+#: src/wipefreespace.c:166
 msgid "Filesystem has errors"
 msgstr ""
 
-#: src/wipefreespace.c:191
+#: src/wipefreespace.c:167
 msgid "during opening a scan of"
 msgstr ""
 
-#: src/wipefreespace.c:192
+#: src/wipefreespace.c:168
 msgid "during iterating over blocks on"
 msgstr ""
 
-#: src/wipefreespace.c:193
+#: src/wipefreespace.c:169
 msgid "during iterating over a directory on"
 msgstr ""
 
-#: src/wipefreespace.c:194
+#: src/wipefreespace.c:170
 msgid "Nothing selected for wiping."
 msgstr ""
 
-#: src/wipefreespace.c:195
+#: src/wipefreespace.c:171
 msgid "PLEASE do NOT set this program's suid bit. Use sgid instead."
 msgstr ""
 
-#: src/wipefreespace.c:196
+#: src/wipefreespace.c:172
 msgid "during setting capabilities"
 msgstr ""
 
-#: src/wipefreespace.c:197
+#: src/wipefreespace.c:173
 msgid "during creation of child process"
 msgstr ""
 
-#: src/wipefreespace.c:198
+#: src/wipefreespace.c:174
 msgid "during disabling device cache"
 msgstr ""
 
-#: src/wipefreespace.c:199
+#: src/wipefreespace.c:175
 msgid "during enabling device cache"
 msgstr ""
 
-#: src/wipefreespace.c:202
+#: src/wipefreespace.c:178
 msgid "Setting signal handlers"
 msgstr ""
 
-#: src/wipefreespace.c:203
+#: src/wipefreespace.c:179
 msgid "Checking if file system is mounted"
 msgstr ""
 
-#: src/wipefreespace.c:204
+#: src/wipefreespace.c:180
 msgid "Opening file system"
 msgstr ""
 
-#: src/wipefreespace.c:205
+#: src/wipefreespace.c:181
 msgid "Flushing file system"
 msgstr ""
 
-#: src/wipefreespace.c:206
+#: src/wipefreespace.c:182
 msgid "Reading block bitmap from"
 msgstr ""
 
-#: src/wipefreespace.c:207
+#: src/wipefreespace.c:183
 msgid "Wiping free space on file system"
 msgstr ""
 
-#: src/wipefreespace.c:208
-msgid "Using pattern"
-msgstr ""
-
-#: src/wipefreespace.c:209
-msgid "random"
-msgstr ""
-
-#: src/wipefreespace.c:210
+#: src/wipefreespace.c:184
 msgid "Wiping unused space in used blocks on"
 msgstr ""
 
-#: src/wipefreespace.c:211
+#: src/wipefreespace.c:185
 msgid "Wiping undelete data on"
 msgstr ""
 
-#: src/wipefreespace.c:212
+#: src/wipefreespace.c:186
 msgid "Closing file system"
 msgstr ""
 
-#: src/wipefreespace.c:213
+#: src/wipefreespace.c:187
 msgid "Going into background not supported or failed"
 msgstr ""
 
-#: src/wipefreespace.c:279
+#: src/wipefreespace.c:242
 msgid "unknown"
 msgstr ""
 
-#: src/wipefreespace.c:706
+#: src/wipefreespace.c:433
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
 msgstr ""
 
-#: src/wipefreespace.c:708
+#: src/wipefreespace.c:435
 msgid " [options] "
 msgstr ""
 
-#: src/wipefreespace.c:710
+#: src/wipefreespace.c:437
 msgid ""
 "Options:\n"
 "--all-zeros\t\tUse only zeros for wiping\n"
@@ -195,7 +187,7 @@ msgid ""
 "-f|--force\t\tWipe even if the file system has errors"
 msgstr ""
 
-#: src/wipefreespace.c:717
+#: src/wipefreespace.c:444
 msgid ""
 "-h|--help\t\tPrint help\n"
 "-n|--iterations NNN\tNumber of passes (>0, default: 35 in Gutmann method, 25 "
@@ -205,11 +197,19 @@ msgid ""
 "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr ""
 
-#: src/wipefreespace.c:723
+#: src/wipefreespace.c:450
 msgid ""
 "--nounrm\t\tDo NOT wipe undelete information\n"
 "--nowfs\t\t\tDo NOT wipe free space on file system\n"
 "--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)\n"
 "-v|--verbose\t\tVerbose output\n"
 "-V|--version\t\tPrint version number"
+msgstr ""
+
+#: src/wfs_wiping.c:46
+msgid "Using pattern"
+msgstr ""
+
+#: src/wfs_wiping.c:47
+msgid "random"
 msgstr ""

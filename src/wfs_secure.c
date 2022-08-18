@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- security-related procedures.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -43,6 +43,8 @@
 # include <unistd.h>	/* get(e)uid(), environ */
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_sec_sig(a,b,c,d)
 #include "wipefreespace.h"
 
 #ifdef HAVE_SYS_CAPABILITY_H
@@ -50,6 +52,8 @@
 #endif
 
 #include "wfs_secure.h"
+
+/* ======================================================================== */
 
 /**
  * Clears the (POSIX) capabilities of the program.
@@ -217,12 +221,14 @@ wfs_check_stds (
 		{
 			*stdout_open = 0;
 		}
+#endif	/* HAVE_SYS_STAT_H */
 	}
 
 	if ( stderr_open != NULL )
 	{
 		*stderr_open = 1;
 
+#ifdef HAVE_SYS_STAT_H
 # ifdef HAVE_ERRNO_H
 		errno = 0;
 # endif
@@ -239,8 +245,8 @@ wfs_check_stds (
 		{
 			*stderr_open = 0;
 		}
-	}
 #endif	/* HAVE_SYS_STAT_H */
+	}
 
 	if ( (stdout == NULL) && (stdout_open != NULL) ) *stdout_open = 0;
 	if ( (stderr == NULL) && (stderr_open != NULL) ) *stderr_open = 0;

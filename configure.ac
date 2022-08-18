@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.3, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.4, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -65,7 +65,7 @@ AC_ARG_ENABLE(FAT,[[  --enable-FAT		FAT12/16/32 support (default=yes).]],
 	]
 	,[feat_fatfs=yes])
 
-AC_ARG_ENABLE(MINIX,[[  --enable-MINIX	MinixFS support (default=yes).]],
+AC_ARG_ENABLE(MINIX,[[  --enable-MINIX	MinixFSv1/2 support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
 		feat_minixfs=no
 	 else
@@ -74,7 +74,7 @@ AC_ARG_ENABLE(MINIX,[[  --enable-MINIX	MinixFS support (default=yes).]],
 	]
 	,[feat_minixfs=yes])
 
-AC_ARG_ENABLE(JFS,[[  --enable-JFS	JFS support (default=yes).]],
+AC_ARG_ENABLE(JFS,[[  --enable-JFS		JFS support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
 		feat_jfs=no
 	 else
@@ -82,6 +82,15 @@ AC_ARG_ENABLE(JFS,[[  --enable-JFS	JFS support (default=yes).]],
 	 fi
 	]
 	,[feat_jfs=yes])
+
+AC_ARG_ENABLE(HFSP,[[  --enable-HFSP		HFS+ support (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_hfsp=no
+	 else
+		feat_hfsp=yes
+	 fi
+	]
+	,[feat_hfsp=yes])
 
 AC_ARG_ENABLE([random-method],[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
 	[if (test "x$enableval" = "xyes"); then
@@ -92,8 +101,51 @@ AC_ARG_ENABLE([random-method],[[  --enable-random-method	Random pattern method (
 	]
 	,[want_rand=no])
 
-if (test "x$want_rand" = "xyes"); then
+AC_ARG_ENABLE(wfs,[[  --enable-wfs		enable wiping free space (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_wfs=no
+	 else
+		feat_wfs=yes
+	 fi
+	]
+	,[feat_wfs=yes])
+
+AC_ARG_ENABLE(unrm,[[  --enable-unrm		enable wiping undelete data (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_unrm=no
+	 else
+		feat_unrm=yes
+	 fi
+	]
+	,[feat_unrm=yes])
+
+AC_ARG_ENABLE(part,[[  --enable-part		enable wiping partially-used blocks (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_part=no
+	 else
+		feat_part=yes
+	 fi
+	]
+	,[feat_part=yes])
+
+if ( test "x$want_rand" = "xyes" ); then
 	AC_DEFINE(WFS_WANT_RANDOM, [1], [If shred-like wiping method was chosen instead of full Gutmann method.])
+fi
+
+if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
+	AC_ERROR([All three options --enable-wfs=no --enable-unrm=no --enable-part=no can't be given together.])
+fi
+
+if ( test "x$feat_wfs" = "xyes" ); then
+	AC_DEFINE(WFS_WANT_WFS, [1], [If wiping free space has been enabled.])
+fi
+
+if ( test "x$feat_unrm" = "xyes" ); then
+	AC_DEFINE(WFS_WANT_UNRM, [1], [If wiping undelete data has been enabled.])
+fi
+
+if ( test "x$feat_part" = "xyes" ); then
+	AC_DEFINE(WFS_WANT_PART, [1], [If wiping partially-used blocks has been enabled.])
 fi
 
 # ==================== Set of available languages (deprecated).
@@ -192,6 +244,13 @@ if ( test "x$feat_jfs" = "xyes" ); then
 
 	libjfs=yes
 	AC_CHECK_LIB([fs],ujfs_get_superblk,,[libjfs=no])
+fi
+
+libhfsp=no
+if ( test "x$feat_hfsp" = "xyes" ); then
+
+	libhfsp=yes
+	AC_CHECK_LIB([hfsp],volume_open,,[libhfsp=no])
 fi
 
 # ==================== Checks for header files.
@@ -398,6 +457,22 @@ if ( test "x$feat_jfs" = "xyes" ); then
 	fi
 fi
 
+has_hfsp_h=no
+if ( test "x$feat_hfsp" = "xyes" ); then
+
+	if ( test "x$libhfsp" = "xyes" ); then
+
+		has_hfsp_h=yes
+		AC_CHECK_HEADER([libhfsp.h],
+			AC_DEFINE([HAVE_LIBHFSP_H],[1],
+				[Whether you have the libhfsp.h header.]),
+					[AC_CHECK_HEADER([hfsplus/libhfsp.h],
+						AC_DEFINE([HAVE_HFSPLUS_LIBHFSP_H],[1],
+						[Whether you have the hfsplus/libhfsp.h header.]),
+						[has_hfsp_h=no])])
+	fi
+fi
+
 wfs_have_reiser4=no
 if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	&& test "x$libreiser4"		= "xyes"	\
@@ -435,6 +510,11 @@ AM_CONDITIONAL(JFS, \
 	&& test "x$libjfs"	= "xyes"	\
 	&& test "x$has_uuid_h"	= "xyes"	\
 	&& test "x$feat_jfs"	= "xyes"] )
+
+AM_CONDITIONAL(HFSP, \
+	[  test "x$has_hfsp_h"	= "xyes"	\
+	&& test "x$libhfsp"	= "xyes"	\
+	&& test "x$feat_hfsp"	= "xyes"] )
 
 has_com_h=yes
 AC_CHECK_HEADER([et/com_err.h],
@@ -630,7 +710,9 @@ if  (  test "x$has_ext234_h"		!= "xyes"	\
     && test "x$has_reiser_h"		!= "xyes"	\
     && test "x$has_libreiser4_h"	!= "xyes"	\
     && test "x$has_tffs_h"		!= "xyes"	\
-    && test "x$has_jfs_h"		!= "xyes"
+    && test "x$has_minixfs_h"		!= "xyes"	\
+    && test "x$has_jfs_h"		!= "xyes"	\
+    && test "x$has_hfsp_h"		!= "xyes"
     ); then
 	AC_MSG_ERROR([[I need at least one of the filesystem headers with its required data types (if any).]])
 fi
@@ -683,14 +765,15 @@ if (test "x$GCC" = "xyes" ); then
 	fi
 fi
 
-# Required if both ReiserFSv3 and REiserFSv4 are enabled, because the same symbols
-# appear in multiple places.
+# Required if filesystem libraries with conflicting names are enabled,
+# because the same symbols appear in multiple places.
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes"); then
 
 	AX_C_CHECK_FLAG([-Wl,-z -Wl,muldefs], [CFLAGS="$CFLAGS -Wl,-z -Wl,muldefs"], [CFLAGS="$CFLAGS"])
 fi
 
-AC_SUBST(AM_CFLAGS,$CFLAGS)
+# this doubles the CFLAGS on compile:
+#AC_SUBST(AM_CFLAGS,$CFLAGS)
 
 # =====================
 
@@ -880,6 +963,24 @@ else
 
 	else	#if ( test "x$has_jfs_h"  != "xyes" ); then
 		echo " *	JFS: no (jfs_superblock.h header missing or unusable)"
+
+	fi
+fi
+
+if (	   test "x$has_hfsp_h"	= "xyes"	\
+	&& test "x$libhfsp"	= "xyes"	\
+	&& test "x$feat_hfsp"	= "xyes"); then
+
+	echo " *	HFS+: yes"
+else
+	if (test "x$feat_hfsp" != "xyes"); then
+		echo " *	HFS+: no (disabled by command line)"
+
+	elif (test "x$libhfsp" != "xyes"); then
+		echo " *	HFS+: no (library missing or unusable)"
+
+	else	#if ( test "x$has_hfsp_h"  != "xyes" ); then
+		echo " *	HFS+: no (libhfsp.h header missing or unusable)"
 
 	fi
 fi

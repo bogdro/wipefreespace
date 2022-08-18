@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2/3/4 file system-specific functions.
  *
- * Copyright (C) 2007-2010 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -48,6 +48,8 @@
 # include <string.h>	/* memset() */
 #endif
 
+/* redefine the inline sig function from hfsp, each time with a different name */
+#define sig(a,b,c,d) wfs_e234_sig(a,b,c,d)
 #include "wipefreespace.h"
 /* fix conflict with reiser4: */
 #undef blk_t
@@ -88,6 +90,7 @@
 
 #include "wfs_ext234.h"
 #include "wfs_signal.h"
+#include "wfs_wiping.h"
 
 struct wfs_e234_block_data
 {
@@ -102,6 +105,8 @@ struct wfs_e234_block_data
 	unsigned int prev_percent;
 	unsigned int number_of_blocks_in_inode;
 };
+
+/* ======================================================================== */
 
 #ifndef WFS_ANSIC
 static size_t WFS_ATTR ((warn_unused_result)) wfs_e234_get_block_size PARAMS ((const wfs_fsid_t FS));
@@ -338,10 +343,11 @@ e2_do_block (
 	}
 }
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_PART
+# ifndef WFS_ANSIC
 static int e2_count_blocks PARAMS ((const ext2_filsys FS WFS_ATTR ((unused)),
 	blk_t * const BLOCKNR, const int BLOCKCNT WFS_ATTR ((unused)), void * PRIVATE));
-#endif
+# endif
 
 /**
  * Finds the last block number used by an ext2/3/4 i-node. Simply gets all block numbers one at
@@ -354,17 +360,17 @@ static int e2_count_blocks PARAMS ((const ext2_filsys FS WFS_ATTR ((unused)),
  * \return This function always returns 0.
  */
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 e2_count_blocks (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 		/*@unused@*/ 		const ext2_filsys	FS WFS_ATTR ((unused)),
 					blk_t * const		BLOCKNR,
 		/*@unused@*/ 		const int		BLOCKCNT WFS_ATTR ((unused)),
 					void *			PRIVATE
 		)
-#else
+# else
 		/*@unused@*/ 		FS,
 					BLOCKNR,
 		/*@unused@*/ 		BLOCKCNT,
@@ -374,18 +380,20 @@ e2_count_blocks (
 					blk_t * const		BLOCKNR;
 		/*@unused@*/ 		const int		BLOCKCNT WFS_ATTR ((unused));
 					void *			PRIVATE;
-#endif
+# endif
 		/*@requires notnull BLOCKNR, PRIVATE @*/
 {
 	if ( (BLOCKNR == NULL) || (PRIVATE == NULL) ) return BLOCK_ABORT;
 	*((blk_t*)PRIVATE) = *BLOCKNR;
 	return 0;
 }
+#endif /* WFS_WANT_PART */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_UNRM
+# ifndef WFS_ANSIC
 static int e2_wipe_unrm_dir PARAMS ((ext2_ino_t dir, int entry, struct ext2_dir_entry * DIRENT,
 	int OFFSET, int BLOCKSIZE WFS_ATTR ((unused)), char * const BUF, void * const PRIVATE ));
-#endif
+# endif
 
 /**
  * Wipes undelete information from the given ext2/3/4 directory i-node.
@@ -400,11 +408,11 @@ static int e2_wipe_unrm_dir PARAMS ((ext2_ino_t dir, int entry, struct ext2_dir_
  *	data was moified.
  */
 static int
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 e2_wipe_unrm_dir (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 			ext2_ino_t		dir,
 			int			entry,
 	 		struct ext2_dir_entry*	DIRENT,
@@ -412,7 +420,7 @@ e2_wipe_unrm_dir (
 	/*@unused@*/	int 			BLOCKSIZE WFS_ATTR ((unused)),
 			char* const		BUF,
        			void* const		PRIVATE )
-#else
+# else
 			dir,
 			entry,
 	 		DIRENT,
@@ -427,7 +435,7 @@ e2_wipe_unrm_dir (
 	/*@unused@*/	int 			BLOCKSIZE WFS_ATTR ((unused));
 			char* const		BUF;
        			void* const		PRIVATE;
-#endif
+# endif
 	/*@requires notnull DIRENT, BUF, PRIVATE @*/
 {
 	struct wfs_e234_block_data * bd;
@@ -460,14 +468,14 @@ e2_wipe_unrm_dir (
 			}
 			else
 			{
-#ifdef HAVE_MEMSET
+# ifdef HAVE_MEMSET
 				memset ( (unsigned char *)filename, 0, (size_t)(DIRENT->name_len&0xFF) );
-#else
+# else
 				for ( j=0; j < (size_t) (DIRENT->name_len & 0xFF); j++ )
 				{
 					filename[j] = '\0';
 				}
-#endif
+# endif
 				if ( j == npasses )
 				{
 					DIRENT->name_len = 0;
@@ -536,7 +544,9 @@ e2_wipe_unrm_dir (
 		return 0;
 	}
 }
+#endif /* WFS_WANT_UNRM */
 
+#ifdef WFS_WANT_PART
 /**
  * Wipes the free space in partially used blocks on the given ext2/3/4 filesystem.
  * \param FS The filesystem.
@@ -544,17 +554,17 @@ e2_wipe_unrm_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_e234_wipe_part (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	ext2_inode_scan ino_scan = 0;
 	ext2_ino_t ino_number = 0;
@@ -571,17 +581,17 @@ wfs_e234_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	block_data.buf = (unsigned char *) malloc ( wfs_e234_get_block_size (FS) );
 	if ( block_data.buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -662,7 +672,9 @@ wfs_e234_wipe_part (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_part;
 }
+#endif /* WFS_WANT_PART */
 
+#ifdef WFS_WANT_WFS
 /**
  * Wipes the free space on the given ext2/3/4 filesystem.
  * \param FS The filesystem.
@@ -670,17 +682,17 @@ wfs_e234_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_e234_wipe_fs (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	blk_t blno;			/* block number */
@@ -692,17 +704,17 @@ wfs_e234_wipe_fs (
 		show_progress (PROGRESS_WFS, 100, &prev_percent);
 		return WFS_BADPARAM;
 	}
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	block_data.buf = (unsigned char *) malloc ( wfs_e234_get_block_size (FS) );
 	if ( block_data.buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_WFS, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -747,10 +759,12 @@ wfs_e234_wipe_fs (
 	if ( sig_recvd != 0 ) return WFS_SIGNAL;
 	return ret_wfs;
 }
+#endif /* WFS_WANT_WFS */
 
-#ifndef WFS_ANSIC
+#ifdef WFS_WANT_UNRM
+# ifndef WFS_ANSIC
 static errcode_enum wfs_e234_wipe_journal PARAMS ((const wfs_fsid_t FS, error_type * const error));
-#endif
+# endif
 
 /**
  * Wipes the journal on an ext2/3/4 filesystem.
@@ -759,17 +773,17 @@ static errcode_enum wfs_e234_wipe_journal PARAMS ((const wfs_fsid_t FS, error_ty
  * \return 0 in case of no errors, other values otherwise.
  */
 static errcode_enum
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_e234_wipe_journal (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, error_type * const error )
-#else
+# else
 	FS, error )
 	const wfs_fsid_t FS;
 	error_type * const error;
-#endif
+# endif
 {
 	errcode_enum ret_journ = WFS_SUCCESS;
 	struct wfs_e234_block_data block_data;
@@ -781,14 +795,14 @@ wfs_e234_wipe_journal (
 		return WFS_BADPARAM;
 	}
 
-#if (defined EXT2_HAS_COMPAT_FEATURE) && (defined EXT3_FEATURE_COMPAT_HAS_JOURNAL)
+# if (defined EXT2_HAS_COMPAT_FEATURE) && (defined EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 	if ( EXT2_HAS_COMPAT_FEATURE (FS.e2fs->super, EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 		!= EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 	{
 		show_progress (PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		return ret_journ;
 	}
-#endif
+# endif
 	/* do nothing if external journal */
 	if ( FS.e2fs->super->s_journal_inum == 0 )
 	{
@@ -796,17 +810,17 @@ wfs_e234_wipe_journal (
 		return ret_journ;
 	}
 
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 	errno = 0;
-#endif
+# endif
 	block_data.buf = (unsigned char *) malloc ( wfs_e234_get_block_size (FS) );
 	if ( block_data.buf == NULL )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error->errcode.gerror = errno;
-#else
+# else
 		error->errcode.gerror = 12L;	/* ENOMEM */
-#endif
+# endif
 		show_progress (PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		return WFS_MALLOC;
 	}
@@ -842,18 +856,18 @@ wfs_e234_wipe_journal (
  * \return 0 in case of no errors, other values otherwise.
  */
 errcode_enum WFS_ATTR ((warn_unused_result))
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
+# endif
 wfs_e234_wipe_unrm (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const wfs_fsid_t FS, const fselem_t node, error_type * const error )
-#else
+# else
 	FS, node, error )
 	const wfs_fsid_t FS;
 	const fselem_t node;
 	error_type * const error;
-#endif
+# endif
 {
 	unsigned long int j;
 	struct wfs_e234_block_data bd;
@@ -869,6 +883,8 @@ wfs_e234_wipe_unrm (
 
 	wd.filesys = FS;
 	wd.passno = 0;
+	wd.ret_val = WFS_SUCCESS;
+	wd.total_fs = 0;	/* dummy value, unused */
 	bd.wd = wd;
 	bd.curr_inode = 0;
 	bd.prev_percent = 0;
@@ -899,6 +915,7 @@ wfs_e234_wipe_unrm (
 
 	return ret;
 }
+#endif /* WFS_WANT_UNRM */
 
 /**
  * Opens an ext2/3/4 filesystem on the given device.

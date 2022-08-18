@@ -1,3 +1,62 @@
+2011-05-22	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.4
+	  Run cppcheck on the code. Compiling parts of the wiping code is
+	  now optional with the new --enable-wfs, --enable-unrm and
+	  --enable-part options to ./configure. Added patches to some of the
+	  filesystem tools used by WipeFreeSpace. HFS+ support. Run cppcheck
+	  and rats on the code.
+	* wfs_secure.c (wfs_check_stds): fixed syntax error.
+	* README: Updated RPM creating. Wrote about the provided patches.
+	* INSTALL: Updated RPM creating. Wrote about the provided patches.
+        * doc/wipefreespace.texi.in: updated RPM creating. Wrote about
+	  the provided patches.
+        * configure.ac: fixed double CFLAGS on compile. Added new options:
+	  --enable-wfs, --enable-unrm and --enable-part. Added missing test
+	  for minix_fs.h when checking if any filesystem support is present.
+	* patches: a directory with some patches for the libraries used by
+	  wipefreespace. The patches for ntfsprogs are optional, the other
+	  are recommended, but aren't needed if the linker accepts multiple
+	  symbol definitions (except for the JFS or ReiserFSv3, one of which
+	  is mandatory if both these filesystems are enabled).
+	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): fixed progress indicators
+	  on error.
+	* src/wfs_minixfs.c (wfs_minixfs_wipe_dir, wfs_minixfs_wipe_fs): fixed
+	  progress indicators on error.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_part, wfs_ntfs_wipe_fs,
+	  wfs_ntfs_wipe_journal): fixed progress indicators on error.
+	* src/wfs_fat.c: added headers for the malloc function.
+	* src/wfs_minixfs.c: added headers for the malloc and memset functions.
+	* src/wfs_ntfs.c (wipe_compressed_attribute): fixed memory leak when
+	  an error occurs.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_journal): fixed memory leak when
+	  an error occurs or a signal is caught.
+	* src/wfs_reiser4.c (wfs_r4_wipe_part_work): fixed memory leak when
+	  an error occurs.
+	* src/wfs_jfs.c: added including the missing jfs_byteorder.h header.
+	* src/wfs_ext234.c (wfs_e234_wipe_unrm): added missing initialization.
+	* src/wfs_jfs.c (wfs_jfs_open_fs): rewinding the file after open.
+	* src/wfs_minixfs.c (wfs_minixfs_open_fs): rewinding the file after
+	  open (for portability).
+	* src/wfs_util.c: moved rpl_malloc(), convert_fs_to_name(),
+	  enable_drive_cache() and disable_drive_cache() from wipefreespace.c.
+	* src/wipefreespace.c: fixed a possible compile error when ioctl()
+	  was unavailable. Fixed the --last-zero command-line option.
+	* src/wfs_wiping.c: a new file with wiping-related stuff, moved from
+	  wipefreespace.c.
+	* src/wfs_ntfs.c (destroy_record): renamed the "record" parameter to
+	  avoid conflicts with HFS+ header files.
+	* src/wfs_reiser.c (wfs_reiser_open_fs): less strlen() calls.
+	* src/wfs_reiser4.c (wfs_r4_open_fs): less strlen() calls.
+	* src/wfs_xfs.c (wfs_xfs_open_fs): less strlen() calls.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_fs): advancing progress if block is
+	  allocated.
+	* wfs_hfsp.{c,h}, src/wipefreespace.h, src/wrappers.c: HFS+
+	  filesystem support.
+	* README, INSTALL, doc/wipefreespace.texi.in, doc/wipefreespace.1,
+	  wipefreespace.spec.in: HFS+ filesystem information added.
+	* src/wfs_fat.c (wfs_fat_open_fs): less strlen() calls.
+
 2010-09-12	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.3

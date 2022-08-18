@@ -1,8 +1,8 @@
 /*
  * A program for secure cleaning of free space on filesystems.
- *	-- NTFS file system-specific functions, header file.
+ *	-- HFS+ file system-specific functions, header file.
  *
- * Copyright (C) 2007-2011 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -23,37 +23,37 @@
  *		USA
  */
 
-#ifndef WFS_HEADER_NTFS
-# define WFS_HEADER_NTFS 1
+#ifndef WFS_HEADER_HFSP
+# define WFS_HEADER_HFSP 1
 
 # include "wipefreespace.h"
 
-extern errcode_enum WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_wipe_part PARAMS((const wfs_fsid_t FS, error_type * const error));
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_hfsp_wipe_unrm PARAMS(( wfs_fsid_t FS, const fselem_t node, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_ntfs_wipe_fs PARAMS((const wfs_fsid_t FS, error_type * const error ));
+	wfs_hfsp_wipe_fs PARAMS(( wfs_fsid_t FS, error_type * const error ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_wipe_unrm PARAMS(( const wfs_fsid_t FS, const fselem_t node, error_type * const error));
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_hfsp_wipe_part PARAMS(( const wfs_fsid_t FS, error_type * const error ));
 
 extern int WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_check_err PARAMS(( const wfs_fsid_t FS ));
+	wfs_hfsp_check_err PARAMS(( wfs_fsid_t FS ));
 
 extern int WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_is_dirty PARAMS(( const wfs_fsid_t FS ));
+	wfs_hfsp_is_dirty PARAMS(( wfs_fsid_t FS ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_ntfs_chk_mount PARAMS(( const char * const dev_name, error_type * const error ));
+	wfs_hfsp_chk_mount PARAMS(( const char * const dev_name, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_ntfs_open_fs PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
-		CURR_FS * const which_fs, const fsdata * const data, error_type * const error ));
+	wfs_hfsp_open_fs PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
+		CURR_FS * const whichfs, const fsdata * const data, error_type * const error ));
 
 extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_ntfs_close_fs PARAMS(( const wfs_fsid_t FS, error_type * const error ));
+	wfs_hfsp_close_fs PARAMS(( const wfs_fsid_t FS, error_type *const error ));
 
 extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_ntfs_flush_fs PARAMS(( const wfs_fsid_t FS,	error_type * const error ));
+	wfs_hfsp_flush_fs PARAMS(( wfs_fsid_t FS, error_type * const error ));
 
-#endif	/* WFS_HEADER_NTFS */
+#endif	/* WFS_HEADER_HFSP */
