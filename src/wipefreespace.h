@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -290,6 +290,9 @@ struct wfs_fsid
 	void * fs_error;
 		/* the type of the current filesystem: */
 	wfs_curr_fs_t whichfs;
+		/* whether not to wipe all-zero blocks on
+		on this filesystem: */
+	int no_wipe_zero_blocks;
 };
 
 typedef struct wfs_fsid wfs_fsid_t;

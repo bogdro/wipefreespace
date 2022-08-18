@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -45,6 +45,10 @@
 
 #ifdef HAVE_LOCALE_H
 # include <locale.h>
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
 #endif
 
 #ifdef HAVE_SIGNAL_H
@@ -168,7 +172,7 @@ static RETSIGTYPE term_signal_received WFS_PARAMS ((const int signum));
  */
 static RETSIGTYPE
 term_signal_received (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const int signum)
 # else
 	signum)
@@ -195,7 +199,7 @@ static RETSIGTYPE child_signal_received WFS_PARAMS ((const int signum));
  */
 static RETSIGTYPE
 child_signal_received (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const int signum)
 # else
 	signum)
@@ -212,6 +216,53 @@ child_signal_received (
 # undef void
 }
 
+/* =============================================================== */
+
+# ifndef WFS_ANSIC
+static void print_signal_error WFS_PARAMS ((const int opt_verbose, const int signum));
+# endif
+
+static void print_signal_error (
+# ifdef WFS_ANSIC
+	const int opt_verbose, const int signum)
+# else
+	opt_verbose, signum)
+	const int opt_verbose;
+	const int signum;
+# endif
+{
+# define 	TMPSIZE	12
+	char tmp[TMPSIZE];		/* Place for a signal number. */
+	wfs_fsid_t wf_gen;
+	wfs_errcode_t err = 0;
+	int res;
+
+	if ( opt_verbose > 0 )
+	{
+		wf_gen.fsname = "";
+		wf_gen.whichfs = WFS_CURR_FS_NONE;
+		wf_gen.fs_error = &err;
+
+# ifdef HAVE_ERRNO_H
+		err = errno;
+# else
+		err = 1L;
+# endif
+# ifdef HAVE_SNPRINTF
+		res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, signum);
+# else
+		res = sprintf (tmp, "%.*d", TMPSIZE-1, signum);
+# endif
+		tmp[TMPSIZE-1] = '\0';
+		if ( err == 0 )
+		{
+			err = 1L;
+		}
+		wfs_show_error (wfs_err_msg_signal,
+			(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
+	}
+}
+
 #endif /* HAVE_SIGNAL_H */
 
 /* =============================================================== */
@@ -225,9 +276,9 @@ void wfs_set_sigh (
 #endif
 {
 #ifdef HAVE_SIGNAL_H
-# define 	TMPSIZE	12
-	char tmp[TMPSIZE];		/* Place for a signal number in case of error. */
-	int res;			/* s(n)printf result */
+# if (defined HAVE_SIGACTION) && (! defined __STRICT_ANSI__)
+	int res;			/* sigaction result */
+# endif
 	size_t s;			/* sizeof(signals) */
 # if (!defined HAVE_SIGACTION) || (defined __STRICT_ANSI__)
 	typedef void (*sighandler_t) (int);
@@ -236,13 +287,6 @@ void wfs_set_sigh (
 # ifndef HAVE_MEMSET
 	size_t i;
 # endif
-	wfs_fsid_t wf_gen;
-	wfs_errcode_t err;
-
-	wf_gen.fsname = "";
-	wf_gen.whichfs = WFS_CURR_FS_NONE;
-	wf_gen.fs_error = &err;
-
 	/*
 	 * Setting signal handlers. We need to catch signals in order to close (and flush)
 	 * an opened file system, to prevent unconsistencies.
@@ -263,22 +307,7 @@ void wfs_set_sigh (
 #  endif
 		   )
 		{
-#  ifdef HAVE_ERRNO_H
-			err = errno;
-#  else
-			err = 1L;
-#  endif
-			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s]);
-			tmp[TMPSIZE-1] = '\0';
-			if ( err == 0 )
-			{
-				err = 1L;
-			}
-			if ( opt_verbose > 0 )
-			{
-				wfs_show_error (wfs_err_msg_signal,
-					(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
-			}
+			print_signal_error (opt_verbose, signals[s]);
 		}
 	}
 #  ifdef HAVE_ERRNO_H
@@ -291,22 +320,7 @@ void wfs_set_sigh (
 #  endif
 	   )
 	{
-#  ifdef HAVE_ERRNO_H
-		err = errno;
-#  else
-		err = 1L;
-#  endif
-		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD);
-		tmp[TMPSIZE-1] = '\0';
-		if ( err == 0 )
-		{
-			err = 1L;
-		}
-		if ( opt_verbose > 0 )
-		{
-			wfs_show_error (wfs_err_msg_signal,
-				(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
-		}
+		print_signal_error (opt_verbose, SIGCHLD);
 	}
 
 # else
@@ -332,28 +346,7 @@ void wfs_set_sigh (
 #  endif
 		   )
 		{
-#  ifdef HAVE_ERRNO_H
-			err = errno;
-#  else
-			err = 1L;
-#  endif
-
-#  ifdef HAVE_SNPRINTF
-			res = snprintf (tmp, TMPSIZE-1, "%.*d",
-				TMPSIZE-1, signals[s] );
-#  else
-			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s]);
-#  endif
-			tmp[TMPSIZE-1] = '\0';
-			if ( err == 0 )
-			{
-				err = 1L;
-			}
-			if ( opt_verbose > 0 )
-			{
-				wfs_show_error (wfs_err_msg_signal,
-					(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
-			}
+			print_signal_error (opt_verbose, signals[s]);
 		}
 	}
 #  ifdef HAVE_ERRNO_H
@@ -367,27 +360,7 @@ void wfs_set_sigh (
 #  endif
 	   )
 	{
-#  ifdef HAVE_ERRNO_H
-		err = errno;
-#  else
-		err = 1L;
-#  endif
-
-#  ifdef HAVE_SNPRINTF
-		res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, SIGCHLD);
-#  else
-		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD);
-#  endif
-		tmp[TMPSIZE-1] = '\0';
-		if ( err == 0 )
-		{
-			err = 1L;
-		}
-		if ( opt_verbose > 0 )
-		{
-			wfs_show_error (wfs_err_msg_signal,
-				(res > 0)? tmp : _(wfs_sig_unk), wf_gen);
-		}
+		print_signal_error (opt_verbose, SIGCHLD);
 	}
 # endif		/* ! ANSI C */
 

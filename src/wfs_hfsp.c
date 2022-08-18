@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- HFS+ file system-specific functions.
  *
- * Copyright (C) 2011-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -70,6 +70,10 @@ extern unsigned long int wfs_hfsp_sig(char c0, char c1, char c2, char c3);
 # else
 #  error Something wrong. HFS+ requested, but libhfsp.h or libhfsp missing.
 # endif
+#endif
+
+#ifndef STDIN_FILENO
+# define STDIN_FILENO	0
 #endif
 
 extern int volume_writetobuf WFS_PARAMS ((volume * vol, void * buf, long int block));
@@ -159,6 +163,7 @@ wfs_hfsp_wipe_part_file (
 	wfs_errcode_t error = 0;
 	struct volume * hfsp_volume;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	hfsp_volume = (struct volume *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -178,8 +183,13 @@ wfs_hfsp_wipe_part_file (
 		}
 		return WFS_DIRITER;
 	}
+	fs_block_size = wfs_hfsp_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 
-	remainder = file->record.u.file.data_fork.total_size % wfs_hfsp_get_block_size (wfs_fs);
+	remainder = file->record.u.file.data_fork.total_size % fs_block_size;
 	if ( remainder == 0 )
 	{
 		if ( sig_recvd != 0 )
@@ -197,7 +207,7 @@ wfs_hfsp_wipe_part_file (
 		(UInt8)HFSP_EXTENT_DATA, file->record.u.file.id);
 	/* skip the full blocks */
 	if ( blockiter_skip (&iter,
-		file->record.u.file.data_fork.total_blocks/wfs_hfsp_get_block_size (wfs_fs)) != 0 )
+		file->record.u.file.data_fork.total_blocks / fs_block_size) != 0 )
 	{
 		if ( error_ret != NULL )
 		{
@@ -219,7 +229,16 @@ wfs_hfsp_wipe_part_file (
 	/* wipe the fail tail here: */
 	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 	{
-		fill_buffer ( j, &buf[remainder], (size_t)(wfs_hfsp_get_block_size (wfs_fs) - remainder),
+		if ( wfs_fs.no_wipe_zero_blocks != 0 )
+		{
+			if ( wfs_is_block_zero (buf, fs_block_size) != 0 )
+			{
+				/* this block is all-zeros - don't wipe, as requested */
+				j = wfs_fs.npasses * 2;
+				break;
+			}
+		}
+		fill_buffer ( j, &buf[remainder], (size_t)(fs_block_size - remainder),
 			selected, wfs_fs );
 		error = volume_writetobuf (hfsp_volume,
 			buf, (long int)last_block);
@@ -235,29 +254,34 @@ wfs_hfsp_wipe_part_file (
 			error = wfs_hfsp_flush_fs (wfs_fs);
 		}
 	}
-	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) && (ret_part == WFS_SUCCESS) )
+	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
+		&& (ret_part == WFS_SUCCESS) )
 	{
 		/* perform last wipe with zeros */
+		if ( j != wfs_fs.npasses * 2 )
+		{
 # ifdef HAVE_MEMSET
-		memset ( &buf[remainder], 0, (size_t)(wfs_hfsp_get_block_size (wfs_fs) - remainder) );
+			memset ( &buf[remainder], 0,
+				(size_t)(fs_block_size - remainder) );
 # else
-		for ( j=remainder; j < wfs_hfsp_get_block_size (wfs_fs); j++ )
-		{
-			buf[j] = '\0';
-		}
+			for ( j=remainder; j < fs_block_size; j++ )
+			{
+				buf[j] = '\0';
+			}
 # endif
-		error = volume_writetobuf (hfsp_volume,
-			buf, (long int)last_block);
-		if ( error != 0 )
-		{
-			ret_part = WFS_BLKWR;
-			/* do NOT break here */
-		}
-		/* Flush after each writing, if more than 1 overwriting needs to be done.
-		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-		{
-			error = wfs_hfsp_flush_fs (wfs_fs);
+			error = volume_writetobuf (hfsp_volume,
+				buf, (long int)last_block);
+			if ( error != 0 )
+			{
+				ret_part = WFS_BLKWR;
+				/* do NOT break here */
+			}
+			/* Flush after each writing, if more than 1 overwriting needs to be done.
+			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+			{
+				error = wfs_hfsp_flush_fs (wfs_fs);
+			}
 		}
 	}
 
@@ -439,6 +463,7 @@ wfs_hfsp_wipe_part (
 	wfs_errcode_t error = 0;
 	struct volume * hfsp_volume;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	hfsp_volume = (struct volume *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -451,6 +476,12 @@ wfs_hfsp_wipe_part (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_hfsp_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
 	/* get the root directory: */
 	res = record_init_cnid (&dir, &(hfsp_volume->catalog), HFSP_ROOT_CNID);
 	if ( res != 0 )
@@ -471,7 +502,7 @@ wfs_hfsp_wipe_part (
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_hfsp_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -527,6 +558,8 @@ wfs_hfsp_wipe_fs (
 	wfs_errcode_t error = 0;
 	struct volume * hfsp_volume;
 	wfs_errcode_t * error_ret;
+	int res;
+	size_t fs_block_size;
 
 	hfsp_volume = (struct volume *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -539,10 +572,15 @@ wfs_hfsp_wipe_fs (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_hfsp_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_hfsp_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -568,9 +606,27 @@ wfs_hfsp_wipe_fs (
 			/* block is not allocated - wipe it */
 			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 			{
-				fill_buffer ( j, buf,
-					wfs_hfsp_get_block_size (wfs_fs),
-					selected, wfs_fs );
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					res = volume_readinbuf (hfsp_volume, buf,
+						(long int)curr_block);
+					if ( res != 0 )
+					{
+						if ( error_ret != NULL )
+						{
+							*error_ret = error;
+						}
+						return WFS_BLKRD;
+					}
+					if ( wfs_is_block_zero (buf,
+						fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
 				error = volume_writetobuf (hfsp_volume,
 					buf, (long int)curr_block);
 				if ( error != 0 )
@@ -588,32 +644,36 @@ wfs_hfsp_wipe_fs (
 			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
 				&& (ret_wfs == WFS_SUCCESS) )
 			{
-				/* perform last wipe with zeros */
+				/* this block is NOT all-zeros - wipe */
+				if ( j != wfs_fs.npasses * 2 )
+				{
+					/* perform last wipe with zeros */
 # ifdef HAVE_MEMSET
-				memset ( buf, 0, wfs_hfsp_get_block_size (wfs_fs) );
+					memset ( buf, 0, fs_block_size );
 # else
-				for ( j=0; j < wfs_hfsp_get_block_size (wfs_fs); j++ )
-				{
-					buf[j] = '\0';
-				}
+					for ( j = 0; j < fs_block_size; j++ )
+					{
+						buf[j] = '\0';
+					}
 # endif
-				error = volume_writetobuf (hfsp_volume,
-					buf, (long int)curr_block);
-				if ( error != 0 )
-				{
-					ret_wfs = WFS_BLKWR;
-					/* do NOT break here */
-				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-				{
-					error = wfs_hfsp_flush_fs (wfs_fs);
+					error = volume_writetobuf (hfsp_volume,
+						buf, (long int)curr_block);
+					if ( error != 0 )
+					{
+						ret_wfs = WFS_BLKWR;
+						/* do NOT break here */
+					}
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_hfsp_flush_fs (wfs_fs);
+					}
 				}
 			}
 		} /* if (volume_allocated) */
 		wfs_show_progress (WFS_PROGRESS_WFS,
-			curr_block/hfsp_volume->vol.total_blocks,
+			curr_block / hfsp_volume->vol.total_blocks,
 			&prev_percent);
 	} /* for (curr_block) */
 	free (buf);
@@ -736,7 +796,6 @@ wfs_hfsp_open_fs (
 		((char *)hfsp_volume)[j] = '\0';
 	}
 #endif
-
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 	namelen = strlen (wfs_fs->fsname);
 #ifdef HAVE_ERRNO_H
@@ -765,6 +824,7 @@ wfs_hfsp_open_fs (
 	   mode, so put a 'y' in the standard input stream. */
 	ungetc ('y', stdin);
 	res = volume_open (hfsp_volume, dev_name_copy, 0 /*partition*/, HFSP_MODE_RDWR);
+	flush_pipe_input (STDIN_FILENO);
 	if ( res == 0 )
 	{
 		wfs_fs->whichfs = WFS_CURR_FS_HFSP;
@@ -997,4 +1057,3 @@ wfs_hfsp_show_error (
 {
 	wfs_show_fs_error_gen (msg, extra, wfs_fs);
 }
-

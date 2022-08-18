@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -222,17 +222,17 @@ _read_fat_sector (
 
 	if ( pfat == NULL )
 	{
-		return 0;
+		return FALSE;
 	}
 	if ( pfat->ptffs == NULL )
 	{
-		return 0;
+		return FALSE;
 	}
 
 	ptffs = pfat->ptffs;
 	if ( (ptffs->hdev == NULL) || (pfat->secbuf == NULL) )
 	{
-		return 0;
+		return FALSE;
 	}
 	if (HAI_readsector (ptffs->hdev, fat_sec, pfat->secbuf) != HAI_OK)
 	{
@@ -790,10 +790,9 @@ wfs_fat_dirent_find (
 
 /* ======================================================================== */
 
-#if (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART)
-# ifndef WFS_ANSIC
+#ifndef WFS_ANSIC
 static size_t GCC_WARN_UNUSED_RESULT wfs_fat_get_block_size WFS_PARAMS ((const wfs_fsid_t wfs_fs));
-# endif
+#endif
 
 /**
  * Returns the buffer size needed to work on the smallest physical unit on a FAT filesystem.
@@ -802,12 +801,12 @@ static size_t GCC_WARN_UNUSED_RESULT wfs_fat_get_block_size WFS_PARAMS ((const w
  */
 static size_t GCC_WARN_UNUSED_RESULT
 wfs_fat_get_block_size (
-# ifdef WFS_ANSIC
+#ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs )
-# else
+#else
 	wfs_fs)
 	const wfs_fsid_t wfs_fs;
-# endif
+#endif
 {
 	tffs_handle_t fat;
 
@@ -824,7 +823,6 @@ wfs_fat_get_block_size (
 	return (size_t)(((tffs_t *)fat)->pbs->byts_per_sec
 		* ((tffs_t *)fat)->pbs->sec_per_clus);
 }
-#endif /* (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART) */
 
 /* ======================================================================== */
 
@@ -865,6 +863,7 @@ wfs_fat_wipe_file_tail (
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -888,8 +887,14 @@ wfs_fat_wipe_file_tail (
 		return WFS_SUCCESS;
 	}
 
-	bufsize = wfs_fat_get_block_size (wfs_fs) -
-		(file_len % wfs_fat_get_block_size (wfs_fs));
+	fs_block_size = wfs_fat_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
+	bufsize = fs_block_size -
+		(file_len % fs_block_size);
 	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer ( j, buf, bufsize, selected, wfs_fs );
@@ -1121,6 +1126,7 @@ wfs_fat_wipe_part (
 	wfs_errcode_t * error_ret;
 	int32 res;
 	char root_dir_name[] = "/";
+	size_t fs_block_size;
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1131,6 +1137,12 @@ wfs_fat_wipe_part (
 		{
 			*error_ret = error;
 		}
+		return WFS_BADPARAM;
+	}
+
+	fs_block_size = wfs_fat_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
 		return WFS_BADPARAM;
 	}
 
@@ -1151,7 +1163,7 @@ wfs_fat_wipe_part (
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_fat_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -1214,6 +1226,7 @@ wfs_fat_wipe_fs (
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1224,6 +1237,12 @@ wfs_fat_wipe_fs (
 		{
 			*error_ret = error;
 		}
+		return WFS_BADPARAM;
+	}
+
+	fs_block_size = wfs_fat_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
 		return WFS_BADPARAM;
 	}
 
@@ -1275,6 +1294,22 @@ wfs_fat_wipe_fs (
 			/* wipe all sectors of cluster 'cluster' */
 			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
 			{
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					error = _read_fat_sector (pfat,
+						(int)clus2sec (ptffs, cluster) + sec_iter);
+					if ( error == 0 )
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (pfat->secbuf,
+						fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						continue;
+					}
+				}
 				error = _write_fat_sector (pfat,
 					(int)clus2sec (ptffs, cluster) + sec_iter);
 				if ( error == 0 )
@@ -1297,14 +1332,6 @@ wfs_fat_wipe_fs (
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-			memset (pfat->secbuf, 0, bytes_per_sector);
-# else
-			for ( j=0; j < bytes_per_sector; j++ )
-			{
-				pfat->secbuf[j] = '\0';
-			}
-# endif
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;
@@ -1314,6 +1341,30 @@ wfs_fat_wipe_fs (
 			/* wipe all sectors of cluster 'cluster' */
 			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
 			{
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					error = _read_fat_sector (pfat,
+						(int)clus2sec (ptffs, cluster) + sec_iter);
+					if ( error == 0 )
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (pfat->secbuf,
+						fs_block_size) == 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						continue;
+					}
+				}
+# ifdef HAVE_MEMSET
+				memset (pfat->secbuf, 0, bytes_per_sector);
+# else
+				for ( j=0; j < bytes_per_sector; j++ )
+				{
+					pfat->secbuf[j] = '\0';
+				}
+# endif
 				error = _write_fat_sector (pfat,
 					(int)clus2sec (ptffs, cluster) + sec_iter);
 				if ( error == 0 )
@@ -1414,10 +1465,10 @@ wfs_fat_wipe_unrm_dir (
 		{
 			break;
 		}
-		if ( (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
-			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
-			|| (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
+		if ( (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
 			|| (strncmp (entry.d_name_short, wfs_fat_parent_dir, 2) == 0)
+			|| (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
+			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
 		)
 		{
 			continue;
@@ -1492,6 +1543,7 @@ wfs_fat_wipe_unrm (
 	wfs_errcode_t * error_ret;
 	int32 res;
 	char root_dir_name[] = "/";
+	size_t fs_block_size;
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1502,6 +1554,12 @@ wfs_fat_wipe_unrm (
 		{
 			*error_ret = error;
 		}
+		return WFS_BADPARAM;
+	}
+
+	fs_block_size = wfs_fat_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
 		return WFS_BADPARAM;
 	}
 
@@ -1522,7 +1580,7 @@ wfs_fat_wipe_unrm (
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc (wfs_fat_get_block_size (wfs_fs));
+	buf = (unsigned char *) malloc (fs_block_size);
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -1962,4 +2020,3 @@ wfs_fat_show_error (
 {
 	wfs_show_fs_error_gen (msg, extra, wfs_fs);
 }
-

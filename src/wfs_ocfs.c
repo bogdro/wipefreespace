@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- OCFS file system-specific functions.
  *
- * Copyright (C) 2011-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -188,6 +188,15 @@ static int wfs_ocfs_wipe_part_blocks (
 				for ( j = 0; (j < bd->wd.filesys.npasses)
 					&& (sig_recvd == 0); j++ )
 				{
+					if ( bd->wd.filesys.no_wipe_zero_blocks != 0 )
+					{
+						if ( wfs_is_block_zero (bd->wd.buf, ocfs2->fs_blocksize) != 0 )
+						{
+							/* this block is all-zeros - don't wipe, as requested */
+							j = bd->wd.filesys.npasses * 2;
+							break;
+						}
+					}
 					fill_buffer ( j, &(bd->wd.buf[offset]), to_wipe,
 						selected, bd->wd.filesys );/* buf OK */
 					if ( sig_recvd != 0 )
@@ -215,32 +224,35 @@ static int wfs_ocfs_wipe_part_blocks (
 				if ( (bd->wd.filesys.zero_pass != 0)
 					&& (sig_recvd == 0) )
 				{
-					/* last pass with zeros: */
+					if ( j != bd->wd.filesys.npasses * 2 )
+					{
+						/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-					memset ( &bd->wd.buf[offset], 0, to_wipe );
+						memset ( &bd->wd.buf[offset], 0, to_wipe );
 # else
-					for ( j = 0; j < to_wipe; j++ )
-					{
-						bd->wd.buf[offset+j] = '\0';
-					}
-# endif
-					if ( sig_recvd == 0 )
-					{
-						/* writing modified cluster here: */
-						err = io_write_block_nocache (ocfs2->fs_io,
-							(int64_t)blkno,
-							1, (char *)bd->wd.buf);
-						if ( err != 0 )
+						for ( j = 0; j < to_wipe; j++ )
 						{
-							ret_part = WFS_BLKWR;
+							bd->wd.buf[offset+j] = '\0';
 						}
-						/* Flush after each writing, if more than 1 overwriting needs to be done.
-						Allow I/O bufferring (efficiency), if just one pass is needed. */
-						if ( (bd->wd.filesys.npasses > 1)
-							&& (sig_recvd == 0) )
+# endif
+						if ( sig_recvd == 0 )
 						{
-							error = wfs_ocfs_flush_fs (
-								bd->wd.filesys);
+							/* writing modified cluster here: */
+							err = io_write_block_nocache (ocfs2->fs_io,
+								(int64_t)blkno,
+								1, (char *)bd->wd.buf);
+							if ( err != 0 )
+							{
+								ret_part = WFS_BLKWR;
+							}
+							/* Flush after each writing, if more than 1 overwriting needs to be done.
+							Allow I/O bufferring (efficiency), if just one pass is needed. */
+							if ( (bd->wd.filesys.npasses > 1)
+								&& (sig_recvd == 0) )
+							{
+								error = wfs_ocfs_flush_fs (
+									bd->wd.filesys);
+							}
 						}
 					}
 				}
@@ -341,6 +353,11 @@ wfs_ocfs_wipe_part (
 	}
 
 	cluster_size = wfs_ocfs_get_block_size (wfs_fs);
+	if ( cluster_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
@@ -570,6 +587,11 @@ wfs_ocfs_wipe_fs (
 	}
 
 	cluster_size = wfs_ocfs_get_block_size (wfs_fs);
+	if ( cluster_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
 	blocks_per_cluster = (unsigned int)(ocfs2_clusters_to_blocks (
 		ocfs2, 1) & 0x0FFFFFFFF);
 
@@ -618,6 +640,24 @@ wfs_ocfs_wipe_fs (
 		/* cluster is unused - wipe it */
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
+			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			{
+				err = io_read_block_nocache (ocfs2->fs_io,
+					/* blkno */ curr_cluster * blocks_per_cluster,
+					/* count */ (int)blocks_per_cluster,
+					(char *)buf);
+				if ( err != 0 )
+				{
+					ret_wfs = WFS_BLKRD;
+					break;
+				}
+				if ( wfs_is_block_zero (buf, cluster_size) != 0 )
+				{
+					/* this block is all-zeros - don't wipe, as requested */
+					j = wfs_fs.npasses * 2;
+					break;
+				}
+			}
 			fill_buffer ( j, buf, cluster_size,
 				selected, wfs_fs );/* buf OK */
 			if ( sig_recvd != 0 )
@@ -649,37 +689,40 @@ wfs_ocfs_wipe_fs (
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
-			/* last pass with zeros: */
+			if ( j != wfs_fs.npasses * 2 )
+			{
+				/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-			memset ( buf, 0, cluster_size );
+				memset ( buf, 0, cluster_size );
 # else
-			for ( j=0; j < cluster_size; j++ )
-			{
-				buf[j] = '\0';
-			}
-# endif
-			if ( sig_recvd == 0 )
-			{
-				/* writing modified cluster here: */
-				err = io_write_block_nocache (ocfs2->fs_io,
-					curr_cluster * blocks_per_cluster,
-					(int)blocks_per_cluster, (char *)buf);
-				if ( err != 0 )
+				for ( j=0; j < cluster_size; j++ )
 				{
-					free (buf);
-					wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
-					if ( error_ret != NULL )
-					{
-						*error_ret = error;
-					}
-					return WFS_BLKWR;
+					buf[j] = '\0';
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+# endif
+				if ( sig_recvd == 0 )
 				{
-					error = wfs_ocfs_flush_fs (
-						wfs_fs);
+					/* writing modified cluster here: */
+					err = io_write_block_nocache (ocfs2->fs_io,
+						curr_cluster * blocks_per_cluster,
+						(int)blocks_per_cluster, (char *)buf);
+					if ( err != 0 )
+					{
+						free (buf);
+						wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+						if ( error_ret != NULL )
+						{
+							*error_ret = error;
+						}
+						return WFS_BLKWR;
+					}
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_ocfs_flush_fs (
+							wfs_fs);
+					}
 				}
 			}
 		}
@@ -877,6 +920,10 @@ wfs_ocfs_wipe_unrm (
 	}
 	/* journal: */
 	cluster_size = wfs_ocfs_get_block_size (wfs_fs);
+	if ( cluster_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -1504,4 +1551,3 @@ wfs_ocfs_show_error (
 #endif
 	fflush (stderr);
 }
-

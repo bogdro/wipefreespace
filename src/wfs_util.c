@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -825,7 +825,7 @@ wfs_check_loop_mounted (
 		return 0;
 	}
 	res = stat (dev_name, &s);
-	if ( ((res >= 0) && S_ISBLK(s.st_mode) && major(s.st_rdev) == LOOPMAJOR)
+	if ( ((res >= 0) && (S_ISBLK(s.st_mode)) && (major(s.st_rdev) == LOOPMAJOR))
 		|| (strncmp (dev_name, "/dev/loop", 9) == 0) )
 	{
 		fd = open (dev_name, O_RDONLY);
@@ -1552,3 +1552,76 @@ wfs_show_fs_error_gen (
 	fflush (stderr);
 }
 
+/* ======================================================================== */
+
+/**
+ * Check if the given buffer has only bytes with the value zero.
+ * \param buf The buffer to check.
+ * \param length The length of the buffer.
+ * \return 1 if this block has only bytes with the value zero.
+ */
+int GCC_WARN_UNUSED_RESULT
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_is_block_zero (
+#ifdef WFS_ANSIC
+	const unsigned char * const	buf,
+	const size_t			len )
+#else
+	buf, len )
+	const unsigned char * const	buf;
+	const size_t			len;
+#endif
+{
+	size_t i;
+
+	if ( (buf == NULL) || (len == 0) )
+	{
+		return 0;
+	}
+
+	for ( i = 0; i < len; i++ )
+	{
+		if ( buf[i] != '\0' )
+		{
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/* ======================================================================== */
+
+/**
+ * Reads the given file descriptor until end of data is reached.
+ * @param fd The file descriptor to empty.
+ */
+void
+flush_pipe_input (
+#ifdef WFS_ANSIC
+	const int fd)
+#else
+	fd )
+	const int fd;
+#endif
+{
+	int r;
+	char c;
+	/* set non-blocking mode to quit as soon as the pipe is empty */
+#ifdef HAVE_FCNTL_H
+	r = fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) | O_NONBLOCK );
+	if ( r != 0 )
+	{
+		return;
+	}
+#endif
+	do
+	{
+		r = read (fd, &c, 1);
+	} while (r == 1);
+	/* set blocking mode again */
+#ifdef HAVE_FCNTL_H
+	fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) & ~ O_NONBLOCK );
+#endif
+}

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -292,44 +292,6 @@ flush_pipe_output (
 # endif
 }
 
-/* ======================================================================== */
-
-# ifndef WFS_ANSIC
-static void flush_pipe_input WFS_PARAMS ((const int fd));
-# endif
-
-/**
- * Reads the given pipe until end of data is reached.
- * @param fd The pipe file descriptor to empty.
- */
-static void
-flush_pipe_input (
-# ifdef WFS_ANSIC
-	const int fd)
-# else
-	fd )
-	const int fd;
-# endif
-{
-	int r;
-	char c;
-	/* set non-blocking mode to quit as soon as the pipe is empty */
-# ifdef HAVE_FCNTL_H
-	r = fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) | O_NONBLOCK );
-	if ( r != 0 )
-	{
-		return;
-	}
-# endif
-	do
-	{
-		r = read (fd, &c, 1);
-	} while (r == 1);
-	/* set blocking mode again */
-# ifdef HAVE_FCNTL_H
-	fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) & ~ O_NONBLOCK );
-# endif
-}
 #endif /* WFS_WANT_PART */
 
 /* ======================================================================== */
@@ -447,6 +409,8 @@ wfs_xfs_wipe_fs	(
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
+	off64_t file_offset;
 
 	xxfs = (struct wfs_xfs *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -455,6 +419,11 @@ wfs_xfs_wipe_fs	(
 		return WFS_BADPARAM;
 	}
 
+	fs_block_size = wfs_xfs_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 	/* Copy the file system name into the right places */
 # ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -528,7 +497,7 @@ wfs_xfs_wipe_fs	(
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buffer = (unsigned char *) malloc ( wfs_xfs_get_block_size (wfs_fs) );
+	buffer = (unsigned char *) malloc ( fs_block_size );
 	if ( buffer == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -656,7 +625,7 @@ wfs_xfs_wipe_fs	(
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	fs_fd = open64 (xxfs->dev_name, O_WRONLY | O_EXCL
+	fs_fd = open64 (xxfs->dev_name, O_RDWR | O_EXCL
 # ifdef O_BINARY
 		| O_BINARY
 # endif
@@ -714,35 +683,55 @@ wfs_xfs_wipe_fs	(
 		}
 		/* Disk offset = (agno * xxfs->wfs_xfs_agblocks + agoff ) * \
 			xxfs->wfs_xfs_blocksize */
+		file_offset = (off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
+			fs_block_size;
 		/* Wiping loop */
-		for ( i=0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
+		for ( i = 0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
 		{
 			/* NOTE: this must be inside */
-			if ( lseek64 (fs_fd, (off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
-				wfs_xfs_get_block_size (wfs_fs), SEEK_SET ) !=
-					(off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
-					wfs_xfs_get_block_size (wfs_fs)
-				)
+			if ( lseek64 (fs_fd, file_offset, SEEK_SET) != file_offset )
 			{
 				break;
 			}
-			fill_buffer ( i, buffer, wfs_xfs_get_block_size (wfs_fs), selected, wfs_fs );
-			for ( j=0; (j < length) && (sig_recvd == 0); j++ )
+			for ( j = 0; (j < length) && (sig_recvd == 0); j++ )
 			{
-				if ( write (fs_fd, buffer, wfs_xfs_get_block_size (wfs_fs))
-					!= (ssize_t) wfs_xfs_get_block_size (wfs_fs)
-					)
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
 				{
-					ret_wfs = WFS_BLKWR;
-					break;
+					if ( read (fs_fd, buffer, fs_block_size)
+						!= (ssize_t) fs_block_size )
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (buffer, fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						i = wfs_fs.npasses * 2;
+					}
+					/* NOTE: this must be inside also after read() */
+					if ( lseek64 (fs_fd, file_offset, SEEK_SET) != file_offset )
+					{
+						break;
+					}
 				}
-				/* Flush after each writing, if more than 1 overwriting
-					needs to be done. Allow I/O bufferring (efficiency),
-					if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( i != wfs_fs.npasses * 2 )
 				{
-					error = wfs_xfs_flush_fs (wfs_fs);
+					fill_buffer ( i, buffer, fs_block_size, selected, wfs_fs );
+					if ( write (fs_fd, buffer, fs_block_size)
+						!= (ssize_t) fs_block_size )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+					/* Flush after each writing, if more than 1 overwriting
+						needs to be done. Allow I/O bufferring (efficiency),
+						if just one pass is needed. */
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_xfs_flush_fs (wfs_fs);
+					}
 				}
+				file_offset += fs_block_size;
 			}
 			if ( j < length )
 			{
@@ -751,42 +740,64 @@ wfs_xfs_wipe_fs	(
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
+			file_offset = (off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
+				fs_block_size;
 			/* NOTE: this must be inside */
-			if ( lseek64 (fs_fd, (off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
-				wfs_xfs_get_block_size (wfs_fs), SEEK_SET ) !=
-					(off64_t) (agno * xxfs->wfs_xfs_agblocks + agoff) *
-					wfs_xfs_get_block_size (wfs_fs)
-				)
+			if ( lseek64 (fs_fd, file_offset, SEEK_SET) != file_offset )
 			{
 				break;
 			}
 			/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-			memset ( buffer, 0, wfs_xfs_get_block_size (wfs_fs) );
-# else
-			for ( j=0; j < wfs_xfs_get_block_size (wfs_fs); j++ )
-			{
-				buffer[j] = '\0';
-			}
-# endif
 			if ( sig_recvd == 0 )
 			{
-				for ( j=0; (j < length) && (sig_recvd == 0); j++ )
+				for ( j = 0; (j < length) && (sig_recvd == 0); j++ )
 				{
-					if ( write (fs_fd, buffer, wfs_xfs_get_block_size (wfs_fs))
-						!= (ssize_t) wfs_xfs_get_block_size (wfs_fs)
-					)
+					i = 1;
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
 					{
-						ret_wfs = WFS_BLKWR;
-						break;
+						if ( read (fs_fd, buffer, fs_block_size)
+							!= (ssize_t) fs_block_size )
+						{
+							ret_wfs = WFS_BLKRD;
+							break;
+						}
+						if ( wfs_is_block_zero (buffer, fs_block_size) != 0 )
+						{
+							/* this block is all-zeros - don't wipe, as requested */
+							i = 0;
+						}
+						/* NOTE: this must be inside also after read() */
+						if ( lseek64 (fs_fd, file_offset, SEEK_SET) != file_offset )
+						{
+							break;
+						}
 					}
-					/* Flush after each writing, if more than 1 overwriting
-					needs to be done. Allow I/O bufferring (efficiency),
-					if just one pass is needed. */
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					if ( i == 1 )
 					{
-						error = wfs_xfs_flush_fs (wfs_fs);
+# ifdef HAVE_MEMSET
+						memset ( buffer, 0, fs_block_size );
+# else
+						for ( i = 0; i < fs_block_size; i++ )
+						{
+							buffer[i] = '\0';
+						}
+# endif
+						if ( write (fs_fd, buffer, fs_block_size)
+							!= (ssize_t) fs_block_size
+						)
+						{
+							ret_wfs = WFS_BLKWR;
+							break;
+						}
+						/* Flush after each writing, if more than 1 overwriting
+						needs to be done. Allow I/O bufferring (efficiency),
+						if just one pass is needed. */
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_xfs_flush_fs (wfs_fs);
+						}
 					}
+					file_offset += fs_block_size;
 				}
 				if ( j < length )
 				{
@@ -939,10 +950,18 @@ wfs_xfs_wipe_part (
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
+	off64_t file_offset;
 
 	xxfs = (struct wfs_xfs *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
 	if ( xxfs == NULL )
+	{
+		return WFS_BADPARAM;
+	}
+
+	fs_block_size = wfs_xfs_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
 	{
 		return WFS_BADPARAM;
 	}
@@ -994,7 +1013,7 @@ wfs_xfs_wipe_part (
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	buffer = (unsigned char *) malloc ( wfs_xfs_get_block_size (wfs_fs) );
+	buffer = (unsigned char *) malloc ( fs_block_size );
 	if ( buffer == NULL )
 	{
 #  ifdef HAVE_ERRNO_H
@@ -1179,7 +1198,7 @@ wfs_xfs_wipe_part (
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
-	fs_fd = open64 (xxfs->dev_name, O_WRONLY | O_EXCL
+	fs_fd = open64 (xxfs->dev_name, O_RDWR | O_EXCL
 #  ifdef O_BINARY
 		| O_BINARY
 #  endif
@@ -1367,7 +1386,7 @@ wfs_xfs_wipe_part (
 				break;
 			}
 			if ( (start_block == 0) /* probably parsed incorrectly */
-				|| (offset > wfs_xfs_get_block_size (wfs_fs)) )
+				|| (offset > fs_block_size) )
 			{
 				continue;
 			}
@@ -1378,75 +1397,93 @@ wfs_xfs_wipe_part (
 			 * block_size - [(inode_size+offset)%block_size] bytes
 			 */
 			/* NOTE: 'offset' is probably NOT the offset within a block at all */
-			length_to_wipe = (int)wfs_xfs_get_block_size (wfs_fs)
-				- (int)((inode_size/*+offset*/)%wfs_xfs_get_block_size (wfs_fs));
+			length_to_wipe = (int)fs_block_size
+				- (int)((inode_size/*+offset*/) % fs_block_size);
 			if ( length_to_wipe <= 0 )
 			{
 				continue;
 			}
-			for ( i=0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
+			file_offset = (off64_t) (start_block * fs_block_size
+				+ inode_size);
+			for ( i = 0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
 			{
-				/* NOTE: this must be inside! */
-				if ( lseek64 (fs_fd,
-						(off64_t) (start_block * wfs_xfs_get_block_size (wfs_fs)
-						+ inode_size),
-						SEEK_SET )
-					!= (off64_t) (start_block * wfs_xfs_get_block_size (wfs_fs)
-						+ inode_size)
-				   )
+				/* go back to writing position - NOTE: this must be inside! */
+				if ( lseek64 (fs_fd, file_offset, SEEK_SET)
+					!= file_offset )
 				{
 					break;
 				}
-				fill_buffer ( i, buffer, wfs_xfs_get_block_size (wfs_fs), selected, wfs_fs );
-				if ( write (fs_fd, buffer, (size_t)length_to_wipe) != length_to_wipe )
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
 				{
-					ret_part = WFS_BLKWR;
-					break;
+					if ( read (fs_fd, buffer, fs_block_size)
+						!= (ssize_t) fs_block_size )
+					{
+						ret_part = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (buffer, fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						i = wfs_fs.npasses * 2;
+					}
+					/* NOTE: this must be inside also after read() */
+					if ( lseek64 (fs_fd, file_offset, SEEK_SET)
+						!= file_offset )
+					{
+						break;
+					}
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				   Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( i != wfs_fs.npasses * 2 )
 				{
-					error = wfs_xfs_flush_fs (wfs_fs);
-				}
-				/* go back to writing position */
-			}
-			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
-			{
-				/* NOTE: this must be inside */
-				if ( lseek64 (fs_fd,
-						(off64_t) (start_block * wfs_xfs_get_block_size (wfs_fs)
-						+ inode_size),
-						SEEK_SET )
-					!= (off64_t) (start_block * wfs_xfs_get_block_size (wfs_fs)
-						+ inode_size)
-				   )
-				{
-					break;
-				}
-				/* last pass with zeros: */
-#  ifdef HAVE_MEMSET
-				memset ( buffer, 0, wfs_xfs_get_block_size (wfs_fs) );
-#  else
-				for ( i=0; i < wfs_xfs_get_block_size (wfs_fs); i++ )
-				{
-					buffer[i] = '\0';
-				}
-#  endif
-				if ( sig_recvd == 0 )
-				{
-					if ( write (fs_fd, buffer, (size_t)length_to_wipe)
-						!= length_to_wipe )
+					fill_buffer ( i, buffer, fs_block_size, selected, wfs_fs );
+					if ( write (fs_fd, buffer, (size_t)length_to_wipe) != length_to_wipe )
 					{
 						ret_part = WFS_BLKWR;
 						break;
 					}
-					/* Flush after each writing, if more than 1 overwriting needs
-					 to be done.
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
 					Allow I/O bufferring (efficiency), if just one pass is needed. */
 					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
 					{
 						error = wfs_xfs_flush_fs (wfs_fs);
+					}
+				}
+			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				/* last pass with zeros: */
+				/* NOTE: this must be inside */
+				if ( lseek64 (fs_fd, file_offset, SEEK_SET)
+					!= file_offset )
+				{
+					break;
+				}
+				if ( i != wfs_fs.npasses * 2 )
+				{
+					/* this block is NOT all-zeros - wipe */
+#  ifdef HAVE_MEMSET
+					memset ( buffer, 0, fs_block_size );
+#  else
+					for ( i=0; i < fs_block_size; i++ )
+					{
+						buffer[i] = '\0';
+					}
+#  endif
+					if ( sig_recvd == 0 )
+					{
+						if ( write (fs_fd, buffer, (size_t)length_to_wipe)
+							!= length_to_wipe )
+						{
+							ret_part = WFS_BLKWR;
+							break;
+						}
+						/* Flush after each writing, if more than 1 overwriting needs
+						to be done.
+						Allow I/O bufferring (efficiency), if just one pass is needed. */
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_xfs_flush_fs (wfs_fs);
+						}
 					}
 				}
 			}
@@ -2328,4 +2365,3 @@ wfs_xfs_show_error (
 {
 	wfs_show_fs_error_gen (msg, extra, wfs_fs);
 }
-

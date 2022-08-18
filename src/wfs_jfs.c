@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- JFS file system-specific functions.
  *
- * Copyright (C) 2010-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2010-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -328,6 +328,7 @@ wfs_jfs_wipe_block (
 	int res;
 	wfs_errcode_t error = 0;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
 	if ( (buf == NULL) || (fp == NULL) )
@@ -343,15 +344,37 @@ wfs_jfs_wipe_block (
 		}
 		return ret_wfs;
 	}
+	fs_block_size = wfs_jfs_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 
 	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 	{
+		if ( wfs_fs.no_wipe_zero_blocks != 0 )
+		{
+			res = ujfs_rw_diskblocks (fp,
+				blocknum * fs_block_size,
+				(int32_t)bufsize, buf, GET);
+			if ( res != 0 )
+			{
+				ret_wfs = WFS_BLKRD;
+				break;
+			}
+			if ( wfs_is_block_zero (buf, fs_block_size) != 0 )
+			{
+				/* this block is all-zeros - don't wipe, as requested */
+				j = wfs_fs.npasses * 2;
+				break;
+			}
+		}
 		fill_buffer ( j, buf, bufsize, selected, wfs_fs );
 		if ( sig_recvd != 0 )
 		{
 			break;
 		}
-		res = ujfs_rw_diskblocks (fp, blocknum * wfs_jfs_get_block_size (wfs_fs),
+		res = ujfs_rw_diskblocks (fp, blocknum * fs_block_size,
 			(int32_t)bufsize, buf, PUT);
 		if ( res != 0 )
 		{
@@ -366,7 +389,10 @@ wfs_jfs_wipe_block (
 	}
 	if ( j < wfs_fs.npasses )
 	{
-		ret_wfs = WFS_BLKWR;
+		if ( ret_wfs == WFS_SUCCESS )
+		{
+			ret_wfs = WFS_BLKWR;
+		}
 		if ( sig_recvd != 0 )
 		{
 			ret_wfs = WFS_SIGNAL;
@@ -376,33 +402,36 @@ wfs_jfs_wipe_block (
 	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
+		if ( j != wfs_fs.npasses * 2 )
+		{
 # ifdef HAVE_MEMSET
-		memset ( buf, 0, bufsize );
+			memset ( buf, 0, bufsize );
 # else
-		for ( j=0; j < bufsize; j++ )
-		{
-			buf[j] = '\0';
-		}
-# endif
-		if ( sig_recvd == 0 )
-		{
-			res = ujfs_rw_diskblocks (fp,
-				blocknum * wfs_jfs_get_block_size (wfs_fs),
-				(int32_t)bufsize, buf, PUT);
-			if ( res != 0 )
+			for ( j=0; j < bufsize; j++ )
 			{
-				ret_wfs = WFS_BLKWR;
-				if ( sig_recvd != 0 )
-				{
-					ret_wfs = WFS_SIGNAL;
-				}
-				return ret_wfs;
+				buf[j] = '\0';
 			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+# endif
+			if ( sig_recvd == 0 )
 			{
-				error = ujfs_flush_dev (fp);
+				res = ujfs_rw_diskblocks (fp,
+					blocknum * fs_block_size,
+					(int32_t)bufsize, buf, PUT);
+				if ( res != 0 )
+				{
+					ret_wfs = WFS_BLKWR;
+					if ( sig_recvd != 0 )
+					{
+						ret_wfs = WFS_SIGNAL;
+					}
+					return ret_wfs;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				{
+					error = ujfs_flush_dev (fp);
+				}
 			}
 		}
 	}
@@ -567,7 +596,6 @@ wfs_jfs_wipe_fs (
 	{
 		ndmaps++;
 	}
-
 	if ( ndmaps == 0 )
 	{
 		error = WFS_BLBITMAPREAD;
@@ -813,8 +841,11 @@ wfs_jfs_wipe_unrm (
 			return ret_unrm;
 		}
 
-		block += LOGPSIZE; /* skip the superblock, because we need its old UUID */
-		for ( i = 0; i < journal.size; i++ )
+		/* Skip the superblock, because we need its old UUID.
+		Note that LOGPSIZE has been added TWICE to the "block" variable.
+		*/
+		block += LOGPSIZE;
+		for ( i = 0; i < journal.size - 2; i++ )
 		{
 			/* NOTE: not the same block number for wfs_fs.jfs.fs and the journal. */
 			/* wfs_jfs_wipe_block expects a block number, not an offset, while
@@ -835,7 +866,7 @@ wfs_jfs_wipe_unrm (
 		free (buf);
 		/* format a new journal: */
 		jfs_logform (jfs->fs, jfs->super.s_bsize, jfs->super.s_l2bsize,
-			jfs->super.s_flag, (block - LOGPSIZE)/jfs->super.s_bsize,
+			jfs->super.s_flag, (block - 2 * LOGPSIZE)/jfs->super.s_bsize,
 			(journal.size * LOGPSIZE)/jfs->super.s_bsize, journal.uuid,
 			journal.label);
 	}
@@ -954,7 +985,7 @@ wfs_jfs_wipe_unrm (
 			return ret_unrm;
 		}
 
-		nblocks = total_size / journal.bsize;
+		nblocks = LOGPNTOB (LOGSUPER_B) + LOGPSIZE + total_size / journal.bsize;
 		/* skip the superblock, because we need its old UUID */
 		for ( block = LOGPNTOB (LOGSUPER_B) + LOGPSIZE; block < nblocks; block++ )
 		{
@@ -971,8 +1002,9 @@ wfs_jfs_wipe_unrm (
 		}
 		free (buf);
 		/* format a new journal */
+		block = LOGPNTOB (LOGSUPER_B); /* starting block of the journal */
 		jfs_logform (journal_fp, jfs->super.s_bsize, jfs->super.s_l2bsize,
-			jfs->super.s_flag, (block - LOGPSIZE)/jfs->super.s_bsize,
+			jfs->super.s_flag, block / jfs->super.s_bsize,
 			(journal.size * LOGPSIZE)/jfs->super.s_bsize, journal.uuid,
 			journal.label);
 		fclose (journal_fp);
@@ -1396,4 +1428,3 @@ wfs_jfs_show_error (
 {
 	wfs_show_fs_error_gen (msg, extra, wfs_fs);
 }
-

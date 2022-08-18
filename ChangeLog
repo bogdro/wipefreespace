@@ -1,3 +1,48 @@
+2016-05-15	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 2.2
+	  New command-line option: --no-wipe-zero-blocks, for not wiping empty
+	  (all-zero) blocks, useful for virtual/sparse devices, where empty
+	  areas are read as all-zeros and do not use physical space unless
+	  actually written to. Some minor optimisations & more safety checks.
+	  Sending a signal to WipeFreeSpace (like pressing Ctrl+C) sends an
+	  interrupt signal to the child process (which is doing the wiping).
+	  In case the child process is stuck, sending another signal to
+	  WipeFreeSpace kills the child process forcefully. Fixed writing
+	  beyond the device size in JFS.
+	* src/wfs_fat.c (_read_fat_sector): returning FALSE instead of 0 for
+	  consistency.
+	* src/wfs_xfs.c (wfs_xfs_wipe_fs, wfs_xfs_wipe_part): speed
+	  optimisations: performing constant calculations just once.
+	* src/wfs_signal.c: added a dedicated function for error display.
+	* src/wipefreespace.c, src/*.c: added support for the new command-line
+	  option --no-wipe-zero-blocks (reading and checking blocks before
+	  writing them, new utility function).
+	* src/wfs_reiser4.c (wfs_r4_wipe_unrm): moved function inside the
+	  WFS_WANT_UNRM block to avoid link-time errors when undelete data
+	  wiping is disabled.
+	* test-compile.sh: added checking if disabling wiping undelete, free
+	  space and partially-used blocks can be compiled on its own and can
+	  be compiled in pairs.
+	* doc/wipefreespace.texi.in, doc/wipefreespace.1, README: added the
+	  new command-line option (--no-wipe-zero-blocks).
+	* doc/wipefreespace.1: added one missing exit code.
+	* doc/wipefreespace.texi.in: updated signals' description
+	* src/*.c: wfs_xxx_get_block_size() called just once, for efficiency,
+	  and values returned are checked not to be zero.
+	* src/wfs_hfsp.c (wfs_hfsp_open_fs): fixed a memory leak after a
+	  failed open attempt.
+	* src/wipefreespace.c (main): improved waiting for the child wiping
+	  process (checking for error). When the main WipeFreeSpace process
+	  receives a signal for the first time, the child process is
+	  interrupted (SIGINT is sent) so it can finish work. When the main
+	  process is signaled the second time, a SIGKILL is sent to the child
+	  process.
+	* src/wfs_xfs.c (wfs_xfs_wipe_fs): fix misuse of variables when the
+	  memset() function is missing from the system.
+	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): fixed re-creating the journal to
+	  avoid writing beyond the device size.
+
 2015-09-26	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 2.1

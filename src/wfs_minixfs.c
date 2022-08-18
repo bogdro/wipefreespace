@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions.
  *
- * Copyright (C) 2009-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2009-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -193,6 +193,7 @@ wfs_minixfs_wipe_dir (
 	wfs_errcode_t error = 0;
 	struct minix_fs_dat * minix;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	minix = (struct minix_fs_dat *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -212,6 +213,8 @@ wfs_minixfs_wipe_dir (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
+
 	if ( (dir_ino == -1) || (dir_ino > (int)INODES (minix)) )
 	{
 		if ( wipe_part != 0 )
@@ -396,8 +399,17 @@ wfs_minixfs_wipe_dir (
 		/* wipe file tail */
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
+			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			{
+				if ( wfs_is_block_zero (buf, fs_block_size) != 0 )
+				{
+					/* this block is all-zeros - don't wipe, as requested */
+					j = wfs_fs.npasses * 2;
+					break;
+				}
+			}
 			fill_buffer ( j, &buf[was_read],
-				(unsigned int)(wfs_minixfs_get_block_size (wfs_fs) - (size_t)was_read),
+				(unsigned int)(fs_block_size - (size_t)was_read),
 				selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
@@ -415,27 +427,30 @@ wfs_minixfs_wipe_dir (
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
+			if ( j != wfs_fs.npasses * 2 )
+			{
 # ifdef HAVE_MEMSET
-			memset ( &buf[was_read], 0,
-				(unsigned int)(wfs_minixfs_get_block_size (wfs_fs)
-				- (size_t)was_read) );
+				memset ( &buf[was_read], 0,
+					(unsigned int)(fs_block_size
+					- (size_t)was_read) );
 # else
-			for ( j=0; j < (unsigned int)(wfs_minixfs_get_block_size (wfs_fs)
-				- (size_t)was_read); j++ )
-			{
-				buf[was_read+j] = '\0';
-			}
-# endif
-			if ( sig_recvd == 0 )
-			{
-				error = 0;
-				write_inoblk (minix, dir_ino, inode_size / BLOCK_SIZE, buf); /* void */
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1)
-					&& (sig_recvd == 0) )
+				for ( j=0; j < (unsigned int)(fs_block_size
+					- (size_t)was_read); j++ )
 				{
-					error = wfs_minixfs_flush_fs (wfs_fs);
+					buf[was_read+j] = '\0';
+				}
+# endif
+				if ( sig_recvd == 0 )
+				{
+					error = 0;
+					write_inoblk (minix, dir_ino, inode_size / BLOCK_SIZE, buf); /* void */
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( (wfs_fs.npasses > 1)
+						&& (sig_recvd == 0) )
+					{
+						error = wfs_minixfs_flush_fs (wfs_fs);
+					}
 				}
 			}
 		}
@@ -478,6 +493,7 @@ wfs_minixfs_wipe_part (
 	wfs_errcode_t error = 0;
 	struct minix_fs_dat * minix;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	minix = (struct minix_fs_dat *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -485,10 +501,12 @@ wfs_minixfs_wipe_part (
 	{
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
+
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_minixfs_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -538,6 +556,7 @@ wfs_minixfs_wipe_fs (
 	long int start_pos = 0;
 	long int current_block = 0;
 	size_t written;
+	size_t was_read;
 	unsigned long int j;
 	int selected[WFS_NPAT] = {0};
 	unsigned int prev_percent = 0;
@@ -545,6 +564,7 @@ wfs_minixfs_wipe_fs (
 	wfs_errcode_t error = 0;
 	struct minix_fs_dat * minix;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	minix = (struct minix_fs_dat *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -557,11 +577,12 @@ wfs_minixfs_wipe_fs (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_minixfs_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -593,9 +614,21 @@ wfs_minixfs_wipe_fs (
 		}
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			fill_buffer ( j, buf,
-				wfs_minixfs_get_block_size (wfs_fs),
-				selected, wfs_fs );
+			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			{
+				was_read = fread (buf, 1,
+					fs_block_size,
+					goto_blk (minix->fp, current_block));
+				if ( (was_read == fs_block_size)
+					&& (wfs_is_block_zero (buf,
+					fs_block_size) != 0) )
+				{
+					/* this block is all-zeros - don't wipe, as requested */
+					j = wfs_fs.npasses * 2;
+					break;
+				}
+			}
+			fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;
@@ -605,10 +638,9 @@ wfs_minixfs_wipe_fs (
 # ifdef HAVE_ERRNO_H
 			errno = 0;
 # endif
-			written = fwrite (buf, 1,
-				wfs_minixfs_get_block_size (wfs_fs),
+			written = fwrite (buf, 1, fs_block_size,
 				goto_blk (minix->fp, current_block));
-			if ( written != wfs_minixfs_get_block_size (wfs_fs) )
+			if ( written != fs_block_size )
 			{
 # ifdef HAVE_ERRNO_H
 				error = errno;
@@ -626,39 +658,41 @@ wfs_minixfs_wipe_fs (
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
+			if ( j != wfs_fs.npasses * 2 )
+			{
 # ifdef HAVE_MEMSET
-			memset ( buf, 0, wfs_minixfs_get_block_size (wfs_fs) );
+				memset ( buf, 0, fs_block_size );
 # else
-			for ( j=0; j < wfs_minixfs_get_block_size (wfs_fs); j++ )
-			{
-				buf[j] = '\0';
-			}
+				for ( j=0; j < fs_block_size; j++ )
+				{
+					buf[j] = '\0';
+				}
 # endif
-			if ( sig_recvd != 0 )
-			{
-				ret_wfs = WFS_SIGNAL;
-				break;
-			}
-			error = 0;
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
+				error = 0;
 # ifdef HAVE_ERRNO_H
-			errno = 0;
+				errno = 0;
 # endif
-			written = fwrite (buf, 1,
-				wfs_minixfs_get_block_size (wfs_fs),
-				goto_blk (minix->fp, current_block));
-			if ( written != wfs_minixfs_get_block_size (wfs_fs) )
-			{
+				written = fwrite (buf, 1, fs_block_size,
+					goto_blk (minix->fp, current_block));
+				if ( written != fs_block_size )
+				{
 # ifdef HAVE_ERRNO_H
-				error = errno;
+					error = errno;
 # endif
-				ret_wfs = WFS_BLKWR;
-				break;
-			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-			{
-				error = wfs_minixfs_flush_fs (wfs_fs);
+					ret_wfs = WFS_BLKWR;
+					break;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				{
+					error = wfs_minixfs_flush_fs (wfs_fs);
+				}
 			}
 		}
 		wfs_show_progress (WFS_PROGRESS_WFS,
@@ -705,6 +739,7 @@ wfs_minixfs_wipe_unrm (
 	wfs_errcode_t error = 0;
 	struct minix_fs_dat * minix;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	minix = (struct minix_fs_dat *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -712,10 +747,12 @@ wfs_minixfs_wipe_unrm (
 	{
 		return 	WFS_BADPARAM;
 	}
+	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
+
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_minixfs_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -1162,4 +1199,3 @@ wfs_minixfs_show_error (
 {
 	wfs_show_fs_error_gen (msg, extra, wfs_fs);
 }
-

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions, header file.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -106,5 +106,12 @@ extern int GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
 	wfs_check_loop_mounted WFS_PARAMS ((
 		const char * const dev_name));
 
-#endif	/* WFS_UTIL_H */
+extern int GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_is_block_zero WFS_PARAMS ((
+		const unsigned char * const buf,
+		const size_t len));
 
+extern void
+	flush_pipe_input WFS_PARAMS ((const int fd));
+
+#endif	/* WFS_UTIL_H */

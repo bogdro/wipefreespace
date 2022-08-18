@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -108,6 +108,14 @@
 # endif
 #endif
 
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
+
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 #include "wfs_secure.h"
@@ -137,7 +145,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2015 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2016 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -193,26 +201,27 @@ static const char * const msg_nobg     = N_("Going into background not supported
 static const char * const msg_cacheoff = N_("Disabling cache");
 
 /* Command-line options. */
-static int opt_allzero = 0;
-static int opt_bg      = 0;
-static int opt_force   = 0;
-static int opt_ioctl   = 0;
-static int opt_nopart  = 0;
-static int opt_nounrm  = 0;
-static int opt_nowfs   = 0;
-static int opt_verbose = 0;
-static int opt_zero    = 0;
+static int opt_allzero      = 0;
+static int opt_bg           = 0;
+static int opt_force        = 0;
+static int opt_ioctl        = 0;
+static int opt_nopart       = 0;
+static int opt_nounrm       = 0;
+static int opt_nowfs        = 0;
+static int opt_no_wipe_zero = 0;
+static int opt_verbose      = 0;
+static int opt_zero         = 0;
 
-static int wfs_optind  = 0;
+static int wfs_optind       = 0;
 
 #if (defined HAVE_GETOPT_H) && (defined HAVE_GETOPT_LONG)
-static int opt_blksize = 0;
-static int opt_help    = 0;
-static int opt_license = 0;
-static int opt_number  = 0;
-static int opt_super   = 0;
-static int opt_version = 0;
-static int opt_method  = 0;
+static int opt_blksize      = 0;
+static int opt_help         = 0;
+static int opt_license      = 0;
+static int opt_number       = 0;
+static int opt_super        = 0;
+static int opt_version      = 0;
+static int opt_method       = 0;
 static char * opt_method_name = NULL;
 /* have to use a temp variable, to add both '-v' and '--verbose' together. */
 static int opt_verbose_temp = 0;
@@ -220,24 +229,25 @@ static int opt_char    = 0;
 
 static const struct option opts[] =
 {
-	{ "all-zeros",  no_argument,       &opt_allzero, 1 },
-	{ "background", no_argument,       &opt_bg,      1 },
-	{ "blocksize",  required_argument, &opt_blksize, 1 },
-	{ "force",      no_argument,       &opt_force,   1 },
-	{ "help",       no_argument,       &opt_help,    1 },
-	{ "iterations", required_argument, &opt_number,  1 },
-	{ "last-zero",  no_argument,       &opt_zero,    1 },
-	{ "licence",    no_argument,       &opt_license, 1 },
-	{ "license",    no_argument,       &opt_license, 1 },
-	{ "method",     required_argument, &opt_method,  1 },
-	{ "nopart",     no_argument,       &opt_nopart,  1 },
-	{ "nounrm",     no_argument,       &opt_nounrm,  1 },
-	{ "nowfs",      no_argument,       &opt_nowfs,   1 },
-	{ "superblock", required_argument, &opt_super,   1 },
-	{ "use-ioctl",  no_argument,       &opt_ioctl,   1 },
+	{ "all-zeros",           no_argument,       &opt_allzero,      1 },
+	{ "background",          no_argument,       &opt_bg,           1 },
+	{ "blocksize",           required_argument, &opt_blksize,      1 },
+	{ "force",               no_argument,       &opt_force,        1 },
+	{ "help",                no_argument,       &opt_help,         1 },
+	{ "iterations",          required_argument, &opt_number,       1 },
+	{ "last-zero",           no_argument,       &opt_zero,         1 },
+	{ "licence",             no_argument,       &opt_license,      1 },
+	{ "license",             no_argument,       &opt_license,      1 },
+	{ "method",              required_argument, &opt_method,       1 },
+	{ "nopart",              no_argument,       &opt_nopart,       1 },
+	{ "nounrm",              no_argument,       &opt_nounrm,       1 },
+	{ "nowfs",               no_argument,       &opt_nowfs,        1 },
+	{ "no-wipe-zero-blocks", no_argument,       &opt_no_wipe_zero, 1 },
+	{ "superblock",          required_argument, &opt_super,        1 },
+	{ "use-ioctl",           no_argument,       &opt_ioctl,        1 },
 	/* have to use a temp variable, to add both '-v' and '--verbose' together. */
-	{ "verbose",    no_argument,       &opt_verbose_temp, 1 },
-	{ "version",    no_argument,       &opt_version, 1 },
+	{ "verbose",             no_argument,       &opt_verbose_temp, 1 },
+	{ "version",             no_argument,       &opt_version,      1 },
 	{ NULL, 0, NULL, 0 }
 };
 #endif
@@ -603,6 +613,7 @@ print_help (
 	puts ( _("--nopart\t\tDo NOT wipe free space in partially used blocks") );
 	puts ( _("--nounrm\t\tDo NOT wipe undelete information") );
 	puts ( _("--nowfs\t\t\tDo NOT wipe free space on file system") );
+	puts ( _("--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system") );
 	puts ( _("--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)") );
 	puts ( _("-v|--verbose\t\tVerbose output") );
 	puts ( _("-V|--version\t\tPrint version number") );
@@ -652,6 +663,7 @@ wfs_wipe_filesytem (
 	fs.npasses = npasses;
 	fs.fs_error = malloc (wfs_get_err_size ());
 	fs.whichfs = WFS_CURR_FS_NONE;
+	fs.no_wipe_zero_blocks = opt_no_wipe_zero;
 
 	if ( dev_name == NULL )
 	{
@@ -954,7 +966,9 @@ main (
 	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
 #if (defined WFS_REISER) || (defined WFS_MINIXFS)
 	pid_t child_pid;
+	pid_t res_pid;
 	int child_status;
+	int child_signaled = 0;
 #endif
 	wfs_fsid_t wf_gen;
 	wfs_errcode_t err;
@@ -1429,6 +1443,13 @@ main (
 			continue;
 		}
 
+		if ( strcmp (argv[i], "--no-wipe-zero-blocks") == 0 )
+		{
+			opt_no_wipe_zero = 1;
+			argv[i] = NULL;
+			continue;
+		}
+
 		if ( strcmp (argv[i], "--") == 0 )
 		{
 			/* end-of-arguments marker */
@@ -1622,14 +1643,35 @@ main (
 			/* parent process: simply wait for the child */
 			while ( 1 == 1 )
 			{
+# ifdef HAVE_KILL
+				if ( sig_recvd != 0 )
+				{
+#  ifndef SIGINT
+#   define SIGINT 2
+#  endif
+#  ifndef SIGKILL
+#   define SIGKILL 9
+#  endif
+					if ( child_signaled == 0 )
+					{
+						kill (child_pid, SIGINT);
+						child_signaled = 1;
+					}
+					else
+					{
+						kill (child_pid, SIGKILL);
+					}
+				}
+# endif
+				child_status = 0;
 # ifdef HAVE_FORK
 #  ifdef HAVE_WAITPID
-				waitpid (child_pid, &child_status, 0);
+				res_pid = waitpid (child_pid, &child_status, 0);
 #  else
-				wait (&child_status);
+				res_pid = wait (&child_status);
 #  endif
 #  ifdef WIFEXITED
-				if ( WIFEXITED (child_status) )
+				if ( (res_pid == child_pid) && WIFEXITED (child_status) )
 				{
 					res = WEXITSTATUS (child_status);
 					if ( res != 0 )
@@ -1640,14 +1682,17 @@ main (
 				}
 #  endif
 #  ifdef WIFSIGNALED
-				if ( WIFSIGNALED (child_status) )
+				if ( (res_pid == child_pid) && WIFSIGNALED (child_status) )
 				{
 					ret = WFS_SIGNAL;
 					break;
 				}
 #  endif
 #  if (!defined WIFEXITED) && (!defined WIFSIGNALED)
-				break;
+				if ( res_pid == child_pid )
+				{
+					break;
+				}
 #  endif
 # endif
 			}
@@ -1701,4 +1746,3 @@ subsequent loop iterations may fail, so don't enable. */
 		return ret;	/* return the last error value or zero */
 	}
 }	/* main() */
-

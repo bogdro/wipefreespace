@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- unit test for the wfs_util.c file.
  *
- * Copyright (C) 2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2015-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v3+
  *
  * This program is free software; you can redistribute it and/or
@@ -265,6 +265,7 @@ START_TEST(test_wfs_check_mounted)
 END_TEST
 
 #ifdef WFS_TEST_CAN_MOUNT
+/* Use "losetup" to detach any incorrectly attached devices */
 
 typedef wfs_errcode_t (*mount_check_function) (const wfs_fsid_t wfs_fs);
 

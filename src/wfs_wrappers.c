@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -1162,4 +1162,3 @@ wfs_show_error (
 		wfs_show_fs_error_gen (msg, extra, wfs_fs);
 	}
 }
-

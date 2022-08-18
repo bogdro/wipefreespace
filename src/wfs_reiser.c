@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv3 file system-specific functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -183,6 +183,7 @@ wfs_reiser_wipe_part (
 	wfs_errcode_t error = 0;
 	reiserfs_filsys_t * rfs;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	rfs = (reiserfs_filsys_t *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -195,11 +196,16 @@ wfs_reiser_wipe_part (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_reiser_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_reiser_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -311,10 +317,10 @@ wfs_reiser_wipe_part (
 				continue;
 			}
 			if ( (bh->b_data == NULL)
-				|| (head->ih2_item_len >= wfs_reiser_get_block_size (wfs_fs))
-				|| (head->ih2_item_location >= wfs_reiser_get_block_size (wfs_fs))
+				|| (head->ih2_item_len >= fs_block_size)
 				|| (head->ih2_item_location + head->ih2_item_len >=
-					(int)wfs_reiser_get_block_size (wfs_fs))
+					(int)fs_block_size)
+				|| (head->ih2_item_location >= fs_block_size)
 				|| ((unsigned long)head->ih2_item_location
 					+ (unsigned long)head->ih2_item_len >= bh->b_size)
 				)
@@ -502,6 +508,7 @@ wfs_reiser_wipe_fs (
 	wfs_errcode_t error = 0;
 	reiserfs_filsys_t * rfs;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	rfs = (reiserfs_filsys_t *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -536,10 +543,15 @@ wfs_reiser_wipe_fs (
 		return WFS_SUCCESS;
 	}
 
+	fs_block_size = wfs_reiser_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_reiser_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -568,8 +580,7 @@ wfs_reiser_wipe_fs (
 			continue;
 		}
 		/* read the block just to fill the structure */
-		bh = bread (rfs->fs_dev, blk_no,
-			wfs_reiser_get_block_size (wfs_fs));
+		bh = bread (rfs->fs_dev, blk_no, fs_block_size);
 		if ( bh == NULL )
 		{
 			continue;
@@ -579,10 +590,18 @@ wfs_reiser_wipe_fs (
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
 			/*&& (ret_wfs == WFS_SUCCESS)*/; j++ )
 		{
+			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			{
+				if ( wfs_is_block_zero ((unsigned char *)bh->b_data, fs_block_size) != 0 )
+				{
+					/* this block is all-zeros - don't wipe, as requested */
+					j = wfs_fs.npasses * 2;
+					break;
+				}
+			}
 
 			fill_buffer ( j, (unsigned char *) bh->b_data,
-				wfs_reiser_get_block_size (wfs_fs),
-				selected, wfs_fs );
+				fs_block_size, selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;
@@ -617,43 +636,46 @@ wfs_reiser_wipe_fs (
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
-			/* last pass with zeros: */
+			if ( j != wfs_fs.npasses * 2 )
+			{
+				/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-			memset ( (unsigned char *) bh->b_data, 0,
-				wfs_reiser_get_block_size (wfs_fs) );
+				memset ( (unsigned char *) bh->b_data, 0,
+					fs_block_size );
 # else
-			for ( j=0; j < wfs_reiser_get_block_size (wfs_fs); j++ )
-			{
-				((unsigned char *) bh->b_data)[j] = '\0';
-			}
-# endif
-			if ( sig_recvd == 0 )
-			{
-				mark_buffer_dirty2 (bh);
-				mark_buffer_uptodate2 (bh);
-				error = bwrite (bh);
-				if ( error != 0 )
+				for ( j=0; j < fs_block_size; j++ )
 				{
-					/* check if block is marked as bad. If there is no 'badblocks'
-					 list or the block is marked OK, then print the error. */
-					if (rfs->fs_badblocks_bm == NULL)
-					{
-						ret_wfs = WFS_BLKWR;
-						break;
-					}
-					else if (reiserfs_bitmap_test_bit (
-						rfs->fs_badblocks_bm,
-						blk_no) == 0)
-					{
-						ret_wfs = WFS_BLKWR;
-						break;
-					}
+					((unsigned char *) bh->b_data)[j] = '\0';
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+# endif
+				if ( sig_recvd == 0 )
 				{
-					error = wfs_reiser_flush_fs (wfs_fs);
+					mark_buffer_dirty2 (bh);
+					mark_buffer_uptodate2 (bh);
+					error = bwrite (bh);
+					if ( error != 0 )
+					{
+						/* check if block is marked as bad. If there is no 'badblocks'
+						list or the block is marked OK, then print the error. */
+						if (rfs->fs_badblocks_bm == NULL)
+						{
+							ret_wfs = WFS_BLKWR;
+							break;
+						}
+						else if (reiserfs_bitmap_test_bit (
+							rfs->fs_badblocks_bm,
+							blk_no) == 0)
+						{
+							ret_wfs = WFS_BLKWR;
+							break;
+						}
+					}
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_reiser_flush_fs (wfs_fs);
+					}
 				}
 			}
 		}
@@ -663,7 +685,7 @@ wfs_reiser_wipe_fs (
 		}
 		curr_sector++;
 		wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
-			/get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
+			/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
 	}	/* for block */
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	free (buf);
@@ -714,6 +736,7 @@ wfs_reiser_wipe_unrm (
 	wfs_errcode_t error = 0;
 	reiserfs_filsys_t * rfs;
 	wfs_errcode_t * error_ret;
+	size_t fs_block_size;
 
 	rfs = (reiserfs_filsys_t *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -726,11 +749,16 @@ wfs_reiser_wipe_unrm (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_reiser_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	buf = (unsigned char *) malloc ( wfs_reiser_get_block_size (wfs_fs) );
+	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -777,8 +805,7 @@ wfs_reiser_wipe_unrm (
 			}
 			*/
 			/* read the block just to fill the structure */
-			bh = bread (rfs->fs_dev, blk_no,
-				wfs_reiser_get_block_size (wfs_fs));
+			bh = bread (rfs->fs_dev, blk_no, fs_block_size);
 			if ( bh == NULL )
 			{
 				continue;
@@ -792,11 +819,9 @@ wfs_reiser_wipe_unrm (
 				if ( j == wfs_fs.npasses )
 				{
 # ifdef HAVE_MEMSET
-					memset ( bh->b_data, 0,
-						wfs_reiser_get_block_size (wfs_fs) );
+					memset ( bh->b_data, 0, fs_block_size );
 # else
-					for ( i=0; i < wfs_reiser_get_block_size (wfs_fs);
-						i++ )
+					for ( i=0; i < fs_block_size; i++ )
 					{
 						bh->b_data[i] = '\0';
 					}
@@ -804,9 +829,19 @@ wfs_reiser_wipe_unrm (
 				}
 				else
 				{
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
+					{
+						if ( wfs_is_block_zero ((unsigned char *)bh->b_data,
+							fs_block_size) != 0 )
+						{
+							/* this block is all-zeros - don't wipe, as requested */
+							j = wfs_fs.npasses * 2;
+							break;
+						}
+					}
+
 					fill_buffer ( j, (unsigned char *) bh->b_data,
-						wfs_reiser_get_block_size (wfs_fs),
-						selected, wfs_fs );
+						fs_block_size, selected, wfs_fs );
 				}
 				if ( sig_recvd != 0 )
 				{
@@ -842,45 +877,47 @@ wfs_reiser_wipe_unrm (
 			}
 			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 			{
-				/* last pass with zeros: */
+				if ( j != wfs_fs.npasses * 2 )
+				{
+					/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-				memset ((unsigned char *) bh->b_data, 0,
-					wfs_reiser_get_block_size (wfs_fs));
+					memset ((unsigned char *) bh->b_data, 0, fs_block_size);
 # else
-				for ( j=0; j < wfs_reiser_get_block_size (wfs_fs); j++ )
-				{
-					((unsigned char *) bh->b_data)[j] = '\0';
-				}
-# endif
-				if ( sig_recvd == 0 )
-				{
-					mark_buffer_dirty2 (bh);
-					mark_buffer_uptodate2 (bh);
-					error = bwrite (bh);
-					if ( error != 0 )
+					for ( j=0; j < fs_block_size; j++ )
 					{
-						/* check if block is marked as bad. If there is no
-						 'badblocks' list or the block is marked OK, then print
-						  the error. */
-						if (rfs->fs_badblocks_bm == NULL)
-						{
-							ret_wfs = WFS_BLKWR;
-							break;
-						}
-						else if (reiserfs_bitmap_test_bit
-							(rfs->fs_badblocks_bm, blk_no) == 0)
-						{
-							ret_wfs = WFS_BLKWR;
-							break;
-						}
+						((unsigned char *) bh->b_data)[j] = '\0';
 					}
-					/* Flush after each writing, if more than 1 overwriting needs
-					 to be done.
-					Allow I/O bufferring (efficiency), if just one pass is needed. */
-					if ( (wfs_fs.npasses > 1)
-						&& (sig_recvd == 0) )
+# endif
+					if ( sig_recvd == 0 )
 					{
-						error = wfs_reiser_flush_fs (wfs_fs);
+						mark_buffer_dirty2 (bh);
+						mark_buffer_uptodate2 (bh);
+						error = bwrite (bh);
+						if ( error != 0 )
+						{
+							/* check if block is marked as bad. If there is no
+							'badblocks' list or the block is marked OK, then print
+							the error. */
+							if (rfs->fs_badblocks_bm == NULL)
+							{
+								ret_wfs = WFS_BLKWR;
+								break;
+							}
+							else if (reiserfs_bitmap_test_bit
+								(rfs->fs_badblocks_bm, blk_no) == 0)
+							{
+								ret_wfs = WFS_BLKWR;
+								break;
+							}
+						}
+						/* Flush after each writing, if more than 1 overwriting needs
+						to be done.
+						Allow I/O bufferring (efficiency), if just one pass is needed. */
+						if ( (wfs_fs.npasses > 1)
+							&& (sig_recvd == 0) )
+						{
+							error = wfs_reiser_flush_fs (wfs_fs);
+						}
 					}
 				}
 			}
@@ -890,7 +927,7 @@ wfs_reiser_wipe_unrm (
 			}
 			curr_direlem++;
 			wfs_show_progress (WFS_PROGRESS_UNRM, (unsigned int) ((curr_direlem*50)
-				/get_jp_journal_size (&(rfs->fs_ondisk_sb->s_v1.sb_journal))),
+				/ get_jp_journal_size (&(rfs->fs_ondisk_sb->s_v1.sb_journal))),
 				&prev_percent);
 		}
 		if ( sig_recvd != 0 )
@@ -1556,4 +1593,3 @@ wfs_reiser_show_error (
 {
 	wfs_show_fs_error_gen (msg, extra, wfs_fs);
 }
-

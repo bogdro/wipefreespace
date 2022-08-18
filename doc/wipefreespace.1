@@ -81,6 +81,10 @@ Do NOT wipe free space in partially used blocks.
 Do NOT wipe undelete information
 .IP --nowfs
 Do NOT wipe free space on file system
+.IP --no-wipe-zero-blocks
+Do NOT wipe all-zero blocks on file system (useful for virtual/sparse devices,
+where empty areas are read as all-zeros and do not take physical space unless
+actually written to).
 .IP --use-ioctl
 Disable device caching during work (can be DANGEROUS)
 .IP -v|--verbose
@@ -161,6 +165,8 @@ Exec error (XFS).
 Seek error (mostly ReiserFSv4).
 .IP \-25:
 Block reading failed.
+.IP \-26:
+I/O control command (ioctl) failed.
 .IP \-100:
 A signal was caught and the program was forced to exit.
 

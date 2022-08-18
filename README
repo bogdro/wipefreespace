@@ -274,6 +274,10 @@ Command line options:
 --nopart		Do NOT wipe free space in partially used blocks
 --nounrm		Do NOT wipe undelete information
 --nowfs			Do NOT wipe free space on file system
+--no-wipe-zero-blocks	Do NOT wipe all-zero blocks on file system (useful for
+			virtual/sparse devices, where empty areas are read as
+			all-zeros and do not take physical space unless
+			actually written to)
 --use-ioctl		Disable device caching during work (can be DANGEROUS).
 			NOTE: this may not work for sub-partitions on drives.
 			To disable the cache, run the 'hdparm' utility with
@@ -361,7 +365,7 @@ you wish.
 marked with capital letters in the header:
 
 # YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007-2015 Bogdan 'bogdro' Drozdowski
+# Copyright (C) 2007-2016 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as
 # the wipefreespace package.
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.

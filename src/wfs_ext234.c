@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2/3/4 file system-specific functions.
  *
- * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2016 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -194,6 +194,7 @@ e2_do_block (
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
 	wfs_errcode_t gerror = 0;
+	size_t fs_block_size;
 
 	if ( (wfs_fs == NULL) || (BLOCKNR == NULL) || (PRIVATE == NULL) )
 	{
@@ -206,12 +207,30 @@ e2_do_block (
 	{
 		return BLOCK_ABORT;
 	}
+	fs_block_size = wfs_e234_get_block_size (bd->wd.filesys);
+	if ( fs_block_size == 0 )
+	{
+		return BLOCK_ABORT;
+	}
 
 	/* for partial wiping: */
 	if ( (bd->ino != NULL) && (sig_recvd == 0) )
 	{
-		buf_start = (size_t)(bd->ino->i_size % wfs_e234_get_block_size (bd->wd.filesys));
+		buf_start = (size_t)(bd->ino->i_size % fs_block_size);
 		/* The beginning of the block must NOT be wiped, read it here. */
+		e2error = io_channel_read_blk (wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
+		if ( e2error != 0 )
+		{
+			if ( error_ret != NULL )
+			{
+				*error_ret = e2error;
+			}
+			return BLOCK_ABORT;
+		}
+	}
+	else if ( bd->wd.filesys.no_wipe_zero_blocks != 0 )
+	{
+		/* read the block to see if it's all-zeros */
 		e2error = io_channel_read_blk (wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 		if ( e2error != 0 )
 		{
@@ -242,8 +261,17 @@ e2_do_block (
 
 	for ( j = 0; (j < bd->wd.filesys.npasses) && (sig_recvd == 0); j++ )
 	{
+		if ( bd->wd.filesys.no_wipe_zero_blocks != 0 )
+		{
+			if ( wfs_is_block_zero (bd->wd.buf, fs_block_size) != 0 )
+			{
+				/* this block is all-zeros - don't wipe, as requested */
+				j = bd->wd.filesys.npasses * 2;
+				break;
+			}
+		}
 		fill_buffer (j, bd->wd.buf + buf_start /* buf OK */,
-			wfs_e234_get_block_size (bd->wd.filesys) - buf_start,
+			fs_block_size - buf_start,
 			selected, bd->wd.filesys);
 		if ( sig_recvd != 0 )
 		{
@@ -284,75 +312,30 @@ e2_do_block (
 	if ( (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* perform last wipe with zeros */
-#ifdef HAVE_MEMSET
-		memset (bd->wd.buf + buf_start, 0,
-			wfs_e234_get_block_size (bd->wd.filesys) - buf_start);
-#else
-		for ( j = 0; j < wfs_e234_get_block_size (bd->wd.filesys)
-			- buf_start; j++ )
-		{
-			bd->wd.buf[buf_start+j] = '\0';
-		}
-#endif
-		e2error = 0;
-		/* do NOT overwrite the first block of the journal */
-		if ( (((bd->wd.isjournal != 0) && (first_journ == 0))
-			|| (bd->wd.isjournal == 0))
-			&& (sig_recvd == 0) )
-		{
-			e2error = io_channel_write_blk (
-				wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
-		}
-		if ( (e2error != 0) )
-		{
-			/* check if block is marked as bad. If there is no 'badblocks' list
-			   or the block is marked OK, then print the error. */
-			if (wfs_fs->badblocks == NULL)
-			{
-				returns = BLOCK_ABORT;
-			}
-			else if (ext2fs_badblocks_list_test (
-				wfs_fs->badblocks, *BLOCKNR) == 0)
-			{
-				returns = BLOCK_ABORT;
-			}
-		}
-		/* Flush after each writing, if more than 1 overwriting needs to be done.
-		   Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
-		{
-			gerror = wfs_e234_flush_fs (bd->wd.filesys);
-		}
-	}
-	/* zero-out the journal after wiping */
-	if ( (bd->wd.isjournal != 0) && (sig_recvd == 0) )
-	{
-		/* skip the first block of the journal */
-		if ( first_journ != 0 )
-		{
-			first_journ--;
-		}
-		else
+		if ( j != bd->wd.filesys.npasses * 2 )
 		{
 #ifdef HAVE_MEMSET
 			memset (bd->wd.buf + buf_start, 0,
-				wfs_e234_get_block_size (bd->wd.filesys) - buf_start);
+				fs_block_size - buf_start);
 #else
-			for ( j = 0; j < wfs_e234_get_block_size (bd->wd.filesys)
-				- buf_start; j++ )
+			for ( j = 0; j < fs_block_size - buf_start; j++ )
 			{
 				bd->wd.buf[buf_start+j] = '\0';
 			}
 #endif
-			if ( sig_recvd != 0 )
+			e2error = 0;
+			/* do NOT overwrite the first block of the journal */
+			if ( (((bd->wd.isjournal != 0) && (first_journ == 0))
+				|| (bd->wd.isjournal == 0))
+				&& (sig_recvd == 0) )
 			{
-				returns = BLOCK_ABORT;
+				e2error = io_channel_write_blk (
+					wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 			}
-			e2error = io_channel_write_blk (wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 			if ( (e2error != 0) )
 			{
 				/* check if block is marked as bad. If there is no 'badblocks' list
-				   or the block is marked OK, then print the error. */
+				or the block is marked OK, then print the error. */
 				if (wfs_fs->badblocks == NULL)
 				{
 					returns = BLOCK_ABORT;
@@ -364,10 +347,72 @@ e2_do_block (
 				}
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			   Allow I/O bufferring (efficiency), if just one pass is needed. */
+			Allow I/O bufferring (efficiency), if just one pass is needed. */
 			if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
 			{
 				gerror = wfs_e234_flush_fs (bd->wd.filesys);
+			}
+		}
+	}
+
+	/* zero-out the journal after wiping */
+	if ( (bd->wd.isjournal != 0) && (sig_recvd == 0) )
+	{
+		/* skip the first block of the journal */
+		if ( first_journ != 0 )
+		{
+			first_journ--;
+		}
+		else
+		{
+			j = 1;
+			if ( bd->wd.filesys.no_wipe_zero_blocks != 0 )
+			{
+				if ( wfs_is_block_zero (bd->wd.buf,
+					fs_block_size) != 0 )
+				{
+					/* this block is all-zeros - don't wipe, as requested */
+					j = 0;
+				}
+			}
+			if ( j == 1 )
+			{
+#ifdef HAVE_MEMSET
+				memset (bd->wd.buf + buf_start, 0,
+					fs_block_size - buf_start);
+#else
+				for ( j = 0; j < fs_block_size
+					- buf_start; j++ )
+				{
+					bd->wd.buf[buf_start+j] = '\0';
+				}
+#endif
+				if ( sig_recvd != 0 )
+				{
+					returns = BLOCK_ABORT;
+				}
+				e2error = io_channel_write_blk (wfs_fs->io,
+					*BLOCKNR, 1, bd->wd.buf);
+				if ( (e2error != 0) )
+				{
+					/* check if block is marked as bad. If there is no 'badblocks' list
+					or the block is marked OK, then print the error. */
+					if (wfs_fs->badblocks == NULL)
+					{
+						returns = BLOCK_ABORT;
+					}
+					else if (ext2fs_badblocks_list_test (
+						wfs_fs->badblocks, *BLOCKNR) == 0)
+					{
+						returns = BLOCK_ABORT;
+					}
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( (bd->wd.filesys.npasses > 1) && (sig_recvd == 0) )
+				{
+					gerror = wfs_e234_flush_fs (bd->wd.filesys);
+				}
 			}
 		}
 		bd->curr_inode++;
@@ -658,6 +703,7 @@ wfs_e234_wipe_part (
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
 	wfs_errcode_t gerror = 0;
+	size_t fs_block_size;
 
 	e2fs = (ext2_filsys) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -677,11 +723,16 @@ wfs_e234_wipe_part (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_e234_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	block_data.wd.buf = (unsigned char *) malloc (
-		wfs_e234_get_block_size (wfs_fs));
+	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -762,7 +813,7 @@ wfs_e234_wipe_part (
 			}
 
 			/* check if there's unused space in any block */
-			if ( (ino.i_size % wfs_e234_get_block_size (wfs_fs)) == 0 )
+			if ( (ino.i_size % fs_block_size) == 0 )
 			{
 				continue;
 			}
@@ -861,6 +912,7 @@ wfs_e234_wipe_fs (
 	ext2_filsys e2fs;
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
+	size_t fs_block_size;
 
 	e2fs = (ext2_filsys) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -880,10 +932,16 @@ wfs_e234_wipe_fs (
 		}
 		return WFS_BADPARAM;
 	}
+	fs_block_size = wfs_e234_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	block_data.wd.buf = (unsigned char *) malloc (wfs_e234_get_block_size (wfs_fs));
+	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -981,6 +1039,7 @@ wfs_e234_wipe_journal (
 	ext2_filsys e2fs;
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
+	size_t fs_block_size;
 
 	e2fs = (ext2_filsys) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -1032,11 +1091,16 @@ wfs_e234_wipe_journal (
 		return ret_journ;
 	}
 
+	fs_block_size = wfs_e234_get_block_size (wfs_fs);
+	if ( fs_block_size == 0 )
+	{
+		return WFS_BADPARAM;
+	}
+
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
-	block_data.wd.buf = (unsigned char *) malloc (
-		wfs_e234_get_block_size (wfs_fs) );
+	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
@@ -1143,6 +1207,10 @@ wfs_e234_wipe_unrm (
 	}
 
 	wfs_show_progress (WFS_PROGRESS_UNRM, 50, &(bd.prev_percent));
+	if ( sig_recvd != 0 )
+	{
+		ret = WFS_SIGNAL;
+	}
 	if ( ret == WFS_SUCCESS )
 	{
 		ret = wfs_e234_wipe_journal (wfs_fs);
@@ -1570,4 +1638,3 @@ wfs_e234_show_error (
 #endif
 	fflush (stderr);
 }
-
