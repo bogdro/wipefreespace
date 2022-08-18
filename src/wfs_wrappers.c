@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wrapper functions.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -36,8 +36,8 @@
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 
-#ifdef WFS_EXT2
-# include "wfs_ext23.h"
+#ifdef WFS_EXT234
+# include "wfs_ext234.h"
 #endif
 
 #ifdef WFS_NTFS
@@ -56,6 +56,10 @@
 # include "wfs_reiser4.h"
 #endif
 
+#ifdef WFS_FATFS
+# include "wfs_fat.h"
+#endif
+
 /**
  * Starts recursive directory search for deleted inodes and undelete data.
  * \param FS The filesystem.
@@ -66,7 +70,7 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wipe_unrm (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -76,16 +80,16 @@ wipe_unrm (
 #endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
-#if (defined WFS_EXT2) || (defined WFS_REISER) \
+#if (defined WFS_EXT234) || (defined WFS_REISER) \
 	|| (defined WFS_NTFS) || (defined WFS_REISER4)
 	fselem_t elem;
 #endif
 
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
+#ifdef WFS_EXT234
 		elem.e2elem = EXT2_ROOT_INO;
-		ret_wfs = wfs_e2_wipe_unrm (FS, elem, error);
+		ret_wfs = wfs_e234_wipe_unrm (FS, elem, error);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -118,6 +122,12 @@ wipe_unrm (
 		ret_wfs = wfs_r4_wipe_unrm (FS, elem, error);
 #endif
 	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		ret_wfs = wfs_fat_wipe_unrm (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -140,7 +150,7 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wipe_fs (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -151,10 +161,10 @@ wipe_fs (
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
-		ret_wfs = wfs_e2_wipe_fs (FS, error);
+#ifdef WFS_EXT234
+		ret_wfs = wfs_e234_wipe_fs (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -181,6 +191,12 @@ wipe_fs (
 		ret_wfs = wfs_r4_wipe_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		ret_wfs = wfs_fat_wipe_fs (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -203,7 +219,7 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wipe_part (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -214,10 +230,10 @@ wipe_part (
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
-		ret_wfs = wfs_e2_wipe_part (FS, error);
+#ifdef WFS_EXT234
+		ret_wfs = wfs_e234_wipe_part (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -244,6 +260,12 @@ wipe_part (
 		ret_wfs = wfs_r4_wipe_part (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		ret_wfs = wfs_fat_wipe_part (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -267,7 +289,7 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_open_fs (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const which_fs,
 	const fsdata * const data, error_type * const error )
 #else
@@ -282,14 +304,21 @@ wfs_open_fs (
 	errcode_enum ret_wfs = WFS_OPENFS;
 	*which_fs = CURR_NONE;
 
-#ifdef WFS_EXT2
-	ret_wfs = wfs_e2_open_fs (dev_name, FS, which_fs, data, error);
+#ifdef WFS_EXT234
+	ret_wfs = wfs_e234_open_fs (dev_name, FS, which_fs, data, error);
 #endif
 #ifdef WFS_NTFS
 	if ( ret_wfs != WFS_SUCCESS )
 	{
 		error->errcode.gerror = WFS_SUCCESS;
 		ret_wfs = wfs_ntfs_open_fs (dev_name, FS, which_fs, data, error);
+	}
+#endif
+#ifdef WFS_REISER4
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		error->errcode.gerror = WFS_SUCCESS;
+		ret_wfs = wfs_r4_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
 #ifdef WFS_XFS
@@ -306,11 +335,13 @@ wfs_open_fs (
 		ret_wfs = wfs_reiser_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
-#ifdef WFS_REISER4
+/* FAT is probably the least specific in its header - the TFFS library can detect
+   XFS and ReiserFS3/4 as FAT, which is bad, so leave this on the last position: */
+#ifdef WFS_FATFS
 	if ( ret_wfs != WFS_SUCCESS )
 	{
 		error->errcode.gerror = WFS_SUCCESS;
-		ret_wfs = wfs_r4_open_fs (dev_name, FS, which_fs, data, error);
+		ret_wfs = wfs_fat_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
 
@@ -335,7 +366,7 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_chk_mount (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -345,8 +376,8 @@ wfs_chk_mount (
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
-#ifdef WFS_EXT2
-	ret_wfs = wfs_e2_chk_mount ( dev_name, error );
+#ifdef WFS_EXT234
+	ret_wfs = wfs_e234_chk_mount ( dev_name, error );
 	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
 #if (defined WFS_NTFS)
@@ -365,6 +396,10 @@ wfs_chk_mount (
 	ret_wfs = wfs_r4_chk_mount ( dev_name, error );
 	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
+#if (defined WFS_FATFS)
+	ret_wfs = wfs_fat_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
 	return ret_wfs;
 }
 
@@ -378,7 +413,7 @@ errcode_enum WFS_ATTR ((nonnull))
 wfs_close_fs (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -389,10 +424,10 @@ wfs_close_fs (
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
-		ret_wfs = wfs_e2_close_fs (FS, error);
+#ifdef WFS_EXT234
+		ret_wfs = wfs_e234_close_fs (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -419,6 +454,12 @@ wfs_close_fs (
 		ret_wfs = wfs_r4_close_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		ret_wfs = wfs_fat_close_fs (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -442,27 +483,27 @@ int WFS_ATTR ((warn_unused_result))
 wfs_check_err (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
-#ifndef WFS_XFS
+# ifndef WFS_XFS
 		WFS_ATTR((unused))
-#endif
+# endif
 	 )
 #else
 	FS, which_fs, error
-#ifndef WFS_XFS
+# ifndef WFS_XFS
 		WFS_ATTR((unused))
-#endif
+# endif
 	 )
 	wfs_fsid_t FS;
 	const CURR_FS which_fs;
 	error_type * const error;
 #endif
 {
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
-		return wfs_e2_check_err (FS);
+#ifdef WFS_EXT234
+		return wfs_e234_check_err (FS);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -489,6 +530,12 @@ wfs_check_err (
 		return wfs_r4_check_err (FS);
 #endif
 	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		return wfs_fat_check_err (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -503,27 +550,27 @@ int WFS_ATTR ((warn_unused_result))
 wfs_is_dirty (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
-#ifndef WFS_XFS
+# ifndef WFS_XFS
 		WFS_ATTR((unused))
-#endif
+# endif
 	 )
 #else
 	FS, which_fs, error
-#ifndef WFS_XFS
+# ifndef WFS_XFS
 		WFS_ATTR((unused))
-#endif
+# endif
 	 )
 	wfs_fsid_t FS;
 	const CURR_FS which_fs;
 	error_type * const error;
 #endif
 {
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
-		return wfs_e2_is_dirty (FS);
+#ifdef WFS_EXT234
+		return wfs_e234_is_dirty (FS);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -550,6 +597,12 @@ wfs_is_dirty (
 		return wfs_r4_is_dirty (FS);
 #endif
 	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		return wfs_fat_is_dirty (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -564,7 +617,7 @@ errcode_enum WFS_ATTR ((nonnull))
 wfs_flush_fs (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
 #else
 	FS, which_fs, error )
@@ -574,10 +627,10 @@ wfs_flush_fs (
 #endif
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
-	if ( which_fs == CURR_EXT2FS )
+	if ( which_fs == CURR_EXT234FS )
 	{
-#ifdef WFS_EXT2
-		ret_wfs = wfs_e2_flush_fs (FS, error);
+#ifdef WFS_EXT234
+		ret_wfs = wfs_e234_flush_fs (FS, error);
 #endif
 	}
 	else if ( which_fs == CURR_NTFS )
@@ -602,6 +655,12 @@ wfs_flush_fs (
 	{
 #ifdef WFS_REISER4
 		ret_wfs = wfs_r4_flush_fs (FS);
+#endif
+	}
+	else if ( which_fs == CURR_FATFS )
+	{
+#ifdef WFS_FATFS
+		ret_wfs = wfs_fat_flush_fs (FS, error);
 #endif
 	}
 

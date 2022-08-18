@@ -1,17 +1,78 @@
 Wipefreespace - a program for secure cleaning of free space on filesystems.
 
 Requirements for compiling the full version:
+
 - a non-root account. Please, NEVER compile or 'make' anything as root.
-- a working C compiler
+
+- a working C compiler. XFS, ReiserFS, Reiser4 and NTFS support require the
+  'long long' data type. NTFS support may require the gcc compiler.
+
 - development package for the C library (like glibc-devel and glibc-headers)
-- development package for the ext2 file system library, libext2fs (usually
-  included in something like e2fsprogs-devel). If you don't have anything
-  like this installed or available (check twice), then go to
-  	http://e2fsprogs.sf.net/
-  Then compile and install that package.
+  XFS support requires the following headers: unistd.h, fcntl.h, mntent.h
+  (but sys/wait.h, sched.h and paths.h can be useful, too) and the following
+  functions: fork(), execvp(), dup2(), close(), pipe(), kill() and
+  waitpid() or wait() (sleep() can be useful, too).
+
 - the 'make' program
 
-Type './configure' to configure the program for your system.
+- Ext2/3/4: development package for the ext2 file system library, libext2fs
+  (usually included in something like e2fsprogs-devel). If you don't have
+  anything like this installed or available (check twice), then go to
+  	http://e2fsprogs.sf.net/
+  Then compile and install that package. Ext4 support requires new versions,
+  like 1.41.
+
+- NTFS: development package for the NTFS file system library, libntfs (usually
+  included in something like ntfsprogs-devel). If you don't have anything
+  like this installed or available (check twice), then go to
+  	http://www.linux-ntfs.org/
+  Then compile and install that package.
+
+- XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
+  Get these at http://oss.sgi.com/projects/xfs/
+
+- ReiserFSv3: development package for reiserfsprogs (header files and
+  compiled static libraries from the package). ReiserFS requires either the
+  fork() function (unistd.h) and one of the waitpid(), wait() functions
+  (sys/wait.h), the mntent.h header file (with at least one of its functions
+  - getmntent() or getmntent_r()).
+
+- Reiser4: development package for reiser4progs, libuuid (e2fsprogs or
+  e2fsprogs-libs), libaal and the mntent.h header file. Go to
+  	http://www.kernel.org/pub/linux/utils/fs/reiser4/
+  and
+  	http://e2fsprogs.sf.net/
+  to get the libraries. After installing, libmisc.a needs to be copied
+  in the same place as libreiser4.a, but under a different name,
+  libreiser4misc.a:
+
+  cp reiser4progs-XX/libmisc/.libs/libmisc.a /dst/path/libreiser4misc.a
+
+  Libmisc.a is in reiser4progs, of course. Nobody thought it would be
+  needed, but libreiser4.a is useless without it.
+
+- FAT12/16/32: tffs-lib, the Tiny FAT FS library. Go to
+	http://code.google.com/p/tffs-lib/
+  to get the library. After compiling, install the library and ALL its
+  header files (including the private ones, from the src directory).
+
+WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
+ refuse to link if the compiler doesn't support the command line option
+ "-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
+ definitions. If you have this problem, disable the support for either
+ of these filesystems (you can compile two versions of the program).
+ Don't complain to me, complain to the guys that made reiserfsprogs and
+ reiser4progs. You can fix either of these libraries yourself, by running
+	find . -type f -exec sed -i 's/misc_mntent/new_misc_mntent/g' '{}' \;
+ in the root directory of either reiserfsprogs or reiser4progs (but
+ NOT both, because this would bring back the same problem, but with a
+ different name). Type the command as above. The command must be run
+ BEFORE compiling the reiserfs programs.
+
+Type './configure' to configure the program for your system.  If you do not
+wish support for a filesystem, give the '--enable-FS=no' option to ./configure
+(FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT). Run './configure --help'
+for details.
 
 Type 'make' to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program
@@ -19,6 +80,9 @@ Documentation will be compiled, if you have the 'makeinfo' program
 Translations will be compiled, if you have the 'gettext' package.
 
 Type 'make install' to install the program.
+
+Type 'info wipefreespace' (or 'info doc/wipefreespace.info' befor install)
+ to get help.
 
 =======================================================
 

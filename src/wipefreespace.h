@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -48,7 +48,7 @@
 # undef		NPAT
 # undef		PASSES
 
-# ifdef	LSR_WANT_RANDOM
+# ifdef	WFS_WANT_RANDOM
 	/* shred-like method: 22 patterns and 3 random passes */
 #  define NPAT 22
 #  define PASSES (NPAT+3)
@@ -94,11 +94,12 @@ typedef enum errcode_enum errcode_enum;
 enum CURR_FS
 {
 	CURR_NONE	= 0,
-	CURR_EXT2FS,
+	CURR_EXT234FS,
 	CURR_NTFS,
 	CURR_XFS,
 	CURR_REISERFS,
-	CURR_REISER4
+	CURR_REISER4,
+	CURR_FATFS
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -117,29 +118,36 @@ typedef long off64_t;
 #  endif
 # endif
 
-# ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-# elif defined HAVE_SYS_STAT_H
+# if defined HAVE_SYS_STAT_H
 #  include <sys/stat.h>
 # elif (!defined HAVE_DEV_T) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
-#  error No dev_t
+/* can't proceed with ext2/3/4 without the 'dev_t' type */
+#  undef HAVE_EXT2FS_EXT2FS_H
+#  undef HAVE_EXT2FS_H
+#  undef HAVE_LIBEXT2FS
 # endif
+
+/* ================ Beginning of filesystem includes ================ */
 
 /* fix e2fsprogs inline functions - some linkers saw double definitions and
    failed with an error message */
 # if (defined HAVE_LIBEXT2FS) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
-#  define _EXT2_USE_C_VERSIONS_	1
-#  define NO_INLINE_FUNCS	1
+#  ifndef _EXT2_USE_C_VERSIONS_
+#   define _EXT2_USE_C_VERSIONS_	1
+#  endif
+#  ifndef NO_INLINE_FUNCS
+#   define NO_INLINE_FUNCS	1
+#  endif
 # endif
 
-# if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS)
+# if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS) && (defined HAVE_DEV_T)
 #  include <ext2fs/ext2fs.h>
-#  define	WFS_EXT2	1
-# elif (defined HAVE_EXT2FS_H) && (defined HAVE_LIBEXT2FS)
+#  define	WFS_EXT234	1
+# elif (defined HAVE_EXT2FS_H) && (defined HAVE_LIBEXT2FS) && (defined HAVE_DEV_T)
 #  include <ext2fs.h>
-#  define	WFS_EXT2	1
+#  define	WFS_EXT234	1
 # else
-#  undef	WFS_EXT2
+#  undef	WFS_EXT234
 # endif
 
 # if (defined HAVE_NTFS_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
@@ -167,18 +175,15 @@ typedef long off64_t;
 	   || (defined HAVE_WAIT)				\
 	   || (defined HAVE_KILL)				\
 	)
-
 #  define	WFS_XFS		1
 # else
 #  undef	WFS_XFS
 # endif
 
 # if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)	\
-	&& (defined HAVE_UNISTD_H) && (defined HAVE_FORK)	\
-	&& (							\
-	      (defined HAVE_WAITPID)				\
-	   || (defined HAVE_WAIT)				\
-	)
+	&& (defined HAVE_FORK) && (defined HAVE_UNISTD_H)	\
+	&& ((defined HAVE_WAITPID) || (defined HAVE_WAIT))
+
 #  ifdef HAVE_ASM_TYPES_H
 #   include <asm/types.h>
 #  else
@@ -186,23 +191,53 @@ typedef unsigned int __u32;
 typedef unsigned short int __u16;
 #  endif
 
+/* Avoid some Reiser3 header files' name conflicts:
+ reiserfs_lib.h uses the same name for a function and a variable,
+ so let's redefine one to avoid name conflicts */
+#  define div reiser_div
+#  define index reiser_index
+#  define key_format(x) key_format0 (x)
 #  include <reiserfs_lib.h>
+#  undef div
+#  undef index
+#  undef key_format
 #  define	WFS_REISER	1
 # else
 #  undef	WFS_REISER
 # endif
 
-/* fix conflict between libext2fs and reiser4. This gets #undef'd in the source files. */
-# define blk_t reiser4_blk_t
-
 # if (defined HAVE_REISER4_LIBREISER4_H) && (defined HAVE_LIBREISER4)	\
 	&& (defined HAVE_LIBREISER4MISC) && (defined HAVE_LIBAAL)
+#  undef get_unaligned
+#  undef put_unaligned
+/* Avoid some Reiser4 header files' name conflicts: */
+#  define div reiser4_div
+#  define index reiser4_index
+
+/* fix conflict between libext2fs and reiser4. This gets #undef'd in the source files. */
+#  define blk_t reiser4_blk_t
+/* we're not using these headers, so let's pretend they're already included,
+ to avoid warnings caused by them. */
+#  define AAL_EXCEPTION_H 1
+#  define AAL_DEBUG_H 1
+
 #  include <reiser4/libreiser4.h>
 #  define	WFS_REISER4	1
 # else
 #  undef	WFS_REISER4
 # endif
 
+# undef div
+# undef index
+
+# if (defined HAVE_TFFS_H) && (defined HAVE_LIBTFFS)
+#  include <tffs.h>
+#  define	WFS_FATFS	1
+# else
+#  undef	WFS_FATFS
+# endif
+
+/* ================ End of filesystem includes ================ */
 
 # ifdef HAVE_GETTEXT
 #  ifndef _
@@ -229,7 +264,7 @@ struct error_type
 	union errcode {
 		/* general error, if more specific type unavailable */
 		errcode_enum	gerror;
-# ifdef 	WFS_EXT2
+# ifdef 	WFS_EXT234
 		errcode_t	e2error;
 # endif
 # ifdef		WFS_REISER4
@@ -244,9 +279,10 @@ typedef struct error_type error_type;
 
 struct wfs_fsid_t
 {
-	const char * fsname;
+	const char * fsname;	/* filesystem name, for informational purposes */
+	int zero_pass;	/* whether to perform an additional wiping with zeros on this filesystem */
 
-# ifdef 	WFS_EXT2
+# ifdef 	WFS_EXT234
 	ext2_filsys	e2fs;
 # endif
 # ifdef		WFS_NTFS
@@ -260,6 +296,8 @@ struct wfs_fsid_t
 		unsigned long long int wfs_xfs_agblocks;
 		char * dev_name;
 		char * mnt_point;
+		unsigned long long int inodes_used;
+		unsigned long long int free_blocks;
 	} xxfs;
 # endif
 # ifdef		WFS_REISER
@@ -268,25 +306,30 @@ struct wfs_fsid_t
 # ifdef		WFS_REISER4
 	reiser4_fs_t * r4;
 # endif
+# ifdef		WFS_FATFS
+	tffs_handle_t fat;
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
-
-
 };
 
 typedef struct wfs_fsid_t wfs_fsid_t;
 
+/* Additional data that may be useful when wiping a filesystem, for functions that
+   have a strict interface that disallows passing these elements separately. */
 struct wipedata
 {
-	unsigned long int	passno;
-	wfs_fsid_t		filesys;
+	unsigned long int	passno;		/* current pass' number */
+	wfs_fsid_t		filesys;	/* filesystem being wiped */
+	int			total_fs;	/* total number of filesystems, for ioctl() */
+	int			ret_val;	/* return value, for threads */
 };
 
 typedef struct wipedata wipedata;
 
 union fselem_t
 {
-# ifdef 	WFS_EXT2
+# ifdef 	WFS_EXT234
 	ext2_ino_t	e2elem;
 # endif
 # ifdef		WFS_NTFS
@@ -301,19 +344,24 @@ union fselem_t
 # ifdef		WFS_REISER4
 	reiser4_node_t * r4node;
 # endif
+# ifdef		WFS_FATFS
+	tdir_handle_t fatdir;
+# endif
 
 	/* TODO: to be expanded, when other FS come into the program */
 
 
 
 
-# if (!defined WFS_EXT2) && (!defined WFS_NTFS) && (!defined WFS_REISER) && (!defined WFS_REISER4)
+# if (!defined WFS_EXT234) && (!defined WFS_NTFS) && (!defined WFS_REISER) \
+	&& (!defined WFS_REISER4) && (!defined WFS_FATFS)
 	char dummy;	/* Make this union non-empty */
 # endif
 };
 
 typedef union fselem_t fselem_t;
 
+/* Additional data that may be useful when opening a filesystem */
 union fsdata
 {
 	struct wipe_e2data
@@ -335,7 +383,7 @@ typedef union fsdata fsdata;
 # undef PARAMS
 # if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 #  define PARAMS(protos) protos
 # else
 #  define PARAMS(protos) ()
@@ -352,6 +400,13 @@ extern void WFS_ATTR ((nonnull))
 extern void WFS_ATTR ((nonnull))
 	fill_buffer PARAMS((unsigned long int pat_no, unsigned char * const buffer,
 		const size_t buflen, int * const selected, const wfs_fsid_t FS ));
+
+# define PROGRESS_WFS	0
+# define PROGRESS_PART	1
+# define PROGRESS_UNRM	2
+extern WFS_ATTR ((nonnull)) void
+	show_progress PARAMS((const unsigned int type, const unsigned int percent,
+		unsigned int * const prev_percent));
 
 extern unsigned long int npasses;
 

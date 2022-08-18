@@ -1,3 +1,57 @@
+2009-04-25	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.1
+	  Renamed wfs_ext23.* to wfs_ext234.*. Better closing routines for
+	  some filesystems. FAT12/16/32 support. Using binary opening mode, if
+	  available. New command-line options: '--last-zero' causes an
+	  additional wiping with zeros to be performed, '--all-zeros' causes
+	  the program to use only zero bits for wiping. Added progress bars
+	  visible in verbose mode.
+	* wipefreespace.c (main): displaying libraries' version numbers along
+	  with the program's version number, fixed error checking after strtoul
+	  in command line parsing. No longer relying on getopt_long(). Now
+	  forking before calling the wiping function.
+	* Makefile.am: fixed making the package.
+	* docs, help: updated the number of passes, added '--last-zero' and
+	  '--all-zeros'.
+	* wipefreespace.1: added thanks, added '--last-zero' and '--all-zeros'
+	* wipefreespace.texi.in: removed the "indicateurl" tag, for better
+	  compatibility with OpenBSD's makeinfo, added '--last-zero' and
+	  '--all-zeros'.
+	* INSTALL, wipefreespace.spec, README: update
+	* wipefreespace.h: Missing type 'dev_t' disables ext2/3/4 instead of
+	  making an error. Removed some of the warnings caused by ReiserFS3/4
+	  include files.
+	* configure.ac: The 'dev_t' type now required for ext2/3/4. Added -O2
+	  to detected compiler flags. The getopt.h header and getopt_long()
+	  function are no longer required.
+	* wfs_signal.c: better checking for defined signals, defining the
+	  signal variables unconditionally.
+	* wfs_signal.c (child_signal_received): fixed checking return type.
+	* wfs_signal.c (wfs_set_sigh): Fixed SIGCHLD in wrong places, fixed
+	  too many arguments for one signal() call.
+	* wipefreespace.c: added including sys/ioctl.h.
+	* wfs_reiser4.c: better initializing some return-code variables.
+	* wfs_cfg.h.in: Defining __attribute__(x) and __attribute(x) to empty
+	  values if we're not using GCC (some headers use these constructs).
+	  Added some missing entries.
+	* wfs_fat.{c,h}: FAT12/16/32 support.
+	* wfs_xfs.c: better maintenance of command arguments for the future.
+	  Fixed problems with select() calls which could cause the program to
+	  wait forever for data. Moved child process management to wfs_util.c.
+	  Re-sending the commands to xfs_db processes if reading data timeouts.
+	* wfs_xfs.c (wfs_xfs_open_fs): checking the filesystem's signature
+	  first, because xfs_db eats many resources and can eventually crash
+	  if the filesystem isn't XFS.
+	* wfs_ntfs.c (wfs_ntfs_wipe_unrm): Wiping the journal fixed and now
+	  wiping it even if wiping undelete data would not occur.
+	* wfs_ext234.c (wfs_e234_wipe_unrm): Wiping the journal even if wiping
+	  undelete data would not occur.
+	* wfs_reiser4.c (wfs_r4_wipe_unrm): initializing tree root if NULL
+	* wfs_util.{c,h}: added new functions for creating a child process
+	  that executes a single command, waiting for child processes and
+	  checking if a child process has already exited.
+
 2008-09-28	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.0
@@ -99,7 +153,7 @@
 
 	* Wipefreespace version 0.8
 	  Big portability corrections. The program now compiles on OpenBSD.
-	  Added ReiserFSv3+.
+	  Added ReiserFSv3.
 	* wfs_xfs.c: using exit() in child processes. If waitpid() and wait()
 	  not available, using SIGCHLD to wait for child processes (if
 	  signals are enabled) and the old sleep+kill method (if signals
@@ -113,7 +167,7 @@
 	* wfs_ext23.{c,h}: new names for ext23.{c,h}.
 	* wfs_ext23.c (e2_do_block): Better badblock list checking.
 	* wfs_xfs.c (wfs_xfs_get_mnt_point): Slightly better portability.
-	* wfs_reiser.{c,h}: ReiserFSv3+ support. Docs updated with this info.
+	* wfs_reiser.{c,h}: ReiserFSv3 support. Docs updated with this info.
 	* wrappers.c (wfs_open_fs): corrected NTFS part which had EXT2/3
 	  elements.
 

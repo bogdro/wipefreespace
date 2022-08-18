@@ -12,8 +12,8 @@ wipefreespace \- Secure cleaning of free space on filesystems.
 
 .SH DESCRIPTION
 The wipefreespace program securely cleans the free space and undelete data
-on the given ext2/3, NTFS, XFS, ReiserFSv3+ and ReiserFSv4 file systems. Write permissions
-are required for the devices
+on the given ext2/3/4, NTFS, XFS, ReiserFSv3/4 and FAT12/16/32 file systems.
+Write permissions are required for the devices
 (or regular files containing the file system), but the program
 .B MUST NOT
 be setuid(root).
@@ -24,8 +24,10 @@ WipeFreeSpace also works for file systems created inside regular files on any ho
 .SH OPTIONS
 Any option affects all filesystems given on the command line, not just the ones following it.
 
+.IP "--all-zeros"
+Use only zeros for wiping.
 .IP "--background"
-Continue work in the background, if possible. If succeded, no messages will be displayed.
+Continue work in the background, if possible. This disables verose mode.
 .IP "-b|--superblock OFFSET"
 Superblock offset on the given filesystems
 .IP "-B|--blocksize SIZE"
@@ -34,10 +36,12 @@ Block size on the given filesystems
 Wipe even if the file system has errors
 .IP -h|--help
 Print help
+.IP "--last-zero"
+Perform additional wiping with zeros
 .IP -l|--license
 Print license information
 .IP "-n|--iterations NNN"
-Number of passes (>0, default: 25)
+Number of passes (>0, default: 35 in Gutmann method, 25 in random)
 .IP --nopart
 Do NOT wipe free space in partially used blocks.
 .IP --nounrm
@@ -47,7 +51,8 @@ Do NOT wipe free space on file system
 .IP --use-ioctl
 Disable device caching during work (can be DANGEROUS)
 .IP -v|--verbose
-Verbose output
+Verbose output. Use twice for more. This also enables progress bars, but be warned: these may
+not always be accurate or increase at a constant rate.
 .IP -V|--version
 Print version number
 
@@ -104,7 +109,7 @@ Bad parameter was passed to one of the functions.
 .IP \-21:
 Pipe error (mostly XFS).
 .IP \-22:
-Fork error (XFS or ReiserFSv3+).
+Fork error (XFS or ReiserFSv3).
 .IP \-23:
 Exec error (XFS).
 .IP \-24:
@@ -133,6 +138,20 @@ bogdro /AT/ rudy . mif . pg . gda . pl
 [EN] http://rudy.mif.pg.gda.pl/~bogdro/inne/
 
 [PL] http://rudy.mif.pg.gda.pl/~bogdro/
+
+.SH THANKS
+Theodore Ts'o, for the great ext2fs library and e2fsprogs.
+
+The linux-ntfs team for their research on NTFS and a great programming library.
+
+Colin Plumb, for the great 'shred' program, parts of which are used here.
+
+Patrick R. McDonald 'marlowe' (www.antagonism.org) - for bug reports, testing and promoting wipefreespace.
+
+Mark Lord (mlord@pobox.com) for the gread hdparm utility.
+
+knightray@gmail.com for The Tiny FAT FS library (on LGPL).
+
 
 .SH "SEE ALSO"
 .BR shred (1),

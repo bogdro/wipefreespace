@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -59,18 +59,67 @@
 # endif
 #endif
 
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>	/* access(), close(), dup2(), fork(), sync(), STDIN_FILENO,
+			   STDOUT_FILENO, STDERR_FILENO, select () (the old way) */
+#endif
+
 #ifdef HAVE_ERRNO_H
 # include <errno.h>
+#endif
+#ifndef ECHILD
+# define ECHILD 10
+#endif
+
+#ifdef HAVE_STDLIB_H
+# include <stdlib.h>	/* exit() */
+#endif
+
+#ifdef HAVE_SYS_WAIT_H
+# include <sys/wait.h>
+#else
+# ifdef HAVE_WAIT_H
+#  include <wait.h>
+# endif
+#endif
+#ifndef WEXITSTATUS
+# define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
+#endif
+#ifndef WIFEXITED
+# define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
+#endif
+#ifndef WIFSIGNALED
+# define WIFSIGNALED(status) (((signed char) (((status) & 0x7f) + 1) >> 1) > 0)
+#endif
+
+#ifdef HAVE_SCHED_H
+# include <sched.h>
 #endif
 
 #include "wipefreespace.h"
 #include "wfs_util.h"
 
+#ifndef EXIT_FAILURE
+# define EXIT_FAILURE (1)
+#endif
+
 #ifndef MNTOPT_RW
 # define MNTOPT_RW	"rw"
 #endif
-#define MNTBUFLEN 4096
 
+#ifndef STDIN_FILENO
+# define STDIN_FILENO	0
+#endif
+
+#ifndef STDOUT_FILENO
+# define STDOUT_FILENO	1
+#endif
+
+#ifndef STDERR_FILENO
+# define STDERR_FILENO	2
+#endif
+
+#define WFS_MNTBUFLEN 4096
 
 /**
  * Gets the mount point of the given device (if mounted).
@@ -85,22 +134,23 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_get_mnt_point (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const char * const dev_name
 # if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
 	WFS_ATTR ((unused))
 # endif
 	, error_type * const error,
-	char * const mnt_point, int * const is_rw )
+	char * const mnt_point, const size_t mnt_point_len, int * const is_rw )
 #else
 	dev_name
 # if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
 	WFS_ATTR ((unused))
 # endif
-	, error, mnt_point, is_rw )
+	, error, mnt_point, mnt_point_len, is_rw )
 	const char * const dev_name;
 	error_type * const error;
 	char * const mnt_point;
+	const size_t mnt_point_len;
 	int * const is_rw;
 #endif
 {
@@ -108,7 +158,7 @@ wfs_get_mnt_point (
 	FILE *mnt_f;
 	struct mntent *mnt, mnt_copy;
 # ifdef HAVE_GETMNTENT_R
-	char buffer[MNTBUFLEN];
+	char buffer[WFS_MNTBUFLEN];
 # endif
 #endif
 /*
@@ -116,7 +166,7 @@ wfs_get_mnt_point (
 		return WFS_BADPARAM;
 */
 	*is_rw = 1;
-	strcpy (mnt_point, "");
+	strncpy (mnt_point, "\0", 1);
 
 #if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
 # ifdef HAVE_ERRNO_H
@@ -139,7 +189,7 @@ wfs_get_mnt_point (
 		mnt = getmntent (mnt_f);
 		memcpy ( &mnt_copy, mnt, sizeof (struct mntent) );
 # else
-		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, MNTBUFLEN);
+		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, WFS_MNTBUFLEN);
 # endif
 		if ( mnt == NULL ) break;
 		if ( strcmp (dev_name, mnt->mnt_fsname) == 0 ) break;
@@ -161,17 +211,17 @@ wfs_get_mnt_point (
 	{
 		error->errcode.gerror = 1L;
 		*is_rw = 1;
-		strcpy (mnt_point, mnt->mnt_dir);
+		strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
 		return WFS_MNTRW;
 	}
 # else
 	error->errcode.gerror = 1L;
 	*is_rw = 1;
-	strcpy (mnt_point, mnt->mnt_dir);
+	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
 	return WFS_MNTRW;	/* can't check for r/w, so don't do anything */
 # endif
 	*is_rw = 0;
-	strcpy (mnt_point, mnt->mnt_dir);
+	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
 	return WFS_SUCCESS;
 #else	/* ! HAVE_MNTENT_H */
 	error->errcode.gerror = 1L;
@@ -190,7 +240,7 @@ errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 wfs_check_mounted (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const char * const dev_name, error_type * const error )
 #else
 	dev_name, error )
@@ -200,14 +250,14 @@ wfs_check_mounted (
 {
 	errcode_enum res;
 	int is_rw;
-	char buffer[MNTBUFLEN];
+	char buffer[WFS_MNTBUFLEN];
 
 	if ( error == NULL )
 	{
 		return WFS_BADPARAM;
 	}
 
-	res = wfs_get_mnt_point (dev_name, error, buffer, &is_rw);
+	res = wfs_get_mnt_point (dev_name, error, buffer, sizeof (buffer), &is_rw);
 	if ( res != WFS_SUCCESS )
 	{
 		return res;
@@ -223,4 +273,223 @@ wfs_check_mounted (
 	{
 		return WFS_SUCCESS;
 	}
+}
+
+/*
+ * The child function called after successful creating a child process.
+ */
+static void *
+child_function (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined (WIN32) || defined (__cplusplus)
+	void * p)
+#else
+	p)
+	void * p;
+#endif
+{
+#if (defined HAVE_EXECVP) && (defined HAVE_CLOSE) && (defined HAVE_DUP2) && (defined HAVE_EXECVP)
+	const struct child_id * const id = (struct child_id *) p;
+	int res;
+	if ( p != NULL )
+	{
+		close (STDIN_FILENO);
+		close (STDOUT_FILENO);
+		close (STDERR_FILENO);
+# ifdef HAVE_ERRNO_H
+		errno = 0;
+# endif
+		if ( id->stdin_fd != -1 )
+		{
+			res = dup2 (id->stdin_fd, STDIN_FILENO);
+			if ( (res != STDIN_FILENO)
+# ifdef HAVE_ERRNO_H
+/*				|| (errno != 0)*/
+# endif
+				)
+			{
+				/* error redirecting stdin */
+				if ( id->type == CHILD_FORK ) exit (EXIT_FAILURE);
+			}
+		}
+		if ( id->stdout_fd != -1 )
+		{
+			res = dup2 (id->stdout_fd, STDOUT_FILENO);
+			if ( (res != STDOUT_FILENO)
+# ifdef HAVE_ERRNO_H
+/*				|| (errno != 0)*/
+# endif
+				)
+			{
+				/* error redirecting stdout */
+				if ( id->type == CHILD_FORK ) exit (EXIT_FAILURE);
+			}
+		}
+		if ( id->stderr_fd != -1 )
+		{
+			res = dup2 (id->stderr_fd, STDERR_FILENO);
+			if ( (res != STDERR_FILENO)
+# ifdef HAVE_ERRNO_H
+/*				|| (errno != 0)*/
+# endif
+				)
+			{
+				/* error redirecting stderr */
+				if ( id->type == CHILD_FORK ) exit (EXIT_FAILURE);
+			}
+		}
+		execvp ( id->program_name, id->args );
+	}
+#endif /* HAVE_EXECVP */
+	/* if we got here, exec() failed or is unavailable and there's nothing to do. */
+	/* NOTE: exit() is needed or the parent will wait forever */
+	exit (EXIT_FAILURE);
+	/* Die or wait for getting killed *
+# if (defined HAVE_GETPID) && (defined HAVE_KILL)
+	kill (getpid (), SIGKILL);
+# endif
+	while (1==1)
+	{
+# ifdef HAVE_SCHED_YIELD
+		sched_yield ();
+# elif (defined HAVE_SLEEP)
+		sleep (5);
+# endif
+	}
+	*return WFS_EXECERR;*/
+}
+
+/**
+ * Launches a child process that runs the given program with the given arguments,
+ * redirecting its input, output and error output to the given file descriptors.
+ * \param id A structure describing the child process to create and containing its data after creation.
+ * \return WFS_SUCCESS on success, other values otherwise.
+ */
+errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+wfs_create_child (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined (WIN32) || defined (__cplusplus)
+	struct child_id * const id)
+#else
+	id )
+	struct child_id * const id;
+#endif
+{
+	if ( id == NULL ) return WFS_BADPARAM;
+
+#ifdef HAVE_FORK
+	id->chld_id.chld_pid = fork ();
+	if ( id->chld_id.chld_pid < 0 ) return WFS_FORKERR;
+	else if ( id->chld_id.chld_pid == 0 )
+	{
+		child_function (id);
+		/* Not all compilers may detect that child_function() will never return, so
+		   return here just in case. */
+		return WFS_SUCCESS;
+	}
+	else
+	{
+		/* parent */
+		id->type = CHILD_FORK;
+		return WFS_SUCCESS;
+	}
+#endif
+	/* PThreads shouldn't be used, because an exit() in a thread causes the whole
+	program to be closed. Besides, there is no portable way to check if a thread
+	is still working / has finished (another thread can't be used, because exec*()
+	kills all threads). */
+}
+
+/**
+ * Waits for the specified child process to finish working.
+ * \param id A structure describing the child process to wait for.
+ */
+void WFS_ATTR ((nonnull))
+wfs_wait_for_child (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined (WIN32) || defined (__cplusplus)
+	const struct child_id * const id)
+#else
+	id )
+	const struct child_id * const id;
+#endif
+{
+	if ( id == NULL ) return;
+	if ( id->type == CHILD_FORK )
+	{
+#ifdef HAVE_WAITPID
+		waitpid (id->chld_id.chld_pid, NULL, 0);
+#else
+# if defined HAVE_WAIT
+		wait (NULL);
+# else
+#  if (defined HAVE_SIGNAL_H)
+		while (sigchld_recvd == 0)
+		{
+#   ifdef HAVE_SCHED_YIELD
+			sched_yield ();
+#   elif (defined HAVE_SLEEP)
+			sleep (1);
+#   endif
+		}
+		sigchld_recvd = 0;
+#  else
+#   ifdef HAVE_SLEEP
+		sleep (5);
+#   else
+		for ( i=0; i < (1<<30); i++ );
+#   endif
+		kill (id->chld_id.chld_pid, SIGKILL);
+#  endif	/* HAVE_SIGNAL_H */
+# endif
+#endif
+	}
+}
+
+/**
+ * Tells if the specified child process finished working.
+ * \param id A structure describing the child process to check.
+ */
+int WFS_ATTR ((nonnull))
+wfs_has_child_exited (
+#if defined (__STDC__) || defined (_AIX) \
+	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
+	|| defined (WIN32) || defined (__cplusplus)
+	const struct child_id * const id)
+#else
+	id )
+	const struct child_id * const id;
+#endif
+{
+#ifdef HAVE_WAITPID
+	int status;
+	int ret;
+#endif
+	if ( id == NULL ) return 0;
+	if ( id->type == CHILD_FORK )
+	{
+#ifdef HAVE_WAITPID
+		ret = waitpid (id->chld_id.chld_pid, &status, WNOHANG);
+		if ( ret > 0 )
+		{
+# ifdef WIFEXITED
+			if ( WIFEXITED (status) ) return 1;
+# endif
+# ifdef WIFSIGNALED
+			if ( WIFSIGNALED (status) ) return 1;
+# endif
+		}
+		else if ( ret < 0 )
+		{
+# ifdef HAVE_ERRNO_H
+			/* No child processes? Then the child must have exited already. */
+			if ( errno == ECHILD ) return 1;
+# endif
+		}
+#endif
+	}
+	return 0;
 }

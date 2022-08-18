@@ -57,7 +57,7 @@ This manual is for wipefreespace, version @VERSION@
 @chapter What is wipefreespace?
 
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
-ReiserFSv3+ and ReiserFSv4 partitions.
+ReiserFSv3, ReiserFSv4, FAT12, FAT16 and FAT32 partitions.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
@@ -107,7 +107,7 @@ device/file permissions. This is MUCH safer.
 Requirements for compiling the full version of the program:@*
 @itemize
 @item a non-root account. Please, @strong{NEVER} compile or 'make' anything as root.
-@item a working C compiler (with the 'long long' data type for XFS, NTFS, ReiserFSv3+
+@item a working C compiler (with the 'long long' data type for XFS, NTFS, ReiserFSv3
 	and Reiser4 support)
 @item development package for the C library (like glibc-devel and glibc-headers).
 @*@*
@@ -135,10 +135,9 @@ and the following functions:@*@*
 @item sleep() (not required, acutally, but a good thing to have)
 @end itemize
 @*
-ReiserFSv3+ support requires the following headers:@*@*
+ReiserFSv3 support requires the following headers:@*@*
 @itemize
-@item unistd.h
-@item wait.h or sys/wait.h
+@item unistd.h with wait.h or sys/wait.h
 @item mntent.h (with at least one of its functions - getmntent() or getmntent_r())
 @end itemize
 @*
@@ -164,29 +163,29 @@ You'll also need at least one of the following filesystem packages:
 @item Ext2/3/4: development package for the ext2 file system library, libext2fs (usually
 included in something like e2fsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
-   	@indicateurl{http://e2fsprogs.sf.net/}@*
+   	http://e2fsprogs.sf.net/@*
 Then compile and install that package. Ext4 support requires new versions, like 1.41.
 
 @item NTFS: development package for the NTFS file system library, libntfs (usually
 included in something like ntfsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
-   	@indicateurl{http://www.linux-ntfs.org/}@*
+   	http://www.linux-ntfs.org/@*
 Then compile and install that package.
 
 @item XFS: xfsprogs installed and in your PATH variable (devel package unusable, so
 not required). Can be downloaded from@*
-	@indicateurl{http://oss.sgi.com/projects/xfs/}@*@*
+	http://oss.sgi.com/projects/xfs/@*@*
 Compile and install that package.
 
-@item ReiserFSv3+: development package for the ReiserFSv3+ file system library (usually
+@item ReiserFSv3: development package for the ReiserFSv3 file system library (usually
 included in something like reiserfsprogs-devel. If not available, copy the
 headers and the library from reiserfsprogs after compiling them).
 
 @item Reiser4: development package for reiser4progs, libuuid (e2fsprogs or
 e2fsprogs-libs) and libaal. Go to@*
-  	@indicateurl{http://www.kernel.org/pub/linux/utils/fs/reiser4/}@*@*
+  	http://www.kernel.org/pub/linux/utils/fs/reiser4/@*@*
 and@*
-  	@indicateurl{http://e2fsprogs.sf.net/}@*@*
+  	http://e2fsprogs.sf.net/@*@*
 to get the libraries. After installing, libmisc.a needs to
 be copied in the same place as libreiser4.a, but under a different name -
 libreiser4misc.a:
@@ -196,12 +195,19 @@ libreiser4misc.a:
 Libmisc.a is in reiser4progs, of course. Nobody thought it would be
 needed, but libreiser4.a is useless without it. Substitute the correct destination
 path for your system in the above command.
+
+@item FAT12/16/32: tffs-lib, the Tiny FAT FS library. Go to@*
+	http://code.google.com/p/tffs-lib/@*
+to get the library. After compiling, install the library and ALL its
+header files (including the private ones, from the src directory).
+
 @end itemize
 
-@strong{WARNING}: If both ReiserFSv3+ and ReiserFSv4 are enabled, the program may
+@strong{WARNING}: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
 refuse to link if the compiler doesn't support the command line option
-"-Wl,-z -Wl,muldefs" that make the linker accept multiple references. If
-you have this problem, disable the support for either of these filesystems.
+"-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol definitions. If
+you have this problem, disable the support for either of these filesystems
+(you can compile two versions of the program).
 Don't complain to me, complain to the guys that made reiserfsprogs and
 reiser4progs.@*
 You can fix either of these libraries yourself, by running
@@ -214,7 +220,7 @@ different name). Type the command as above, just without the leading and trailin
 apostrophes. The command must be run @strong{BEFORE} compiling the reiserfs programs.
 
 Type './configure' to configure the program for your system. If you do not
-with support for a filesystem, give the @option{--enable-FS=no} to ./configure
+with support for a filesystem, give the @option{--enable-FS=no} option to ./configure
 (FS=EXT234, NTFS, XFS, REISERFS, REISER4). Run @command{./configure --help} for details.
 
 Type 'make' to compile the program.
@@ -292,6 +298,13 @@ by more than 1 object)
 @item wiping the journal
 @end itemize
 
+@item FAT12/16/32 (using the library from tffs-lib):
+@itemize
+@item wiping the free space
+@item wiping space in partially used blocks
+@item wiping deleted files' names
+@end itemize
+
 @end enumerate
 
 @c ==================================================================
@@ -331,7 +344,8 @@ Basic syntax is:
 The '/dev/XY' part stands for a device with a supported file system. Examples: /dev/hda1, /dev/fd0.
 More than one device can be given on the command line, but they will be wiped sequentially,
 @strong{NOT} in multiple threads. WipeFreeSpace is not multi-threaded and probably won't be,
-because the libraries used can be not thread-safe.
+because the libraries used can be not thread-safe and the program can't tell if a library will
+be used until it's used.
 
 Each given filesystem is wiped @strong{ONLY ONCE}, no matter how many times
 it appears on the command line.
@@ -346,9 +360,14 @@ no guarantee that it will be fully wiped.
 
 Options:
 
+@noindent @option{--all-zeros}@*
+@quotation
+Use only zeros for wiping.
+@end quotation
+
 @noindent @option{--background}@*
 @quotation
-Continue work in the background, if possible. If succeded, no messages will be displayed.
+Continue work in the background, if possible. This disables verose mode.
 @end quotation
 
 @noindent @option{-b superblock_offset}@*@option{--superblock superblock_offset}@*
@@ -371,6 +390,11 @@ Forces the program to do its job even when the file system has errors.
 Print help and exit.
 @end quotation
 
+@noindent @option{--last-zero}@*
+@quotation
+Perform additional wiping with zeros
+@end quotation
+
 @noindent @option{-l}@*@option{--license}@*@option{--licence}@*
 @quotation
 Print license information and exit.
@@ -378,8 +402,8 @@ Print license information and exit.
 
 @noindent @option{-n NNN}@*@option{--iterations NNN}@*
 @quotation
-Number of passes (must be greater than 0, default is 25). This is also the number of
-patterns (including random) used to wipe the free space.
+Number of passes (must be greater than 0, default is 35 in Gutmann method, 25 in random).
+This is also the number of patterns (including random) used to wipe the free space.
 @end quotation
 
 @noindent @option{--nopart}@*
@@ -405,7 +429,9 @@ the fcntl.h header file and the ioctl() function to be present.
 
 @noindent @option{-v}@*@option{--verbose}@*
 @quotation
-Enables verbose output. The program will tell what it's doing.
+Enables verbose output. The program will tell what it's doing. Use twice for more.
+This also enables progress bars, but be warned: these may not always be accurate or
+increase at a constant rate.
 @end quotation
 
 @noindent @option{-V}@*@option{--version}@*
@@ -482,12 +508,11 @@ but the previous weren't, their errors are currently lost.
 @chapter Signals
 
 The program will terminate normally (that is: will flush and close the file system and
-release memory) if any of the following signals are caught: SIGINT (Ctrl+C), SIGQUIT, SIGILL,
+release memory) if any of the following signals (if available during compiling)
+are caught: SIGINT (Ctrl+C), SIGQUIT, SIGILL,
 SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGTTIN,
 SIGTTOU, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGXCPU, SIGXFSZ, SIGPWR, SIGVTALRM,
-SIGUNUSED.
-The program will close cleanly also upon receiving the SIGEMT and SIGLOST signals, if they're
-available (during compiling).
+SIGUNUSED, SIGEMT, SIGLOST.
 
 The SIGCHLD (required for XFS support) signal is caught, but ignored.
 
@@ -523,11 +548,11 @@ bogdro (at) rudy . mif . pg . gda . pl
 
 
 or look at my website:@*
-[EN] @indicateurl{http://wipefreespace.sf.net}@*
-[PL] @indicateurl{http://wipefreespace.sf.net/index-pl.php}@*
-[EN] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/soft/}@*
-[EN] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/inne/}@*
-[PL] @indicateurl{http://rudy.mif.pg.gda.pl/~bogdro/}@*
+[EN] http://wipefreespace.sf.net@*
+[PL] http://wipefreespace.sf.net/index-pl.php@*
+[EN] http://rudy.mif.pg.gda.pl/~bogdro/soft/@*
+[EN] http://rudy.mif.pg.gda.pl/~bogdro/inne/@*
+[PL] http://rudy.mif.pg.gda.pl/~bogdro/@*
 
 
 @c ==================================================================
@@ -543,9 +568,10 @@ or look at my website:@*
 The 'shred' utility is:@*
 	Copyright (C) 1999-2006 Free Software Foundation, Inc.@*
 	Copyright (C) 1997, 1998, 1999 Colin Plumb.
-@item Patrick R. McDonald 'marlowe' (@indicateurl{www.antagonism.org}) - for
+@item Patrick R. McDonald 'marlowe' (www.antagonism.org) - for
 bug reports, testing and promoting wipefreespace.
 @item Mark Lord (mlord@@pobox.com) for the gread hdparm utility.
+@item knightray@@gmail.com for The Tiny FAT FS library (on LGPL).
 
 @end enumerate
 
@@ -1436,7 +1462,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2009 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*

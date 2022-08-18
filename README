@@ -44,11 +44,11 @@ Requirements for compiling the full version:
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/
 
-- ReiserFSv3+:development package for reiserfsprogs (header files and
-  compiled static libraries from the package). ReiserFS requires the
-  fork() function (unistd.h), the mntent.h header file (with at least one of
-  its functions - getmntent() or getmntent_r()) and one of the
-  waitpid(), wait() functions (sys/wait.h).
+- ReiserFSv3: development package for reiserfsprogs (header files and
+  compiled static libraries from the package). ReiserFS requires either the
+  fork() function (unistd.h) and one of the waitpid(), wait() functions
+  (sys/wait.h), the mntent.h header file (with at least one of its functions
+  - getmntent() or getmntent_r()).
 
 - Reiser4: development package for reiser4progs, libuuid (e2fsprogs or
   e2fsprogs-libs), libaal and the mntent.h header file. Go to
@@ -64,23 +64,28 @@ Requirements for compiling the full version:
   Libmisc.a is in reiser4progs, of course. Nobody thought it would be
   needed, but libreiser4.a is useless without it.
 
-WARNING: If both ReiserFSv3+ and ReiserFSv4 are enabled, the program may
+- FAT12/16/32: tffs-lib, the Tiny FAT FS library. Go to
+	http://code.google.com/p/tffs-lib/
+  to get the library. After compiling, install the library and ALL its
+  header files (including the private ones, from the src directory).
+
+WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
  refuse to link if the compiler doesn't support the command line option
- "-Wl,-z -Wl,muldefs" that make the linker accept multiple references. If
- you have this problem, disable the support for either of these filesystems.
+ "-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
+ definitions. If you have this problem, disable the support for either
+ of these filesystems (you can compile two versions of the program).
  Don't complain to me, complain to the guys that made reiserfsprogs and
- reiser4progs.
- You can fix either of these libraries yourself, by running
+ reiser4progs. You can fix either of these libraries yourself, by running
 	find . -type f -exec sed -i 's/misc_mntent/new_misc_mntent/g' '{}' \;
  in the root directory of either reiserfsprogs or reiser4progs (but
  NOT both, because this would bring back the same problem, but with a
- different name). Type the command as above, just without the leading
- and trailing apostrophes. The command must be run BEFORE compiling
- the reiserfs programs.
+ different name). Type the command as above. The command must be run
+ BEFORE compiling the reiserfs programs.
 
 Type './configure' to configure the program for your system.  If you do not
-wish support for a filesystem, give the '--enable-FS=no' to ./configure
-(FS=EXT234, NTFS, XFS, REISERFS, REISER4). Run './configure --help' for details.
+wish support for a filesystem, give the '--enable-FS=no' option to ./configure
+(FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT). Run './configure --help'
+for details.
 
 Type 'make' to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program
@@ -97,18 +102,24 @@ Syntax:
 
 Command line options:
 
---background		Continue work in the background, if possible
+--all-zeros		Use only zeros for wiping
+--background		Continue work in the background, if possible. This
+			disables verose mode.
 -b|--superblock <off>	Superblock offset on the given filesystems
 -B|--blocksize <size>	Block size on the given filesystems
 -f|--force		Wipe even if the file system has errors
 -h|--help		Print help
+--last-zero		Perform additional wiping with zeros
 -l|--license		Print license information
--n|--iterations NNN	Number of passes (>0, default: 25)
+-n|--iterations NNN	Number of passes (>0, default: 35 in Gutmann method,
+				25 in random)
 --nopart		Do NOT wipe free space in partially used blocks
 --nounrm		Do NOT wipe undelete information
 --nowfs			Do NOT wipe free space on file system
 --use-ioctl		Disable device caching during work (can be DANGEROUS)
--v|--verbose		Verbose output
+-v|--verbose		Verbose output. Use twice for more. This also enables
+			progress bars, but be warned: these may not always be
+			accurate or increase at a constant rate.
 -V|--version		Print version number
 
 The '/dev/XY' part stands for a device with a supported file system.
@@ -141,15 +152,15 @@ Translating the docs to your language:
  Type `msginit -i wipefreespace.pot -o XX.po', substituting your
 2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the
 'gettext' package installed. You can manually copy the file
-e2wipefreespace.pot to XX.po and manually add the following header, if
+wipefreespace.pot to XX.po and manually add the following header, if
 you wish.
  In the resulting XX.po file you have to fill in all the fields
 marked with capital letters in the header:
 
 # YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007 Bogdan 'bogdro' Drozdowski
+# Copyright (C) 2007-2009 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as
-# the e2wipefreespace package.
+# the wipefreespace package.
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.
 #
 msgid ""

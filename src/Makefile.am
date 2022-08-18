@@ -9,7 +9,7 @@ INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
 EXTRA_DIST = wfs_cfg.h.in
 
 if EXT234FS
-wipefreespace_SOURCES += wfs_ext23.h wfs_ext23.c
+wipefreespace_SOURCES += wfs_ext234.h wfs_ext234.c
 endif
 
 if NTFS
@@ -26,5 +26,9 @@ endif
 
 if REISER4
 wipefreespace_SOURCES += wfs_reiser4.h wfs_reiser4.c
+endif
+
+if FATFS
+wipefreespace_SOURCES += wfs_fat.h wfs_fat.c
 endif
 

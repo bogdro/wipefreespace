@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- security-related procedures.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,6 @@
  */
 
 #include "wfs_cfg.h"
-#include "wipefreespace.h"
 
 #include <stdio.h>	/* stdout & stderr */
 
@@ -44,6 +43,8 @@
 # include <unistd.h>	/* get(e)uid(), environ */
 #endif
 
+#include "wipefreespace.h"
+
 #ifdef HAVE_SYS_CAPABILITY_H
 # include <sys/capability.h>	/* not before ext2fs.h or wipefreespace.h */
 #endif
@@ -58,7 +59,7 @@ int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result))
 wfs_clear_cap (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	error_type * const error)
 #else
 	error)
@@ -178,7 +179,7 @@ void WFS_ATTR ((nonnull))
 wfs_check_stds (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	int *stdout_open, int *stderr_open)
 #else
 	stdout_open, stderr_open)
@@ -250,7 +251,7 @@ errcode_enum WFS_ATTR ((warn_unused_result))
 wfs_check_suid (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	void)
 #else
 	)
@@ -275,7 +276,7 @@ void
 wfs_clear_env (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	void)
 #else
 	)

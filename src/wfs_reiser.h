@@ -1,8 +1,8 @@
 /*
  * A program for secure cleaning of free space on filesystems.
- *	-- ReiserFS file system-specific functions, header file.
+ *	-- ReiserFSv3 file system-specific functions, header file.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or

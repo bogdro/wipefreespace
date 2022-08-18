@@ -104,6 +104,8 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 EXT234FS_FALSE = @EXT234FS_FALSE@
 EXT234FS_TRUE = @EXT234FS_TRUE@
+FATFS_FALSE = @FATFS_FALSE@
+FATFS_TRUE = @FATFS_TRUE@
 GMSGFMT = @GMSGFMT@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -625,12 +627,18 @@ uninstall-info: uninstall-info-recursive
 	uninstall-info-am
 
 
-pack:
-	echo '\input texinfo'			 > doc/wipefreespace.texi
-	echo '@setfilename wipefreespace.info'	>> doc/wipefreespace.texi
-	echo '@settitle wipefreespace manual'	>> doc/wipefreespace.texi
-	echo '@bye'				>> doc/wipefreespace.texi
+pack:	doc/wipefreespace.info
 	make dist-gzip
+	mkdir -p wipefreespace-@VERSION@/doc
+	echo '\input texinfo'			 > wipefreespace-@VERSION@/doc/wipefreespace.texi
+	echo '@setfilename wipefreespace.info'	>> wipefreespace-@VERSION@/doc/wipefreespace.texi
+	echo '@settitle wipefreespace manual'	>> wipefreespace-@VERSION@/doc/wipefreespace.texi
+	echo '@bye'				>> wipefreespace-@VERSION@/doc/wipefreespace.texi
+	gunzip -f wipefreespace-@VERSION@.tar.gz
+	tar --delete -f wipefreespace-@VERSION@.tar wipefreespace-@VERSION@/doc/wipefreespace.texi
+	tar -rf wipefreespace-@VERSION@.tar wipefreespace-@VERSION@/doc/wipefreespace.texi
+	gzip -9 -f wipefreespace-@VERSION@.tar
+	rm -fr wipefreespace-@VERSION@
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.0, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.1, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -38,7 +38,7 @@ AC_ARG_ENABLE(XFS,[[  --enable-XFS		XFS support (default=yes).]],
 	]
 	,feat_xfs=yes)
 
-AC_ARG_ENABLE(REISERFS,[[  --enable-REISERFS	ReiserFSv3+ support (default=yes).]],
+AC_ARG_ENABLE(REISERFS,[[  --enable-REISERFS	ReiserFSv3 support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
 		feat_reiser=no
 	 else
@@ -56,7 +56,16 @@ AC_ARG_ENABLE(REISER4,[[  --enable-REISER4	ReiserFSv4 support (default=yes).]],
 	]
 	,feat_reiser4=yes)
 
-AC_ARG_ENABLE(LSR_WANT_RANDOM,[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
+AC_ARG_ENABLE(FAT,[[  --enable-FAT	FAT12/16/32 support (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_fatfs=no
+	 else
+		feat_fatfs=yes
+	 fi
+	]
+	,feat_fatfs=yes)
+
+AC_ARG_ENABLE(WFS_WANT_RANDOM,[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
 	[if (test "x$enableval" = "xyes"); then
 		want_rand=yes
 	 else
@@ -66,7 +75,7 @@ AC_ARG_ENABLE(LSR_WANT_RANDOM,[[  --enable-random-method	Random pattern method (
 	,want_rand=no)
 
 if (test "x$want_rand" = "xyes"); then
-	AC_DEFINE(LSR_WANT_RANDOM, [1], [If shred-like wiping method was chosen instead of full Gutmann method.])
+	AC_DEFINE(WFS_WANT_RANDOM, [1], [If shred-like wiping method was chosen instead of full Gutmann method.])
 fi
 
 # ==================== Set of available languages (deprecated).
@@ -81,11 +90,11 @@ AM_CONDITIONAL(ISGCC, [test "x$GCC" = "xyes"])
 # OpenBSD needs libssl and libcrypto for libcom_err, which is part of
 #	krb5-devel in that world. Autoconf cache makes the second test
 #	(with the libraries) negative, so this is disabled.
-#AC_CHECK_LIB(com_err,com_err,,
+#AC_CHECK_LIB([com_err],[com_err],,
 #
-#	AC_CHECK_LIB(ssl,ssl_cert_new,,, -lcrypto)
-#	AC_CHECK_LIB(crypto,RAND_add,,, -lssl)
-#	AC_CHECK_LIB(com_err,com_err,,,-lssl -lcrypto)
+#	AC_CHECK_LIB([ssl],[ssl_cert_new],,, [-lcrypto])
+#	AC_CHECK_LIB([crypto],[RAND_add],,, [-lssl])
+#	AC_CHECK_LIB([com_err],[com_err],,,[-lssl -lcrypto])
 #)
 
 libcomm=yes
@@ -107,8 +116,6 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 	libntfs=yes
 	AC_CHECK_LIB([ntfs],[ntfs_pwrite],,[libntfs=no])
 fi
-
-#AC_CHECK_LIB(pthread,pthread_create)
 
 libuuid=no
 if ( test "x$feat_reiser" = "xyes" || test "x$feat_reiser4" = "xyes" ); then
@@ -148,12 +155,15 @@ if ( test "x$feat_reiser4" = "xyes" ); then
 	fi
 fi
 
+libtffs=no
+if ( test "x$feat_fatfs" = "xyes" ); then
+
+	libtffs=yes
+	AC_CHECK_LIB([tffs],[TFFS_mount],,[libtffs=no])
+fi
+
 # ==================== Checks for header files.
 AC_HEADER_STDC
-
-AC_CHECK_HEADER([getopt.h],AC_DEFINE([HAVE_GETOPT_H],[1],[Whether you have the getopt.h header.]),
-	[AC_MSG_ERROR([[I need getopt.h to work.]])]
-	)
 
 AC_CHECK_HEADERS([sys/time.h time.h sys/stat.h])
 AC_HEADER_TIME()
@@ -190,7 +200,7 @@ if ( test "x$feat_ext234" = "xyes" ); then
 			AC_DEFINE([HAVE_EXT2FS_EXT2FS_H],[1],[Whether you have the ext2fs/ext2fs.h header.]),
 			[AC_CHECK_HEADER([ext2fs.h],
 				AC_DEFINE([HAVE_EXT2FS_H],[1],[Whether you have the ext2fs.h header.]),
-				has_ext234_h=no)]
+				[has_ext234_h=no])]
 			)
 	fi
 fi
@@ -203,6 +213,15 @@ fi
 have_ll=yes
 AC_CHECK_TYPE([long long],AC_DEFINE([HAVE_LONG_LONG],[1],[Whether you have the long long type.]),
 	[have_ll=no])
+
+have_dev_t=yes
+AC_CHECK_TYPE([dev_t],AC_DEFINE([HAVE_DEV_T],[1],[Whether you have the dev_t type.]),
+	[have_dev_t=no],
+	[[
+	#ifdef HAVE_SYS_TYPES_H
+	#include <sys/types.h>
+	#endif
+	]])
 
 if ( test "x$feat_xfs" = "xyes" ); then
 
@@ -231,7 +250,7 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 					[AC_CHECK_HEADER([volume.h],
 						AC_DEFINE([HAVE_VOLUME_H],[1],
 							[Whether you have the volume.h header.]),
-						has_ntfs_h=no,
+						[has_ntfs_h=no],
 					[[#ifdef HAVE_STDARG_H
 			  		  # include <stdarg.h>
 					  #endif
@@ -288,6 +307,19 @@ if ( test "x$feat_reiser4" = "xyes" ); then
 	fi
 fi
 
+has_tffs_h=no
+if ( test "x$feat_fatfs" = "xyes" ); then
+
+	if ( test "x$libtffs" = "xyes" ); then
+
+		has_tffs_h=yes
+		AC_CHECK_HEADER([tffs.h],
+			AC_DEFINE([HAVE_TFFS_H],[1],
+				[Whether you have the tffs.h header.]),
+			[has_tffs_h=no])
+	fi
+fi
+
 wfs_have_reiser4=no
 if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	&& test "x$libreiser4"		= "xyes"	\
@@ -297,18 +329,23 @@ if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	wfs_have_reiser4=yes
 fi
 
-AM_CONDITIONAL(REISER4, [test "x$wfs_have_reiser4" = "xyes"] )
-
-
 AM_CONDITIONAL(EXT234FS, \
 	[  test "x$has_ext234_h" = "xyes"	\
 	&& test "x$libext234"	= "xyes"	\
-	&& test "x$feat_ext234"	= "xyes"] )
+	&& test "x$feat_ext234"	= "xyes"	\
+	&& test "x$have_dev_t"	= "xyes"] )
 
 AM_CONDITIONAL(NTFS, \
 	[  test "x$has_ntfs_h"	= "xyes"	\
 	&& test "x$libntfs"	= "xyes"	\
 	&& test "x$feat_ntfs"	= "xyes"] )
+
+AM_CONDITIONAL(REISER4, [test "x$wfs_have_reiser4" = "xyes"] )
+
+AM_CONDITIONAL(FATFS, \
+	[  test "x$has_tffs_h"	= "xyes"	\
+	&& test "x$libtffs"	= "xyes"	\
+	&& test "x$feat_fatfs"	= "xyes"] )
 
 has_com_h=yes
 AC_CHECK_HEADER([et/com_err.h],
@@ -322,9 +359,9 @@ AM_CONDITIONAL(COMERR, \
 	[  test "x$has_com_h"	= "xyes"	\
 	&& test "x$libcomm"	= "xyes"])
 
-AC_CHECK_HEADERS([locale.h stdlib.h string.h errno.h signal.h malloc.h \
+AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h malloc.h \
 	libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
-	sys/sysmacros.h sys/mkdev.h hdreg.h linux/hdreg.h])
+	sys/sysmacros.h sys/mkdev.h hdreg.h linux/hdreg.h sys/ioctl.h])
 
 if ( test "x$feat_xfs" = "xyes" ); then
 
@@ -352,21 +389,21 @@ AM_CONDITIONAL(SYSCAP, \
 	&& test "x$libcap"	= "xyes"] )
 
 AC_CHECK_DECLS([environ],,,
-	[
+	[[
 	#ifndef _GNU_SOURCE
 	# define _GNU_SOURCE	1
 	#endif
 	#ifdef HAVE_UNISTD_H
 	# include <unistd.h>
 	#endif
-	])
+	]])
 
 AC_CHECK_DECLS([__environ],,,
-	[
+	[[
 	#ifdef HAVE_UNISTD_H
 	# include <unistd.h>
 	#endif
-	])
+	]])
 
 # ===================== Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -374,26 +411,26 @@ AC_TYPE_SIZE_T
 AC_C_VOLATILE
 AC_CHECK_TYPES([size_t, ssize_t])
 AC_CHECK_TYPES([off64_t],,,
-	[
+	[[
 	#define _FILE_OFFSET_BITS 64
 	#define _LARGEFILE64_SOURCE
 	#ifdef HAVE_SYS_TYPES_H
 	# include <sys/types.h>
 	#endif
-	])
+	]])
 AC_CHECK_TYPES([sig_atomic_t],,,
-	[
+	[[
 	#ifdef HAVE_SIGNAL_H
 	# include <signal.h>
 	#endif
-	])
+	]])
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_TYPE_SIGNAL
 
 AC_CHECK_FUNCS([memset memcpy setlocale strtoul random srandom clearenv \
-	getuid geteuid snprintf daemon sigaction access sleep getpid \
+	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
 	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl])
 
 has_execvp=no
@@ -409,12 +446,6 @@ if ( test "x$feat_xfs" = "xyes" ); then
 		AC_DEFINE([HAVE_KILL],[1],[Whether you have the kill function.]),
 		[has_kill=no])
 fi
-
-has_getopt=yes
-AC_CHECK_FUNC([getopt_long],
-	AC_DEFINE([HAVE_GETOPT_LONG],[1],[Whether you have the getopt_long function.]),
-	[has_getopt=no
-	AC_MSG_ERROR([[I need the getopt_long() function.]])])
 
 has_malloc=yes
 AC_CHECK_FUNC([malloc],
@@ -451,6 +482,10 @@ AC_CHECK_FUNC([waitpid],
 	AC_DEFINE([HAVE_WAITPID],[1],[Whether you have the waitpid function.]),
 	[has_waitpid=no])
 
+has_exit=yes
+AC_CHECK_FUNC([exit],
+	AC_DEFINE([HAVE_EXIT],[1],[Whether you have the exit function.]),
+	[has_exit=no])
 
 
 if (test "x$has_malloc" != "xyes"); then
@@ -501,7 +536,8 @@ if  (  test "x$has_ext234_h"		!= "xyes"	\
     && test "x$has_ntfs_h"		!= "xyes"	\
     && test "x$wfs_have_xfs"		!= "xyes"	\
     && test "x$has_reiser_h"		!= "xyes"	\
-    && test "x$has_libreiser4_h"	!= "xyes"
+    && test "x$has_libreiser4_h"	!= "xyes"	\
+    && test "x$has_tffs_h"		!= "xyes"
     ); then
 	AC_MSG_ERROR([[I need at least one of the filesystem headers with its required data types (if any).]])
 fi
@@ -545,6 +581,7 @@ if (test "x$GCC" = "xyes" ); then
 	AX_C_CHECK_FLAG([-Winit-self], [CFLAGS="$CFLAGS -Winit-self"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-Wlogical-op], [CFLAGS="$CFLAGS -Wlogical-op"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-fstack-protector-all], [CFLAGS="$CFLAGS -fstack-protector-all"], [CFLAGS="$CFLAGS"])
+	AX_C_CHECK_FLAG([-O2], [CFLAGS="$CFLAGS -O2"], [CFLAGS="$CFLAGS"])
 
 	if (test "x$have_ll" = "xyes"); then
 
@@ -553,7 +590,7 @@ if (test "x$GCC" = "xyes" ); then
 	fi
 fi
 
-# Required if both ReiserFSv3+ and REiserFSv4 are enabled, because the same symbols
+# Required if both ReiserFSv3 and REiserFSv4 are enabled, because the same symbols
 # appear in multiple places.
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes"); then
 
@@ -578,6 +615,8 @@ else
 		echo " *	Ext2/3/4: no (disabled by command line)"
 	elif (test "x$libext234" != "xyes"); then
 		echo " *	Ext2/3/4: no (library missing or unusable)"
+	elif (test "x$have_dev_t" != "xyes"); then
+		echo " *	Ext2/3/4: no (dev_t type missing)"
 	else
 		echo " *	Ext2/3/4: no (headers missing)"
 	fi
@@ -643,30 +682,33 @@ if (	   test "x$have_ll"		= "xyes"	\
 	&& test "x$has_reiser_h"	= "xyes"	\
 	&& test "x$libcore"		= "xyes"); then
 
-	echo " *	ReiserFS: yes"
+	echo " *	ReiserFSv3: yes"
 else
 	if (test "x$feat_reiser" != "xyes"); then
-		echo " *	ReiserFS: no (disabled by command line)"
+		echo " *	ReiserFSv3: no (disabled by command line)"
 
 	elif (test "x$have_ll" != "xyes"); then
-		echo " *	ReiserFS: no (long long type missing)"
+		echo " *	ReiserFSv3: no (long long type missing)"
 
 	elif ( test "x$has_reiser_h"  != "xyes" ); then
-		echo " *	ReiserFS: no (reiserfs_lib.h header missing)"
+		echo " *	ReiserFSv3: no (reiserfs_lib.h header missing)"
 
 	elif (test "x$has_uni_h" != "xyes"); then
-		echo " *	ReiserFS: no (unistd.h missing)"
+		echo " *	ReiserFSv3: no (unistd.h missing)"
 
 	elif (test "x$has_sys_wait_h" != "xyes"); then
-		echo " *	ReiserFS: no (wait.h & sys/wait.h missing)"
+		echo " *	ReiserFSv3: no (wait.h & sys/wait.h missing)"
+
+	elif (test "x$has_exit" != "xyes"); then
+		echo " *	ReiserFSv3: no (exit() missing)"
 
 	elif (test "x$has_fork" != "xyes"); then
-		echo " *	ReiserFS: no (fork() missing)"
+		echo " *	ReiserFSv3: no (fork() missing)"
 
 	elif (test "x$libcore" != "xyes"); then
-		echo " *	ReiserFS: no (library missing or unusable)"
+		echo " *	ReiserFSv3: no (library missing or unusable)"
 	else
-		echo " *	ReiserFS: no (waitpid() and wait() missing)"
+		echo " *	ReiserFSv3: no (waitpid() and wait() missing)"
 	fi
 fi
 
@@ -688,6 +730,23 @@ else
 
 	else	#if (test "x$libreiser4" != "xyes"); then
 		echo " *	Reiser4: no (library missing or unusable)"
+	fi
+fi
+
+if (	   test "x$has_tffs_h"		= "xyes"	\
+	&& test "x$libtffs"		= "xyes"	\
+	&& test "x$feat_fatfs"		= "xyes"); then
+
+	echo " *	FAT12/16/32: yes"
+else
+	if (test "x$feat_fatfs" != "xyes"); then
+		echo " *	FAT12/16/32: no (disabled by command line)"
+
+	elif ( test "x$has_tffs_h"  != "xyes" ); then
+		echo " *	FAT12/16/32: no (tffs.h header missing)"
+
+	else	#if (test "x$libtffs" != "xyes"); then
+		echo " *	FAT12/16/32: no (library missing or unusable)"
 	fi
 fi
 

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -54,6 +54,10 @@
 #include "wipefreespace.h"
 #include "wfs_signal.h"
 
+/* These have to be public and always defined: */
+volatile sig_atomic_t sig_recvd = 0;		/* non-zero after signal received */
+volatile sig_atomic_t sigchld_recvd = 0;	/* non-zero after SIGCHLD signal received */
+
 #ifdef HAVE_SIGNAL_H
 # if (defined HAVE_SIGACTION) && (!defined __STRICT_ANSI__)
 static struct sigaction sa/* = { .sa_handler = &term_signal_received }*/;
@@ -61,9 +65,67 @@ static struct sigaction sa/* = { .sa_handler = &term_signal_received }*/;
 /* Handled signals which will cause the program to exit cleanly. */
 static const int signals[] =
 {
-	SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGPIPE,
-	SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGTTIN, SIGTTOU, SIGBUS, SIGPROF,
-	SIGSYS, SIGTRAP, SIGXCPU, SIGXFSZ, SIGVTALRM
+	SIGINT
+# ifdef SIGQUIT
+	, SIGQUIT
+# endif
+# ifdef SIGILL
+	, SIGILL
+# endif
+# ifdef SIGABRT
+	, SIGABRT
+# endif
+# ifdef SIGFPE
+	, SIGFPE
+# endif
+# ifdef SIGSEGV
+	, SIGSEGV
+# endif
+# ifdef SIGPIPE
+	, SIGPIPE
+# endif
+# ifdef SIGALRM
+	, SIGALRM
+# endif
+# ifdef SIGTERM
+	, SIGTERM
+# endif
+# ifdef SIGUSR1
+	, SIGUSR1
+# endif
+# ifdef SIGUSR2
+	, SIGUSR2
+# endif
+# ifdef SIGTTIN
+	, SIGTTIN
+# endif
+# ifdef SIGTTOU
+	, SIGTTOU
+# endif
+# ifdef SIGBUS
+	, SIGBUS
+# endif
+# ifdef SIGPROF
+	, SIGPROF
+# endif
+# ifdef SIGSYS
+	, SIGSYS
+# endif
+# ifdef SIGTRAP
+	, SIGTRAP
+# endif
+# ifdef SIGXCPU
+	, SIGXCPU
+# endif
+# ifdef SIGXFSZ
+	, SIGXFSZ
+# endif
+# ifdef SIGVTALRM
+	, SIGVTALRM
+# endif
+# ifdef SIGCHLD
+	, SIGCHLD
+# endif
 # ifdef SIGPOLL
 	, SIGPOLL
 # endif
@@ -73,19 +135,16 @@ static const int signals[] =
 # ifdef SIGUNUSED
 	, SIGUNUSED
 # endif
-# if defined SIGEMT
+# ifdef SIGEMT
 	, SIGEMT
 # endif
-# if defined SIGLOST
+# ifdef SIGLOST
 	, SIGLOST
 # endif
-# if defined SIGIO
+# ifdef SIGIO
 	, SIGIO
 # endif
 };
-
-volatile sig_atomic_t sig_recvd = 0;		/* non-zero after signal received */
-volatile sig_atomic_t sigchld_recvd = 0;	/* non-zero after SIGCHLD signal received */
 
 # ifndef RETSIGTYPE
 #  define RETSIGTYPE void
@@ -97,14 +156,14 @@ volatile sig_atomic_t sigchld_recvd = 0;	/* non-zero after SIGCHLD signal receiv
  */
 static RETSIGTYPE
 term_signal_received (
-#if defined (__STDC__) || defined (_AIX) \
+# if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const int signum)
-#else
+# else
 	signum)
 	const int signum;
-#endif
+# endif
 {
 	sig_recvd = signum;
 # define void 1
@@ -118,19 +177,23 @@ term_signal_received (
 
 static RETSIGTYPE
 child_signal_received (
-#if defined (__STDC__) || defined (_AIX) \
+# if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	const int signum)
-#else
+# else
 	signum)
 	const int signum;
-#endif
+# endif
 {
 	sigchld_recvd = signum;
-# ifdef RETSIG_ISINT
+# define void 1
+# define int 2
+# if RETSIGTYPE != void
 	return 0;
 # endif
+# undef int
+# undef void
 }
 
 #endif /* HAVE_SIGNAL_H */
@@ -140,7 +203,7 @@ child_signal_received (
 void wfs_set_sigh (
 #if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
-	|| defined(WIN32) || defined(__cplusplus)
+	|| defined (WIN32) || defined (__cplusplus)
 	error_type * const error, const int opt_verbose)
 #else
 	error, opt_verbose)
@@ -153,13 +216,13 @@ void wfs_set_sigh (
 	char tmp[TMPSIZE];		/* Place for a signal number in case of error. */
 	int res;			/* s(n)printf result */
 	size_t s;			/* sizeof(signals) */
-#if (defined __STRICT_ANSI__) && (defined HAVE_SIGNAL_H)
+# if (defined __STRICT_ANSI__) && (defined HAVE_SIGNAL_H)
 	typedef void (*sighandler_t) (int);
 	sighandler_t shndlr;
-#endif
+# endif
 	wfs_fsid_t wf_gen;
 
-	wf_gen.fsname = "-";
+	wf_gen.fsname = "";
 	/*
 	 * Setting signal handlers. We need to catch signals in order to close (and flush)
 	 * an opened file system, to prevent unconsistencies.
@@ -172,7 +235,7 @@ void wfs_set_sigh (
 #  ifdef HAVE_ERRNO_H
 		errno = 0;
 #  endif
-		shndlr = signal ( signals[s], &term_signal_received, wf_gen );
+		shndlr = signal ( signals[s], &term_signal_received );
 		if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
 /*			|| (errno != 0)*/
@@ -249,7 +312,7 @@ void wfs_set_sigh (
 #  ifdef HAVE_SNPRINTF
 			res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, signals[s] );
 #  else
-			res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD );
+			res = sprintf (tmp, "%.*d", TMPSIZE-1, signals[s] );
 #  endif
 			tmp[TMPSIZE-1] = '\0';
 			if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;
@@ -279,7 +342,7 @@ void wfs_set_sigh (
 #  ifdef HAVE_SNPRINTF
 		res = snprintf (tmp, TMPSIZE-1, "%.*d", TMPSIZE-1, SIGCHLD );
 #  else
-		res = sprintf (tmp, "%.*d", TMPSIZE-1,SIGCHLD );
+		res = sprintf (tmp, "%.*d", TMPSIZE-1, SIGCHLD );
 #  endif
 		tmp[TMPSIZE-1] = '\0';
 		if ( error->errcode.gerror == 0 ) error->errcode.gerror = 1L;

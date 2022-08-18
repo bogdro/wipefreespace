@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions, header file.
  *
- * Copyright (C) 2007-2008 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -28,12 +28,43 @@
 
 # include "wipefreespace.h"
 
+enum child_type
+{
+	CHILD_FORK,
+};
+
+struct child_id
+{
+	enum child_type type;
+	union id
+	{
+#ifdef HAVE_FORK
+		pid_t chld_pid;
+#endif
+		char * dummy;
+	} chld_id;
+	char * program_name;
+	char ** args;
+	int stdin_fd;
+	int stdout_fd;
+	int stderr_fd;
+};
+
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 	wfs_check_mounted PARAMS ((const char * const dev_name, error_type * const error));
 
 extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
 	wfs_get_mnt_point PARAMS ((const char * const dev_name, error_type * const error,
-				char * const mnt_point, int * const is_rw));
+				char * const mnt_point, const size_t mnt_point_len, int * const is_rw));
+
+extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_create_child PARAMS ((struct child_id * const id));
+
+extern void WFS_ATTR ((nonnull))
+	wfs_wait_for_child PARAMS ((const struct child_id * const id));
+
+extern int WFS_ATTR ((nonnull))
+	wfs_has_child_exited PARAMS ((const struct child_id * const id));
 
 #endif	/* WFS_UTIL_H */
 
