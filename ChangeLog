@@ -1,0 +1,16 @@
+2007-04-01	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* Version 0.2
+	  Adds generating the error table. Adds flushing the file system
+	  before starting if it's marked dirty or invalid. Adds a second
+	  try for opening the file system, when exclusive access is
+	  impossible. Adds a 'verbose' option.
+
+2007-03-24	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* First release of e2wipefreespace, version 0.1.
+	  Uses exclusive access, if possible. Checks if the file system is
+	  mounted. Uses raw block access, no i-nodes. Uses patterns from
+	  'shred', but has own random-generating code. Sets signal handlers.
+	  Accepts 7 command-line options, 'license' being an alias for
+	  'licence'.

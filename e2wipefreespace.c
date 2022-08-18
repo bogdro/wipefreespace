@@ -24,9 +24,9 @@
  *		USA
  */
 
-/* TODO: wipe unused space in partially occupied blocks, if possible
+/*
+ * TODO: wipe unused space in partially occupied blocks, if possible
  * TODO: try also to wipe removed files' names, if possible
- * TODO: flush the fs before starting
  * TODO: allow translations
  * TODO: write a man page
  */
@@ -43,7 +43,7 @@
 #include <signal.h>
 #include <time.h>	/* time() for randomization purposes */
 
-static const char ver_str[]  = "This is e2wipefreespace, version 0.1\n";
+static const char ver_str[]  = "This is e2wipefreespace, version 0.2\n";
 static const char help_str[] =
 	"e2wipefreespace - program for secure cleaning of free space on ext2/3 partitions."	\
 	"\nSyntax: e2wipefreespace [options] /dev/XY [...]\n\n"					\
@@ -52,6 +52,7 @@ static const char help_str[] =
 	"-n|--iterations NNN\tNumber of passes (>0, default: 25)\n"				\
 	"-B|--blocksize\t\tBlock size on the given filesystems\n"				\
 	"-b|--superblock\t\tSuperblock offset on the given filesystems\n"			\
+	"-v|--verbose\t\tVerbose output\n"							\
 	;
 static const char author_str[] = "Copyright (C) 2007 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[]  =
@@ -68,6 +69,7 @@ static const char lic_str[]  =
 static const char err_msg_format[]  = "(%s %ld) %s '%s'";
 static const char err_msg[]         = "error";
 static const char err_msg_open[]    = "during opening";
+static const char err_msg_flush[]   = "while flushing";
 static const char err_msg_close[]   = "during closing";
 static const char err_msg_malloc[]  = "during malloc while working on";
 static const char err_msg_checkmt[] = "during checking if the file system is mounted: ";
@@ -75,25 +77,39 @@ static const char err_msg_mtrw[]    = "- Device is mounted in read-write mode:";
 static const char err_msg_rdblbm[]  = "during reading block bitmap from";
 static const char err_msg_wrtblk[]  = "during writing of a block on";
 static const char err_msg_signal[]  = "while trying to set a signal handler for";
+static const char err_msg_fserr[]   = "Filesystem has errors:";
+
+static const char msg_cmdline[]     = "Parsing command-line";
+static const char msg_signal[]      = "Setting signal handlers";
+static const char msg_chkmnt[]      = "Checking if file system is mounted";
+static const char msg_openfs[]      = "Opening file system";
+static const char msg_flushfs[]     = "File system invalid or dirty, flushing";
+static const char msg_rdblbm[]      = "Reading block bitmap from";
+static const char msg_wipefs[]      = "Wiping file system";
+static const char msg_pattern[]     = "Using pattern";
+static const char msg_closefs[]     = "Closing file system";
 
 /* Command-line options. */
-static int opt_version = 0;
+static int opt_blksize = 0;
 static int opt_help    = 0;
 static int opt_license = 0;
 static int opt_number  = 0;
-static int opt_blksize = 0;
 static int opt_super   = 0;
+static int opt_verbose = 0;
+static int opt_version = 0;
+
 static int opt_char = 0;
 
 static const struct option opts[] = {
 
-		{ "version",    no_argument,       &opt_version, 1 },
-		{ "help",       no_argument,       &opt_help,    1 },
-		{ "license",    no_argument,       &opt_license, 1 },
-		{ "licence",    no_argument,       &opt_license, 1 },
-		{ "iterations", required_argument, &opt_number,  1 },
 		{ "blocksize",  required_argument, &opt_blksize, 1 },
+		{ "help",       no_argument,       &opt_help,    1 },
+		{ "iterations", required_argument, &opt_number,  1 },
+		{ "licence",    no_argument,       &opt_license, 1 },
+		{ "license",    no_argument,       &opt_license, 1 },
 		{ "superblock", required_argument, &opt_super,   1 },
+		{ "verbose",    no_argument,       &opt_verbose, 1 },
+		{ "version",    no_argument,       &opt_version, 1 },
 		{ NULL, 0, NULL, 0 }
 	};
 
@@ -174,6 +190,10 @@ static void fill_buffer ( const unsigned long int pat_no, char* const buffer,
 	buffer[0] = (char)((bits >> 4) & 0xFF);
 	buffer[1] = (char)((bits >> 8) & 0xFF);
 	buffer[2] = (char)(bits & 0xFF);
+	if ( opt_verbose == 1 ) {
+		printf ( "%s: %s: '%02x%02x%02x'\n", progname, msg_pattern,
+			(unsigned int)buffer[0], (unsigned int)buffer[1], (unsigned int)buffer[2] );
+	}
 	for (i = 3; i < buflen / 2; i *= 2) {
 		(void)memcpy (buffer + i, buffer, i);
 	}
@@ -209,11 +229,14 @@ int main ( int argc, char* argv[] ) {
 
 	progname = argv[0];
 
+	if ( opt_verbose == 1 ) {
+		printf ( "%s: %s\n", progname, msg_cmdline );
+	}
 	/* Parsing the command line */
 	optind = 0;
 	while (1==1) {
 
-		opt_char = getopt_long ( argc, argv, "Vhln:B:b:", opts, NULL );
+		opt_char = getopt_long ( argc, argv, "Vhln:B:b:v", opts, NULL );
 		if ( opt_char == -1 ) break;
 
 		if ( opt_char == (int)'?' || opt_char == (int)':' ) {
@@ -234,6 +257,10 @@ int main ( int argc, char* argv[] ) {
 		if ( opt_char == (int)'l' || opt_license == 1 ) {
 			printf ( "%s%s", lic_str, author_str );
 			return 1;
+		}
+
+		if ( opt_char == (int)'v' || opt_verbose == 1 ) {
+			opt_verbose = 1;
 		}
 
 		if ( opt_char == (int)'n' || opt_number == 1 ) {
@@ -269,6 +296,9 @@ int main ( int argc, char* argv[] ) {
 		return -1;
 	}
 
+	if ( opt_verbose == 1 ) {
+		printf ( "%s: %s\n", progname, msg_signal );
+	}
 	/*
 	 * Setting signal handlers. We need to catch signals in order to close (and flush)
 	 * an opened file system, to prevent unconsistencies.
@@ -314,6 +344,8 @@ int main ( int argc, char* argv[] ) {
 	srand(0xabadcafe*(unsigned long)time(NULL));
 #endif
 
+	initialize_ext2_error_table();
+
 	/*
 	 * Unrecognised command line options are assumed to be devices, on which we are supposed to
 	 * wipe the free space.
@@ -322,6 +354,10 @@ int main ( int argc, char* argv[] ) {
 
 		ret = 0;
 		fsname = argv[optind];
+		if ( opt_verbose == 1 ) {
+			printf ( "%s: %s: '%s'\n", progname, msg_chkmnt, fsname );
+		}
+
 		/* reject if mounted for read and write (when we can't go on with our work) */
 		error = ext2fs_check_if_mounted ( fsname, &mtflags );
 		if ( error != 0 ) {
@@ -341,19 +377,49 @@ int main ( int argc, char* argv[] ) {
 		}
 
 		/* opening the file system */
+		if ( opt_verbose == 1 ) {
+			printf ( "%s: %s: '%s'\n", progname, msg_openfs, fsname );
+		}
+
 		error = ext2fs_open ( argv[optind], EXT2_FLAG_RW
 #ifdef EXT2_FLAG_EXCLUSIVE
 			| EXT2_FLAG_EXCLUSIVE
 #endif
-			, (int)super_off, blocksize, unix_io_manager, &fs );
+			, (int)super_off, (unsigned int)blocksize, unix_io_manager, &fs );
 		if ( error != 0 ) {
-			com_err ( progname, error, err_msg_format, err_msg, error,
-				err_msg_open, fsname );
+			error = ext2fs_open ( argv[optind], EXT2_FLAG_RW, (int)super_off,
+				(unsigned int)blocksize, unix_io_manager, &fs );
+			if ( error != 0 ) {
+				com_err ( progname, error, err_msg_format, err_msg, error,
+					err_msg_open, fsname );
+				optind++;
+				ret = -4;
+				continue;
+			}
+		}
+
+		if ( (fs->super->s_state & EXT2_ERROR_FS) != 0 ) {
+			fprintf ( stderr, "%s: %s '%s'\n", progname, err_msg_fserr, fsname );
 			optind++;
-			ret = -4;
+			ret = -9;
 			continue;
 		}
 
+		/* flush the file system before starting */
+		if ( ext2fs_test_valid(fs) == 0 || (fs->flags & EXT2_FLAG_DIRTY) != 0 ) {
+			if ( opt_verbose == 1 ) {
+				printf ( "%s: %s: '%s'\n", progname, msg_flushfs, fsname );
+			}
+			error = ext2fs_flush ( fs );
+			if ( error != 0 ) {
+				com_err ( progname, error, err_msg_format, err_msg, error,
+					err_msg_flush, fsname );
+			}
+		}
+
+		if ( opt_verbose == 1 ) {
+			printf ( "%s: %s: '%s'\n", progname, msg_rdblbm, fsname );
+		}
 		/* read the bitmap of blocks */
 		error = ext2fs_read_block_bitmap ( fs );
 		if ( error != 0 ) {
@@ -386,6 +452,9 @@ int main ( int argc, char* argv[] ) {
 			continue;
 		}
 
+		if ( opt_verbose == 1 ) {
+			printf ( "%s: %s: '%s'\n", progname, msg_wipefs, fsname );
+		}
 		for ( i = 0; i < fs->super->s_blocks_count; i++ ) {
 
 			/* if we find an empty block, we shred it */
@@ -403,6 +472,9 @@ int main ( int argc, char* argv[] ) {
 			}
 		}
 
+		if ( opt_verbose == 1 ) {
+			printf ( "%s: %s: '%s'\n", progname, msg_closefs, fsname );
+		}
 		error = ext2fs_close ( fs );
 		if ( error != 0 ) {
 			com_err ( progname, error, err_msg_format, err_msg, error,

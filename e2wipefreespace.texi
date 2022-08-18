@@ -1,11 +1,11 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename e2wipefreespace.info
-@settitle e2wipefreedpace manual 0.1
+@settitle e2wipefreespace manual 0.2
 @c %**end of header
 
 @copying
-This manual is for e2wipefreespace, version 2007-03-26.
+This manual is for e2wipefreespace, version 0.2.
 @end copying
 
 @titlepage
@@ -92,19 +92,19 @@ More than one device can be given on the command line.
 
 Options:
 
-@noindent @option{-V}@*@option{--version}@*
+@noindent @option{-b superblock_offset}@*@option{--superblock superblock_offset}@*
 @quotation
-Print version number
+Superblock offset on the given filesystems (usually detected automatically).
+@end quotation
+
+@noindent @option{-B block_size}@*@option{--blocksize block_size}@*
+@quotation
+Block size on the given filesystems (usually detected automatically).
 @end quotation
 
 @noindent @option{-h}@*@option{--help}@*
 @quotation
-Print help
-@end quotation
-
-@noindent @option{-l}@*@option{--license}@*
-@quotation
-Print license information
+Print help and exit.
 @end quotation
 
 @noindent @option{-n NNN}@*@option{--iterations NNN}@*
@@ -113,14 +113,19 @@ Number of passes (must be greater than 0, default is 25). This is also the numbe
 patterns (including random) used to wipe the free space.
 @end quotation
 
-@noindent @option{-B block_size}@*@option{--blocksize block_size}@*
+@noindent @option{-l}@*@option{--license}@*@option{--licence}@*
 @quotation
-Block size on the given filesystems.
+Print license information and exit.
 @end quotation
 
-@noindent @option{-b superblock_offset}@*@option{--superblock superblock_offset}@*
+@noindent @option{-v}@*@option{--verbose}@*
 @quotation
-Superblock offset on the given filesystems.
+Enables verbose output. The program will tell what it's doing.
+@end quotation
+
+@noindent @option{-V}@*@option{--version}@*
+@quotation
+Print version number and exit.
 @end quotation
 
 
