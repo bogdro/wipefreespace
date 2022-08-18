@@ -75,6 +75,8 @@ typedef short int __u16;
 # undef key_format
 #else
 # error Something wrong. ReiserFS requested, but headers or library missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. ReiserFS requested, but headers or library missing.
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -223,17 +225,11 @@ wfs_reiser_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -269,14 +265,7 @@ wfs_reiser_wipe_part (
 			}
 			else
 			{
-# ifdef HAVE_MEMSET
-				memset (&elem_key, 0xff, KEY_SIZE);
-# else
-				for ( i=0; i < KEY_SIZE; i++ )
-				{
-					((char*)&elem_key)[i] = '\xff';
-				}
-# endif
+				WFS_MEMSET (&elem_key, 0xff, KEY_SIZE);
 			}
 
 			pathrelse (&elem_path);
@@ -323,14 +312,7 @@ wfs_reiser_wipe_part (
 			}
 			else
 			{
-# ifdef HAVE_MEMSET
-				memset (&elem_key, 0xff, KEY_SIZE);
-# else
-				for ( j=0; j < KEY_SIZE; j++ )
-				{
-					((char*)&elem_key)[j] = '\xff';
-				}
-# endif
+				WFS_MEMSET (&elem_key, 0xff, KEY_SIZE);
 			}
 
 			if ( head == NULL )
@@ -406,15 +388,8 @@ wfs_reiser_wipe_part (
 			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 			{
 				/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-				memset ( (unsigned char *) offset, 0,
+				WFS_MEMSET ( (unsigned char *) offset, 0,
 					(size_t) length );
-# else
-				for ( j=0; j < (size_t) length; j++ )
-				{
-					((unsigned char *) offset)[j] = '\0';
-				}
-# endif
 				if ( sig_recvd == 0 )
 				{
 					mark_buffer_dirty2 (bh);
@@ -469,14 +444,7 @@ wfs_reiser_wipe_part (
 		}
 		else
 		{
-# ifdef HAVE_MEMSET
-			memset (&elem_key, 0xff, KEY_SIZE);
-# else
-			for ( i=0; i < KEY_SIZE; i++ )
-			{
-				((char*)&elem_key)[i] = '\xff';
-			}
-# endif
+			WFS_MEMSET (&elem_key, 0xff, KEY_SIZE);
 		}
 		pathrelse (&elem_path);
 		if (bh->b_count != 0)
@@ -567,17 +535,11 @@ wfs_reiser_wipe_fs (
 	{
 		return WFS_BADPARAM;
 	}
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -664,15 +626,8 @@ wfs_reiser_wipe_fs (
 			if ( j != wfs_fs.npasses * 2 )
 			{
 				/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-				memset ( (unsigned char *) bh->b_data, 0,
+				WFS_MEMSET ( (unsigned char *) bh->b_data, 0,
 					fs_block_size );
-# else
-				for ( j=0; j < fs_block_size; j++ )
-				{
-					((unsigned char *) bh->b_data)[j] = '\0';
-				}
-# endif
 				if ( sig_recvd == 0 )
 				{
 					mark_buffer_dirty2 (bh);
@@ -779,17 +734,11 @@ wfs_reiser_wipe_unrm (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -850,14 +799,7 @@ wfs_reiser_wipe_unrm (
 				/* Last pass has to be with zeros */
 				if ( j == wfs_fs.npasses )
 				{
-# ifdef HAVE_MEMSET
-					memset ( bh->b_data, 0, fs_block_size );
-# else
-					for ( i=0; i < fs_block_size; i++ )
-					{
-						bh->b_data[i] = '\0';
-					}
-# endif
+					WFS_MEMSET ( bh->b_data, 0, fs_block_size );
 				}
 				else
 				{
@@ -911,14 +853,7 @@ wfs_reiser_wipe_unrm (
 				if ( j != wfs_fs.npasses * 2 )
 				{
 					/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-					memset ((unsigned char *) bh->b_data, 0, fs_block_size);
-# else
-					for ( j=0; j < fs_block_size; j++ )
-					{
-						((unsigned char *) bh->b_data)[j] = '\0';
-					}
-# endif
+					WFS_MEMSET ((unsigned char *) bh->b_data, 0, fs_block_size);
 					if ( sig_recvd == 0 )
 					{
 						mark_buffer_dirty2 (bh);
@@ -1034,14 +969,7 @@ wfs_reiser_wipe_unrm (
 				}
 				else
 				{
-# ifdef HAVE_MEMSET
-					memset (&elem_key, 0xff, KEY_SIZE);
-# else
-					for ( j=0; j < KEY_SIZE; j++ )
-					{
-						((char*)&elem_key)[j] = '\xff';
-					}
-# endif
+					WFS_MEMSET (&elem_key, 0xff, KEY_SIZE);
 				}
 
 				if ( (deh != NULL)
@@ -1122,21 +1050,10 @@ wfs_reiser_wipe_unrm (
 								head, deh,
 								(int)count) > 0 )
 							{
-# ifdef HAVE_MEMSET
-								memset ((unsigned char *)
+								WFS_MEMSET ((unsigned char *)
 									name_in_entry (deh, (int)count),
 									0, (size_t) name_in_entry_length
 									(head, deh, (int)count));
-# else
-								for ( j=0; j < (size_t)
-									name_in_entry_length
-									(head, deh, (int)count); j++ )
-								{
-									((unsigned char *)
-									name_in_entry (deh, count))[j]
-										= '\0';
-								}
-# endif
 							}
 						}
 						if ( sig_recvd == 0 )
@@ -1198,14 +1115,7 @@ wfs_reiser_wipe_unrm (
 		}
 		else
 		{
-# ifdef HAVE_MEMSET
-			memset (&elem_key, 0xff, KEY_SIZE);
-# else
-			for ( i=0; i < KEY_SIZE; i++ )
-			{
-				((char*)&elem_key)[i] = '\xff';
-			}
-# endif
+			WFS_MEMSET (&elem_key, 0xff, KEY_SIZE);
 		}
 		pathrelse (&elem_path);
 
@@ -1255,7 +1165,6 @@ wfs_reiser_open_fs (
 {
 	reiserfs_filsys_t * res;
 	char * dev_name_copy;
-	size_t namelen;
 	wfs_errcode_t error = 0;
 	wfs_errcode_t * error_ret = NULL;
 	int open_err;
@@ -1276,28 +1185,18 @@ wfs_reiser_open_fs (
 
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 	wfs_fs->fs_backend = NULL;
-	namelen = strlen (wfs_fs->fsname);
 
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
-	dev_name_copy = (char *) malloc (namelen + 1);
+	WFS_SET_ERRNO (0);
+	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
 	}
-
-	strncpy (dev_name_copy, wfs_fs->fsname, namelen + 1);
-	dev_name_copy[namelen] = '\0';
 
 	res = reiserfs_open (dev_name_copy, O_RDWR | O_EXCL
 #ifdef O_BINARY
@@ -1545,11 +1444,7 @@ wfs_reiser_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_reiser_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_reiser_print_version (WFS_VOID)
 {
 	printf ( "ReiserFSv3: <?>\n");
 }
@@ -1560,11 +1455,7 @@ void wfs_reiser_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_reiser_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_reiser_get_err_size (WFS_VOID)
 {
 	return sizeof (wfs_errcode_t);
 }
@@ -1574,11 +1465,7 @@ size_t wfs_reiser_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_reiser_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_reiser_init (WFS_VOID)
 {
 }
 
@@ -1587,11 +1474,7 @@ void wfs_reiser_init (
 /**
  * De-initialize the library.
  */
-void wfs_reiser_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_reiser_deinit (WFS_VOID)
 {
 }
 

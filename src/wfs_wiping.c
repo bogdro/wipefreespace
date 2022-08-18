@@ -34,6 +34,10 @@
 # include <string.h>
 #endif
 
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>	/* random(), srandom(), rand(), srand() */
 #endif
@@ -103,11 +107,14 @@ static unsigned int patterns_dod[] =
 
 /* ======================================================================== */
 
-#define WFS_TOUPPER(c) ((char)( ((c) >= 'a' && (c) <= 'z')? ((c) & 0x5F) : (c) ))
-
-#ifndef WFS_ANSIC
+#ifdef HAVE_STRCASECMP
+# define WFS_STRCASECMP strcasecmp
+#else
+# ifndef WFS_ANSIC
 static int wfs_compare WFS_PARAMS ((const char string1[], const char string2[]));
-#endif
+# endif
+
+# define WFS_TOUPPER(c) ((char)( ((c) >= 'a' && (c) <= 'z')? ((c) & 0x5F) : (c) ))
 
 /**
  * Compares the given strings case-insensitively.
@@ -117,13 +124,13 @@ static int wfs_compare WFS_PARAMS ((const char string1[], const char string2[]))
  */
 static int
 wfs_compare (
-#ifdef WFS_ANSIC
+# ifdef WFS_ANSIC
 	const char string1[], const char string2[])
-#else
+# else
 	string1, string2)
 	const char string1[];
 	const char string2[];
-#endif
+# endif
 {
 	size_t i, len1, len2;
 	char c1, c2;
@@ -173,6 +180,8 @@ wfs_compare (
 	}
 	return 0;
 }
+# define WFS_STRCASECMP wfs_compare
+#endif /* HAVE_STRCASECMP */
 
 /* ======================================================================== */
 
@@ -264,7 +273,7 @@ init_wiping (
 
 	if ( method != NULL )
 	{
-		if ( wfs_compare (method, "gutmann") == 0 )
+		if ( WFS_STRCASECMP (method, "gutmann") == 0 )
 		{
 			opt_method = WFS_METHOD_GUTMANN;
 			/* the number of passes is the number of predefined patterns
@@ -272,7 +281,7 @@ init_wiping (
 			number_of_passes = sizeof (patterns_gutmann)/sizeof (patterns_gutmann[0])
 				+ 4 + 1 + 4;
 		}
-		else if ( wfs_compare (method, "random") == 0 )
+		else if ( WFS_STRCASECMP (method, "random") == 0 )
 		{
 			opt_method = WFS_METHOD_RANDOM;
 			/* the number of passes is the number of predefined patterns
@@ -280,7 +289,7 @@ init_wiping (
 			number_of_passes = sizeof (patterns_random)/sizeof (patterns_random[0])
 				+ 1 + 1 + 1;
 		}
-		else if ( wfs_compare (method, "schneier") == 0 )
+		else if ( WFS_STRCASECMP (method, "schneier") == 0 )
 		{
 			opt_method = WFS_METHOD_SCHNEIER;
 			/* the number of passes is the number of predefined patterns
@@ -288,7 +297,7 @@ init_wiping (
 			number_of_passes = sizeof (patterns_schneier)/sizeof (patterns_schneier[0])
 				+ 5;
 		}
-		else if ( wfs_compare (method, "dod") == 0 )
+		else if ( WFS_STRCASECMP (method, "dod") == 0 )
 		{
 			opt_method = WFS_METHOD_DOD;
 			/* fill the patterns with a random byte and its complement */
@@ -314,8 +323,14 @@ init_wiping (
 	}
 	if ( wfs_npasses == 0 )
 	{
-		/* use the default */
+		/* use the default or the parameter */
 		wfs_npasses = number_of_passes;
+	}
+	if ( wfs_npasses == 0 )
+	{
+		/* use the default */
+		wfs_npasses = WFS_PASSES;
+		number_of_passes = WFS_PASSES;
 	}
 	return number_of_passes;
 }
@@ -353,9 +368,6 @@ fill_buffer (
 {
 
 	size_t i;
-#if (!defined HAVE_MEMCPY) && (!defined HAVE_STRING_H)
-	size_t j;
-#endif
 	unsigned int bits;
 	char tmp[8];
 	int res;
@@ -524,18 +536,7 @@ fill_buffer (
 	}
 	for (i = 3; ((i << 1) < buflen) && (sig_recvd == 0); i <<= 1)
 	{
-#ifdef HAVE_MEMCPY
-		memcpy (buffer + i, buffer, i);
-#else
-# if defined HAVE_STRING_H
-		strncpy ((char *) (buffer + i), (char *) buffer, i);
-# else
-		for ( j = 0; j < i; j++ )
-		{
-			buffer [ i + j ] = buffer[j];
-		}
-# endif
-#endif
+		WFS_MEMCOPY (buffer + i, buffer, i);
 	}
         if ( sig_recvd != 0 )
 	{
@@ -543,17 +544,6 @@ fill_buffer (
 	}
 	if (i < buflen)
 	{
-#ifdef HAVE_MEMCPY
-		memcpy (buffer + i, buffer, buflen - i);
-#else
-# if defined HAVE_STRING_H
-		strncpy ((char *) (buffer + i), (char *) buffer, buflen - i);
-# else
-		for ( j = 0; j < buflen - i; j++ )
-		{
-			buffer [ i + j ] = buffer[j];
-		}
-# endif
-#endif
+		WFS_MEMCOPY (buffer + i, buffer, buflen - i);
 	}
 }

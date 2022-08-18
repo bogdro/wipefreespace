@@ -2,8 +2,6 @@ Wipefreespace - a program for secure cleaning of free space on filesystems.
 
 Requirements for compiling the full version:
 
-- a non-root account. Please, NEVER compile or 'make' anything as root.
-
 - a working C compiler. XFS, ReiserFS, Reiser4 and NTFS support require the
   'long long' data type. NTFS support may require the gcc compiler.
   C++ compilers won't work due to variable casts.
@@ -16,19 +14,19 @@ Requirements for compiling the full version:
 
 - the 'make' program
 
-- Ext2/3/4: development package for the ext2 file system library, libext2fs
+- Ext2/3/4: the development package for the ext2 file system library, libext2fs
   (usually included in something like e2fsprogs-devel). If you don't have
   anything like this installed or available (check twice), then go to
   	http://e2fsprogs.sf.net/
   Then compile and install that package. Ext4 support requires new versions,
   like 1.41.
 
-- NTFS: development package for the NTFS file system library, libntfs (usually
-  included in something like ntfsprogs-devel). If you don't have anything
-  like this installed or available (check twice), then go to
-  	http://www.linux-ntfs.org/
-  Then compile and install that package. You can also use ntfs3g-ntfsprogs:
+- NTFS: the development package for the NTFS file system library,
+  ntfs3g-ntfsprogs. If you don't have anything like this installed or
+  available (check twice), then go to
 	http://www.tuxera.com/community/ntfs-3g-download/
+  Then compile and install that package. You can also use libntfs (usually
+  included in something like ntfsprogs-devel).
 
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/. The following utilities
@@ -38,9 +36,9 @@ Requirements for compiling the full version:
   "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier versions will
   probably also work.
 
-- ReiserFSv3: development package for reiserfsprogs (header files and
-  compiled static libraries from the package). ReiserFS requires either the
-  fork() function (unistd.h) and one of the waitpid(), wait() functions
+- ReiserFSv3: development package for reiserfsprogs (header files - *.h - and
+  compiled static libraries - *.a - from the package). ReiserFS requires either
+  the fork() function (unistd.h) and one of the waitpid(), wait() functions
   (sys/wait.h), the mntent.h header file (with at least one of its functions
   - getmntent() or getmntent_r()).
 
@@ -77,9 +75,11 @@ Requirements for compiling the full version:
      patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-free-fix.diff
      patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-overflow-fix.diff
      patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-fat-eof-fix.diff
+     patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-dir-fix.diff
 
-  After applying any patch, you need to recompile and install the library and
-  ALL its header files (including the private ones, from the src directory).
+  After applying any patch, you need to recompile and install the library -
+  libtffs.a - and ALL its header files - *.h - (including the private ones,
+  from the src directory).
 
 - MinixFS: "mfstool", the MinixFS tool. Go to
 	http://mfstool.sourceforge.net/
@@ -97,7 +97,6 @@ Requirements for compiling the full version:
   instead of the sed command:
 
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff
-
 
 - JFS: jfsutils and libuuid (the <uuid/uuid.h> header file). Go to
 	http://jfs.sourceforge.net/
@@ -121,11 +120,11 @@ https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
 
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff
 
-  After compiling, install all the libraries and ALL the header files
-  from the libhfsp/src/ directory where the C compiler can find them (or
-  put the correct -I and -L options in the compiler flags).
+  After compiling, install all the libraries - *.a - and ALL the header
+  files - *.h - from the libhfsp/src/ directory where the C compiler can
+  find them (or put the correct -I and -L options in the compiler flags).
 
-- OCFS: the "ocfs2-tools" series 1.6.x package (other version also work, but
+- OCFS: the "ocfs2-tools" series 1.6.x package (other versions also work, but
   disable wiping undelete data in such case). Go to
 	http://oss.oracle.com/projects/ocfs2-tools/
   to get it. Then compile and install that package.
@@ -218,7 +217,7 @@ Type
 
 	make
 
- to compile the program.
+to compile the program.
 
 Documentation will be compiled, if you have the 'makeinfo' program
  ('texinfo' package).
@@ -231,8 +230,8 @@ Type
 
 	make install
 
- to install the program (NOT recommended) or read below on how to make
- an RPM package (recommended).
+to install the program (NOT recommended) or read below on how to make an
+RPM package (recommended).
 
 Type 'info wipefreespace' (or 'info doc/wipefreespace.info' before install)
  to get help.
@@ -241,18 +240,18 @@ Type 'info wipefreespace' (or 'info doc/wipefreespace.info' before install)
 
 Building an RPM package:
 
-1) copy the wipefreespace.spec file to /usr/src/redhat/SPECS
-2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
-3) type
-	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
-4) get the RPMs from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
-
-NOTE: some systems may use other directories than these.
-
-Building an RPM package (the new way):
-
 1) copy the wipefreespace.spec file to $HOME/rpmbuild/SPECS
 2) copy the source package wipefreespace-XX.tar.gz to $HOME/rpmbuild/SOURCES
 3) type
         rpmbuild -ba $HOME/rpmbuild/SPECS/wipefreespace.spec
-4) get the RPMs from $HOME/rpmbuild/RPMS/i386 and $HOME/rpmbuild/SRPMS
+4) get the RPMs from $HOME/rpmbuild/RPMS/<arch> and $HOME/rpmbuild/SRPMS
+
+Building an RPM package (the old way):
+
+1) copy the wipefreespace.spec file to /usr/src/redhat/SPECS
+2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
+3) type
+	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
+4) get the RPMs from /usr/src/redhat/RPMS/<arch> and /usr/src/redhat/SRPMS
+
+NOTE: some systems may use other directories than these.

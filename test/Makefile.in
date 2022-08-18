@@ -87,8 +87,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@WFS_TESTS_ENABLED_TRUE@TESTS = test_wfs_util$(EXEEXT)
-@WFS_TESTS_ENABLED_TRUE@check_PROGRAMS = test_wfs_util$(EXEEXT)
+@WFS_TESTS_ENABLED_TRUE@TESTS = test_wfs_util$(EXEEXT) \
+@WFS_TESTS_ENABLED_TRUE@	test_wfs_wiping$(EXEEXT)
+@WFS_TESTS_ENABLED_TRUE@check_PROGRAMS = test_wfs_util$(EXEEXT) \
+@WFS_TESTS_ENABLED_TRUE@	test_wfs_wiping$(EXEEXT)
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_1 = $(top_builddir)/src/wfs_ext234.o
 @NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_2 = $(top_builddir)/src/wfs_ntfs.o
 @WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@am__append_3 = $(top_builddir)/src/wfs_xfs.o
@@ -104,11 +106,12 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c_check_flag.m4 \
 	$(top_srcdir)/m4/ax_check_link_flag.m4 \
 	$(top_srcdir)/m4/ax_gcc_warn_unused_result.m4 \
-	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/iconv.m4 \
-	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/host-cpu-c-abi.m4 \
+	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/intlmacosx.m4 \
+	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
+	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/nls.m4 \
+	$(top_srcdir)/m4/po.m4 $(top_srcdir)/m4/progtest.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
@@ -129,6 +132,13 @@ test_wfs_util_OBJECTS = $(am_test_wfs_util_OBJECTS)
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_9) $(am__append_10)
 test_wfs_util_LINK = $(CCLD) $(test_wfs_util_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am__test_wfs_wiping_SOURCES_DIST = test_wfs_wiping.c
+@WFS_TESTS_ENABLED_TRUE@am_test_wfs_wiping_OBJECTS = test_wfs_wiping-test_wfs_wiping.$(OBJEXT)
+test_wfs_wiping_OBJECTS = $(am_test_wfs_wiping_OBJECTS)
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_DEPENDENCIES =  \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o
+test_wfs_wiping_LINK = $(CCLD) $(test_wfs_wiping_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -144,7 +154,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/test_wfs_util-test_wfs_util.Po
+am__depfiles_remade = ./$(DEPDIR)/test_wfs_util-test_wfs_util.Po \
+	./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -162,8 +173,9 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(test_wfs_util_SOURCES)
-DIST_SOURCES = $(am__test_wfs_util_SOURCES_DIST)
+SOURCES = $(test_wfs_util_SOURCES) $(test_wfs_wiping_SOURCES)
+DIST_SOURCES = $(am__test_wfs_util_SOURCES_DIST) \
+	$(am__test_wfs_wiping_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -408,6 +420,7 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CHECK_CFLAGS = @CHECK_CFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
+CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
@@ -440,8 +453,8 @@ LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 MSGFMT = @MSGFMT@
-MSGFMT_015 = @MSGFMT_015@
 MSGMERGE = @MSGMERGE@
+MSGMERGE_FOR_MSGFMT_OPTION = @MSGMERGE_FOR_MSGFMT_OPTION@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -517,8 +530,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+@WFS_TESTS_ENABLED_TRUE@WFSTEST_COMMON_CFLAGS = @CHECK_CFLAGS@ -I $(top_builddir)/src
 @WFS_TESTS_ENABLED_TRUE@test_wfs_util_SOURCES = test_wfs_util.c
-@WFS_TESTS_ENABLED_TRUE@test_wfs_util_CFLAGS = @CHECK_CFLAGS@ -I $(top_builddir)/src
+@WFS_TESTS_ENABLED_TRUE@test_wfs_util_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_util_LDADD =  \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
 @WFS_TESTS_ENABLED_TRUE@	@CHECK_LIBS@ @LIBS@ $(am__append_1) \
@@ -527,6 +541,9 @@ top_srcdir = @top_srcdir@
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_6) $(am__append_7) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_8) $(am__append_9) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_10)
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_SOURCES = test_wfs_wiping.c
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_LDADD = $(top_builddir)/src/wfs_wiping.o @CHECK_LIBS@ @LIBS@
 all: all-am
 
 .SUFFIXES:
@@ -568,6 +585,10 @@ test_wfs_util$(EXEEXT): $(test_wfs_util_OBJECTS) $(test_wfs_util_DEPENDENCIES) $
 	@rm -f test_wfs_util$(EXEEXT)
 	$(AM_V_CCLD)$(test_wfs_util_LINK) $(test_wfs_util_OBJECTS) $(test_wfs_util_LDADD) $(LIBS)
 
+test_wfs_wiping$(EXEEXT): $(test_wfs_wiping_OBJECTS) $(test_wfs_wiping_DEPENDENCIES) $(EXTRA_test_wfs_wiping_DEPENDENCIES) 
+	@rm -f test_wfs_wiping$(EXEEXT)
+	$(AM_V_CCLD)$(test_wfs_wiping_LINK) $(test_wfs_wiping_OBJECTS) $(test_wfs_wiping_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -575,6 +596,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_util-test_wfs_util.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -609,6 +631,20 @@ test_wfs_util-test_wfs_util.obj: test_wfs_util.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_wfs_util.c' object='test_wfs_util-test_wfs_util.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_util_CFLAGS) $(CFLAGS) -c -o test_wfs_util-test_wfs_util.obj `if test -f 'test_wfs_util.c'; then $(CYGPATH_W) 'test_wfs_util.c'; else $(CYGPATH_W) '$(srcdir)/test_wfs_util.c'; fi`
+
+test_wfs_wiping-test_wfs_wiping.o: test_wfs_wiping.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_wiping_CFLAGS) $(CFLAGS) -MT test_wfs_wiping-test_wfs_wiping.o -MD -MP -MF $(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Tpo -c -o test_wfs_wiping-test_wfs_wiping.o `test -f 'test_wfs_wiping.c' || echo '$(srcdir)/'`test_wfs_wiping.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Tpo $(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_wfs_wiping.c' object='test_wfs_wiping-test_wfs_wiping.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_wiping_CFLAGS) $(CFLAGS) -c -o test_wfs_wiping-test_wfs_wiping.o `test -f 'test_wfs_wiping.c' || echo '$(srcdir)/'`test_wfs_wiping.c
+
+test_wfs_wiping-test_wfs_wiping.obj: test_wfs_wiping.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_wiping_CFLAGS) $(CFLAGS) -MT test_wfs_wiping-test_wfs_wiping.obj -MD -MP -MF $(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Tpo -c -o test_wfs_wiping-test_wfs_wiping.obj `if test -f 'test_wfs_wiping.c'; then $(CYGPATH_W) 'test_wfs_wiping.c'; else $(CYGPATH_W) '$(srcdir)/test_wfs_wiping.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Tpo $(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_wfs_wiping.c' object='test_wfs_wiping-test_wfs_wiping.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_wiping_CFLAGS) $(CFLAGS) -c -o test_wfs_wiping-test_wfs_wiping.obj `if test -f 'test_wfs_wiping.c'; then $(CYGPATH_W) 'test_wfs_wiping.c'; else $(CYGPATH_W) '$(srcdir)/test_wfs_wiping.c'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -810,6 +846,13 @@ test_wfs_util.log: test_wfs_util$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_wfs_wiping.log: test_wfs_wiping$(EXEEXT)
+	@p='test_wfs_wiping$(EXEEXT)'; \
+	b='test_wfs_wiping'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .test.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -903,6 +946,7 @@ clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/test_wfs_util-test_wfs_util.Po
+	-rm -f ./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -949,6 +993,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/test_wfs_util-test_wfs_util.Po
+	-rm -f ./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

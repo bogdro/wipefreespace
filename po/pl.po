@@ -7,22 +7,22 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wipefreespace\n"
 "Report-Msgid-Bugs-To: bogdro@users.sourceforge.net\n"
-"POT-Creation-Date: 2021-08-18 16:00+0200\n"
+"POT-Creation-Date: 2021-09-21 20:29+0200\n"
 "PO-Revision-Date: 2007-04-23 17:24+0200\n"
 "Last-Translator: Bogdan Drozdowski <bogdro@users.sourceforge.net>\n"
 "Language-Team: Polish\n"
-"Language: \n"
+"Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-2\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: src/wipefreespace.c:147
+#: src/wipefreespace.c:144
 msgid "version"
 msgstr "wersja"
 
-#: src/wipefreespace.c:150
+#: src/wipefreespace.c:147
 msgid ""
 "Program for secure cleaning of free space on filesystems.\n"
 "\n"
@@ -50,172 +50,172 @@ msgstr ""
 "ZASTOSOWAÑ\n"
 "\n"
 
-#: src/wipefreespace.c:160
+#: src/wipefreespace.c:157
 msgid "error"
 msgstr "b³±d"
 
-#: src/wipefreespace.c:161
+#: src/wipefreespace.c:158
 msgid "during opening"
 msgstr "podczas otwierania"
 
-#: src/wipefreespace.c:162
+#: src/wipefreespace.c:159
 msgid "while flushing"
 msgstr "podczas zapisu systemu na dysk"
 
-#: src/wipefreespace.c:163
+#: src/wipefreespace.c:160
 msgid "during closing"
 msgstr "podczas zamykania"
 
-#: src/wipefreespace.c:164
+#: src/wipefreespace.c:161
 msgid "during malloc while working on"
 msgstr "przy alokacji pamiêci podczas pracy na"
 
-#: src/wipefreespace.c:165
+#: src/wipefreespace.c:162
 msgid "during checking if the file system is mounted"
 msgstr "podczas sprawdzania, czy system plików jest zamontowany"
 
-#: src/wipefreespace.c:166
+#: src/wipefreespace.c:163
 msgid "- Device is mounted in read-write mode"
 msgstr "- Urz±dzenie jest zamontowane do odczytu i zapisu"
 
-#: src/wipefreespace.c:167
+#: src/wipefreespace.c:164
 msgid "during reading block bitmap from"
 msgstr "podczas czytania bitmapy bloków z"
 
-#: src/wipefreespace.c:168
+#: src/wipefreespace.c:165
 msgid "during writing of a block on"
 msgstr "podczas zapisu bloku na"
 
-#: src/wipefreespace.c:169
+#: src/wipefreespace.c:166
 msgid "during reading of a block on"
 msgstr "podczas czytania bloku z"
 
-#: src/wipefreespace.c:170
+#: src/wipefreespace.c:167
 msgid "during reading of an inode on"
 msgstr "podczas czytania i-wêz³a z"
 
-#: src/wipefreespace.c:171
+#: src/wipefreespace.c:168
 msgid "while trying to set a signal handler for"
 msgstr "podczas ustawiania procedury obs³ugi sygna³u"
 
-#: src/wipefreespace.c:172
+#: src/wipefreespace.c:169
 msgid "Filesystem has errors"
 msgstr "System plików zawiera b³êdy"
 
-#: src/wipefreespace.c:173
+#: src/wipefreespace.c:170
 msgid "during opening a scan of"
 msgstr "podczas otwierania skanu na"
 
-#: src/wipefreespace.c:174
+#: src/wipefreespace.c:171
 msgid "during iterating over blocks on"
 msgstr "podczas iterowania po blokach na"
 
-#: src/wipefreespace.c:175
+#: src/wipefreespace.c:172
 msgid "during iterating over a directory on"
 msgstr "podczas iterowania katalogu na"
 
-#: src/wipefreespace.c:176
+#: src/wipefreespace.c:173
 msgid "Nothing selected for wiping."
 msgstr "Nie wybrano nic do czyszczenia."
 
-#: src/wipefreespace.c:177
+#: src/wipefreespace.c:174
 msgid "PLEASE do NOT set this program's suid bit. Use sgid instead."
 msgstr ""
 "PROSZÊ NIE ustawiaj bitu suid dla tego programu. Zamiast tego, u¿yj sgid."
 
-#: src/wipefreespace.c:178
+#: src/wipefreespace.c:175
 msgid "during setting capabilities"
 msgstr "podczas ustawiania uprawnieñ programu"
 
-#: src/wipefreespace.c:179
+#: src/wipefreespace.c:176
 msgid "during creation of child process"
 msgstr "podczas tworzenia procesu potomnego"
 
-#: src/wipefreespace.c:180
+#: src/wipefreespace.c:177
 msgid "during disabling device cache"
 msgstr "podczas wy³±czania pamiêci podrêcznej urz±dzenia"
 
-#: src/wipefreespace.c:181
+#: src/wipefreespace.c:178
 msgid "during enabling device cache"
 msgstr "podczas w³±czania pamiêci podrêcznej urz±dzenia"
 
-#: src/wipefreespace.c:182
+#: src/wipefreespace.c:179
 msgid "during opening an attribute"
 msgstr "podczas otwierania atrybutu"
 
-#: src/wipefreespace.c:183
+#: src/wipefreespace.c:180
 msgid "during mapping a runlist"
 msgstr "podczas mapowania listy"
 
-#: src/wipefreespace.c:184
+#: src/wipefreespace.c:181
 msgid "during creating a search context"
 msgstr "podczas tworzenia kontekstu wyszukiwania"
 
-#: src/wipefreespace.c:185
+#: src/wipefreespace.c:182
 msgid "during checking parameters"
 msgstr "podczas sprawdzania parametrów"
 
-#: src/wipefreespace.c:186
+#: src/wipefreespace.c:183
 msgid "during creating a pipe"
 msgstr "podczas tworzenia potoku"
 
-#: src/wipefreespace.c:187
+#: src/wipefreespace.c:184
 msgid "during starting a sub-process"
 msgstr "podczas uruchamiania procesu potomnego"
 
-#: src/wipefreespace.c:188
+#: src/wipefreespace.c:185
 msgid "during seeking to position"
 msgstr "podczas zmiany pozycji"
 
-#: src/wipefreespace.c:189
+#: src/wipefreespace.c:186
 msgid "during performing a control operation on"
 msgstr "podczas wykonywania operacji steruj±cej"
 
-#: src/wipefreespace.c:192
+#: src/wipefreespace.c:189
 msgid "Setting signal handlers"
 msgstr "Ustawianie procedur obs³ugi sygna³ów"
 
-#: src/wipefreespace.c:193
+#: src/wipefreespace.c:190
 msgid "Checking if file system is mounted"
 msgstr "Sprawdzanie, czy system plików jest zamontowany"
 
-#: src/wipefreespace.c:194
+#: src/wipefreespace.c:191
 msgid "Opening file system"
 msgstr "Otwieranie systemu plików"
 
-#: src/wipefreespace.c:195
+#: src/wipefreespace.c:192
 msgid "Flushing file system"
 msgstr "Zapisujê niezapisane zmiany w systemie plików"
 
-#: src/wipefreespace.c:197
+#: src/wipefreespace.c:194
 msgid "Wiping free space on file system"
 msgstr "Czyszczê puste miejsce na systemie plików"
 
-#: src/wipefreespace.c:200
+#: src/wipefreespace.c:197
 msgid "Wiping unused space in used blocks on"
 msgstr "Czyszczê nieu¿ywane miejsce w u¿ywanych blokach na"
 
-#: src/wipefreespace.c:203
+#: src/wipefreespace.c:200
 msgid "Wiping undelete data on"
 msgstr "Czyszczê dane s³u¿±ce do odzyskiwania plików na"
 
-#: src/wipefreespace.c:205
+#: src/wipefreespace.c:202
 msgid "Closing file system"
 msgstr "Zamykam system plików"
 
-#: src/wipefreespace.c:206
+#: src/wipefreespace.c:203
 msgid "Going into background not supported or failed"
 msgstr "Przechodzenie w t³o nie jest obs³ugiwane lub nie powiod³o siê"
 
-#: src/wipefreespace.c:207
+#: src/wipefreespace.c:204
 msgid "Disabling cache"
 msgstr "Wy³±czanie pamiêci podrêcznej urz±dzenia"
 
-#: src/wipefreespace.c:267
+#: src/wipefreespace.c:266
 msgid "unknown"
 msgstr "nieznany"
 
-#: src/wipefreespace.c:607
+#: src/wipefreespace.c:594
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
@@ -223,91 +223,97 @@ msgstr ""
 " - Program do bezpiecznego czyszczenia pustego miejsca na systemach plików\n"
 "Sk³adnia: "
 
-#: src/wipefreespace.c:609
+#: src/wipefreespace.c:596
 msgid " [options] "
 msgstr " [opcje] "
 
-#: src/wipefreespace.c:611
+#: src/wipefreespace.c:598
 msgid "Options:"
 msgstr "Opcje:"
 
-#: src/wipefreespace.c:612
+#: src/wipefreespace.c:599
 msgid "--all-zeros\t\tUse only zeros for wiping"
 msgstr "--all-zeros\t\tU¿ywaj tylko zer do wymazywania"
 
-#: src/wipefreespace.c:613
+#: src/wipefreespace.c:600
 msgid "--background\t\tContinue work in the background, if possible"
 msgstr "--background\t\tKontynuuj pracê w tle, je¶li to mo¿liwe"
 
-#: src/wipefreespace.c:614
+#: src/wipefreespace.c:601
 msgid "-b|--superblock <off>\tSuperblock offset on the given filesystems"
 msgstr "-b|--superblock <off>\tPozycja Superbloku na podanych systemach plików"
 
-#: src/wipefreespace.c:615
+#: src/wipefreespace.c:602
 msgid "-B|--blocksize <size>\tBlock size on the given filesystems"
 msgstr "-B|--blocksize <size>\tRozmiar bloku na podanych systemach plików"
 
-#: src/wipefreespace.c:616
+#: src/wipefreespace.c:603
 msgid "-f|--force\t\tWipe even if the file system has errors"
 msgstr "-f|--force\t\tCzy¶æ nawet gdy system plików ma b³êdy"
 
-#: src/wipefreespace.c:617
+#: src/wipefreespace.c:604
 msgid "-h|--help\t\tPrint help"
 msgstr "-h|--help\t\tWy¶wietl pomoc"
 
-#: src/wipefreespace.c:618
+#: src/wipefreespace.c:605
 msgid "-n|--iterations NNN\tNumber of passes (greater than 0)"
 msgstr "-n|--iterations NNN\tLiczba przej¶æ (wiêksza od 0)"
 
-#: src/wipefreespace.c:619
+#: src/wipefreespace.c:606
 msgid "--last-zero\t\tPerform additional wiping with zeros"
 msgstr "--last-zero\t\tWykonaj dodatkowe zamazywanie zerami"
 
-#: src/wipefreespace.c:620
+#: src/wipefreespace.c:607
 msgid "-l|--license\t\tPrint license information"
 msgstr "-l|--license\t\tWy¶wietl informacje o licencji"
 
-#: src/wipefreespace.c:621
+#: src/wipefreespace.c:608
 msgid "--method <name>\t\tUse the given method for wiping"
 msgstr "--method <nazwa>\tU¿yj podanej metody do wymazywania"
 
-#: src/wipefreespace.c:622
+#: src/wipefreespace.c:609
 msgid "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr "--nopart\t\tNIE czy¶æ pustego miejsca w czê¶ciowo u¿ywanych blokach"
 
-#: src/wipefreespace.c:623
+#: src/wipefreespace.c:610
 msgid "--nounrm\t\tDo NOT wipe undelete information"
 msgstr "--nounrm\t\tNIE czy¶æ informacji s³u¿±cych do odzyskiwania plików"
 
-#: src/wipefreespace.c:624
+#: src/wipefreespace.c:611
 msgid "--nowfs\t\t\tDo NOT wipe free space on file system"
 msgstr "--nowfs\t\t\tNIE czy¶æ pustego miejsca na systemie plików"
 
-#: src/wipefreespace.c:625
+#: src/wipefreespace.c:612
 msgid "--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system"
 msgstr ""
 "--no-wipe-zero-blocks\tNIE czy¶æ bloków zawieraj±cych same zera na systemie "
 "plików"
 
-#: src/wipefreespace.c:626
+#: src/wipefreespace.c:613
+msgid ""
+"--use-dedicated\t\tUse the program dedicated for the given filesystem type"
+msgstr ""
+"--use-dedicated\t\tU¿yj programu dedykowanego pod dany typ systemu plików"
+
+#: src/wipefreespace.c:614
 msgid "--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)"
 msgstr ""
 "--use-ioctl\t\tWy³±cz pamiêæ podrêczn± w czasie pracy (mo¿e byæ "
 "NIEBEZPIECZNE)"
 
-#: src/wipefreespace.c:627
+#: src/wipefreespace.c:615
 msgid "-v|--verbose\t\tVerbose output"
 msgstr "-v|--verbose\t\tWy¶wietlaj szczegó³y dzia³ania"
 
-#: src/wipefreespace.c:628
+#: src/wipefreespace.c:616
 msgid "-V|--version\t\tPrint version number"
 msgstr "-V|--version\t\tWy¶wietl numer wersji"
 
-#: src/wfs_wiping.c:61
+#: src/wfs_wiping.c:65
 msgid "Using pattern"
 msgstr "U¿ywam wzorca"
 
-#: src/wfs_wiping.c:62
+#: src/wfs_wiping.c:66
 msgid "random"
 msgstr "losowy"
 

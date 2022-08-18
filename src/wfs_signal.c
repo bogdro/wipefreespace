@@ -243,11 +243,7 @@ static void print_signal_error (
 		wf_gen.whichfs = WFS_CURR_FS_NONE;
 		wf_gen.fs_error = &err;
 
-# ifdef HAVE_ERRNO_H
-		err = errno;
-# else
-		err = 1L;
-# endif
+		err = WFS_GET_ERRNO_OR_DEFAULT (1L);
 # ifdef HAVE_SNPRINTF
 		res = snprintf (tmp, TMPSIZE, "%.*d", TMPSIZE-1, signum);
 # else
@@ -284,9 +280,6 @@ void wfs_set_sigh (
 	typedef void (*sighandler_t) (int);
 	sighandler_t shndlr;
 # endif
-# ifndef HAVE_MEMSET
-	size_t i;
-# endif
 	/*
 	 * Setting signal handlers. We need to catch signals in order to close (and flush)
 	 * an opened file system, to prevent unconsistencies.
@@ -297,9 +290,7 @@ void wfs_set_sigh (
 	/* ANSI C */
 	for ( s = 0; s < sizeof (signals) / sizeof (signals[0]); s++ )
 	{
-#  ifdef HAVE_ERRNO_H
-		errno = 0;
-#  endif
+		WFS_SET_ERRNO (0);
 		shndlr = signal (signals[s], &term_signal_received);
 		if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
@@ -310,9 +301,7 @@ void wfs_set_sigh (
 			print_signal_error (opt_verbose, signals[s]);
 		}
 	}
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 	shndlr = signal (SIGCHLD, &child_signal_received);
 	if ( (shndlr == SIG_ERR)
 #  ifdef HAVE_ERRNO_H
@@ -325,20 +314,11 @@ void wfs_set_sigh (
 
 # else
 	/* more than ANSI C */
-#  ifdef HAVE_MEMSET
-	memset (&sa, 0, sizeof (struct sigaction));
-#  else
-	for ( i = 0; i < sizeof (struct sigaction); i++ )
-	{
-		((char *)&sa)[i] = '\0';
-	}
-#  endif
+	WFS_MEMSET (&sa, 0, sizeof (struct sigaction));
 	sa.sa_handler = &term_signal_received;
 	for ( s = 0; s < sizeof (signals) / sizeof (signals[0]); s++ )
 	{
-#  ifdef HAVE_ERRNO_H
-		errno = 0;
-#  endif
+		WFS_SET_ERRNO (0);
 		res = sigaction (signals[s], &sa, NULL);
 		if ( (res != 0)
 #  ifdef HAVE_ERRNO_H
@@ -349,9 +329,7 @@ void wfs_set_sigh (
 			print_signal_error (opt_verbose, signals[s]);
 		}
 	}
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 	sa.sa_handler = &child_signal_received;
 	res = sigaction (SIGCHLD, &sa, NULL);
 	if ( (res != 0)

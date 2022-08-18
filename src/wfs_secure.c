@@ -70,11 +70,7 @@
  * \return 0 on success, other values otherwise.
  */
 int GCC_WARN_UNUSED_RESULT
-wfs_clear_cap (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+wfs_clear_cap (WFS_VOID)
 {
 #ifdef HAVE_SYS_CAPABILITY_H
 	int res;
@@ -84,9 +80,7 @@ wfs_clear_cap (
 
 #ifdef HAVE_SYS_CAPABILITY_H
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	/* NOTE: Valgring says this calls capget(..., NULL), but
 	there's nothing we can do about it. */
 	my_capab = cap_init ();
@@ -96,9 +90,7 @@ wfs_clear_cap (
 # endif
 	   )
 	{
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		res = cap_set_proc (my_capab);
 		if ( (res != 0)
 # ifdef HAVE_ERRNO_H
@@ -106,11 +98,7 @@ wfs_clear_cap (
 # endif
 		   )
 		{
-# ifdef HAVE_ERRNO_H
-			ret = errno;
-# else
-			ret = 1L;
-# endif
+			ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		}
 		/* don't care about any cap_free() errors right now */
 		cap_free (my_capab);
@@ -118,9 +106,7 @@ wfs_clear_cap (
 	else
 	{	/* cap_init() failed. Get current capabilities and clear them. */
 
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		my_capab = cap_get_proc ();
 		if ( (my_capab != NULL)
 # ifdef HAVE_ERRNO_H
@@ -128,9 +114,7 @@ wfs_clear_cap (
 # endif
 		   )
 		{
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
+			WFS_SET_ERRNO (0);
 			res = cap_clear (my_capab);
 
 			if ( (res != 0)
@@ -139,17 +123,11 @@ wfs_clear_cap (
 # endif
 			   )
 			{
-# ifdef HAVE_ERRNO_H
-				ret = errno;
-# else
-				ret = 1L;
-# endif
+				ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
 			}
 			else
 			{	/* cap_clear() success */
-# ifdef HAVE_ERRNO_H
-				errno = 0;
-# endif
+				WFS_SET_ERRNO (0);
 				res = cap_set_proc (my_capab);
 				if ( (res != 0)
 # ifdef HAVE_ERRNO_H
@@ -157,23 +135,16 @@ wfs_clear_cap (
 # endif
 				   )
 				{
-# ifdef HAVE_ERRNO_H
-					ret = errno;
-# else
-					ret = 1L;
-# endif
+					ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
 				}
 			}
 			/* don't care about any cap_free() errors right now */
 			cap_free (my_capab);
 		}
 		else
-		{	/* cap_get_proc() failed. */
-# ifdef HAVE_ERRNO_H
-			ret = errno;
-# else
-			ret = 1L;
-# endif
+		{
+			/* cap_get_proc() failed. */
+			ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		}
 	}
 #endif /* HAVE_SYS_CAPABILITY_H */
@@ -225,9 +196,7 @@ wfs_check_stds (
 
 #ifdef WFS_HAVE_STAT
 
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 # ifdef HAVE_FSTAT64
 		res = fstat64 (stdout_fd, &stat_buf);
 # elif HAVE_FSTAT
@@ -251,9 +220,7 @@ wfs_check_stds (
 		*stderr_open = 1;
 
 #ifdef WFS_HAVE_STAT
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 # ifdef HAVE_FSTAT64
 		res = fstat64 (stderr_fd, &stat_buf);
 # elif HAVE_FSTAT
@@ -289,12 +256,7 @@ wfs_check_stds (
  * \return WFS_SUCCESS if not.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-wfs_check_suid (
-#ifdef WFS_ANSIC
-	void)
-#else
-	)
-#endif
+wfs_check_suid (WFS_VOID)
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 
@@ -314,12 +276,7 @@ wfs_check_suid (
  * Clears the environment.
  */
 void
-wfs_clear_env (
-#ifdef WFS_ANSIC
-	void)
-#else
-	)
-#endif
+wfs_clear_env (WFS_VOID)
 {
 #if (defined HAVE_CLEARENV)
 	clearenv ();

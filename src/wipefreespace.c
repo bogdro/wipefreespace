@@ -39,6 +39,8 @@
 #ifdef STAT_MACROS_BROKEN
 # if STAT_MACROS_BROKEN
 #  error Stat macros broken. Change your C library.
+/* make a syntax error, because not all compilers treat #error as an error */
+Stat macros broken. Change your C library.
 # endif
 #endif
 
@@ -71,17 +73,12 @@
 */
 
 /* time() for randomization purposes */
-#if TIME_WITH_SYS_TIME
+#if HAVE_SYS_TIME_H
 # include <sys/time.h>
+#endif
+
+#ifdef HAVE_TIME_H
 # include <time.h>
-#else
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# else
-#  ifdef HAVE_TIME_H
-#   include <time.h>
-#  endif
-# endif
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -207,53 +204,55 @@ static const char * const msg_nobg     = N_("Going into background not supported
 static const char * const msg_cacheoff = N_("Disabling cache");
 
 /* Command-line options. */
-static int opt_allzero      = 0;
-static int opt_bg           = 0;
-static int opt_force        = 0;
-static int opt_ioctl        = 0;
-static int opt_nopart       = 0;
-static int opt_nounrm       = 0;
-static int opt_nowfs        = 0;
-static int opt_no_wipe_zero = 0;
-static int opt_verbose      = 0;
-static int opt_zero         = 0;
+static int opt_allzero       = 0;
+static int opt_bg            = 0;
+static int opt_force         = 0;
+static int opt_ioctl         = 0;
+static int opt_nopart        = 0;
+static int opt_nounrm        = 0;
+static int opt_nowfs         = 0;
+static int opt_no_wipe_zero  = 0;
+static int opt_use_dedicated = 0;
+static int opt_verbose       = 0;
+static int opt_zero          = 0;
 
-static int wfs_optind       = 0;
+static int wfs_optind        = 0;
 
 #if (defined HAVE_GETOPT_H) && (defined HAVE_GETOPT_LONG)
-static int opt_blksize      = 0;
-static int opt_help         = 0;
-static int opt_license      = 0;
-static int opt_number       = 0;
-static int opt_super        = 0;
-static int opt_version      = 0;
-static int opt_method       = 0;
+static int opt_blksize       = 0;
+static int opt_help          = 0;
+static int opt_license       = 0;
+static int opt_number        = 0;
+static int opt_super         = 0;
+static int opt_version       = 0;
+static int opt_method        = 0;
 static char * opt_method_name = NULL;
 /* have to use a temp variable, to add both '-v' and '--verbose' together. */
-static int opt_verbose_temp = 0;
-static int opt_char    = 0;
+static int opt_verbose_temp  = 0;
+static int opt_char          = 0;
 
 static const struct option opts[] =
 {
-	{ "all-zeros",           no_argument,       &opt_allzero,      1 },
-	{ "background",          no_argument,       &opt_bg,           1 },
-	{ "blocksize",           required_argument, &opt_blksize,      1 },
-	{ "force",               no_argument,       &opt_force,        1 },
-	{ "help",                no_argument,       &opt_help,         1 },
-	{ "iterations",          required_argument, &opt_number,       1 },
-	{ "last-zero",           no_argument,       &opt_zero,         1 },
-	{ "licence",             no_argument,       &opt_license,      1 },
-	{ "license",             no_argument,       &opt_license,      1 },
-	{ "method",              required_argument, &opt_method,       1 },
-	{ "nopart",              no_argument,       &opt_nopart,       1 },
-	{ "nounrm",              no_argument,       &opt_nounrm,       1 },
-	{ "nowfs",               no_argument,       &opt_nowfs,        1 },
-	{ "no-wipe-zero-blocks", no_argument,       &opt_no_wipe_zero, 1 },
-	{ "superblock",          required_argument, &opt_super,        1 },
-	{ "use-ioctl",           no_argument,       &opt_ioctl,        1 },
+	{ "all-zeros",           no_argument,       &opt_allzero,       1 },
+	{ "background",          no_argument,       &opt_bg,            1 },
+	{ "blocksize",           required_argument, &opt_blksize,       1 },
+	{ "force",               no_argument,       &opt_force,         1 },
+	{ "help",                no_argument,       &opt_help,          1 },
+	{ "iterations",          required_argument, &opt_number,        1 },
+	{ "last-zero",           no_argument,       &opt_zero,          1 },
+	{ "licence",             no_argument,       &opt_license,       1 },
+	{ "license",             no_argument,       &opt_license,       1 },
+	{ "method",              required_argument, &opt_method,        1 },
+	{ "nopart",              no_argument,       &opt_nopart,        1 },
+	{ "nounrm",              no_argument,       &opt_nounrm,        1 },
+	{ "nowfs",               no_argument,       &opt_nowfs,         1 },
+	{ "no-wipe-zero-blocks", no_argument,       &opt_no_wipe_zero,  1 },
+	{ "superblock",          required_argument, &opt_super,         1 },
+	{ "use-dedicated",       no_argument,       &opt_use_dedicated, 1 },
+	{ "use-ioctl",           no_argument,       &opt_ioctl,         1 },
 	/* have to use a temp variable, to add both '-v' and '--verbose' together. */
-	{ "verbose",             no_argument,       &opt_verbose_temp, 1 },
-	{ "version",             no_argument,       &opt_version,      1 },
+	{ "verbose",             no_argument,       &opt_verbose_temp,  1 },
+	{ "version",             no_argument,       &opt_version,       1 },
 	{ NULL, 0, NULL, 0 }
 };
 #endif
@@ -286,11 +285,7 @@ static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
  * @return a non-zero value if the standard output is open for use.
  */
 int
-wfs_is_stdout_open (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+wfs_is_stdout_open (WFS_VOID)
 {
 	return stdout_open;
 }
@@ -302,11 +297,7 @@ wfs_is_stdout_open (
  * @return a non-zero value if the standard error output is open for use.
  */
 int
-wfs_is_stderr_open (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+wfs_is_stderr_open (WFS_VOID)
 {
 	return stderr_open;
 }
@@ -318,11 +309,7 @@ wfs_is_stderr_open (
  * @return the program's name.
  */
 const char *
-wfs_get_program_name (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+wfs_get_program_name (WFS_VOID)
 {
 	return wfs_progname;
 }
@@ -623,6 +610,7 @@ print_help (
 	puts ( _("--nounrm\t\tDo NOT wipe undelete information") );
 	puts ( _("--nowfs\t\t\tDo NOT wipe free space on file system") );
 	puts ( _("--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system") );
+	puts ( _("--use-dedicated\t\tUse the program dedicated for the given filesystem type") );
 	puts ( _("--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)") );
 	puts ( _("-v|--verbose\t\tVerbose output") );
 	puts ( _("-V|--version\t\tPrint version number") );
@@ -650,29 +638,16 @@ wfs_wipe_filesytem (
 	wfs_fsid_t fs;			/* The file system we're working on */
 	wfs_fsdata_t data;
 	wfs_errcode_t res;
-#ifndef HAVE_MEMSET
-	size_t i;
-#endif
 
-#ifdef HAVE_MEMSET
-	memset ( &fs, 0, sizeof (wfs_fsid_t) );
-	memset ( &data, 0, sizeof (wfs_fsdata_t) );
-#else
-	for (i = 0; i < sizeof (wfs_fsid_t); i++)
-	{
-		((char *)&fs)[i] = '\0';
-	}
-	for (i = 0; i < sizeof (wfs_fsdata_t); i++)
-	{
-		((char *)&data)[i] = '\0';
-	}
-#endif
+	WFS_MEMSET ( &fs, 0, sizeof (wfs_fsid_t) );
+	WFS_MEMSET ( &data, 0, sizeof (wfs_fsdata_t) );
 	fs.fsname = dev_name;
 	fs.zero_pass = opt_zero;
 	fs.npasses = npasses;
 	fs.fs_error = malloc (wfs_get_err_size ());
 	fs.whichfs = WFS_CURR_FS_NONE;
 	fs.no_wipe_zero_blocks = opt_no_wipe_zero;
+	fs.use_dedicated = opt_use_dedicated;
 
 	if ( dev_name == NULL )
 	{
@@ -773,6 +748,16 @@ wfs_wipe_filesytem (
 			free (fs.fs_error);
 		}
 		return WFS_OPENFS;
+	}
+	if ( (fs.whichfs != WFS_CURR_FS_XFS) && (fs.use_dedicated == 0) )
+	{
+		/*
+		 * NOTE: XFS support requires the $PATH environment variable
+		 * right now, so don't clear the environment.
+		 * Same thing with calling the dedicated wiping tools.
+		 * For other filesystems we can clear the environment.
+		 */
+		wfs_clear_env ();
 	}
 
 	if ( (sig_recvd == 0) && (opt_verbose > 0) )
@@ -982,9 +967,7 @@ static int GCC_WARN_UNUSED_RESULT wfs_read_ulong_param (
 		return -1;
 	}
 
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 #ifdef HAVE_STRTOL
 	tmp_value = strtol ( param, NULL, 10 );
 #else
@@ -1039,6 +1022,7 @@ main (
 	wf_gen.zero_pass = 0;
 	wf_gen.fs_backend = NULL;
 	wf_gen.no_wipe_zero_blocks = 0;
+	wf_gen.use_dedicated = 0;
 	wfs_check_stds (&stdout_open, &stderr_open);
 
 #ifdef HAVE_LIBINTL_H
@@ -1099,10 +1083,6 @@ main (
 		err = res;
 		wfs_show_error (wfs_err_msg_capset, wfs_progname, wf_gen);
 	}
-
-	/* NOTE: XFS support requires the $PATH environment variable right now,
-		so don't clear the environment. */
-	/*wfs_clear_env ();*/
 
 	/* Parsing the command line */
 #if (defined HAVE_GETOPT_H) && (defined HAVE_GETOPT_LONG)
@@ -1410,6 +1390,12 @@ main (
 			argv[i] = NULL;
 			continue;
 		}
+		if ( strcmp (argv[i], "--use-dedicated") == 0 )
+		{
+			opt_use_dedicated = 1;
+			argv[i] = NULL;
+			continue;
+		}
 
 		if ( strcmp (argv[i], "--") == 0 )
 		{
@@ -1663,7 +1649,7 @@ main (
 		else
 		{
 			/* child process: wipe the given filesystem */
-#ifdef HAVE_IOCTL
+#  ifdef HAVE_IOCTL
 /* Valgrind: when this is enabled, no memory leak in main() is reported, but the
 subsequent loop iterations may fail, so don't enable. */
 /*			if ( ioctls != NULL )
@@ -1671,7 +1657,7 @@ subsequent loop iterations may fail, so don't enable. */
 				free (ioctls);
 			}
 			ioctls = NULL;*/
-#endif
+#  endif
 			exit (wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind));
 		}
 # endif

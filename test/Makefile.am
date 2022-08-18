@@ -1,9 +1,11 @@
 if WFS_TESTS_ENABLED
 
-TESTS = test_wfs_util
-check_PROGRAMS = test_wfs_util
+TESTS = test_wfs_util test_wfs_wiping
+check_PROGRAMS = test_wfs_util test_wfs_wiping
+WFSTEST_COMMON_CFLAGS = @CHECK_CFLAGS@ -I $(top_builddir)/src
+
 test_wfs_util_SOURCES = test_wfs_util.c
-test_wfs_util_CFLAGS = @CHECK_CFLAGS@ -I $(top_builddir)/src
+test_wfs_util_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 test_wfs_util_LDADD = $(top_builddir)/src/wfs_util.o @CHECK_LIBS@ @LIBS@
 
 if EXT234FS
@@ -45,6 +47,10 @@ endif
 if OCFS
 test_wfs_util_LDADD += $(top_builddir)/src/wfs_ocfs.o
 endif
+
+test_wfs_wiping_SOURCES = test_wfs_wiping.c
+test_wfs_wiping_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_wiping_LDADD = $(top_builddir)/src/wfs_wiping.o @CHECK_LIBS@ @LIBS@
 
 zcompile: $(TESTS)
 .PHONY: zcompile

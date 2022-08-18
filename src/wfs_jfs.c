@@ -95,6 +95,8 @@
 #  include <jfs_logmgr.h>
 # else
 #  error Something wrong. JFS requested, but jfs_superblock.h or libfs missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. JFS requested, but jfs_superblock.h or libfs missing.
 # endif
 #endif
 
@@ -414,14 +416,7 @@ wfs_jfs_wipe_block (
 		/* last pass with zeros: */
 		if ( j != wfs_fs.npasses * 2 )
 		{
-# ifdef HAVE_MEMSET
-			memset ( buf, 0, bufsize );
-# else
-			for ( j=0; j < bufsize; j++ )
-			{
-				buf[j] = '\0';
-			}
-# endif
+			WFS_MEMSET ( buf, 0, bufsize );
 			if ( sig_recvd == 0 )
 			{
 				res = ujfs_rw_diskblocks (fp,
@@ -565,17 +560,11 @@ wfs_jfs_wipe_fs (
 	}
 
 	bufsize = wfs_jfs_get_block_size (wfs_fs);
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( bufsize );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -616,17 +605,11 @@ wfs_jfs_wipe_fs (
 		}
 		return WFS_BLBITMAPREAD;
 	}
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	block_map = (struct dmap **) malloc ((size_t)ndmaps * sizeof (struct dmap *));
 	if ( block_map == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;    /* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		free (buf);
 		if ( error_ret != NULL )
@@ -642,17 +625,11 @@ wfs_jfs_wipe_fs (
 	start = BMAP_OFF + PSIZE + PSIZE * (2 - level) + PSIZE;
 	for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
 	{
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		block_map[i] = (struct dmap *) malloc (sizeof (struct dmap));
 		if ( block_map[i] == NULL )
 		{
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 12L;    /* ENOMEM */
-# endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 			start += PSIZE;
 			continue;
 		}
@@ -829,17 +806,11 @@ wfs_jfs_wipe_unrm (
 			return ret_unrm;
 		}
 		bufsize = LOGPSIZE;
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 12L;	/* ENOMEM */
-# endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			ret_unrm = WFS_MALLOC;
 			if ( sig_recvd != 0 )
@@ -975,17 +946,11 @@ wfs_jfs_wipe_unrm (
 			return ret_unrm;
 		}
 		bufsize = (size_t)(journal.bsize);
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 12L;	/* ENOMEM */
-# endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 			fclose (journal_fp);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			ret_unrm = WFS_MALLOC;
@@ -1089,34 +1054,22 @@ wfs_jfs_open_fs (
 	}
 
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	jfs = (struct wfs_jfs *) malloc (sizeof (struct wfs_jfs));
 	if ( jfs == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
 	}
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	jfs->fs = fopen ( wfs_fs->fsname, "r+b" );
 	if ( jfs->fs == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 1L;	/* EPERM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);	/* EPERM */
 		ret = WFS_OPENFS;
 		free (jfs);
 	}
@@ -1208,18 +1161,12 @@ wfs_jfs_close_fs (
 	{
 		if ( jfs->fs != NULL )
 		{
-#ifdef HAVE_ERRNO_H
-			errno = 0;
-#endif
+			WFS_SET_ERRNO (0);
 			res = fclose (jfs->fs);
 			free (jfs);
 			if ( res != 0 )
 			{
-#ifdef HAVE_ERRNO_H
-				error = errno;
-#else
-				error = 9L;	/* EBADF */
-#endif
+				error = WFS_GET_ERRNO_OR_DEFAULT (9L);	/* EBADF */
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;
@@ -1374,11 +1321,7 @@ wfs_jfs_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_jfs_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_jfs_print_version (WFS_VOID)
 {
 	printf ( "JFS: <?>\n");
 }
@@ -1389,11 +1332,7 @@ void wfs_jfs_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_jfs_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_jfs_get_err_size (WFS_VOID)
 {
 	return sizeof (wfs_errcode_t);
 }
@@ -1403,11 +1342,7 @@ size_t wfs_jfs_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_jfs_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_jfs_init (WFS_VOID)
 {
 }
 
@@ -1416,11 +1351,7 @@ void wfs_jfs_init (
 /**
  * De-initialize the library.
  */
-void wfs_jfs_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_jfs_deinit (WFS_VOID)
 {
 }
 

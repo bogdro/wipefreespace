@@ -1,3 +1,4 @@
+# @configure_input@
 # Special names here like {__make} come from /usr/lib/rpm/macros, /usr/lib/rpm/macros.rpmbuild
 
 %define wfs_version @VERSION@
@@ -37,7 +38,8 @@ Provides:	e2wipefreespace >= 0.6
 %configure
 
 %build
-%make
+#% make
+%make_build
 
 %post
 #install-info

@@ -114,4 +114,12 @@ extern int GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
 extern void
 	flush_pipe_input WFS_PARAMS ((const int fd));
 
+extern char **
+	deep_copy_array WFS_PARAMS ((const char * const * const array,
+		const unsigned int len));
+
+extern void
+	free_array_deep_copy WFS_PARAMS ((char * array[],
+		const unsigned int len));
+
 #endif	/* WFS_UTIL_H */

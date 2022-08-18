@@ -35,6 +35,7 @@
 # else
 #  if !defined HAVE_DEV_T
 #   error No dev_t
+No dev_t /* make a syntax error, because not all compilers treat #error as an error */
 #  endif
 # endif
 #endif
@@ -78,6 +79,8 @@
 #  include <ext2fs.h>
 # else
 #  error Something wrong. Ext2/3/4 requested, but ext2fs.h or libext2fs missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. Ext2/3/4 requested, but ext2fs.h or libext2fs missing.
 # endif
 #endif
 
@@ -318,15 +321,8 @@ e2_do_block (
 		/* perform last wipe with zeros */
 		if ( j != bd->wd.filesys.npasses * 2 )
 		{
-#ifdef HAVE_MEMSET
-			memset (bd->wd.buf + buf_start, 0,
+			WFS_MEMSET (bd->wd.buf + buf_start, 0,
 				fs_block_size - buf_start);
-#else
-			for ( j = 0; j < fs_block_size - buf_start; j++ )
-			{
-				bd->wd.buf[buf_start+j] = '\0';
-			}
-#endif
 			e2error = 0;
 			/* do NOT overwrite the first block of the journal */
 			if ( (((bd->wd.isjournal != 0) && (first_journ == 0))
@@ -380,16 +376,8 @@ e2_do_block (
 			}
 			if ( j == 1 )
 			{
-#ifdef HAVE_MEMSET
-				memset (bd->wd.buf + buf_start, 0,
+				WFS_MEMSET (bd->wd.buf + buf_start, 0,
 					fs_block_size - buf_start);
-#else
-				for ( j = 0; j < fs_block_size
-					- buf_start; j++ )
-				{
-					bd->wd.buf[buf_start+j] = '\0';
-				}
-#endif
 				if ( sig_recvd != 0 )
 				{
 					returns = BLOCK_ABORT;
@@ -591,16 +579,8 @@ e2_wipe_unrm_dir (
 			}
 			else
 			{
-# ifdef HAVE_MEMSET
-				memset ((unsigned char *)filename, 0,
+				WFS_MEMSET ((unsigned char *)filename, 0,
 					(size_t)(DIRENT->name_len&0xFF));
-# else
-				for ( j=0; j < (size_t) (DIRENT->name_len & 0xFF);
-					j++ )
-				{
-					filename[j] = '\0';
-				}
-# endif
 				if ( j == wd->filesys.npasses )
 				{
 					DIRENT->name_len = 0;
@@ -736,17 +716,11 @@ wfs_e234_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		e2error = errno;
-# else
-		e2error = 12L;	/* ENOMEM */
-# endif
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -971,17 +945,11 @@ wfs_e234_wipe_fs (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		e2error = errno;
-# else
-		e2error = 12L;	/* ENOMEM */
-# endif
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1130,17 +1098,11 @@ wfs_e234_wipe_journal (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		e2error = errno;
-# else
-		e2error = 12L;	/* ENOMEM */
-# endif
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		if ( error_ret != NULL )
 		{
@@ -1573,11 +1535,7 @@ wfs_e234_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_e234_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_e234_print_version (WFS_VOID)
 {
 	const char *lib_ver = NULL;
 
@@ -1592,11 +1550,7 @@ void wfs_e234_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_e234_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_e234_get_err_size (WFS_VOID)
 {
 	return sizeof (errcode_t);
 }
@@ -1606,11 +1560,7 @@ size_t wfs_e234_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_e234_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_e234_init (WFS_VOID)
 {
 	initialize_ext2_error_table ();
 }
@@ -1620,11 +1570,7 @@ void wfs_e234_init (
 /**
  * De-initialize the library.
  */
-void wfs_e234_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_e234_deinit (WFS_VOID)
 {
 #if (defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)
 	remove_error_table (&et_ext2_error_table);

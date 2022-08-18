@@ -17,6 +17,10 @@
 #
 #   Copyright (c) 2006 Guido U. Draheim <guidod@gmx.de>
 #
+#	Changes:
+#	2021-09-07, Bogdan Drozdowski <bogdro@users.sourceforge.net>: updated
+#		to autoconf 2.71.
+#
 #   This program is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public License as
 #   published by the Free Software Foundation; either version 2 of the
@@ -51,9 +55,8 @@ AC_DEFUN([AX_GCC_WARN_UNUSED_RESULT],[dnl
 AC_CACHE_CHECK(
  [whether the compiler supports function __attribute__((__warn_unused_result__))],
  ax_cv_gcc_warn_unused_result,[
- AC_TRY_COMPILE([__attribute__((__warn_unused_result__))
- int f(int i) { return i; }],
- [],
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[__attribute__((__warn_unused_result__))
+ int f(int i) { return i; }]], [[]])],
  ax_cv_gcc_warn_unused_result=yes, ax_cv_gcc_warn_unused_result=no)])
  if test "$ax_cv_gcc_warn_unused_result" = yes; then
    AC_DEFINE([GCC_WARN_UNUSED_RESULT],[__attribute__((__warn_unused_result__))],

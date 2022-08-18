@@ -43,6 +43,8 @@
 # include <common.h>
 #else
 # error Something wrong. FAT12/16/32 requested, but tffs.h or libtffs missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. FAT12/16/32 requested, but tffs.h or libtffs missing.
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -546,9 +548,6 @@ _get_dirent (
 # endif
 {
 	int ret = DIRENTRY_OK;
-# ifndef HAVE_MEMCPY
-	size_t j;
-# endif
 
 	if ( (pdir == NULL) || (pdirent == NULL) )
 	{
@@ -569,17 +568,9 @@ _get_dirent (
 
 	if (pdir->cur_dir_entry < (pdir->ptffs->pbs->byts_per_sec / sizeof (dir_entry_t)))
 	{
-# ifdef HAVE_MEMCPY
-		memcpy (pdirent,
+		WFS_MEMCOPY (pdirent,
 			(dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry,
 			sizeof (dir_entry_t));
-# else
-		for ( j=0; j < sizeof (dir_entry_t); j++ )
-		{
-			((char *)pdirent)[j] =
-				((char *)((dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry))[j];
-		}
-# endif
 		pdir->cur_dir_entry++;
 	}
 	else
@@ -593,18 +584,9 @@ _get_dirent (
 			pdir->cur_dir_entry = 0;
 			if ((ret = dir_read_sector (pdir)) == DIR_OK)
 			{
-# ifdef HAVE_MEMCPY
-				memcpy (pdirent,
+				WFS_MEMCOPY (pdirent,
 					(dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry,
 					sizeof (dir_entry_t));
-# else
-				for ( j=0; j < sizeof (dir_entry_t); j++ )
-				{
-					((char *)pdirent)[j] =
-						((char *)((dir_entry_t *)pdir->secbuf
-							+ pdir->cur_dir_entry))[j];
-				}
-# endif
 				pdir->cur_dir_entry++;
 			}
 			else
@@ -780,21 +762,11 @@ wfs_fat_dirent_find (
 						printf("wfs_fat_dirent_find: wiping long name with zeros\n");
 						fflush(stdout);
 #endif
-# ifdef HAVE_MEMSET
-						memset (fname,
+						WFS_MEMSET (fname,
 							'\0', 13 /*dirent.h->long_dir_entry_t*/
 								/* 2 / *sizeof UTF-16 character */
 								-1 /* the first marker byte */
 								);
-# else
-						for ( j = 0; j < 13 /*dirent.h->long_dir_entry_t*/
-								/* 2 / *sizeof UTF-16 character */
-								-1 /* the first marker byte */
-								; j++ )
-						{
-							fname[j] = '\0';
-						}
-# endif
 					}
 					else
 					{
@@ -802,14 +774,7 @@ wfs_fat_dirent_find (
 						printf("wfs_fat_dirent_find: wiping short name with zeros\n");
 						fflush(stdout);
 #endif
-# ifdef HAVE_MEMSET
-						memset (fname, '\0', sizeof (dirent.dir_name) - 1);
-# else
-						for ( j = 0; j < sizeof (dirent.dir_name) - 1; j++ )
-						{
-							fname[j] = '\0';
-						}
-# endif
+						WFS_MEMSET (fname, '\0', sizeof (dirent.dir_name) - 1);
 					}
 					if ( sig_recvd != 0 )
 					{
@@ -959,7 +924,7 @@ wfs_fat_wipe_file_tail (
 	printf("wfs_fat_wipe_file_tail: got file size: %u\n", file_len);
 	fflush(stdout);
 #endif
-	if ( (int)file_len < 0 /*|| (file_len >= (unsigned int)0x80000000)*/ )
+	if ( (int)file_len <= 0 /*|| (file_len >= (unsigned int)0x80000000)*/ )
 	{
 		if ( error_ret != NULL )
 		{
@@ -1016,6 +981,7 @@ wfs_fat_wipe_file_tail (
 		/* workaround a bug in tffs? */
 		if ( written > 0 )
 		{
+			dirent_set_file_size (fh->pdir_entry, file_len);
 			fh->file_size -= (uint32)written;
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
@@ -1032,14 +998,7 @@ wfs_fat_wipe_file_tail (
 	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-		memset (buf, 0, bufsize);
-# else
-		for ( j = 0; j < bufsize; j++ )
-		{
-			buf[j] = '\0';
-		}
-# endif
+		WFS_MEMSET (buf, 0, bufsize);
 		if ( sig_recvd == 0 )
 		{
 			/* wipe the space after the file */
@@ -1052,6 +1011,7 @@ wfs_fat_wipe_file_tail (
 			/* workaround a bug in tffs? */
 			if ( written > 0 )
 			{
+				dirent_set_file_size (fh->pdir_entry, file_len);
 				fh->file_size -= (uint32)written;
 			}
 			/* No need to flush the last writing of a given block. *
@@ -1127,9 +1087,6 @@ wfs_fat_wipe_file_tails_in_dir (
 	tdir_handle_t dirh;
 	byte wfs_fat_parent_dir[] = ".."; /* use a local copy, even if constant */
 	byte wfs_fat_fopen_mode[] = "a"; /* use a local copy, even if constant */
-# ifndef HAVE_MEMSET
-	unsigned int j;
-# endif
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1166,14 +1123,7 @@ wfs_fat_wipe_file_tails_in_dir (
 
 	do
 	{
-# ifdef HAVE_MEMSET
-		memset (&entry, '\0', sizeof (dirent_t));
-# else
-		for ( j = 0; j < sizeof (dirent_t); j++ )
-		{
-			((char*)&entry)[j] = '\0';
-		}
-# endif
+		WFS_MEMSET (&entry, '\0', sizeof (dirent_t));
 #ifdef WFS_DEBUG
 		printf("wfs_fat_wipe_file_tails_in_dir: read directory\n");
 		fflush(stdout);
@@ -1188,7 +1138,6 @@ wfs_fat_wipe_file_tails_in_dir (
 		{
 			break;
 		}
-
 #ifdef WFS_DEBUG
 		printf("wfs_fat_wipe_file_tails_in_dir: marker 1\n");
 		fflush(stdout);
@@ -1295,6 +1244,7 @@ wfs_fat_wipe_file_tails_in_dir (
 					entry.d_name);
 				fflush(stdout);
 #endif
+
 				wfs_fat_wipe_file_tail (wfs_fs, fh, buf);
 #ifdef WFS_DEBUG
 				printf("wfs_fat_wipe_file_tails_in_dir: wiping file '%s' finished\n",
@@ -1401,17 +1351,11 @@ wfs_fat_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1611,15 +1555,15 @@ wfs_fat_wipe_fs (
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
-			if ( sig_recvd != 0 )
-			{
-				ret_wfs = WFS_SIGNAL;
-				break;
-			}
 			error = 0;
 			/* wipe all sectors of cluster 'cluster' */
 			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
 			{
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
 				if ( wfs_fs.no_wipe_zero_blocks != 0 )
 				{
 					error = _read_fat_sector (pfat,
@@ -1637,14 +1581,7 @@ wfs_fat_wipe_fs (
 						continue;
 					}
 				}
-# ifdef HAVE_MEMSET
-				memset (pfat->secbuf, 0, bytes_per_sector);
-# else
-				for ( j = 0; j < bytes_per_sector; j++ )
-				{
-					pfat->secbuf[j] = '\0';
-				}
-# endif
+				WFS_MEMSET (pfat->secbuf, 0, bytes_per_sector);
 				error = _write_fat_sector (pfat,
 					sec_num + sec_iter);
 				if ( error == 0 )
@@ -1662,6 +1599,11 @@ wfs_fat_wipe_fs (
 			{
 				error = wfs_fat_flush_fs (wfs_fs);
 			}*/
+			if ( sig_recvd != 0 )
+			{
+				ret_wfs = WFS_SIGNAL;
+				break;
+			}
 		}
 		wfs_show_progress (WFS_PROGRESS_WFS,
 			(cluster * 100)/ptffs->total_clusters,
@@ -1726,9 +1668,6 @@ wfs_fat_wipe_unrm_dir (
 	wfs_errcode_t * error_ret;
 	tdir_handle_t dirh;
 	byte wfs_fat_parent_dir[] = ".."; /* use a local copy, even if constant */
-# ifndef HAVE_MEMSET
-	unsigned int j;
-# endif
 
 	fat = (tffs_handle_t) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -1762,14 +1701,7 @@ wfs_fat_wipe_unrm_dir (
 	/* first recurse into subdirectories: */
 	while (sig_recvd == 0)
 	{
-# ifdef HAVE_MEMSET
-		memset (&entry, '\0', sizeof (dirent_t));
-# else
-		for ( j = 0; j < sizeof (dirent_t); j++ )
-		{
-			((char*)&entry)[j] = '\0';
-		}
-# endif
+		WFS_MEMSET (&entry, '\0', sizeof (dirent_t));
 #ifdef WFS_DEBUG
 		printf("wfs_fat_wipe_unrm_dir: read directory '%s'\n", dirname);
 		fflush(stdout);
@@ -1940,17 +1872,11 @@ wfs_fat_wipe_unrm (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc (fs_block_size);
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -2006,9 +1932,6 @@ wfs_fat_open_fs (
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
 	char * dev_name_copy;
-#ifndef HAVE_MEMCPY
-	unsigned int i;
-#endif
 	int fs_fd;
 	ssize_t boot_read;
 	union bootsec
@@ -2016,7 +1939,6 @@ wfs_fat_open_fs (
 		boot_sector_t pbs;
 		unsigned char bytes[512]; /* to make sure we have at leat 512 bytes in "union bootsec" */
 	} bsec;
-	size_t namelen;
 	wfs_errcode_t error = 0;
 	tffs_handle_t fat;
 	wfs_errcode_t * error_ret = NULL;
@@ -2040,9 +1962,7 @@ wfs_fat_open_fs (
 
 #ifdef HAVE_FCNTL_H
 	/* first check some basic things, to save resources if different filesystem */
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	fs_fd = open (wfs_fs->fsname, O_RDONLY
 # ifdef O_BINARY
 		| O_BINARY
@@ -2054,11 +1974,7 @@ wfs_fat_open_fs (
 # endif
 	   )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 1L;	/* EPERM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);	/* EPERM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -2087,33 +2003,17 @@ wfs_fat_open_fs (
 
 #endif /* HAVE_FCNTL_H */
 	/* malloc a new array for dev_name */
-	namelen = strlen (wfs_fs->fsname);
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
-	dev_name_copy = (char *) malloc (namelen + 1);
+	WFS_SET_ERRNO (0);
+	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
 	}
-
-#ifdef HAVE_MEMCPY
-	memcpy (dev_name_copy, wfs_fs->fsname, namelen + 1);
-#else
-	for ( i=0; i < namelen + 1; i++ )
-	{
-		dev_name_copy[i] = wfs_fs->fsname[i];
-	}
-#endif
 
 	error = TFFS_mount (dev_name_copy, &fat);
 	free (dev_name_copy);
@@ -2241,6 +2141,12 @@ wfs_fat_is_dirty (
 
 /* ======================================================================== */
 
+#if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)
+# define WFS_ONLY_WITH_FSYNC WFS_ATTR ((unused))
+#else
+# define WFS_ONLY_WITH_FSYNC
+#endif
+
 /**
  * Flushes the FAT filesystem.
  * \param wfs_fs The filesystem.
@@ -2250,18 +2156,10 @@ wfs_fat_is_dirty (
 wfs_errcode_t
 wfs_fat_flush_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t wfs_fs
-# if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)
-		WFS_ATTR ((unused))
-# endif
-	)
+	wfs_fsid_t wfs_fs WFS_ONLY_WITH_FSYNC)
 #else
 	wfs_fs)
-	wfs_fsid_t wfs_fs
-# if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)
-		WFS_ATTR ((unused))
-# endif
-	;
+	wfs_fsid_t wfs_fs WFS_ONLY_WITH_FSYNC;
 #endif
 {
 	wfs_errcode_t ret = WFS_SUCCESS;
@@ -2284,9 +2182,7 @@ wfs_fat_flush_fs (
 	dev = (tdev_t *) ((tffs_t *)fat)->hdev;
 	if ( dev != NULL )
 	{
-#  ifdef HAVE_ERRNO_H
-		errno = 0;
-#  endif
+		WFS_SET_ERRNO (0);
 		fsync (dev->fd);
 #  ifdef HAVE_ERRNO_H
 		if ( errno != 0 )
@@ -2313,11 +2209,7 @@ wfs_fat_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_fat_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_fat_print_version (WFS_VOID)
 {
 	printf ( "FAT (TFFS): <?>\n");
 }
@@ -2328,11 +2220,7 @@ void wfs_fat_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_fat_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_fat_get_err_size (WFS_VOID)
 {
 	return sizeof (wfs_errcode_t);
 }
@@ -2342,11 +2230,7 @@ size_t wfs_fat_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_fat_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_fat_init (WFS_VOID)
 {
 }
 
@@ -2355,11 +2239,7 @@ void wfs_fat_init (
 /**
  * De-initialize the library.
  */
-void wfs_fat_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_fat_deinit (WFS_VOID)
 {
 }
 

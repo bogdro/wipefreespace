@@ -35,6 +35,8 @@
 # include <protos.h>
 #else
 # error Something wrong. MinixFS requested, but minix_fs.h or libminixfs missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. MinixFS requested, but minix_fs.h or libminixfs missing.
 #endif
 
 #ifdef HAVE_ERRNO_H
@@ -355,15 +357,7 @@ wfs_minixfs_wipe_dir (
 						&& (sig_recvd == 0) )
 					{
 						/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-						memset ( &blk[j+2], 0, direntsize-2);
-# else
-						for ( k=0; (k < direntsize-2)
-							&& (sig_recvd == 0); k++ )
-						{
-							blk[j+2+k] = '\0';
-						}
-# endif
+						WFS_MEMSET ( &blk[j+2], 0, direntsize-2);
 						if ( sig_recvd == 0 )
 						{
 							error = 0;
@@ -435,17 +429,9 @@ wfs_minixfs_wipe_dir (
 			/* last pass with zeros: */
 			if ( j != wfs_fs.npasses * 2 )
 			{
-# ifdef HAVE_MEMSET
-				memset ( &buf[was_read], 0,
+				WFS_MEMSET ( &buf[was_read], 0,
 					(unsigned int)(fs_block_size
 					- (size_t)was_read) );
-# else
-				for ( j=0; j < (unsigned int)(fs_block_size
-					- (size_t)was_read); j++ )
-				{
-					buf[was_read+j] = '\0';
-				}
-# endif
 				if ( sig_recvd == 0 )
 				{
 					error = 0;
@@ -508,17 +494,11 @@ wfs_minixfs_wipe_part (
 	}
 	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -584,17 +564,11 @@ wfs_minixfs_wipe_fs (
 	}
 	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -640,9 +614,7 @@ wfs_minixfs_wipe_fs (
 				break;
 			}
 			error = 0;
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
+			WFS_SET_ERRNO (0);
 			written = fwrite (buf, 1, fs_block_size,
 				goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
 			if ( written != fs_block_size )
@@ -665,23 +637,14 @@ wfs_minixfs_wipe_fs (
 			/* last pass with zeros: */
 			if ( j != wfs_fs.npasses * 2 )
 			{
-# ifdef HAVE_MEMSET
-				memset ( buf, 0, fs_block_size );
-# else
-				for ( j=0; j < fs_block_size; j++ )
-				{
-					buf[j] = '\0';
-				}
-# endif
+				WFS_MEMSET ( buf, 0, fs_block_size );
 				if ( sig_recvd != 0 )
 				{
 					ret_wfs = WFS_SIGNAL;
 					break;
 				}
 				error = 0;
-# ifdef HAVE_ERRNO_H
-				errno = 0;
-# endif
+				WFS_SET_ERRNO (0);
 				written = fwrite (buf, 1, fs_block_size,
 					goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
 				if ( written != fs_block_size )
@@ -753,17 +716,11 @@ wfs_minixfs_wipe_unrm (
 	}
 	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -840,34 +797,22 @@ wfs_minixfs_open_fs (
 	/* Open the filesystem our way, because open_fs() calls exit() and closes the
 	   process, so if this filesystem is not MinixFS, filesystems checked after
 	   MinixFS will not have a chance to get tried. */
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	minix = (struct minix_fs_dat *) malloc (sizeof (struct minix_fs_dat));
 	if ( minix == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		ret = errno;
-#else
-		ret = 12; /* ENOMEM */
-#endif
+		ret = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = ret;
 		}
 		return WFS_OPENFS;
 	}
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	minix->fp = fopen (wfs_fs->fsname, "r+b");
 	if ( minix->fp == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		ret = errno;
-#else
-		ret = 9; /* EBADF */
-#endif
+		ret = WFS_GET_ERRNO_OR_DEFAULT (9); /* EBADF */
 		free (minix);
 		if ( error_ret != NULL )
 		{
@@ -981,16 +926,10 @@ wfs_minixfs_close_fs (
 		}
 		else
 		{
-#ifdef HAVE_ERRNO_H
-			errno = 0;
-#endif
+			WFS_SET_ERRNO (0);
 			if ( fclose (minix->fp) != 0 )
 			{
-#ifdef HAVE_ERRNO_H
-				error = errno;
-#else
-				error = 9; /* EBADF */
-#endif
+				error = WFS_GET_ERRNO_OR_DEFAULT (9); /* EBADF */
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;
@@ -1112,9 +1051,7 @@ wfs_minixfs_flush_fs (
 	{
 		return WFS_BADPARAM;
 	}
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	if ( fflush (minix->fp) != 0 )
 	{
 #ifdef HAVE_ERRNO_H
@@ -1136,11 +1073,7 @@ wfs_minixfs_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_minixfs_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_minixfs_print_version (WFS_VOID)
 {
 	printf ( "MinixFS: <?>\n");
 }
@@ -1151,11 +1084,7 @@ void wfs_minixfs_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_minixfs_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_minixfs_get_err_size (WFS_VOID)
 {
 	return sizeof (wfs_errcode_t);
 }
@@ -1165,11 +1094,7 @@ size_t wfs_minixfs_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_minixfs_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_minixfs_init (WFS_VOID)
 {
 }
 
@@ -1178,11 +1103,7 @@ void wfs_minixfs_init (
 /**
  * De-initialize the library.
  */
-void wfs_minixfs_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_minixfs_deinit (WFS_VOID)
 {
 }
 

@@ -70,6 +70,8 @@ extern unsigned long int wfs_hfsp_sig(char c0, char c1, char c2, char c3);
 # include <blockiter.h>
 # else
 #  error Something wrong. HFS+ requested, but libhfsp.h or libhfsp missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. HFS+ requested, but libhfsp.h or libhfsp missing.
 # endif
 #endif
 
@@ -265,15 +267,8 @@ wfs_hfsp_wipe_part_file (
 		/* perform last wipe with zeros */
 		if ( j != wfs_fs.npasses * 2 )
 		{
-# ifdef HAVE_MEMSET
-			memset ( &buf[remainder], 0,
+			WFS_MEMSET ( &buf[remainder], 0,
 				(size_t)(fs_block_size - remainder) );
-# else
-			for ( j=remainder; j < fs_block_size; j++ )
-			{
-				buf[j] = '\0';
-			}
-# endif
 			error = volume_writetobuf (hfsp_volume,
 				buf, (long int)last_block);
 			if ( error != 0 )
@@ -503,17 +498,11 @@ wfs_hfsp_wipe_part (
 		return ret_part;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
@@ -581,17 +570,11 @@ wfs_hfsp_wipe_fs (
 	{
 		return WFS_BADPARAM;
 	}
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -652,14 +635,7 @@ wfs_hfsp_wipe_fs (
 				if ( j != wfs_fs.npasses * 2 )
 				{
 					/* perform last wipe with zeros */
-# ifdef HAVE_MEMSET
-					memset ( buf, 0, fs_block_size );
-# else
-					for ( j = 0; j < fs_block_size; j++ )
-					{
-						buf[j] = '\0';
-					}
-# endif
+					WFS_MEMSET ( buf, 0, fs_block_size );
 					error = volume_writetobuf (hfsp_volume,
 						buf, (long int)curr_block);
 					if ( error != 0 )
@@ -757,13 +733,9 @@ wfs_hfsp_open_fs (
 	wfs_errcode_t ret = WFS_OPENFS;
 	int res;
 	char * dev_name_copy;
-	size_t namelen;
 	wfs_errcode_t error = 0;
 	struct volume * hfsp_volume;
 	wfs_errcode_t * error_ret;
-#ifndef HAVE_MEMSET
-	size_t j;
-#endif
 
 	if ( wfs_fs == NULL )
 	{
@@ -778,44 +750,25 @@ wfs_hfsp_open_fs (
 		}
 		return WFS_BADPARAM;
 	}
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	hfsp_volume = (struct volume *) malloc (sizeof (struct volume));
 	if ( hfsp_volume == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
 	}
-#ifdef HAVE_MEMSET
-	memset (hfsp_volume, 0, sizeof (struct volume));
-#else
-	for ( j = 0; j < sizeof (struct volume); j++ )
-	{
-		((char *)hfsp_volume)[j] = '\0';
-	}
-#endif
+	WFS_MEMSET (hfsp_volume, 0, sizeof (struct volume));
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
-	namelen = strlen (wfs_fs->fsname);
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
-	dev_name_copy = (char *) malloc (namelen + 1);
+
+	WFS_SET_ERRNO (0);
+	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		free (hfsp_volume);
 		if ( error_ret != NULL )
 		{
@@ -823,9 +776,6 @@ wfs_hfsp_open_fs (
 		}
 		return WFS_MALLOC;
 	}
-
-	strncpy (dev_name_copy, wfs_fs->fsname, namelen + 1);
-	dev_name_copy[namelen] = '\0';
 
 	/* volume_open() wants a confirmation from the user when opening in read+write
 	   mode, so put a 'y' in the standard input stream. */
@@ -989,11 +939,7 @@ wfs_hfsp_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_hfsp_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_hfsp_print_version (WFS_VOID)
 {
 	printf ( "HFS+: <?>\n");
 }
@@ -1004,11 +950,7 @@ void wfs_hfsp_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_hfsp_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_hfsp_get_err_size (WFS_VOID)
 {
 	return sizeof (wfs_errcode_t);
 }
@@ -1018,11 +960,7 @@ size_t wfs_hfsp_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_hfsp_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_hfsp_init (WFS_VOID)
 {
 }
 
@@ -1031,11 +969,7 @@ void wfs_hfsp_init (
 /**
  * De-initialize the library.
  */
-void wfs_hfsp_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_hfsp_deinit (WFS_VOID)
 {
 }
 

@@ -23,10 +23,10 @@
  *		USA
  */
 
-#define _POSIX_C_SOURCE 200112L	/* posix_memalign() */
-#define _XOPEN_SOURCE 600	/* brk(), sbrk() */
-#define _LARGEFILE64_SOURCE 1	/* off64_t */
-#define _GNU_SOURCE	1	/* fallocate() */
+#define _POSIX_C_SOURCE 200112L
+#define _XOPEN_SOURCE 600
+#define _LARGEFILE64_SOURCE 1
+#define _GNU_SOURCE	1
 #define _ATFILE_SOURCE 1
 #define __USE_GNU
 
@@ -228,18 +228,18 @@ fill_buffer (
 	const wfs_fsid_t		wfs_fs WFS_ATTR ((unused)) )
 #else
 	pat_no,	buffer,	buflen,	selected, wfs_fs )
-	unsigned long int 		pat_no;
-	unsigned char * const 		buffer;
-	const size_t 			buflen;
-	int * const			selected;
-	const wfs_fsid_t		wfs_fs;
+	unsigned long int 		pat_no WFS_ATTR ((unused));
+	unsigned char * const 		buffer WFS_ATTR ((unused));
+	const size_t 			buflen WFS_ATTR ((unused));
+	int * const			selected WFS_ATTR ((unused));
+	const wfs_fsid_t		wfs_fs WFS_ATTR ((unused));
 #endif
 {
 }
 
 /* ============================================================= */
 
-#define WFS_TEST_FILESYSTEM "../../dysk_ext2"
+#define WFS_TEST_FILESYSTEM "test-fs"
 #define WFS_TEST_MOUNT_POINT "testdir"
 #define WFS_TEST_LOOP_DEVICE "/dev/loop3"	/* chosen arbitrarily */
 
@@ -352,7 +352,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 			close (fd_fs);
 			ioctl (fd_loop, LOOP_CLR_FD, 0);
 			close (fd_loop);
-			fail ("%s: can't allocate memory of size %ld\n",
+			fail ("%s: can't allocate memory of size %d\n",
 				test_name, WFS_TEST_ERR_SIZE);
 		}
 	}

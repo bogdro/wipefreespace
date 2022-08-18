@@ -29,6 +29,8 @@
 # ifdef STAT_MACROS_BROKEN
 #  if STAT_MACROS_BROKEN
 #   error Stat macros broken. Change your C library.
+/* make a syntax error, because not all compilers treat #error as an error */
+Stat macros broken. Change your C library.
 #  endif
 # endif
 
@@ -297,6 +299,8 @@ struct wfs_fsid
 		/* whether not to wipe all-zero blocks on
 		on this filesystem: */
 	int no_wipe_zero_blocks;
+		/* whether not to use the dedicated wiping tool: */
+	int use_dedicated;
 };
 
 typedef struct wfs_fsid wfs_fsid_t;
@@ -343,6 +347,43 @@ typedef union wfs_fsdata wfs_fsdata_t;
 # else
 #  define WFS_PARAMS(protos) ()
 #  undef WFS_ANSIC
+# endif
+
+# ifdef WFS_ANSIC
+#  define WFS_VOID void
+# else
+#  define WFS_VOID
+# endif
+
+# ifdef HAVE_ERRNO_H
+#  define WFS_GET_ERRNO_OR_DEFAULT(val) (errno)
+#  define WFS_SET_ERRNO(value) do { errno = (value); } while (0)
+# else
+#  define WFS_GET_ERRNO_OR_DEFAULT(val) (val)
+#  define WFS_SET_ERRNO(value)
+# endif
+
+# ifdef HAVE_MEMCPY
+#  define WFS_MEMCOPY memcpy
+# else
+extern void wfs_memcopy WFS_PARAMS ((void * const dest,
+	const void * const src, const size_t len));
+#  define WFS_MEMCOPY wfs_memcopy
+# endif
+
+# ifdef HAVE_MEMSET
+#  define WFS_MEMSET memset
+# else
+extern void wfs_mem_set WFS_PARAMS ((void * const dest,
+	const char value, const size_t len));
+#  define WFS_MEMSET wfs_mem_set
+# endif
+
+# ifdef HAVE_STRDUP
+#  define WFS_STRDUP strdup
+# else
+extern char * wfs_duplicate_string WFS_PARAMS ((const char src[]));
+#  define WFS_STRDUP wfs_duplicate_string
 # endif
 
 extern int GCC_WARN_UNUSED_RESULT

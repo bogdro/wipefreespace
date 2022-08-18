@@ -21,18 +21,16 @@ be setuid(root).
 Each given filesystem is wiped ONLY ONCE, no matter how many times it appears on the command line.
 WipeFreeSpace also works for file systems created inside regular files on any host file system.
 
-Wipefreespace wipes the following things (when supported by the backing
- library):
+Wipefreespace wipes the following things (when supported by the backing library):
 .IP - 2
- free space (space in unused blocks/clusters)
+free space (space in unused blocks/clusters)
 .IP - 2
- free space in partially used blocks (also called the "slack space")
+free space in partially used blocks (also called the "slack space")
 .IP - 2
- deleted files' names and other data that can be used to undelete a file (like the journal)
+deleted files' names and other data that can be used to undelete a file (like the journal)
 
 .LP
-Wipefreespace does NOT decrease the amount of available free space when
- working.
+Wipefreespace does NOT decrease the amount of available free space when working.
 
 To perform a command after wiping (like sending e-mail), simply run a
 program after WipeFreeSpace is finished, for example:
@@ -85,6 +83,9 @@ Do NOT wipe free space on file system
 Do NOT wipe all-zero blocks on file system (useful for virtual/sparse devices,
 where empty areas are read as all-zeros and do not take physical space unless
 actually written to).
+.IP --use-dedicated
+Use the program dedicated for the given filesystem type if supported. Fallback to
+WipeFreeSpace if unsupported (currently, only 'ntfswipe' is supported)
 .IP --use-ioctl
 Disable device caching during work (can be DANGEROUS)
 .IP -v|--verbose
@@ -95,13 +96,13 @@ Print version number
 
 .SH "WIPING METHODS"
 The following method names (case-insensitive) are available:
-.IP Gutmann
+.IP Gutmann 10
 - method similar to Gutmann's, the default, 36 passes
-.IP random
+.IP random 10
 - shred-like, 25 passes
-.IP schneier
+.IP schneier 10
 - Shneier's method, 7 passes, contains ITSG-06
-.IP dod
+.IP dod 10
 - DoD, 3 passes, contains NAVSO P-5239-26 and German Federal Office for Information Security
 
 
@@ -179,6 +180,7 @@ the journal is committed and there aren't any concurrent modifications.
 
 .SH AUTHOR
 Bogdan 'bogdro' Drozdowski,
+
 bogdro (at) users . sourceforge . net
 
 bogdro-soft (at) gmx . com

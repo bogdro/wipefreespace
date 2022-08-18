@@ -305,9 +305,7 @@ wfs_get_mnt_point_getmntent (
 	*is_rw = 1;
 	mnt_point[0] = '\0';
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	mnt_f = setmntent (_PATH_MOUNTED, "r");
 	if ( mnt_f == NULL )
 	{
@@ -321,12 +319,10 @@ wfs_get_mnt_point_getmntent (
 	}
 	do
 	{
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 # ifndef HAVE_GETMNTENT_R
 		mnt = getmntent (mnt_f);
-		memcpy (&mnt_copy, mnt, sizeof (struct mntent));
+		WFS_MEMCOPY (&mnt_copy, mnt, sizeof (struct mntent));
 # else
 		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, WFS_MNTBUFLEN);
 # endif
@@ -442,9 +438,6 @@ wfs_get_mnt_point_mounts (
 	struct loop_info li;
 # endif
 #endif /* WFS_HAVE_IOCTL_LOOP */
-#ifndef HAVE_MEMSET
-	size_t j;
-#endif
 
 	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
@@ -519,27 +512,12 @@ wfs_get_mnt_point_mounts (
 				{
 					continue;
 				}
-# ifdef HAVE_MEMSET
-#  ifdef LOOP_GET_STATUS64
-				memset ( &li64, 0, sizeof (struct loop_info64) );
-#  endif
-#  ifdef LOOP_GET_STATUS
-				memset ( &li, 0, sizeof (struct loop_info) );
-#  endif
-# else /* ! HAVE_MEMSET */
-#  ifdef LOOP_GET_STATUS64
-				for ( j=0; j < sizeof (struct loop_info64); j++ )
-				{
-					((char *)&li64)[j] = '\0';
-				}
-#  endif
-#  ifdef LOOP_GET_STATUS
-				for ( j=0; j < sizeof (struct loop_info); j++ )
-				{
-					((char *)&li)[j] = '\0';
-				}
-#  endif
-# endif /* HAVE_MEMSET */
+# ifdef LOOP_GET_STATUS64
+				WFS_MEMSET ( &li64, 0, sizeof (struct loop_info64) );
+# endif
+# ifdef LOOP_GET_STATUS
+				WFS_MEMSET ( &li, 0, sizeof (struct loop_info) );
+# endif
 				res = -1;
 				res64 = -1;
 # ifdef LOOP_GET_STATUS64
@@ -947,9 +925,7 @@ child_function (
 #endif
 
 #if (defined HAVE_DUP2)
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		if ( id->stdin_fd != -1 )
 		{
 			res = dup2 (id->stdin_fd, STDIN_FILENO);
@@ -1099,6 +1075,7 @@ wfs_create_child (
 	}
 	else if ( id->chld_id.chld_pid == 0 )
 	{
+		id->type = CHILD_FORK;
 		child_function (id);
 		/* Not all compilers may detect that child_function() will never return, so
 		   return here just in case. */
@@ -1674,3 +1651,172 @@ flush_pipe_input (
 	fcntl (fd, F_SETFL, fcntl (fd, F_GETFL) & ~ O_NONBLOCK );
 #endif
 }
+
+/* ======================================================================== */
+
+/**
+ * Makes a deep copy of the given array.
+ * @param array The array to copy.
+ * @param len The length of the array.
+ * @return a new deep copy of the given array.
+ */
+char **
+deep_copy_array (
+#ifdef WFS_ANSIC
+	const char * const * const array, const unsigned int len)
+#else
+	array, len )
+	const char * const * const array;
+	const unsigned int len;
+#endif
+{
+	unsigned int i;
+	char ** new_arr;
+
+	if ( (array == NULL) || (len == 0) )
+	{
+		return NULL;
+	}
+
+	new_arr = (char **) malloc ( len * sizeof (char *) );
+	if ( new_arr == NULL )
+	{
+		return NULL;
+	}
+	for ( i = 0; i < len; i++ )
+	{
+		new_arr[i] = NULL;
+	}
+
+	for ( i = 0; i < len; i++ )
+	{
+		if ( array[i] == NULL )
+		{
+			new_arr[i] = NULL;
+			continue;
+		}
+		new_arr[i] = WFS_STRDUP (array[i]);
+		if ( new_arr[i] == NULL )
+		{
+			free_array_deep_copy (new_arr, len);
+			return NULL;
+		}
+	}
+	return new_arr;
+}
+
+/* ======================================================================== */
+
+/**
+ * Frees a deep copy of an array.
+ * @param array The array to free.
+ * @param len The length of the array.
+ */
+void
+free_array_deep_copy (
+#ifdef WFS_ANSIC
+	char * array[], const unsigned int len)
+#else
+	array, len )
+	char * array[];
+	const unsigned int len;
+#endif
+{
+	unsigned int i;
+
+	if ( array == NULL )
+	{
+		return;
+	}
+	for ( i = 0; i < len; i++ )
+	{
+		if ( array[i] != NULL )
+		{
+			free (array[i]);
+		}
+	}
+	free (array);
+}
+
+/* =============================================================== */
+
+#ifndef HAVE_STRDUP
+char * wfs_duplicate_string (
+# ifdef WFS_ANSIC
+	const char src[])
+# else
+	src)
+	const char src[];
+# endif
+{
+	size_t len;
+	char * dest;
+
+	if ( src == NULL )
+	{
+		return NULL;
+	}
+	len = strlen (src);
+	if ( len == 0 )
+	{
+		return NULL;
+	}
+	dest = (char *) malloc (len + 1);
+	if ( dest == NULL )
+	{
+		return NULL;
+	}
+# ifdef HAVE_STRING_H
+	strncpy (dest, src, len);
+# else
+	WFS_MEMCOPY (dest, src, len);
+# endif
+	dest[len] = '\0';
+	return dest;
+}
+#endif /* ! HAVE_STRDUP */
+
+/* =============================================================== */
+
+#ifndef HAVE_MEMCPY
+void wfs_memcopy (
+# ifdef WFS_ANSIC
+	void * const dest, const void * const src, const size_t len)
+# else
+	dest, src, len)
+	void * const dest;
+	const void * const src;
+	const size_t len;
+# endif
+{
+	size_t i;
+	char * const d = (char *)dest;
+	const char * const s = (const char *)src;
+
+	for ( i = 0; i < len; i++ )
+	{
+		d[i] = s[i];
+	}
+}
+#endif
+
+/* =============================================================== */
+
+#ifndef HAVE_MEMSET
+void wfs_mem_set (
+# ifdef WFS_ANSIC
+	void * const dest, const char value, const size_t len)
+# else
+	dest, value, len)
+	void * const dest;
+	const char value;
+	const size_t len;
+# endif
+{
+	size_t i;
+	for ( i = 0; i < len; i++ )
+	{
+		((char *)dest)[i] = value;
+	}
+}
+#endif

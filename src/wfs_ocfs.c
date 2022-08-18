@@ -81,6 +81,8 @@
 #  include <ocfs2.h>
 # else
 #  error Something wrong. OCFS requested, but ocfsp2.h or libocfs2 missing.
+/* make a syntax error, because not all compilers treat #error as an error */
+Something wrong. OCFS requested, but ocfsp2.h or libocfs2 missing.
 # endif
 #endif
 
@@ -233,14 +235,7 @@ static int wfs_ocfs_wipe_part_blocks (
 					if ( j != bd->wd.filesys.npasses * 2 )
 					{
 						/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-						memset ( &bd->wd.buf[offset], 0, to_wipe );
-# else
-						for ( j = 0; j < to_wipe; j++ )
-						{
-							bd->wd.buf[offset+j] = '\0';
-						}
-# endif
+						WFS_MEMSET ( &bd->wd.buf[offset], 0, to_wipe );
 						if ( sig_recvd == 0 )
 						{
 							/* writing modified cluster here: */
@@ -363,17 +358,11 @@ wfs_ocfs_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	inode_buf = (char *) malloc ( cluster_size );
 	if ( inode_buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -381,17 +370,11 @@ wfs_ocfs_wipe_part (
 		}
 		return WFS_MALLOC;
 	}
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( cluster_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		free (inode_buf);
 		if ( error_ret != NULL )
@@ -475,15 +458,8 @@ wfs_ocfs_wipe_part (
 					&& (sig_recvd == 0) )
 				{
 					/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-					memset ( &(dinode->id2.i_data.id_data[offset]),
+					WFS_MEMSET ( &(dinode->id2.i_data.id_data[offset]),
 						0, to_wipe );
-# else
-					for ( j = 0; j < to_wipe; j++ )
-					{
-						dinode->id2.i_data.id_data[offset+j] = '\0';
-					}
-# endif
 					if ( sig_recvd == 0 )
 					{
 						/* writing modified inode here: */
@@ -598,17 +574,11 @@ wfs_ocfs_wipe_fs (
 	blocks_per_cluster = (unsigned int)(ocfs2_clusters_to_blocks (
 		ocfs2, 1) & 0x0FFFFFFFF);
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( cluster_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -695,14 +665,7 @@ wfs_ocfs_wipe_fs (
 			if ( j != wfs_fs.npasses * 2 )
 			{
 				/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-				memset ( buf, 0, cluster_size );
-# else
-				for ( j=0; j < cluster_size; j++ )
-				{
-					buf[j] = '\0';
-				}
-# endif
+				WFS_MEMSET ( buf, 0, cluster_size );
 				if ( sig_recvd == 0 )
 				{
 					/* writing modified cluster here: */
@@ -781,9 +744,6 @@ static int wfs_ocfs_wipe_unrm_dir (
 	wfs_wipedata_t * wd = (wfs_wipedata_t *)priv_data;
 	int changed = 0;
 	int selected[WFS_NPAT] = {0};
-# ifndef HAVE_MEMSET
-	size_t j;
-# endif
 	ocfs2_filesys * ocfs2;
 
 	if ( (dirent == NULL) || (wd == NULL) )
@@ -818,14 +778,7 @@ static int wfs_ocfs_wipe_unrm_dir (
 	{
 		if ( (wd->filesys.zero_pass != 0) && (sig_recvd == 0) )
 		{
-# ifdef HAVE_MEMSET
-			memset ( dirent->name, 0, OCFS2_MAX_FILENAME_LEN );
-# else
-			for ( j=0; j < OCFS2_MAX_FILENAME_LEN; j++ )
-			{
-				dirent->name[j] = '\0';
-			}
-# endif
+			WFS_MEMSET ( dirent->name, 0, OCFS2_MAX_FILENAME_LEN );
 		}
 		else
 		{
@@ -928,17 +881,11 @@ wfs_ocfs_wipe_unrm (
 		return WFS_BADPARAM;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buf = (unsigned char *) malloc ( cluster_size );
 	if ( buf == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1023,18 +970,12 @@ wfs_ocfs_wipe_unrm (
 		/*ocfs2_swap_journal_superblock (jsb);*/
 
 		/* wipe the journal */
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
+		WFS_SET_ERRNO (0);
 		jbuf = (unsigned char *) malloc ( (size_t)jsb->s_blocksize );
 		if ( jbuf == NULL )
 		{
 			ocfs2_free_cached_inode (ocfs2, ci);
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 12L;	/* ENOMEM */
-# endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 			break;
 		}
 		/*journal_size_in_clusters = (jsb->s_blocksize * jsb->s_maxlen) >>
@@ -1083,14 +1024,7 @@ wfs_ocfs_wipe_unrm (
 			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 			{
 				/* last pass with zeros: */
-# ifdef HAVE_MEMSET
-				memset ( buf, 0, (size_t)jsb->s_blocksize );
-# else
-				for ( j=0; j < (size_t)jsb->s_blocksize; j++ )
-				{
-					buf[j] = '\0';
-				}
-# endif
+				WFS_MEMSET ( buf, 0, (size_t)jsb->s_blocksize );
 				if ( sig_recvd == 0 )
 				{
 					/* writing modified cluster here: */
@@ -1127,14 +1061,7 @@ wfs_ocfs_wipe_unrm (
 		free (jbuf);
 		/* recreate the journal: */
 		/*
-# ifdef HAVE_MEMSET
-		memset ( &journal_features, 0, sizeof (journal_features) );
-# else
-		for ( j=0; j < sizeof (journal_features); j++ )
-		{
-			((char*)journal_features)[j] = '\0';
-		}
-# endif
+		WFS_MEMSET ( &journal_features, 0, sizeof (journal_features) );
 		journal_features.opt_compat = jsb->s_feature_compat;
 		journal_features.opt_incompat = jsb->s_feature_incompat;
 		journal_features.opt_ro_compat = jsb->s_feature_ro_compat;
@@ -1452,11 +1379,7 @@ wfs_ocfs_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_ocfs_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_ocfs_print_version (WFS_VOID)
 {
 	printf ( "OCFS: <?>\n");
 }
@@ -1467,11 +1390,7 @@ void wfs_ocfs_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_ocfs_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_ocfs_get_err_size (WFS_VOID)
 {
 	return sizeof (errcode_t);
 }
@@ -1481,11 +1400,7 @@ size_t wfs_ocfs_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_ocfs_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_ocfs_init (WFS_VOID)
 {
 	/*initialize_o2cb_error_table ();*/
 	/*initialize_o2dl_error_table ();*/
@@ -1497,11 +1412,7 @@ void wfs_ocfs_init (
 /**
  * De-initialize the library.
  */
-void wfs_ocfs_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_ocfs_deinit (WFS_VOID)
 {
 #if (defined HAVE_COM_ERR_H) || (defined HAVE_ET_COM_ERR_H)
 	/*remove_error_table (&et_o2cb_error_table);*/

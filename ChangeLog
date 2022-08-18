@@ -1,3 +1,103 @@
+2021-09-30	Bogdan Drozdowski <bogdro@users.sourceforge.net>
+
+	* WipeFreeSpace version 2.5
+	  It is now possible to use the dedicated wiping tools for a given
+	  filesystem type using the new command-line option '--use-dedicated'
+	  (currently, only 'ntfswipe' is supported). Fixed yet another crash
+	  in the TFFS library which provides FAT filesystem support (binary
+	  releases of WipeFreeSpace will be linked against the fixed library,
+	  users compiling manually need to apply a patch). The XFS backend
+	  should no longer crash on environments where modifying constant
+	  strings is disallowed. Other major and minor changes and
+	  simplifications of the code. Compatibility improvements. Significant
+	  changes in the TeXinfo documentation. New unit tests.
+	* configure.ac: Updated using autoconf 2.71. Check for some header
+	  files and libraries in the default locations first. Corrected the
+	  checks for ntfs-3g. Check for the execvpe(), execvp(), kill(),
+	  setenv() and putenv() functions unconditionally now because now more
+	  backends can call subprocesses (to launch dedicated tools) and may
+	  need those functions to work. Double-quote all AC_MSG_* messages.
+	  Check for the strings.h header and the strdup() and strcasecmp()
+	  functions.
+	* src/wipefreespace.c, src/wfs_xfs.c: updated #including the time
+	  header files as recommended by the new autoconf.
+	* src/wfs_util.c (deep_copy_array, free_array_deep_copy): new functions
+	  to copy and free string arrays which should remain const
+	* src/wfs_xfs.c (wfs_xfs_wipe_fs, wfs_xfs_wipe_part, wfs_xfs_check_err,
+	  wfs_xfs_open_fs): use the new functions from wfs_util to create
+	  parameter and environment arrays used to create child processes.
+	  This way the code avoids writing to string literals (which, for some
+	  compilers or systems, should be read-only).
+	* src/wfs_fat.c (wfs_fat_wipe_file_tail): leave when file size is 0.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_part, wfs_ntfs_wipe_fs,
+	  wfs_ntfs_wipe_unrm, wfs_ntfs_flush_fs, wfs_ntfs_is_dirty,
+	  wfs_ntfs_check_err, wfs_ntfs_close_fs, wfs_ntfs_open_fs): allow the
+	  use of the dedicated wiping tool, 'ntfswipe', as an option.
+	* src/wipefreespace.c: added support for the new command-line option,
+	  --use-dedicated, that calls the program dedicated to the given
+	  fileysstem type instead of wiping with WipeFreeSpace.
+	* src/wipefreespace.c (wfs_wipe_filesytem): re-enable clearing the
+	  environment in case the filesystem is not XFS and the user didn't
+	  choose to use the dedicated wiping tools (both cases require the
+	  $PATH environment variable).
+	* src/wfs_cfg.h.in, doc/wipefreespace.texi.in, wipefreespace.spec.in:
+	  added a comment saying that 'configure' processes these files.
+	* src/wipefreespace.h, src/*.c: define WFS_VOID to be 'void' in ANSI C
+	  and use that in function definitions for better readability.
+	  Simplify the usage of 'errno' using macros.
+	* src/wfs_fat.c, src/wfs_reiser4.c, src/wfs_xfs.c: simplify the unused
+	  parameters' declarations in some function declarations
+	* src/*.c: make a syntax error after each #error directive because not
+	  all compilers stop on #error and it's usually pointless to continue.
+	* src/wipefreespace.h: declare replacement functions for memcpy(),
+	  memset() and strdup() and macros that choose which to use.
+	* src/*.c: use macros instead of memcpy(), memset() and strdup() so
+	  that replacement functions are used when needed. This simplifies the
+	  code greatly.
+	* src/wfs_util.c (wfs_duplicate_string, wfs_memcopy, wfs_mem_set):
+	  define the replacement functions.
+	* src/wfs_wiping.c (wfs_compare): define the function only if the
+	  strcasecmp() function is unavailable and use the WFS_STRCASECMP
+	  macro to choose the built-in function or the replacement.
+	* src/wfs_wiping.c (init_wiping): if the number of passes is still 0
+	  after all checks, use the default.
+	* src/wfs_util.c (wfs_create_child): set the child type also in the
+	  child process to avoid uninitialized values
+	* test/test_wfs_util.c (mount_and_get_result): fixed a format message
+	* test/test_wfs_wiping.c: a new unit test to test the functions in the
+	  wfs_wiping.c file.
+	* wipefreespace.spec.in: replaced %make with %make_build
+	* doc/wipefreespace.texi.in, doc/wipefreespace.1, README: added
+	  information about the new command-line option, --use-dedicated.
+	* doc/wipefreespace.1: minor formatting fixes
+	* doc/wipefreespace.texi.in, README, INSTALL-WFS.txt: Added information
+	  about the new patch for TFFS. Updates in how to compile and install
+	  the various required libraries and build RPMs. Make the common parts
+	  say the same.
+	* doc/wipefreespace.texi.in: many improvements in the documentation:
+	  fixed backticks in commands in new TeXinfo, made URLs into proper
+	  links, use the TeXinfo @file, @option, @kbd, @samp, @command, @pxref
+	  and @verbatim properly, a separate chapter for filesystem support
+	  with subsections describing the compilation requirements and the
+	  supported operations, updated the links to the external software
+	  needed for compilation, improved the description on how to report
+	  errors.
+	* patches/tffs-dir-fix.diff: a new fix for TFFS which fixes an invalid
+	  memory access caused by allowing opening a directory as a file and
+	  not setting the correct flags to allow to recognise this fact.
+	* m4/ax_gcc_warn_unused_result.m4: Updated for autoconf 2.71.
+	* ABOUT-NLS, config.rpath, po/Makefile.in.in, po/boldquot.sed,
+	  po/en@boldquot.header, po/en@quot.header, po/insert-header.sin
+	  po/Makevars.template, po/quot.sed, po/remove-potcdate.sin
+	  po/Rules-quot, po/ChangeLog, m4/gettext.m4, m4/host-cpu-c-abi.m4,
+	  m4/iconv.m4, m4/intlmacosx.m4, m4/lib-ld.m4, m4/lib-link.m4,
+	  m4/lib-prefix.m4, m4/nls.m4, m4/po.m4, m4/progtest.m4, m4/ChangeLog,
+	  configure.ac, po/Makevars: updated gettext to 0.21.
+
+2021-09-07  gettextize  <bug-gnu-gettext@gnu.org>
+
+	* configure.ac (AM_GNU_GETTEXT_VERSION): Bump to 0.21.
+
 2021-08-18	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.3.1
@@ -6,7 +106,7 @@
 	  and flow errors found by cppcheck, Address Sanitizer and Valgrind.
 	  Documentation updates.
 	* configure.ac: When checking for the OCFS2 headers, include the
-	  sys/types.h, otherwise the test may fail beaucse of missing types
+	  sys/types.h, otherwise the test may fail because of missing types
 	  even though the file is present and valid. Added checking for the
 	  -Wstringop-truncation, -Wduplicated-branches and -fstack-check
 	  compiler options. Unconditionally check for the kill() function,
@@ -17,7 +117,7 @@
 	* src/wfs_fat.c (wfs_fat_wipe_file_tail): removed duplicated condition
 	* src/wfs_ext234.c (wfs_e234_wipe_part): stop processing the file if
 	  the last block can't be found because of a read error.
-	* src/wfs_ext234.c (wfs_e234_wipe_journal): skip wiping th journal if
+	* src/wfs_ext234.c (wfs_e234_wipe_journal): skip wiping the journal if
 	  the journal block can't be read because of a read error.
 	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm_dir): removed invalid condition.
 	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): fixed memory leaks on errors
@@ -240,7 +340,7 @@
 	* src/wfs_wiping.c (fill_buffer): if --all-zeros is given, don't
 	  display "(random)" - display zeros, as that is the correct pattern
 	  (only output was impacted, wiping was correct with zeros). Use
-	  "sizeof(tmp)" instead of hardcoded length. Fix filling the buffer
+	  "sizeof(tmp)" instead of hard-coded length. Fix filling the buffer
 	  when size is 1, 2 or some specific number (which made total_size -
 	  size_written exceed the remaining part of the buffer).
 	* src/wfs_fat.c (wfs_fat_wipe_fs): calculating constant expressions
@@ -381,7 +481,7 @@
 	  all the required filesystem-specific headers.
 	* src/wfs_xfs.c (wfs_xfs_read_line): making some conditionally needed
 	  variables compile only when the conditions are met.
-	* po/pl.po: corrected license transation.
+	* po/pl.po: corrected license translation.
 	* po/LINGUAS, wipefreespace.spec: added the en@quot and en@boldquot
 	  pseudo-translations.
 	* src/wipefreespace.c, po/pl.po: one help line per one translated
@@ -628,7 +728,7 @@
 	* WipeFreeSpace version 1.3
 	  JFS filesystem now supported. Updated gettext version and related
 	  files. Compiled with new GCC. Corrected compiling for non-ANSI C
-	  compilers. Run flawfinder on the code and valgrind on the program.
+	  compilers. Run flawfinder on the code and Valgrind on the program.
 	* wipefreespace.c: fixed variable declarations and includes when
 	  ReiserFSv3 and Minix were enabled, but ReiserFSv3 wasn't compiled.
 	  Added a replacement function for malloc(), if required. Displaying
@@ -774,7 +874,7 @@
 	* README: added a list of command-line options.
 	* doc/wipefreespace.{1,texi}: updated error list, web addresses and
 	  other corrections. New command line option added.
-	* wipefreespace.c (main): removing dulpicate command-line parameters
+	* wipefreespace.c (main): removing duplicate command-line parameters
 	  (for thread safety).
 	* wfs_xfs.c: now using select(), if available, to specify a waiting
 	  time for input from child processes. If the child died, the program
@@ -783,7 +883,7 @@
 	* wfs_cfg.h: separate glibc stuff from non-glibc.
 	* wipefreespace.c, wfs_signal.c: the "verbose" option can now be
 	  passed more than once. If one is given, only the operations will be
-	  displayed. If two or more, both operatios and patterns used will be
+	  displayed. If two or more, both operations and patterns used will be
 	  displayed.
 	* doc/wipefreespace.texi: Added a "Thanks" chapter.
 	* wipefreespace.spec: Changed the URL, added more symbolic links,
@@ -864,7 +964,7 @@
 	* wipefreespace.h: new enum entry CURR_NONE instead of using a zero
 	  all the time.
 	* wfs_ntfs.c (destroy_record): wiping deleted files' name's length
-	  and data length (it won't be posiible to tell how long was the
+	  and data length (it won't be possible to tell how long was the
 	  file name and how much data was inside).
 	* info doc: new option added. Full texts of the Licenses added. Added
 	  a note saying that signal handling needs 'volatile' to work. Added

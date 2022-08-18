@@ -31,10 +31,6 @@
 # include <unistd.h>	/* sync() */
 #endif
 
-#ifdef HAVE_ERRNO_H
-# include <errno.h>	/* EIO */
-#endif
-
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 #include "wfs_util.h"
@@ -854,11 +850,7 @@ wfs_flush_fs (
 /**
  * Print the versions of the libraries.
  */
-void wfs_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_print_version (WFS_VOID)
 {
 #ifdef WFS_EXT234
 	wfs_e234_print_version();
@@ -898,11 +890,7 @@ void wfs_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_get_err_size (WFS_VOID)
 {
 	size_t ret = sizeof (wfs_errcode_t);
 #if (defined WFS_EXT234) || (defined WFS_NTFS) || (defined WFS_XFS) \
@@ -996,11 +984,7 @@ size_t wfs_get_err_size (
 /**
  * Initialize the libraries.
  */
-void wfs_lib_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_lib_init (WFS_VOID)
 {
 #ifdef WFS_EXT234
 	wfs_e234_init ();
@@ -1039,11 +1023,7 @@ void wfs_lib_init (
 /**
  * De-initialize the libraries.
  */
-void wfs_lib_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_lib_deinit (WFS_VOID)
 {
 #ifdef WFS_EXT234
 	wfs_e234_deinit ();

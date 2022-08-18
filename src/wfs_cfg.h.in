@@ -2,6 +2,8 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- configuration header file.
  *
+ * @configure_input@
+ * 
  * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
@@ -108,6 +110,8 @@
 #  define HAVE_STDBOOL_H	1
 #  define HAVE_STDINT_H		1
 #  define HAVE_STDLIB_H		1
+#  define HAVE_STRCASECMP	1
+#  define HAVE_STRDUP		1
 #  define HAVE_STRINGS_H	1
 #  define HAVE_STRING_H		1
 #  define HAVE_STRTOL		1

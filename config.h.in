@@ -17,11 +17,11 @@
 /* Define to 1 if you have the `basename' function. */
 #undef HAVE_BASENAME
 
-/* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
-   CoreFoundation framework. */
-#undef HAVE_CFLOCALECOPYCURRENT
+/* Define to 1 if you have the Mac OS X function
+   CFLocaleCopyPreferredLanguages in the CoreFoundation framework. */
+#undef HAVE_CFLOCALECOPYPREFERREDLANGUAGES
 
-/* Define to 1 if you have the MacOS X function CFPreferencesCopyAppValue in
+/* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
    the CoreFoundation framework. */
 #undef HAVE_CFPREFERENCESCOPYAPPVALUE
 
@@ -55,7 +55,7 @@
 /* Whether you have the dup2 function. */
 #undef HAVE_DUP2
 
-/* Define to 1 if you have the <endian.h> header file. */
+/* Whether you have the endian.h header. */
 #undef HAVE_ENDIAN_H
 
 /* Define to 1 if you have the <errno.h> header file. */
@@ -127,7 +127,7 @@
 /* Define to 1 if you have the `hasmntopt' function. */
 #undef HAVE_HASMNTOPT
 
-/* Define to 1 if you have the <hdreg.h> header file. */
+/* Whether you have the hdreg.h header. */
 #undef HAVE_HDREG_H
 
 /* Whether you have the hfsplus/libhfsp.h header. */
@@ -229,10 +229,10 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
-/* Define to 1 if you have the <linux/hdreg.h> header file. */
+/* Whether you have the linux/hdreg.h header. */
 #undef HAVE_LINUX_HDREG_H
 
-/* Define to 1 if you have the <linux/loop.h> header file. */
+/* Whether you have the linux/loop.h header. */
 #undef HAVE_LINUX_LOOP_H
 
 /* Define to 1 if you have the <linux/types.h> header file. */
@@ -244,10 +244,10 @@
 /* Whether you have the long long type. */
 #undef HAVE_LONG_LONG
 
-/* Define to 1 if you have the <loop.h> header file. */
+/* Whether you have the loop.h header. */
 #undef HAVE_LOOP_H
 
-/* Define to 1 if you have the <machine/endian.h> header file. */
+/* Whether you have the machine/endian.h header. */
 #undef HAVE_MACHINE_ENDIAN_H
 
 /* Whether you have the malloc function. */
@@ -376,6 +376,12 @@
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
 
+/* Define to 1 if you have the `strcasecmp' function. */
+#undef HAVE_STRCASECMP
+
+/* Define to 1 if you have the `strdup' function. */
+#undef HAVE_STRDUP
+
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
 
@@ -409,7 +415,7 @@
 /* Define to 1 if you have the <sys/select.h> header file. */
 #undef HAVE_SYS_SELECT_H
 
-/* Define to 1 if you have the <sys/statfs.h> header file. */
+/* Define to 1 if you have the <Sys/statfs.h> header file. */
 #undef HAVE_SYS_STATFS_H
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
@@ -495,7 +501,7 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Define as the return type of signal handlers (`int' or `void'). */
+/* Define as the return type of signal handlers (int or void). */
 #undef RETSIGTYPE
 
 /* Define to 1 if the `S_IS*' macros in <sys/stat.h> do not work properly. */
@@ -505,10 +511,6 @@
    required in a freestanding environment). This macro is provided for
    backward compatibility; new code need not use it. */
 #undef STDC_HEADERS
-
-/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. This
-   macro is obsolete. */
-#undef TIME_WITH_SYS_TIME
 
 /* Version number of package */
 #undef VERSION

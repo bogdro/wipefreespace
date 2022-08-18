@@ -1,13 +1,13 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 2.3.1, bogdro@users.sourceforge.net)
+AC_PREREQ([2.71])
+AC_INIT([wipefreespace],[2.5],[bogdro@users.sourceforge.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])
 AC_CONFIG_SRCDIR([config.h.in])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # ==================== configure arguments
 
@@ -156,11 +156,11 @@ AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for wipefr
 	,feat_LIBNETBLOCK=no)
 
 if ( test "x$want_rand" = "xyes" ); then
-	AC_MSG_WARN([--enable-random-method if deprecated. Use --method <name> when running the program.])
+	AC_MSG_WARN([[--enable-random-method if deprecated. Use --method <name> when running the program.]])
 fi
 
 if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
-	AC_ERROR([All three options --enable-wfs=no --enable-unrm=no --enable-part=no can NOT be given together.])
+	AC_MSG_ERROR([[All three options --enable-wfs=no --enable-unrm=no --enable-part=no can NOT be given together.]])
 fi
 
 if ( test "x$feat_wfs" = "xyes" ); then
@@ -212,17 +212,12 @@ libntfs=no
 libntfs3g=no
 if ( test "x$feat_ntfs" = "xyes" ); then
 
-	libntfs=yes
-	AC_CHECK_LIB([ntfs],[ntfs_pwrite],,[libntfs=no])
-	if ( test "x$libntfs" = "xno" ); then
+	libntfs3g=yes
+	AC_CHECK_LIB([ntfs-3g],[ntfs_pwrite],,[libntfs3g=no])
+	if ( test "x$libntfs3g" = "xno" ); then
 
 		libntfs=yes
-
-		AC_CHECK_LIB([ntfs-3g],[ntfs_pwrite],,[libntfs=no])
-		if ( test "x$libntfs" = "xyes" ); then
-
-			libntfs3g=yes
-		fi
+		AC_CHECK_LIB([ntfs],[ntfs_pwrite],,[libntfs=no])
 	fi
 fi
 
@@ -326,10 +321,32 @@ if ( test "x$feat_LIBNETBLOCK" = "xyes" ); then
 fi
 
 # ==================== Checks for header files.
-AC_HEADER_STDC
+# AC_HEADER_STDC
+# m4_warn([obsolete],
+# [The preprocessor macro `STDC_HEADERS' is obsolete.
+#   Except in unusual embedded environments, you can safely include all
+#   ISO C90 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
 
 AC_CHECK_HEADERS([sys/time.h time.h sys/stat.h])
-AC_HEADER_TIME()
+# AC_HEADER_TIME()
+# m4_warn([obsolete],
+# [Update your code to rely only on HAVE_SYS_TIME_H,
+# then remove this warning and the obsolete code below it.
+# All current systems provide time.h; it need not be checked for.
+# Not all systems provide sys/time.h, but those that do, all allow
+# you to include it and time.h simultaneously.])dnl
+# AC_CHECK_HEADERS_ONCE([sys/time.h])
+# Obsolete code to be removed.
+# if test $ac_cv_header_sys_time_h = yes; then
+#   AC_DEFINE([TIME_WITH_SYS_TIME],[1],[Define to 1 if you can safely include both <sys/time.h>
+# 	     and <time.h>.  This macro is obsolete.])
+# fi
+# End of obsolete code.
+
 AC_HEADER_STAT()
 AC_HEADER_SYS_WAIT()
 AC_HEADER_MAJOR()
@@ -415,21 +432,21 @@ fi
 has_ntfs_h=no
 if ( test "x$feat_ntfs" = "xyes" ); then
 
-	if (test "x$have_ll" != "xyes" && test "x$libntfs" = "xyes"); then
+	if (test "x$have_ll" != "xyes" && (test "x$libntfs" = "xyes" || test "x$libntfs3g" = "xyes")); then
 
 		AC_MSG_WARN([[NTFS support impossible without the long long type.]])
 
-	elif (test "x$have_ll" = "xyes" && test "x$libntfs" = "xyes"); then
+	elif (test "x$have_ll" = "xyes" && (test "x$libntfs" = "xyes" || test "x$libntfs3g" = "xyes")); then
 
 		CFLAGS="$CFLAGS -I src"
 		has_ntfs_h=yes
 		if ( test "x$libntfs3g" = "xno" ); then
-			AC_CHECK_HEADER([ntfs/ntfs_volume.h],
-					[AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
-						[Whether you have the ntfs/ntfs_volume.h header.])],
-					[AC_CHECK_HEADER([ntfs/volume.h],
-						AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
-							[Whether you have the ntfs/volume.h header.]),
+			AC_CHECK_HEADER([ntfs/volume.h],
+					[AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
+						[Whether you have the ntfs/volume.h header.])],
+					[AC_CHECK_HEADER([ntfs/ntfs_volume.h],
+						AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
+							[Whether you have the ntfs/ntfs_volume.h header.]),
 						[AC_CHECK_HEADER([volume.h],
 							AC_DEFINE([HAVE_VOLUME_H],[1],
 								[Whether you have the volume.h header.]),
@@ -450,12 +467,12 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 				]]
 				)
 		else
-			AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
-					[AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
-						[Whether you have the ntfs-3g/ntfs_volume.h header.])],
-					[AC_CHECK_HEADER([ntfs-3g/volume.h],
-						AC_DEFINE([HAVE_NTFS_3G_VOLUME_H],[1],
-							[Whether you have the ntfs-3g/volume.h header.]),
+			AC_CHECK_HEADER([ntfs-3g/volume.h],
+					[AC_DEFINE([HAVE_NTFS_3G_VOLUME_H],[1],
+						[Whether you have the ntfs-3g/volume.h header.])],
+					[AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
+						AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
+							[Whether you have the ntfs-3g/ntfs_volume.h header.]),
 						[AC_CHECK_HEADER([volume.h],
 							AC_DEFINE([HAVE_VOLUME_H],[1],
 								[Whether you have the volume.h header.]),
@@ -592,13 +609,13 @@ if ( test "x$feat_ocfs" = "xyes" ); then
 
 		has_ocfs_h=yes
 		AC_CHECK_HEADER(
-			[ocfs2.h],
-			AC_DEFINE([HAVE_OCFS2_H],[1],
-				[Whether you have the ocfs2.h header.]),
+			[ocfs2/ocfs2.h],
+			AC_DEFINE([HAVE_OCFS2_OCFS2_H],[1],
+				[Whether you have the ocfs2/ocfs2.h header.]),
 			[AC_CHECK_HEADER(
-				[ocfs2/ocfs2.h],
-				AC_DEFINE([HAVE_OCFS2_OCFS2_H],[1],
-					[Whether you have the ocfs2/ocfs2.h header.]),
+				[ocfs2.h],
+				AC_DEFINE([HAVE_OCFS2_H],[1],
+					[Whether you have the ocfs2.h header.]),
 				[has_ocfs_h=no],
 				[
 					#ifndef HAVE_UMODE_T
@@ -659,7 +676,7 @@ AM_CONDITIONAL(EXT234FS, [test "x$wfs_have_ext234fs" = "xyes"] )
 
 wfs_have_ntfs=no
 if (	   test "x$has_ntfs_h"		= "xyes"	\
-	&& test "x$libntfs"		= "xyes"	\
+	&& (test "x$libntfs"		= "xyes" || test "x$libntfs3g" = "xyes")	\
 	&& test "x$feat_ntfs"		= "xyes" ); then
 
 	wfs_have_ntfs=yes
@@ -730,11 +747,26 @@ AM_CONDITIONAL(COMERR, \
 	[  test "x$has_com_h"	= "xyes"	\
 	&& test "x$libcomm"	= "xyes"])
 
+AC_CHECK_HEADER([linux/loop.h],
+	AC_DEFINE([HAVE_LINUX_LOOP_H],[1],[Whether you have the linux/loop.h header.]),
+	[AC_CHECK_HEADER([loop.h],
+		AC_DEFINE([HAVE_LOOP_H],[1],[Whether you have the loop.h header.]))]
+)
+AC_CHECK_HEADER([linux/hdreg.h],
+	AC_DEFINE([HAVE_LINUX_HDREG_H],[1],[Whether you have the linux/hdreg.h header.]),
+	[AC_CHECK_HEADER([hdreg.h],
+		AC_DEFINE([HAVE_HDREG_H],[1],[Whether you have the hdreg.h header.]))]
+)
+AC_CHECK_HEADER([endian.h],
+	AC_DEFINE([HAVE_ENDIAN_H],[1],[Whether you have the endian.h header.]),
+	[AC_CHECK_HEADER([machine/endian.h],
+		AC_DEFINE([HAVE_MACHINE_ENDIAN_H],[1],[Whether you have the machine/endian.h header.]))]
+)
+
 AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h \
 	malloc.h libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
-	sys/sysmacros.h sys/mkdev.h hdreg.h linux/hdreg.h sys/ioctl.h \
-	sys/statfs.h sys/vfs.h sys/byteorder.h machine/endian.h endian.h \
-	stdbool.h loop.h linux/loop.h])
+	sys/sysmacros.h sys/mkdev.h sys/ioctl.h Sys/statfs.h sys/vfs.h \
+	sys/byteorder.h stdbool.h strings.h])
 
 if ( test "x$feat_xfs" = "xyes" ); then
 
@@ -806,43 +838,49 @@ AC_CHECK_TYPES([sig_atomic_t],,,
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_TYPE_SIGNAL
+# AC_TYPE_SIGNAL
+# m4_warn([obsolete],
+# [your code may safely assume C89 semantics that RETSIGTYPE is void.
+# Remove this warning and the AC_CACHE_CHECK when you adjust the code.])dnl
+AC_CACHE_CHECK([return type of signal handlers],[ac_cv_type_signal],[AC_COMPILE_IFELSE(
+[AC_LANG_PROGRAM([#include <sys/types.h>
+#include <signal.h>
+],
+		 [return *(signal (0, 0)) (0) == 1;])],
+		   [ac_cv_type_signal=int],
+		   [ac_cv_type_signal=void])])
+AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type of signal handlers
+		    (int or void).])
+
 
 AC_CHECK_FUNCS([memset memcpy setlocale strtol random srandom clearenv \
 	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
 	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl \
-	getmntinfo fopen64 basename umount open stat stat64 fstat fstat64])
+	getmntinfo fopen64 basename umount open stat stat64 fstat fstat64 \
+	strdup strcasecmp])
 
 # NOTE: Debian 5 does not support execvpe(), so it requires execvp()
 # along with setenv() or putenv()
-has_execvpe=no
-has_execvp=no
-has_kill=no
-has_setenv=no
-has_putenv=no
+has_execvpe=yes
+has_execvp=yes
+has_kill=yes
+has_setenv=yes
+has_putenv=yes
+AC_CHECK_FUNC([execvpe],
+	AC_DEFINE([HAVE_EXECVPE],[1],[Whether you have the execvpe function.]),
+	[has_execvpe=no])
+AC_CHECK_FUNC([execvp],
+	AC_DEFINE([HAVE_EXECVP],[1],[Whether you have the execvp function.]),
+	[has_execvp=no])
 AC_CHECK_FUNC([kill],
 	AC_DEFINE([HAVE_KILL],[1],[Whether you have the kill function.]),
 	[has_kill=no])
-if ( test "x$feat_xfs" = "xyes" ); then
-
-	has_execvpe=yes
-	has_execvp=yes
-	has_kill=yes
-	has_setenv=yes
-	has_putenv=yes
-	AC_CHECK_FUNC([execvpe],
-		AC_DEFINE([HAVE_EXECVPE],[1],[Whether you have the execvpe function.]),
-		[has_execvpe=no])
-	AC_CHECK_FUNC([execvp],
-		AC_DEFINE([HAVE_EXECVP],[1],[Whether you have the execvp function.]),
-		[has_execvp=no])
-	AC_CHECK_FUNC([setenv],
-		AC_DEFINE([HAVE_SETENV],[1],[Whether you have the setenv function.]),
-		[has_setenv=no])
-	AC_CHECK_FUNC([putenv],
-		AC_DEFINE([HAVE_PUTENV],[1],[Whether you have the putenv function.]),
-		[has_putenv=no])
-fi
+AC_CHECK_FUNC([setenv],
+	AC_DEFINE([HAVE_SETENV],[1],[Whether you have the setenv function.]),
+	[has_setenv=no])
+AC_CHECK_FUNC([putenv],
+	AC_DEFINE([HAVE_PUTENV],[1],[Whether you have the putenv function.]),
+	[has_putenv=no])
 
 has_malloc=yes
 AC_CHECK_FUNC([malloc],
@@ -944,7 +982,7 @@ if  (  test "x$wfs_have_ext234fs"	!= "xyes"	\
 	AC_MSG_ERROR([[I need headers/libraries/programs for at least one of the filesystems.]])
 fi
 
-AM_GNU_GETTEXT_VERSION([0.17])
+AM_GNU_GETTEXT_VERSION([0.21])
 AM_GNU_GETTEXT([external])
 
 # Can be /usr/local/include/libintl.h. Use --with-libintl-prefix=DIR then.
@@ -1056,13 +1094,15 @@ else
 fi
 
 if (       test "x$has_ntfs_h"	= "xyes"	\
-	&& test "x$libntfs"	= "xyes"); then
+	&& (test "x$libntfs"	= "xyes" || test "x$libntfs3g" = "xyes")); then
 
 		echo " *	NTFS: yes"
 else
 	if (test "x$feat_ntfs" != "xyes"); then
 		echo " *	NTFS: no (disabled by command line)"
 	elif (test "x$libntfs" != "xyes"); then
+		echo " *	NTFS: no (library missing or unusable)"
+	elif (test "x$libntfs3g" != "xyes"); then
 		echo " *	NTFS: no (library missing or unusable)"
 	else
 		echo " *	NTFS: no (headers missing or unusable)"
@@ -1292,9 +1332,9 @@ if (	test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" \
 	&& test "x$have_libhideip_h" = "xyes" ); then
 
 	echo " *	LibHideIP enabled: yes"
-	AC_MSG_WARN([LibHideIP may cause network filesystem wiping not to work.])
-	AC_MSG_WARN([If you do not wish to enable LibHideIP, re-configure wipefreespace with])
-	AC_MSG_WARN([./configure --enable-LIBHIDEIP=no])
+	AC_MSG_WARN([[LibHideIP may cause network filesystem wiping not to work.]])
+	AC_MSG_WARN([[If you do not wish to enable LibHideIP, re-configure wipefreespace with]])
+	AC_MSG_WARN([[./configure --enable-LIBHIDEIP=no]])
 else
 	if (test "x$feat_LIBHIDEIP" != "xyes"); then
 		echo " *	LibHideIP enabled: no (disabled by command line)"
@@ -1312,9 +1352,9 @@ if (	test "x$feat_LIBNETBLOCK" = "xyes" && test "x$libnb" = "xyes" \
 	&& test "x$have_libnetblock_h" = "xyes" ); then
 
 	echo " *	LibNetBlock enabled: yes"
-	AC_MSG_WARN([LibNetBlock may cause network filesystem wiping not to work.])
-	AC_MSG_WARN([If you do not wish to enable LibNetBlock, re-configure wipefreespace with])
-	AC_MSG_WARN([./configure --enable-LIBNETBLOCK=no])
+	AC_MSG_WARN([[LibNetBlock may cause network filesystem wiping not to work.]])
+	AC_MSG_WARN([[If you do not wish to enable LibNetBlock, re-configure wipefreespace with]])
+	AC_MSG_WARN([[./configure --enable-LIBNETBLOCK=no]])
 else
 	if (test "x$feat_LIBNETBLOCK" != "xyes"); then
 		echo " *	LibNetBlock enabled: no (disabled by command line)"
@@ -1332,28 +1372,28 @@ echo "***********************************"
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes" ); then
 
-	AC_MSG_WARN([ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the REDME file.])
+	AC_MSG_WARN([[ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the REDME file.]])
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_minixfs" = "xyes" ); then
 
-	AC_MSG_WARN([ReiserFSv3 and MinixFS both enabled. They may conflict - read the REDME file.])
+	AC_MSG_WARN([[ReiserFSv3 and MinixFS both enabled. They may conflict - read the REDME file.]])
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" ); then
 
-	AC_MSG_WARN([ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file.])
+	AC_MSG_WARN([[ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file.]])
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" \
 	&& test "x$has_patched_r3" != "xyes" && test "x$has_patched_jfs" != "xyes" ); then
 
-	AC_MSG_WARN([ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the REDME file.])
+	AC_MSG_WARN([[ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the REDME file.]])
 fi
 
 if ( test "x$wfs_have_hfsp" = "xyes"  ); then
 
-	AC_MSG_WARN([HFS+ enabled. Make sure it's patched - read the REDME file.])
+	AC_MSG_WARN([[HFS+ enabled. Make sure it is patched - read the REDME file.]])
 fi
 
 echo "***********************************"

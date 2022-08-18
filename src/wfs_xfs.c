@@ -66,17 +66,12 @@
 #endif
 
 /* time headers for select() (the old way) */
-#if TIME_WITH_SYS_TIME
+#if HAVE_SYS_TIME_H
 # include <sys/time.h>
+#endif
+
+#ifdef HAVE_TIME_H
 # include <time.h>
-#else
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# else
-#  ifdef HAVE_TIME_H
-#   include <time.h>
-#  endif
-# endif
 #endif
 
 /* select () - the new way */
@@ -195,28 +190,16 @@ wfs_xfs_read_line (
 	struct timeval tv;
 	fd_set set;
 #endif
-#ifndef HAVE_MEMSET
-	int offset;
-#endif
 
 	if ( (buf == NULL) || (child == NULL) || (bufsize == 0) || (fd < 0) )
 	{
 		return -1;
 	}
 
-#ifdef HAVE_MEMSET
-	memset (buf, 0, bufsize);
-#else
-	for ( offset = 0; offset < bufsize; offset++ )
-	{
-		buf[offset] = '\0';
-	}
-#endif
+	WFS_MEMSET (buf, 0, bufsize);
 	do
 	{
-#ifdef HAVE_ERRNO_H
-		errno = 0;
-#endif
+		WFS_SET_ERRNO (0);
 #ifdef WFS_XFS_HAVE_SELECT
 		/* select() can destroy the descriptor sets */
 		FD_ZERO (&set);
@@ -392,15 +375,19 @@ wfs_xfs_wipe_fs	(
 	wfs_errcode_t ret_child;
 	/* 	 xfs_freeze -f (freeze) | -u (unfreeze) mount-point */
 # define FSNAME_POS_FREEZE 2
-	char * args_freeze[] = { "xfs_freeze", "-f", NULL, NULL };
+	const char * args_freeze[] = { "xfs_freeze", "-f", NULL, NULL };
+	char ** args_freeze_copy = NULL;
 # define FSNAME_POS_UNFREEZE 2
-	char * args_unfreeze[] = { "xfs_freeze", "-u", NULL, NULL };
+	const char * args_unfreeze[] = { "xfs_freeze", "-u", NULL, NULL };
+	char ** args_unfreeze_copy = NULL;
 	/*	 xfs_db  -c 'freesp -d' dev_name */
 # define FSNAME_POS_FREESP 7
-	char * args_db[] = { "xfs_db", "-i", "-c",
+	const char * args_db[] = { "xfs_db", "-i", "-c",
 		"freesp -d", "-c", "quit",
 		"--", NULL, NULL };
-	char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
+	char ** args_db_copy = NULL;
+	const char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
+	char ** wfs_xfs_xfs_db_env_copy = NULL;
 	char read_buffer[WFS_XFSBUFSIZE];
 	unsigned long long int agno, agoff, length;
 	unsigned char * buffer;
@@ -409,8 +396,6 @@ wfs_xfs_wipe_fs	(
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_block = 0;
-	size_t mnt_point_len;
-	size_t dev_name_len;
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
@@ -430,18 +415,13 @@ wfs_xfs_wipe_fs	(
 		return WFS_BADPARAM;
 	}
 	/* Copy the file system name into the right places */
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
-	dev_name_len = strlen (xxfs->dev_name);
-	args_db[FSNAME_POS_FREESP] = (char *) malloc (dev_name_len + 1);
-	if ( args_db[FSNAME_POS_FREESP] == NULL )
+	WFS_SET_ERRNO (0);
+	args_db[FSNAME_POS_FREESP] = xxfs->dev_name;
+	args_db_copy = deep_copy_array (args_db, sizeof (args_db) / sizeof (args_db[0]));
+	
+	if ( args_db_copy == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -449,23 +429,18 @@ wfs_xfs_wipe_fs	(
 		}
 		return WFS_MALLOC;
 	}
-	strncpy (args_db[FSNAME_POS_FREESP], xxfs->dev_name, dev_name_len + 1);
 	/* we need the mount point here, not the wfs_fs device */
 	if ( xxfs->mnt_point != NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
-		mnt_point_len = strlen (xxfs->mnt_point);
-		args_freeze[FSNAME_POS_FREEZE] = (char *) malloc (mnt_point_len + 1);
-		if ( args_freeze[FSNAME_POS_FREEZE] == NULL )
+		WFS_SET_ERRNO (0);
+		args_freeze[FSNAME_POS_FREEZE] = xxfs->mnt_point;
+		args_freeze_copy = deep_copy_array (args_freeze,
+			sizeof (args_freeze) / sizeof (args_freeze[0]));
+		if ( args_freeze_copy == NULL )
 		{
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 12L;	/* ENOMEM */
-# endif
-			free (args_db[FSNAME_POS_FREESP]);
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			free_array_deep_copy (args_db_copy,
+				sizeof (args_db) / sizeof (args_db[0]));
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 			if ( error_ret != NULL )
 			{
@@ -473,22 +448,17 @@ wfs_xfs_wipe_fs	(
 			}
 			return WFS_MALLOC;
 		}
-		strncpy (args_freeze[FSNAME_POS_FREEZE], xxfs->mnt_point,
-			mnt_point_len + 1);
-# ifdef HAVE_ERRNO_H
-		errno = 0;
-# endif
-		args_unfreeze[FSNAME_POS_UNFREEZE] =
-			(char *) malloc (mnt_point_len + 1);
-		if ( args_unfreeze[FSNAME_POS_UNFREEZE] == NULL )
+		WFS_SET_ERRNO (0);
+		args_unfreeze[FSNAME_POS_UNFREEZE] = xxfs->mnt_point;
+		args_unfreeze_copy = deep_copy_array (args_unfreeze,
+			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
+		if ( args_unfreeze_copy == NULL )
 		{
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 12L;	/* ENOMEM */
-# endif
-			free (args_freeze[FSNAME_POS_FREEZE]);
-			free (args_db[FSNAME_POS_FREESP]);
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			free_array_deep_copy (args_freeze_copy,
+				sizeof (args_freeze) / sizeof (args_freeze[0]));
+			free_array_deep_copy (args_db_copy,
+				sizeof (args_db) / sizeof (args_db[0]));
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 			if ( error_ret != NULL )
 			{
@@ -496,23 +466,18 @@ wfs_xfs_wipe_fs	(
 			}
 			return WFS_MALLOC;
 		}
-		strncpy (args_unfreeze[FSNAME_POS_UNFREEZE], xxfs->mnt_point,
-			mnt_point_len + 1);
 	}
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	buffer = (unsigned char *) malloc ( fs_block_size );
 	if ( buffer == NULL )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 12L;	/* ENOMEM */
-# endif
-		free (args_unfreeze[FSNAME_POS_UNFREEZE]);
-		free (args_freeze[FSNAME_POS_FREEZE]);
-		free (args_db[FSNAME_POS_FREESP]);
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		free_array_deep_copy (args_unfreeze_copy,
+			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
+		free_array_deep_copy (args_freeze_copy,
+			sizeof (args_freeze) / sizeof (args_freeze[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -521,9 +486,28 @@ wfs_xfs_wipe_fs	(
 		return WFS_MALLOC;
 	}
 
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
+	wfs_xfs_xfs_db_env_copy = deep_copy_array (wfs_xfs_xfs_db_env,
+		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+	if ( wfs_xfs_xfs_db_env_copy == NULL )
+	{
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		free (buffer);
+		free_array_deep_copy (args_unfreeze_copy,
+			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
+		free_array_deep_copy (args_freeze_copy,
+			sizeof (args_freeze) / sizeof (args_freeze[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_MALLOC;
+	}
+
+	WFS_SET_ERRNO (0);
 	res = pipe (pipe_fd);
 	if ( (res < 0)
 # ifdef HAVE_ERRNO_H
@@ -531,15 +515,16 @@ wfs_xfs_wipe_fs	(
 # endif
 		 )
 	{
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 1L;
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
-		free (args_unfreeze[FSNAME_POS_UNFREEZE]);
-		free (args_freeze[FSNAME_POS_FREEZE]);
-		free (args_db[FSNAME_POS_FREESP]);
+		free_array_deep_copy (args_unfreeze_copy,
+			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
+		free_array_deep_copy (args_freeze_copy,
+			sizeof (args_freeze) / sizeof (args_freeze[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -563,8 +548,8 @@ wfs_xfs_wipe_fs	(
 # ifdef HAVE_SIGNAL_H
 		sigchld_recvd = 0;
 # endif
-		child_freeze.program_name = args_freeze[0];
-		child_freeze.args = args_freeze;
+		child_freeze.program_name = args_freeze_copy[0];
+		child_freeze.args = args_freeze_copy;
 		child_freeze.child_env = NULL;
 		child_freeze.stdin_fd = -1;
 		child_freeze.stdout_fd = -1;
@@ -573,17 +558,18 @@ wfs_xfs_wipe_fs	(
 		if ( ret_child != WFS_SUCCESS )
 		{
 			/* error */
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 1L;
-# endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
 			free (buffer);
-			free (args_unfreeze[FSNAME_POS_UNFREEZE]);
-			free (args_freeze[FSNAME_POS_FREEZE]);
-			free (args_db[FSNAME_POS_FREESP]);
+			free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+				sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+			free_array_deep_copy (args_unfreeze_copy,
+				sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
+			free_array_deep_copy (args_freeze_copy,
+				sizeof (args_freeze) / sizeof (args_freeze[0]));
+			free_array_deep_copy (args_db_copy,
+				sizeof (args_db) / sizeof (args_db[0]));
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 			if ( error_ret != NULL )
 			{
@@ -596,15 +582,13 @@ wfs_xfs_wipe_fs	(
 	}	/* if ( xxfs->mnt_point != NULL )  */
 
 	/* parent, continued */
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 # ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 # endif
-	child_xfsdb.program_name = args_db[0];
-	child_xfsdb.args = args_db;
-	child_xfsdb.child_env = wfs_xfs_xfs_db_env;
+	child_xfsdb.program_name = args_db_copy[0];
+	child_xfsdb.args = args_db_copy;
+	child_xfsdb.child_env = wfs_xfs_xfs_db_env_copy;
 	child_xfsdb.stdin_fd = -1;
 	child_xfsdb.stdout_fd = pipe_fd[PIPE_W];
 	child_xfsdb.stderr_fd = pipe_fd[PIPE_W];
@@ -612,11 +596,7 @@ wfs_xfs_wipe_fs	(
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-# ifdef HAVE_ERRNO_H
-		error = errno;
-# else
-		error = 1L;
-# endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		/* can't return from here - have to un-freeze first */
 		ret_wfs = WFS_FORKERR;
 	}
@@ -627,9 +607,7 @@ wfs_xfs_wipe_fs	(
 	for (i=0; (i < (1<<30)) && (sig_recvd == 0); i++ );
 # endif
 	/* open the wfs_fs */
-# ifdef HAVE_ERRNO_H
-	errno = 0;
-# endif
+	WFS_SET_ERRNO (0);
 	fs_fd = open64 (xxfs->dev_name, O_RDWR | O_EXCL
 # ifdef O_BINARY
 		| O_BINARY
@@ -644,6 +622,7 @@ wfs_xfs_wipe_fs	(
 		/* can't return from here - have to un-freeze first */
 		ret_wfs = WFS_OPENFS;
 	}
+
 	while ( (sig_recvd == 0) && (fs_fd >= 0) /*&& (ret_wfs == WFS_SUCCESS)*/ )
 	{
 		/* read just 1 line */
@@ -779,14 +758,7 @@ wfs_xfs_wipe_fs	(
 					}
 					if ( i == 1 )
 					{
-# ifdef HAVE_MEMSET
-						memset ( buffer, 0, fs_block_size );
-# else
-						for ( i = 0; i < fs_block_size; i++ )
-						{
-							buffer[i] = '\0';
-						}
-# endif
+						WFS_MEMSET ( buffer, 0, fs_block_size );
 						if ( write (fs_fd, buffer, fs_block_size)
 							!= (ssize_t) fs_block_size
 						)
@@ -833,8 +805,8 @@ wfs_xfs_wipe_fs	(
 # ifdef HAVE_SIGNAL_H
 		sigchld_recvd = 0;
 # endif
-		child_unfreeze.program_name = args_unfreeze[0];
-		child_unfreeze.args = args_unfreeze;
+		child_unfreeze.program_name = args_unfreeze_copy[0];
+		child_unfreeze.args = args_unfreeze_copy;
 		child_unfreeze.child_env = NULL;
 		child_unfreeze.stdin_fd = -1;
 		child_unfreeze.stdout_fd = -1;
@@ -843,11 +815,7 @@ wfs_xfs_wipe_fs	(
 		if ( ret_child != WFS_SUCCESS )
 		{
 			/* error */
-# ifdef HAVE_ERRNO_H
-			error = errno;
-# else
-			error = 1L;
-# endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 			ret_wfs = WFS_FORKERR;
 		}
 		/* parent */
@@ -857,10 +825,15 @@ wfs_xfs_wipe_fs	(
 	close (pipe_fd[PIPE_R]);
 	close (pipe_fd[PIPE_W]);
 
+	free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 	free (buffer);
-	free (args_unfreeze[FSNAME_POS_UNFREEZE]);
-	free (args_freeze[FSNAME_POS_FREEZE]);
-	free (args_db[FSNAME_POS_FREESP]);
+	free_array_deep_copy (args_unfreeze_copy,
+		sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
+	free_array_deep_copy (args_freeze_copy,
+		sizeof (args_freeze) / sizeof (args_freeze[0]));
+	free_array_deep_copy (args_db_copy,
+		sizeof (args_db) / sizeof (args_db[0]));
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -876,6 +849,13 @@ wfs_xfs_wipe_fs	(
 /* ======================================================================== */
 
 #ifdef WFS_WANT_PART
+
+# ifdef XFS_HAS_SHARED_BLOCKS
+#  define WFS_ONLY_WITH_XFS_SHARED_BLOCKS WFS_ATTR ((unused))
+# else
+#  define WFS_ONLY_WITH_XFS_SHARED_BLOCKS
+# endif
+
 /**
  * Wipes the free space in partially used blocks on the given XFS filesystem.
  * \param wfs_fs The filesystem.
@@ -885,18 +865,10 @@ wfs_xfs_wipe_fs	(
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
 wfs_xfs_wipe_part (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t wfs_fs
-#  ifdef XFS_HAS_SHARED_BLOCKS
-	WFS_ATTR ((unused))
-#  endif
-	)
+	const wfs_fsid_t wfs_fs WFS_ONLY_WITH_XFS_SHARED_BLOCKS)
 # else
 	wfs_fs)
-	const wfs_fsid_t wfs_fs
-#  ifdef XFS_HAS_SHARED_BLOCKS
-		WFS_ATTR ((unused))
-#  endif
-	;
+	const wfs_fsid_t wfs_fs WFS_ONLY_WITH_XFS_SHARED_BLOCKS;
 # endif
 {
 	/*
@@ -930,12 +902,15 @@ wfs_xfs_wipe_part (
 	wfs_errcode_t ret_child;
 	/*	 xfs_db   dev_name */
 #  define FSNAME_POS_PART_NCHECK 9
-	char * args_db_ncheck[] = { "xfs_db", "-i", "-c",
+	const char * args_db_ncheck[] = { "xfs_db", "-i", "-c",
 		"blockget -n", "-c", "ncheck",
 		"-c", "quit", "--", NULL, NULL };
 #  define FSNAME_POS_PART_DB 3
-	char * args_db[] = { "xfs_db", "-i", "--", NULL, NULL };
-	char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
+	char ** args_db_ncheck_copy = NULL;
+	const char * args_db[] = { "xfs_db", "-i", "--", NULL, NULL };
+	char ** args_db_copy = NULL;
+	const char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
+	char ** wfs_xfs_xfs_db_env_copy = NULL;
 	char read_buffer[WFS_XFSBUFSIZE];
 	char * pos1 = NULL;
 	char * pos2 = NULL;
@@ -950,7 +925,6 @@ wfs_xfs_wipe_part (
 	char inode_cmd[40];
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_inode = 0;
-	size_t dev_name_len;
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
@@ -971,18 +945,12 @@ wfs_xfs_wipe_part (
 	}
 
 	/* Copy the file system name into the right places */
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
-	dev_name_len = strlen (xxfs->dev_name);
-	args_db[FSNAME_POS_PART_DB] = (char *) malloc (dev_name_len + 1);
-	if ( args_db[FSNAME_POS_PART_DB] == NULL )
+	WFS_SET_ERRNO (0);
+	args_db[FSNAME_POS_PART_DB] = xxfs->dev_name;
+	args_db_copy = deep_copy_array (args_db, sizeof (args_db) / sizeof (args_db[0]));
+	if ( args_db_copy == NULL )
 	{
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 12L;	/* ENOMEM */
-#  endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -990,20 +958,16 @@ wfs_xfs_wipe_part (
 		}
 		return WFS_MALLOC;
 	}
-	strncpy (args_db[FSNAME_POS_PART_DB], xxfs->dev_name, dev_name_len + 1);
 
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
-	args_db_ncheck[FSNAME_POS_PART_NCHECK] = (char *) malloc (dev_name_len + 1);
-	if ( args_db_ncheck[FSNAME_POS_PART_NCHECK] == NULL )
+	WFS_SET_ERRNO (0);
+	args_db_ncheck[FSNAME_POS_PART_NCHECK] = xxfs->dev_name;
+	args_db_ncheck_copy = deep_copy_array (args_db_ncheck,
+		sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+	if ( args_db_ncheck_copy == NULL )
 	{
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 12L;	/* ENOMEM */
-#  endif
-		free (args_db[FSNAME_POS_PART_DB]);
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1011,22 +975,16 @@ wfs_xfs_wipe_part (
 		}
 		return WFS_MALLOC;
 	}
-	strncpy (args_db_ncheck[FSNAME_POS_PART_NCHECK], xxfs->dev_name,
-		dev_name_len + 1);
 
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 	buffer = (unsigned char *) malloc ( fs_block_size );
 	if ( buffer == NULL )
 	{
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 12L;	/* ENOMEM */
-#  endif
-		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-		free (args_db[FSNAME_POS_PART_DB]);
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1035,9 +993,26 @@ wfs_xfs_wipe_part (
 		return WFS_MALLOC;
 	}
 
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
+	wfs_xfs_xfs_db_env_copy = deep_copy_array (wfs_xfs_xfs_db_env,
+		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+	if ( wfs_xfs_xfs_db_env_copy == NULL )
+	{
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		free (buffer);
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
+		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_MALLOC;
+	}
+
+	WFS_SET_ERRNO (0);
 	res = pipe (pipe_from_ino_db);
 	if ( (res < 0)
 #  ifdef HAVE_ERRNO_H
@@ -1045,14 +1020,14 @@ wfs_xfs_wipe_part (
 #  endif
 		 )
 	{
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 1L;
-#  endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
-		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-		free (args_db[FSNAME_POS_PART_DB]);
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1061,9 +1036,7 @@ wfs_xfs_wipe_part (
 		return WFS_PIPEERR;
 	}
 
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 	res = pipe (pipe_to_blk_db);
 	if ( (res < 0)
 #  ifdef HAVE_ERRNO_H
@@ -1071,16 +1044,16 @@ wfs_xfs_wipe_part (
 #  endif
 		 )
 	{
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 1L;
-#  endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
-		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-		free (args_db[FSNAME_POS_PART_DB]);
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1089,9 +1062,7 @@ wfs_xfs_wipe_part (
 		return WFS_PIPEERR;
 	}
 
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 	res = pipe (pipe_from_blk_db);
 	if ( (res < 0)
 #  ifdef HAVE_ERRNO_H
@@ -1099,18 +1070,18 @@ wfs_xfs_wipe_part (
 #  endif
 		 )
 	{
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 1L;
-#  endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		close (pipe_to_blk_db[PIPE_R]);
 		close (pipe_to_blk_db[PIPE_W]);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
-		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-		free (args_db[FSNAME_POS_PART_DB]);
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1120,15 +1091,13 @@ wfs_xfs_wipe_part (
 	}
 
 	/* open the first xfs_db process - it will read used inode's numbers */
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 #  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #  endif
-	child_ncheck.program_name = args_db_ncheck[0];
-	child_ncheck.args = args_db_ncheck;
-	child_ncheck.child_env = wfs_xfs_xfs_db_env;
+	child_ncheck.program_name = args_db_ncheck_copy[0];
+	child_ncheck.args = args_db_ncheck_copy;
+	child_ncheck.child_env = wfs_xfs_xfs_db_env_copy;
 	child_ncheck.stdin_fd = -1;
 	child_ncheck.stdout_fd = pipe_from_ino_db[PIPE_W];
 	child_ncheck.stderr_fd = -1;
@@ -1136,20 +1105,20 @@ wfs_xfs_wipe_part (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 1L;
-#  endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		close (pipe_to_blk_db[PIPE_R]);
 		close (pipe_to_blk_db[PIPE_W]);
 		close (pipe_from_blk_db[PIPE_R]);
 		close (pipe_from_blk_db[PIPE_W]);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
-		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-		free (args_db[FSNAME_POS_PART_DB]);
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1159,15 +1128,13 @@ wfs_xfs_wipe_part (
 	}
 	/* parent */
 	/* open a second xfs_db process - this one will read inodes' block info */
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 #  ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #  endif
-	child_xfsdb.program_name = args_db[0];
-	child_xfsdb.args = args_db;
-	child_xfsdb.child_env = wfs_xfs_xfs_db_env;
+	child_xfsdb.program_name = args_db_copy[0];
+	child_xfsdb.args = args_db_copy;
+	child_xfsdb.child_env = wfs_xfs_xfs_db_env_copy;
 	child_xfsdb.stdin_fd = pipe_to_blk_db[PIPE_R];
 	child_xfsdb.stdout_fd = pipe_from_blk_db[PIPE_W];
 	child_xfsdb.stderr_fd = pipe_from_blk_db[PIPE_W];
@@ -1175,11 +1142,7 @@ wfs_xfs_wipe_part (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-#  ifdef HAVE_ERRNO_H
-		error = errno;
-#  else
-		error = 1L;
-#  endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		wfs_wait_for_child (&child_ncheck);
@@ -1187,9 +1150,13 @@ wfs_xfs_wipe_part (
 		close (pipe_to_blk_db[PIPE_W]);
 		close (pipe_from_blk_db[PIPE_R]);
 		close (pipe_from_blk_db[PIPE_W]);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
-		free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-		free (args_db[FSNAME_POS_PART_DB]);
+		free_array_deep_copy (args_db_ncheck_copy,
+			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+		free_array_deep_copy (args_db_copy,
+			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1199,9 +1166,7 @@ wfs_xfs_wipe_part (
 	}
 	/* parent */
 	/* open the wfs_fs */
-#  ifdef HAVE_ERRNO_H
-	errno = 0;
-#  endif
+	WFS_SET_ERRNO (0);
 	fs_fd = open64 (xxfs->dev_name, O_RDWR | O_EXCL
 #  ifdef O_BINARY
 		| O_BINARY
@@ -1473,14 +1438,7 @@ wfs_xfs_wipe_part (
 				if ( i != wfs_fs.npasses * 2 )
 				{
 					/* this block is NOT all-zeros - wipe */
-#  ifdef HAVE_MEMSET
-					memset ( buffer, 0, fs_block_size );
-#  else
-					for ( i=0; i < fs_block_size; i++ )
-					{
-						buffer[i] = '\0';
-					}
-#  endif
+					WFS_MEMSET ( buffer, 0, fs_block_size );
 					if ( sig_recvd == 0 )
 					{
 						if ( write (fs_fd, buffer, (size_t)length_to_wipe)
@@ -1527,9 +1485,13 @@ wfs_xfs_wipe_part (
 	close (pipe_from_blk_db[PIPE_R]);
 	close (pipe_from_blk_db[PIPE_W]);
 
+	free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 	free (buffer);
-	free (args_db_ncheck[FSNAME_POS_PART_NCHECK]);
-	free (args_db[FSNAME_POS_PART_DB]);
+	free_array_deep_copy (args_db_ncheck_copy,
+		sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
+	free_array_deep_copy (args_db_copy,
+		sizeof (args_db) / sizeof (args_db[0]));
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -1560,15 +1522,16 @@ wfs_xfs_check_err (
 #endif
 {
 	/* Requires xfs_db! No output expected.	*/
-	int res = 0;
+	int res;
 	int pipe_fd[2];
 	child_id_t child_xfschk;
 	wfs_errcode_t ret_child;
-#define FSNAME_POS_CHECK 2
-	char * args[] = { "xfs_check", "  ",
+#define FSNAME_POS_CHECK_DEV 1
+#define FSNAME_POS_CHECK_FILE 2
+	const char * args[] = { "xfs_check", NULL,
 		NULL, NULL }; /* xfs_check [-f] dev/file */
+	char ** args_copy = NULL;
 	char buffer[WFS_XFSBUFSIZE];
-	size_t dev_name_len;
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
@@ -1587,6 +1550,7 @@ wfs_xfs_check_err (
 		return WFS_BADPARAM;
 	}
 
+	res = 0;
 #ifdef HAVE_STAT_H
 # ifdef HAVE_STAT64
 	if ( stat64 (xxfs->dev_name, &s) >= 0 )
@@ -1596,34 +1560,35 @@ wfs_xfs_check_err (
 	{
 		if ( S_ISREG (s.st_mode) )
 		{
-			strcpy (args[1], "-f");
+			res = 1;
 		}
 	}
 #endif
-
+	
 	/* Copy the file system name into the right places */
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
-	dev_name_len = strlen (xxfs->dev_name);
-	args[FSNAME_POS_CHECK] = (char *) malloc (dev_name_len + 1);
-	if ( args[FSNAME_POS_CHECK] == NULL )
+	WFS_SET_ERRNO (0);
+	if ( res == 0 )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		/* device or cannot check */
+		args[FSNAME_POS_CHECK_DEV] = xxfs->dev_name;
+	}
+	else
+	{
+		/* regular file: 'xfs_check -f xxx' */
+		args[FSNAME_POS_CHECK_DEV] = "-f";
+		args[FSNAME_POS_CHECK_FILE] = xxfs->dev_name;
+	}
+	args_copy = deep_copy_array (args, sizeof (args) / sizeof (args[0]));
+	if ( args_copy == NULL )
+	{
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
 		}
 		return WFS_MALLOC;
 	}
-	strncpy (args[FSNAME_POS_CHECK], xxfs->dev_name, dev_name_len + 1);
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	res = pipe (pipe_fd);
 	if ( (res < 0)
 #ifdef HAVE_ERRNO_H
@@ -1631,12 +1596,9 @@ wfs_xfs_check_err (
 #endif
 		 )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 1L;
-#endif
-		free (args[FSNAME_POS_CHECK]);
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		free_array_deep_copy (args_copy,
+			sizeof (args) / sizeof (args[0]));
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1651,14 +1613,12 @@ wfs_xfs_check_err (
 	fcntl (pipe_fd[PIPE_R], F_SETFL, fcntl (pipe_fd[PIPE_R], F_GETFL) | O_NONBLOCK );
 	fcntl (pipe_fd[PIPE_W], F_SETFL, fcntl (pipe_fd[PIPE_W], F_GETFL) | O_NONBLOCK );
 
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 #ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #endif
-	child_xfschk.program_name = args[0];
-	child_xfschk.args = args;
+	child_xfschk.program_name = args_copy[0];
+	child_xfschk.args = args_copy;
 	child_xfschk.child_env = NULL;
 	child_xfschk.stdin_fd = -1;
 	child_xfschk.stdout_fd = pipe_fd[PIPE_W];
@@ -1667,14 +1627,11 @@ wfs_xfs_check_err (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 1L;
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		close (pipe_fd[PIPE_R]);
 		close (pipe_fd[PIPE_W]);
-		free (args[FSNAME_POS_CHECK]);
+		free_array_deep_copy (args_copy,
+			sizeof (args) / sizeof (args[0]));
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1690,7 +1647,8 @@ wfs_xfs_check_err (
 	close (pipe_fd[PIPE_R]);
 	close (pipe_fd[PIPE_W]);
 	wfs_wait_for_child (&child_xfschk);
-	free (args[FSNAME_POS_CHECK]);
+	free_array_deep_copy (args_copy,
+		sizeof (args) / sizeof (args[0]));
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -1784,19 +1742,20 @@ wfs_xfs_open_fs (
 	unsigned char xfs_sig[4];
 	ssize_t sig_read;
 #define FSNAME_POS_OPEN 9
-	char * args[] = { "xfs_db", "-i", "-c",
+	const char * args[] = { "xfs_db", "-i", "-c",
 		"sb 0", "-c",
 		"print", "-c", "quit",
 		"--", NULL, NULL }; /* xfs_db -c 'sb 0' -c print dev_name */
-	char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
+	char ** args_copy = NULL;
+	const char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
+	char ** wfs_xfs_xfs_db_env_copy = NULL;
 	char buffer[WFS_XFSBUFSIZE];
-	int blocksize_set = 0, agblocks_set = 0, inprogress_found = 0, used_inodes_set = 0,
-		free_blocks_set = 0;
+	int blocksize_set = 0, agblocks_set = 0, inprogress_found = 0,
+		used_inodes_set = 0, free_blocks_set = 0;
 	char *pos1 = NULL, *pos2 = NULL, *pos3 = NULL, *pos4 = NULL, *pos5 = NULL;
 	int is_rw;
 	unsigned long long int inprogress;
 	size_t namelen;
-	size_t buffer_len;
 	wfs_errcode_t error = 0;
 	struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
@@ -1813,26 +1772,18 @@ wfs_xfs_open_fs (
 	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	xxfs = (struct wfs_xfs *) malloc (sizeof (struct wfs_xfs));
 	if ( xxfs == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		return WFS_MALLOC;
 	}
 	xxfs->mnt_point = NULL;
 	namelen = strlen (wfs_fs->fsname);
 
 	/* first check if 0x58465342 signature present, to save resources if different filesystem */
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	fs_fd = open64 (wfs_fs->fsname, O_RDONLY
 #ifdef O_BINARY
 		| O_BINARY
@@ -1844,11 +1795,7 @@ wfs_xfs_open_fs (
 #endif
 	   )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1870,33 +1817,21 @@ wfs_xfs_open_fs (
 		return WFS_OPENFS;
 	}
 
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
-	xxfs->dev_name = (char *) malloc (namelen + 1);
+	WFS_SET_ERRNO (0);
+	xxfs->dev_name = WFS_STRDUP (wfs_fs->fsname);
 	if ( xxfs->dev_name == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		free (xxfs);
 		return WFS_MALLOC;
 	}
-	strncpy (xxfs->dev_name, wfs_fs->fsname, namelen + 1);
 	/* Copy the file system name into the right places */
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
-	args[FSNAME_POS_OPEN] = (char *) malloc (namelen + 1);
-	if ( args[FSNAME_POS_OPEN] == NULL )
+	WFS_SET_ERRNO (0);
+	args[FSNAME_POS_OPEN] = xxfs->dev_name;
+	args_copy = deep_copy_array (args, sizeof (args) / sizeof (args[0]));
+	if ( args_copy == NULL )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 12L;	/* ENOMEM */
-#endif
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
@@ -1906,12 +1841,26 @@ wfs_xfs_open_fs (
 		}
 		return WFS_MALLOC;
 	}
-	strncpy (args[FSNAME_POS_OPEN], xxfs->dev_name, namelen + 1);
+
+	WFS_SET_ERRNO (0);
+	wfs_xfs_xfs_db_env_copy = deep_copy_array (wfs_xfs_xfs_db_env,
+		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+	if ( wfs_xfs_xfs_db_env_copy == NULL )
+	{
+		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		free_array_deep_copy (args_copy,
+			sizeof (args) / sizeof (args[0]));
+		free (xxfs->dev_name);
+		free (xxfs);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return WFS_MALLOC;
+	}
 
 	/* Open the pipe for communications */
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	res = pipe (pipe_fd);
 	if ( (res < 0)
 #ifdef HAVE_ERRNO_H
@@ -1919,12 +1868,11 @@ wfs_xfs_open_fs (
 #endif
 		 )
 	{
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 1L;
-#endif
-		free (args[FSNAME_POS_OPEN]);
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+		free_array_deep_copy (args_copy,
+			sizeof (args) / sizeof (args[0]));
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
@@ -1944,15 +1892,13 @@ wfs_xfs_open_fs (
 	fcntl (pipe_fd[PIPE_W], F_SETFL, fcntl (pipe_fd[PIPE_W], F_GETFL) | O_NONBLOCK );
 	*/
 
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 #ifdef HAVE_SIGNAL_H
 	sigchld_recvd = 0;
 #endif
-	child_xfsdb.program_name = args[0];
-	child_xfsdb.args = args;
-	child_xfsdb.child_env = wfs_xfs_xfs_db_env;
+	child_xfsdb.program_name = args_copy[0];
+	child_xfsdb.args = args_copy;
+	child_xfsdb.child_env = wfs_xfs_xfs_db_env_copy;
 	child_xfsdb.stdin_fd = -1;
 	child_xfsdb.stdout_fd = pipe_fd[PIPE_W];
 	child_xfsdb.stderr_fd = pipe_fd[PIPE_W];
@@ -1960,12 +1906,11 @@ wfs_xfs_open_fs (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-#ifdef HAVE_ERRNO_H
-		error = errno;
-#else
-		error = 1L;
-#endif
-		free (args[FSNAME_POS_OPEN]);
+		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+		free_array_deep_copy (args_copy,
+			sizeof (args) / sizeof (args[0]));
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
@@ -2004,7 +1949,10 @@ wfs_xfs_open_fs (
 			/* NOTE: waiting for the child has already been taken care of. */
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
-			free (args[FSNAME_POS_OPEN]);
+			free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+				sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+			free_array_deep_copy (args_copy,
+				sizeof (args) / sizeof (args[0]));
 			free (xxfs->dev_name);
 			xxfs->dev_name = NULL;
 			free (xxfs);
@@ -2024,7 +1972,10 @@ wfs_xfs_open_fs (
 			/* NOTE: waiting for the child has already been taken care of. */
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
-			free (args[FSNAME_POS_OPEN]);
+			free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+				sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+			free_array_deep_copy (args_copy,
+				sizeof (args) / sizeof (args[0]));
 			free (xxfs->dev_name);
 			xxfs->dev_name = NULL;
 			free (xxfs);
@@ -2059,7 +2010,10 @@ wfs_xfs_open_fs (
 				/* NOTE: waiting for the child has already been taken care of. */
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
-				free (args[FSNAME_POS_OPEN]);
+				free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+					sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+				free_array_deep_copy (args_copy,
+					sizeof (args) / sizeof (args[0]));
 				free (xxfs->dev_name);
 				xxfs->dev_name = NULL;
 				free (xxfs);
@@ -2079,7 +2033,10 @@ wfs_xfs_open_fs (
 				/* NOTE: waiting for the child has already been taken care of. */
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
-				free (args[FSNAME_POS_OPEN]);
+				free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+					sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+				free_array_deep_copy (args_copy,
+					sizeof (args) / sizeof (args[0]));
 				free (xxfs->dev_name);
 				xxfs->dev_name = NULL;
 				free (xxfs);
@@ -2099,7 +2056,10 @@ wfs_xfs_open_fs (
 				/* NOTE: waiting for the child has already been taken care of. */
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
-				free (args[FSNAME_POS_OPEN]);
+				free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+					sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+				free_array_deep_copy (args_copy,
+					sizeof (args) / sizeof (args[0]));
 				free (xxfs->dev_name);
 				xxfs->dev_name = NULL;
 				free (xxfs);
@@ -2114,7 +2074,10 @@ wfs_xfs_open_fs (
 				/* NOTE: waiting for the child has already been taken care of. */
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
-				free (args[FSNAME_POS_OPEN]);
+				free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+					sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+				free_array_deep_copy (args_copy,
+					sizeof (args) / sizeof (args[0]));
 				free (xxfs->dev_name);
 				xxfs->dev_name = NULL;
 				free (xxfs);
@@ -2134,7 +2097,10 @@ wfs_xfs_open_fs (
 				/* NOTE: waiting for the child has already been taken care of. */
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
-				free (args[FSNAME_POS_OPEN]);
+				free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+					sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+				free_array_deep_copy (args_copy,
+					sizeof (args) / sizeof (args[0]));
 				free (xxfs->dev_name);
 				xxfs->dev_name = NULL;
 				free (xxfs);
@@ -2154,7 +2120,10 @@ wfs_xfs_open_fs (
 				/* NOTE: waiting for the child has already been taken care of. */
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
-				free (args[FSNAME_POS_OPEN]);
+				free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+					sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+				free_array_deep_copy (args_copy,
+					sizeof (args) / sizeof (args[0]));
 				free (xxfs->dev_name);
 				xxfs->dev_name = NULL;
 				free (xxfs);
@@ -2173,7 +2142,10 @@ wfs_xfs_open_fs (
 
 	if (sig_recvd != 0)
 	{
-		free (args[FSNAME_POS_OPEN]);
+		free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+		free_array_deep_copy (args_copy,
+			sizeof (args) / sizeof (args[0]));
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
@@ -2190,22 +2162,18 @@ wfs_xfs_open_fs (
 		buffer, sizeof (buffer), &is_rw);
 	if ( (mnt_ret == WFS_SUCCESS) && (buffer[0] != '\0' /*strlen (buffer) > 0*/) )
 	{
-#ifdef HAVE_ERRNO_H
-		errno = 0;
-#endif
+		WFS_SET_ERRNO (0);
 		buffer[sizeof (buffer)-1] = '\0';
-		buffer_len = strlen (buffer);
-		xxfs->mnt_point = (char *) malloc (buffer_len + 1);
+		xxfs->mnt_point = WFS_STRDUP (buffer);
 		if ( xxfs->mnt_point == NULL )
 		{
-#ifdef HAVE_ERRNO_H
-			error = errno;
-#else
-			error = 12L;	/* ENOMEM */
-#endif
+			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
 			xxfs->wfs_xfs_agblocks = 0;
 			xxfs->wfs_xfs_blocksize = 0;
-			free (args[FSNAME_POS_OPEN]);
+			free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+				sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+			free_array_deep_copy (args_copy,
+				sizeof (args) / sizeof (args[0]));
 			free (xxfs->dev_name);
 			xxfs->dev_name = NULL;
 			free (xxfs);
@@ -2215,10 +2183,12 @@ wfs_xfs_open_fs (
 			}
 			return WFS_MALLOC;
 		}
-		strncpy (xxfs->mnt_point, buffer, buffer_len + 1);
 	}
 
-	free (args[FSNAME_POS_OPEN]);
+	free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
+		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
+	free_array_deep_copy (args_copy,
+		sizeof (args) / sizeof (args[0]));
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -2257,9 +2227,7 @@ wfs_xfs_close_fs (
 
 	xxfs = (struct wfs_xfs *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
-#ifdef HAVE_ERRNO_H
-	errno = 0;
-#endif
+	WFS_SET_ERRNO (0);
 	if ( xxfs != NULL )
 	{
 		free (xxfs->mnt_point);
@@ -2310,11 +2278,7 @@ wfs_xfs_flush_fs (
 /**
  * Print the version of the current library, if applicable.
  */
-void wfs_xfs_print_version (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_xfs_print_version (WFS_VOID)
 {
 	printf ( "XFS: <?>\n");
 }
@@ -2325,11 +2289,7 @@ void wfs_xfs_print_version (
  * Get the preferred size of the error variable.
  * \return the preferred size of the error variable.
  */
-size_t wfs_xfs_get_err_size (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+size_t wfs_xfs_get_err_size (WFS_VOID)
 {
 	return sizeof (wfs_errcode_t);
 }
@@ -2339,11 +2299,7 @@ size_t wfs_xfs_get_err_size (
 /**
  * Initialize the library.
  */
-void wfs_xfs_init (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_xfs_init (WFS_VOID)
 {
 }
 
@@ -2352,11 +2308,7 @@ void wfs_xfs_init (
 /**
  * De-initialize the library.
  */
-void wfs_xfs_deinit (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
+void wfs_xfs_deinit (WFS_VOID)
 {
 }
 
