@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv3 file system-specific functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -31,18 +31,19 @@
 # include <sys/types.h>
 #endif
 
-#if (!defined MAJOR_IN_SYSMACROS) && (!defined MAJOR_IN_MKDEV)
-# ifdef HAVE_SYS_SYSMACROS_H
-#  define MAJOR_IN_SYSMACROS 1
-#  define MAJOR_IN_MKDEV 0
+#ifdef MAJOR_IN_MKDEV
+# include <sys/mkdev.h>
+#else
+# if defined MAJOR_IN_SYSMACROS
 #  include <sys/sysmacros.h>
-# else
+# else /* ! MAJOR_IN_SYSMACROS */
+#  ifdef HAVE_SYS_SYSMACROS_H
+#   include <sys/sysmacros.h>
+#  endif
 #  ifdef HAVE_SYS_MKDEV_H
-#   define MAJOR_IN_SYSMACROS 0
-#   define MAJOR_IN_MKDEV 1
 #   include <sys/mkdev.h>
 #  endif
-# endif
+# endif /* MAJOR_IN_SYSMACROS */
 #endif
 
 #ifdef HAVE_ASM_TYPES_H
@@ -50,6 +51,14 @@
 #else
 typedef unsigned int __u32;
 typedef short int __u16;
+#endif
+
+#ifndef MAJOR_IN_MKDEV
+# define MAJOR_IN_MKDEV 0
+#endif
+
+#ifndef MAJOR_IN_SYSMACROS
+# define MAJOR_IN_SYSMACROS 0
 #endif
 
 #if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)
@@ -123,6 +132,10 @@ static const unsigned long long int bh_dirty = BH_Dirty;
 static const unsigned long long int bh_up2date = BH_Uptodate;
 #define mark_buffer_dirty2(bh)    misc_set_bit (bh_dirty,   &(bh)->b_state)
 #define mark_buffer_uptodate2(bh) misc_set_bit (bh_up2date, &(bh)->b_state)
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 

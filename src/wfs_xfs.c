@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -151,6 +151,10 @@ struct wfs_xfs
 	unsigned long long int inodes_used;
 	unsigned long long int free_blocks;
 };
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 

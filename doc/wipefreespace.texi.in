@@ -588,6 +588,10 @@ More than one device can be given on the command line, but they will be wiped se
 because the libraries used can be not thread-safe and the program can't tell if a library will
 be used until it's used.
 
+But, you can run multiple WipeFreeSpace processes (but not wiping the same
+filesystem) in multiple terminals (or under screen/nohup) as a substitute
+for multi-threading.
+
 Each given filesystem is wiped @strong{ONLY ONCE}, no matter how many times
 it appears on the command line.
 
@@ -841,25 +845,19 @@ Bogdan 'bogdro' Drozdowski.
 
 To contact me, try one of these adresses (English accepted): @*
 @quotation
-bogdandr (at) op . pl@*
-bogdro (at) rudy . mif . pg . gda . pl
+bogdro (at) users . sourceforge . net@*
+bogdro-soft (at) gmx . com
 @end quotation
 
 
 or look at my website:@*
-[EN] @url{http://wipefreespace.sf.net}@*
-[PL] @url{http://wipefreespace.sf.net/index-pl.php}@*
+[EN] @url{https://wipefreespace.sourceforge.io}@*
 [EN] @url{http://bogdro.evai.pl/soft/}@*
-[EN] @url{http://bogdro.evai.pl/inne/}@*
-[PL] @url{http://bogdro.evai.pl/}@*
+[EN] @url{http://bogdro.evai.pl/soft4asm/}@*
 [EN] @url{http://bogdro.evai.pl/index-en.php}@*
 [EN] @url{http://bogdro.byethost18.com/soft/}@*
-[EN] @url{http://bogdro.byethost18.com/inne/}@*
-[PL] @url{http://bogdro.byethost18.com/}@*
+[EN] @url{http://bogdro.byethost18.com/soft4asm/}@*
 [EN] @url{http://bogdro.byethost18.com/index-en.php}@*
-[EN] @url{http://rudy.mif.pg.gda.pl/~bogdro/soft/}@*
-[EN] @url{http://rudy.mif.pg.gda.pl/~bogdro/inne/}@*
-[PL] @url{http://rudy.mif.pg.gda.pl/~bogdro/}@*
 
 
 @c ==================================================================
@@ -1770,7 +1768,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2021 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*

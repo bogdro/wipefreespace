@@ -46,5 +46,7 @@ if OCFS
 test_wfs_util_LDADD += $(top_builddir)/src/wfs_ocfs.o
 endif
 
+zcompile: $(TESTS)
+.PHONY: zcompile
 
 endif

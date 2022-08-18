@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2/3/4 file system-specific functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -116,6 +116,10 @@ struct wfs_e234_block_data
 	unsigned int prev_percent;
 	unsigned int number_of_blocks_in_inode;
 };
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 
@@ -854,6 +858,7 @@ wfs_e234_wipe_part (
 			if ( e2error != 0 )
 			{
 				ret_part = WFS_BLKITER;
+				break;
 			}
 	        	if ( sig_recvd != 0 )
 			{
@@ -1145,6 +1150,15 @@ wfs_e234_wipe_journal (
 	}
 
 	e2error = ext2fs_read_inode (e2fs, e2fs->super->s_journal_inum, &jino);
+	if ( e2error != 0 )
+	{
+		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
+		if ( error_ret != NULL )
+		{
+			*error_ret = e2error;
+		}
+		return WFS_BLKITER;
+	}
 	block_data.number_of_blocks_in_inode = jino.i_blocks;
 
 	e2error = ext2fs_block_iterate (e2fs,

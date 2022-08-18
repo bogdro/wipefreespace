@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -91,6 +91,10 @@
 
 #define WFS_IS_NAME_CURRENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '\0')
 #define WFS_IS_NAME_PARENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '.' && ((x)[2]) == '\0')
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /*#define WFS_DEBUG 1*/
 /* ============================================================= */
@@ -955,7 +959,7 @@ wfs_fat_wipe_file_tail (
 	printf("wfs_fat_wipe_file_tail: got file size: %u\n", file_len);
 	fflush(stdout);
 #endif
-	if ( ((int)file_len < 0) || (file_len >= (unsigned int)0x80000000) )
+	if ( (int)file_len < 0 /*|| (file_len >= (unsigned int)0x80000000)*/ )
 	{
 		if ( error_ret != NULL )
 		{
@@ -978,7 +982,7 @@ wfs_fat_wipe_file_tail (
 	bufsize = fs_block_size -
 		(file_len % fs_block_size);
 #ifdef WFS_DEBUG
-	printf("wfs_fat_wipe_file_tail: size to wipe: %u\n", bufsize);
+	printf("wfs_fat_wipe_file_tail: size to wipe: %lu\n", bufsize);
 	fflush(stdout);
 #endif
 	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )

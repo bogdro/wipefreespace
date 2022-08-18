@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- signal-related functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -58,6 +58,10 @@
 #include "wipefreespace.h"
 #include "wfs_signal.h"
 #include "wfs_wrappers.h"
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 

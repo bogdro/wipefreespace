@@ -1,46 +1,42 @@
 # Special names here like {__make} come from /usr/lib/rpm/macros, /usr/lib/rpm/macros.rpmbuild
 
-%define version @VERSION@
-%define name wipefreespace
-# define wfs_prefix /usr/local
+%define wfs_version @VERSION@
+%define wfs_release 1
+%define wfs_name wipefreespace
+%define wfs_url https://wipefreespace.sourceforge.io
+%define wfs_descr Wipefreespace is a program which securely cleans free space on given \
+file systems, making confidential removed data recovery impossible. It also \
+removes deleted files' names, so that no trace is left. Supported file systems \
+are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS, HFS+ \
+and OCFS.
+%define wfs_lic GPLv2
+%define wfs_summary Program for secure cleaning of free space on file systems
 
-Summary:	Program for secure cleaning of free space on file systems
-Name:		%{name}
-Version:	%{version}
-Release:	1%{?dist}
-URL:		http://wipefreespace.sf.net
-License:	GPLv2
+Summary:	%{wfs_summary}
+Name:		%{wfs_name}
+Version:	%{wfs_version}
+Release:	%{wfs_release}
+URL:		%{wfs_url}
+BugURL:		%{wfs_url}
+License:	%{wfs_lic}
 # group must be one of the listed in /usr/share/doc/rpm-.../GROUPS or /usr/share/rpmlint/config.d/distro.conf
 Group:		Security
 # Group:		System Utilities / Applications/System
-# Packager:	Bogdan Drozdowski <bogdandr@op.pl>
-# Prefix:		/usr/local
-Source:		%{name}-%{version}.tar.gz
-BuildRoot:	%{_tmppath}/%{name}-build
+Source:		%{wfs_name}-%{wfs_version}.tar.gz
+BuildRoot:	%{_tmppath}/%{wfs_name}-build
 Requires:	xfsprogs
 BuildRequires:	gcc, glibc, glibc-devel, make
 Obsoletes:	e2wipefreespace <= 0.5
 Provides:	e2wipefreespace >= 0.6
 
 %description
-
-Wipefreespace is a program which securely cleans free space on given
-file systems, making confidential removed data recovery impossible. It also
-removes deleted files' names, so that no trace is left. Supported file systems
-are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS, HFS+
-and OCFS.
+%{wfs_descr}
 
 %prep
 %setup -q
 %configure
 
 %build
-#CFLAGS='-march=i386' ./configure --prefix= {wfs_prefix} --mandir=/usr/share/man \
-#	--infodir=/usr/share/info --libdir= {wfs_prefix}/lib
-#--mandir=$RPM_BUILD_ROOT/usr/local/man
-#prefix=$RPM_BUILD_ROOT/usr/local
-# {__make} 2>/dev/null
-
 %make
 
 %post
@@ -53,17 +49,6 @@ and OCFS.
 
 %makeinstall_std
 
-# {__mkdir_p} $RPM_BUILD_ROOT/usr/share/info
-#prefix=$RPM_BUILD_ROOT/usr/local
-# {__make} DESTDIR="$RPM_BUILD_ROOT" install-strip
-# {__mv} -f $RPM_BUILD_ROOT/usr/share/locale/pl/LC_MESSAGES/wipefreespace.mo \
-#	$RPM_BUILD_ROOT {wfs_prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
-# {__rm} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace*
-# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/info/wipefreespace.info*
-# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/man/man1/wipefreespace.1*
-# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/share/info/wipefreespace.info*
-# {__rm} -f $RPM_BUILD_ROOT {wfs_prefix}/share/man/man1/wipefreespace.1*
-# {__rm} -f $RPM_BUILD_ROOT {wfs_wfs_prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
 %{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/e2wipefreespace
 %{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/e3wipefreespace
 %{__ln_s} %{_bindir}/wipefreespace $RPM_BUILD_ROOT/%{_bindir}/e4wipefreespace
@@ -99,8 +84,6 @@ and OCFS.
 %{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/hfswipefreespace.1%_extension
 %{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/ocfswipefreespace.1%_extension
 %{__ln_s} %{_mandir}/man1/wipefreespace.1%_extension $RPM_BUILD_ROOT/%{_mandir}/man1/ocfs2wipefreespace.1%_extension
-# {__mv} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace $RPM_BUILD_ROOT {wfs_prefix}/bin/wipefreespace
-# {makeinstall}
 
 %clean
 

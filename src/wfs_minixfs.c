@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions.
  *
- * Copyright (C) 2009-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2009-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -64,6 +64,10 @@
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- security-related procedures.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -57,6 +57,10 @@
 # define WFS_HAVE_STAT 1
 #else
 # undef WFS_HAVE_STAT
+#endif
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
 #endif
 
 /* ======================================================================== */

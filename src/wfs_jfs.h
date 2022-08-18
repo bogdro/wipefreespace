@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- JFS file system-specific functions, header file.
  *
- * Copyright (C) 2010-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2010-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or

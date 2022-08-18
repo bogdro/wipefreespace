@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- unit test for the wfs_util.c file.
  *
- * Copyright (C) 2015-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2015-2021 Bogdan Drozdowski, bogdro (at) users . sourceforge . net
  * License: GNU General Public License, v3+
  *
  * This program is free software; you can redistribute it and/or
@@ -252,13 +252,14 @@ START_TEST(test_wfs_check_mounted)
 	wfs_fs.fs_error = malloc (sizeof(wfs_errcode_t));
 	if ( wfs_fs.fs_error != NULL )
 	{
-		wfs_fs.fsname = "/dev/sda1";
+		wfs_fs.fsname = "/dev/sda2";
 		ret = wfs_check_mounted (wfs_fs);
+		free (wfs_fs.fs_error);
 		ck_assert_int_eq (ret, WFS_MNTRW);
 	}
 	else
 	{
-		fail ("test_wfs_check_mounted: can't allocate memory of size %d\n",
+		fail ("test_wfs_check_mounted: can't allocate memory of size %ld\n",
 			sizeof(wfs_errcode_t));
 	}
 }
@@ -267,6 +268,7 @@ END_TEST
 #ifdef WFS_TEST_CAN_MOUNT
 /* Use "losetup" to detach any incorrectly attached devices */
 
+# define WFS_TEST_ERR_SIZE 16 /*sizeof(wfs_errcode_t)*/
 typedef wfs_errcode_t (*mount_check_function) (const wfs_fsid_t wfs_fs);
 
 static wfs_errcode_t mount_and_get_result (const char * const test_name,
@@ -284,6 +286,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 		return WFS_BADPARAM;
 	}
 
+	sleep (1);
 	fd_fs = open (WFS_TEST_FILESYSTEM, open_flags);
 	if ( fd_fs < 0 )
 	{
@@ -315,7 +318,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 		"ext2", MS_MGC_VAL | mount_flags, NULL);
 	if ( res == 0 )
 	{
-		wfs_fs.fs_error = malloc (sizeof(wfs_errcode_t));
+		wfs_fs.fs_error = malloc (WFS_TEST_ERR_SIZE);
 		if ( wfs_fs.fs_error != NULL )
 		{
 			wfs_fs.fsname = WFS_TEST_LOOP_DEVICE;
@@ -349,8 +352,8 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 			close (fd_fs);
 			ioctl (fd_loop, LOOP_CLR_FD, 0);
 			close (fd_loop);
-			fail ("%s: can't allocate memory of size %d\n",
-				test_name, sizeof(wfs_errcode_t));
+			fail ("%s: can't allocate memory of size %ld\n",
+				test_name, WFS_TEST_ERR_SIZE);
 		}
 	}
 	else

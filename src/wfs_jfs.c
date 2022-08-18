@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- JFS file system-specific functions.
  *
- * Copyright (C) 2010-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2010-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -125,7 +125,9 @@
 # warning Detected unpatched JFS library with Reiser3FS enabled. WipeFreeSpace can crash! Read README.
 #endif
 
+#ifdef WFS_WANT_UNRM
 static char wfs_jfs_dev_path[] = "/dev";
+#endif
 
 struct wfs_jfs
 {
@@ -180,6 +182,10 @@ v_fsck_send_msg (
 {
 	return 0;
 }
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 int
 alloc_wrksp (

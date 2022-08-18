@@ -16,50 +16,14 @@ NOTE: it is best to use this program on un-mounted file systems, what
 NOTE: if a block is damaged, it is only wiped until the first error. There is
  no guarantee that it will be fully wiped.
 
-Read the info documentation (type 'info doc/wipefreespace.info') to get more
- information.
-
-Author: Bogdan Drozdowski, bogdandr @ op . pl
-License: GPLv2+
-
-================================================================
-
-The binary version of wipefreespace is linked with the GNU C Library,
- licensed under the GNU LGPL:
-
-Copyright (C) 1991,92,93,94,95,96,97,98,99,2000,2001,2002,2003,2004,2005,
- 2006,2007 Free Software Foundation, Inc.
-
-The GNU C Library is free software; you can redistribute it and/or modify
- it under the terms of the GNU Lesser General Public License as published
- by the Free Software Foundation; either version 2.1 of the License, or
- (at your option) any later version.
-
-The GNU C Library is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
- License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
- along with the GNU C Library; if not, write to the Free Software Foundation,
- Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-
 ================================================================
 
 Requirements for compiling the full version:
 
-- a non-root account. Please, NEVER compile or 'make' anything as root.
-
 - a working C compiler. XFS, ReiserFS, Reiser4 and NTFS support require the
   'long long' data type. NTFS support may require the gcc compiler.
   C++ compilers won't work due to variable casts.
-
 - development package for the C library (like glibc-devel and glibc-headers)
-  XFS support requires the following headers: unistd.h, fcntl.h, mntent.h
-  (but sys/wait.h, sched.h and paths.h can be useful, too) and the following
-  functions: fork(), execvp(), dup2(), close(), pipe(), kill() and
-  waitpid() or wait() (sleep() can be useful, too).
-
 - the 'make' program
 
 - Ext2/3/4: development package for the ext2 file system library, libext2fs
@@ -178,95 +142,19 @@ https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
   If you're having trouble compiling, try to apply the patch first:
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/ocfs2-tools-1.6.4-compile-fix.diff
 
-WARNING: If both ReiserFSv3 and ReiserFSv4 are enabled, the program
- may refuse to link if the compiler doesn't support the command line option
- "-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
- definitions. If you have this problem, disable the support for either
- of these filesystems (you can compile two versions of the program).
- Don't complain to me, complain to the guys that made reiserfsprogs and
- reiser4progs. You can fix either of these libraries yourself, by running
-
-	find . -type f -exec sed -i 's/misc_mntent/new_misc_mntent/g' '{}' \;
-
- in the root directory of either reiserfsprogs or reiser4progs (but
- NOT both, because this would bring back the same problem, but with a
- different name). Type the command as above. The command must be run
- BEFORE compiling the reiserfs programs. You can use the provided patches
- to do this:
-
-	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
-	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser4-1.0.7.diff
-
-WARNING: If both ReiserFSv3 and MinixFS are enabled, the program
- may refuse to link if the compiler doesn't support the command line option
- "-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
- definitions. If you have this problem, disable the support for either
- of these filesystems (you can compile two versions of the program).
- You can fix either of these libraries yourself, by running
-
-	find . -type f -exec sed -i 's/die/new_die/g' '{}' \;
-
- in the root directory of either reiserfsprogs or mfstool (but
- NOT both, because this would bring back the same problem, but with a
- different name). Type the command as above. The command must be run
- BEFORE compiling reiserfs/mfstool. You can use the provided patches
- to do this:
-
-	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff
-	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
-
-WARNING: If both ReiserFSv3 and JFS are enabled, you MUST either disable
- the support for either of these filesystems (you can compile two
- versions of the program) or fix the ReiserFSv3 library yourself,
- by running
-
-	find . -type f -exec sed -i 's/bread/reiser3_new_bread/g' '{}' \;
-
- in the root directory of reiserfsprogs. Type the command as above. The
- command must be run BEFORE compiling reiserfs. You can use the provided
- patches to do this:
-
-	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/reiser-3.6.XX.diff
-
- Even if your linker/compiler accepts the "-Wl,-z -Wl,muldefs" option, it
- won't help in this case.
-
-The patches for ntfsprogs are optional. Whether or not they will be included
- in the official release of ntfsprogs, wipefreespace still will compile.
+WARNING: Some filesystem backends may not be incompatible. Read the full
+README file in the documentation.
 
 Type
 
 	./configure
 
 to configure the program for your system.
-If you do not wish support for a filesystem, give the '--enable-FS=no'
- option to ./configure (FS=EXT234, NTFS, XFS, REISERFS, REISER4, FAT,
- MINIX, JFS, HFSP, OCFS).
-If you do not wish support for a particular wiping operation, give the
- '--enable-OPER=no' option to ./configure (OPER=wfs, unrm, part - these
- are wiping free space, undelete data and partially-used blocks,
- respectively). You cannot disable all of these.
-Run './configure --help' for details.
-
-If you do NOT wish wipefreespace to use the network or get the computer's IP
- address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
-
-	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
-
-NOTE: this may cause network filesystem wiping to fail.
-
 Type
 
 	make
 
 to compile the program.
-Documentation will be compiled, if you have the 'makeinfo' program
- ('texinfo' package).
-Translations will be compiled, if you have the 'gettext' package.
-
-NOTE: if you have trouble compiling, send me some of the first error messages
-in each file and the config.h file generated by the 'configure' script.
-
 Type
 
 	make install
@@ -315,6 +203,10 @@ The '/dev/XY' part stands for a device with a supported file system.
  command line, but they will be wiped sequentially, NOT in
  multiple threads. WipeFreeSpace is not multi-threaded and probably
  won't be, because the libraries used can be not thread-safe.
+ But, you can run multiple WipeFreeSpace processes (but not wiping the same
+ filesystem) in multiple terminals (or under screen/nohup) as a substitute
+ for multi-threading.
+
 The following method names (case-insensitive) are available:
  - Gutmann (method similar to Gutmann's, the default, 36 passes)
  - random (shred-like, 25 passes)
@@ -353,61 +245,3 @@ To run WipeFreeSpace with a higher or lower priority, simply use the
  "renice" utility, for example:
 
 	renice +1 $(pidof wipefreespace)
-
-=======================================================
-
-Building an RPM package (the old way):
-
-1) copy the wipefreespace.spec file to /usr/src/redhat/SPECS
-2) copy the source package wipefreespace-XX.tar.gz to /usr/src/redhat/SOURCES
-3) type
-	rpmbuild -ba /usr/src/redhat/SPECS/wipefreespace.spec
-4) get the RPMs from /usr/src/redhat/RPMS/i386 and /usr/src/redhat/SRPMS
-
-NOTE: some systems may use other directories than these.
-
-Building an RPM package (the new way):
-
-1) copy the wipefreespace.spec file to $HOME/rpmbuild/SPECS
-2) copy the source package wipefreespace-XX.tar.gz to $HOME/rpmbuild/SOURCES
-3) type
-        rpmbuild -ba $HOME/rpmbuild/SPECS/wipefreespace.spec
-4) get the RPMs from $HOME/rpmbuild/RPMS/i386 and $HOME/rpmbuild/SRPMS
-
-=======================================================
-
-Translating the docs to your language:
-
- Type `msginit -i wipefreespace.pot -o XX.po', substituting your
-2-letter language code for 'XX' (e.g. 'pl' or 'de'). This requires the
-'gettext' package installed. You can manually copy the file
-wipefreespace.pot to XX.po and manually add the following header, if
-you wish.
- In the resulting XX.po file you have to fill in all the fields
-marked with capital letters in the header:
-
-# YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski
-# This file is distributed under the same license as
-# the wipefreespace package.
-# YOUR FULL NAME <EMAILADDRESS>, YEAR.
-#
-msgid ""
-msgstr ""
-"Project-Id-Version: wipefreespace VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-08-03 15:28+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAILADDRESS>\n"
-"Language-Team: LANGUAGE <EMAILADDRESS>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
-"Content-Transfer-Encoding: 8bit\n"
-
-The rest of the file will contain messages from the program. Translate
-them all and send me the resulting XX.po file.
-
-Translating the documentation:
-- info: simply change the wipefreespace.texi file
-- man: Unpack the page using 'gunzip wipefreespace.1.gz' and
-  translate the resulting wipefreespace.1 file.

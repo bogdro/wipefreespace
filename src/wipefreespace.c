@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -145,7 +145,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2021 Bogdan 'bogdro' Drozdowski, bogdro@users.sourceforge.net\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -193,9 +193,15 @@ static const char * const msg_signal   = N_("Setting signal handlers");
 static const char * const msg_chkmnt   = N_("Checking if file system is mounted");
 static const char * const msg_openfs   = N_("Opening file system");
 static const char * const msg_flushfs  = N_("Flushing file system");
+#ifdef WFS_WANT_WFS
 static const char * const msg_wipefs   = N_("Wiping free space on file system");
+#endif
+#ifdef WFS_WANT_PART
 static const char * const msg_wipeused = N_("Wiping unused space in used blocks on");
+#endif
+#ifdef WFS_WANT_UNRM
 static const char * const msg_wipeunrm = N_("Wiping undelete data on");
+#endif
 static const char * const msg_closefs  = N_("Closing file system");
 static const char * const msg_nobg     = N_("Going into background not supported or failed");
 static const char * const msg_cacheoff = N_("Disabling cache");
@@ -268,6 +274,10 @@ static /*@observer@*/ const char *wfs_progname;	/* The name of the program */
 static int stdout_open = 1, stderr_open = 1;
 
 static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 
@@ -1576,13 +1586,13 @@ main (
 			err = 1L;
 # endif
 			wfs_show_error (wfs_err_msg_fork, argv[wfs_optind], wf_gen);
-#ifdef HAVE_IOCTL
+# ifdef HAVE_IOCTL
 			if ( ioctls != NULL )
 			{
 				free (ioctls);
 			}
 			ioctls = NULL;
-#endif
+# endif
 			wfs_lib_deinit ();
 			return WFS_FORKERR;
 		}

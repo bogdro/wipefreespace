@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -120,22 +120,23 @@
 # include <sched.h>
 #endif
 
-#if (!defined MAJOR_IN_SYSMACROS) && (!defined MAJOR_IN_MKDEV)
-# ifdef HAVE_SYS_SYSMACROS_H
-#  define MAJOR_IN_SYSMACROS 1
-#  define MAJOR_IN_MKDEV 0
-#  include <sys/sysmacros.h>
-# else
-#  ifdef HAVE_SYS_MKDEV_H
-#   define MAJOR_IN_SYSMACROS 0
-#   define MAJOR_IN_MKDEV 1
-#   include <sys/mkdev.h>
-#  endif
-# endif
-#endif
-
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>	/* for open() */
+#endif
+
+#ifdef MAJOR_IN_MKDEV
+# include <sys/mkdev.h>
+#else
+# if defined MAJOR_IN_SYSMACROS
+#  include <sys/sysmacros.h>
+# else /* ! MAJOR_IN_SYSMACROS */
+#  ifdef HAVE_SYS_SYSMACROS_H
+#   include <sys/sysmacros.h>
+#  endif
+#  ifdef HAVE_SYS_MKDEV_H
+#   include <sys/mkdev.h>
+#  endif
+# endif /* MAJOR_IN_SYSMACROS */
 #endif
 
 #ifdef HAVE_SYS_STAT_H
@@ -236,6 +237,10 @@
 #else
 # undef WFS_HAVE_IOCTL_LOOP
 # define WFS_USED_ONLY_WITH_LOOP
+#endif
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
 #endif
 
 /* ======================================================================== */

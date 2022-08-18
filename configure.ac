@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 2.3, bogdandr@op.pl)
+AC_INIT(wipefreespace, 2.3.1, bogdro@users.sourceforge.net)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])
@@ -604,11 +604,17 @@ if ( test "x$feat_ocfs" = "xyes" ); then
 					#ifndef HAVE_UMODE_T
 					#define umode_t mode_t /* workaround for new glibc */
 					#endif
+					#ifdef HAVE_SYS_TYPES_H
+					#include <sys/types.h>
+					#endif
 				]
 			)],
 			[
 				#ifndef HAVE_UMODE_T
 				#define umode_t mode_t /* workaround for new glibc */
+				#endif
+				#ifdef HAVE_SYS_TYPES_H
+				#include <sys/types.h>
 				#endif
 			]
 		)
@@ -814,6 +820,9 @@ has_execvp=no
 has_kill=no
 has_setenv=no
 has_putenv=no
+AC_CHECK_FUNC([kill],
+	AC_DEFINE([HAVE_KILL],[1],[Whether you have the kill function.]),
+	[has_kill=no])
 if ( test "x$feat_xfs" = "xyes" ); then
 
 	has_execvpe=yes
@@ -827,9 +836,6 @@ if ( test "x$feat_xfs" = "xyes" ); then
 	AC_CHECK_FUNC([execvp],
 		AC_DEFINE([HAVE_EXECVP],[1],[Whether you have the execvp function.]),
 		[has_execvp=no])
-	AC_CHECK_FUNC([kill],
-		AC_DEFINE([HAVE_KILL],[1],[Whether you have the kill function.]),
-		[has_kill=no])
 	AC_CHECK_FUNC([setenv],
 		AC_DEFINE([HAVE_SETENV],[1],[Whether you have the setenv function.]),
 		[has_setenv=no])
@@ -1003,6 +1009,9 @@ if (test "x$GCC" = "xyes" ); then
         AX_C_CHECK_FLAG([-Wrestrict], [CFLAGS="$CFLAGS -Wrestrict"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Woverlength-strings], [CFLAGS="$CFLAGS -Woverlength-strings"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Wno-nonnull-compare], [CFLAGS="$CFLAGS -Wno-nonnull-compare"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wstringop-truncation], [CFLAGS="$CFLAGS -Wstringop-truncation"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wduplicated-branches], [CFLAGS="$CFLAGS -Wduplicated-branches"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-fstack-check], [CFLAGS="$CFLAGS -fstack-check"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-g], [CFLAGS="$CFLAGS -g"], [CFLAGS="$CFLAGS"])	# needed for the 'debuginfo' rpm package
 
 	if (test "x$have_ll" = "xyes"); then

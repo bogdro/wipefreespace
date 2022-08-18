@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- OCFS file system-specific functions.
  *
- * Copyright (C) 2011-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -95,6 +95,10 @@ struct wfs_ocfs_block_data
 	struct ocfs2_dinode *inode;
 	wfs_wipedata_t wd;
 };
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ============================================================= */
 
@@ -794,7 +798,7 @@ static int wfs_ocfs_wipe_unrm_dir (
 		/* proceed with the next element */
 		return 0;
 	}
-	if ( (dirent->file_type == OCFS2_FT_DIR) && (dirent->name != NULL) )
+	if ( (dirent->file_type == OCFS2_FT_DIR) /*&& (dirent->name != NULL)*/ )
 	{
 		if ( (strncmp (dirent->name, "..", OCFS2_MAX_FILENAME_LEN) != 0) &&
 			(strncmp (dirent->name, ".", OCFS2_MAX_FILENAME_LEN) != 0) &&
@@ -810,7 +814,7 @@ static int wfs_ocfs_wipe_unrm_dir (
 			}
 		}
 	}
-	else if ( (entry == OCFS2_DIRENT_DELETED_FILE) && (dirent->name != NULL) )
+	else if ( (entry == OCFS2_DIRENT_DELETED_FILE) /*&& (dirent->name != NULL)*/ )
 	{
 		if ( (wd->filesys.zero_pass != 0) && (sig_recvd == 0) )
 		{
@@ -995,6 +999,7 @@ wfs_ocfs_wipe_unrm (
 			&journal_block_numer, &contig, NULL);
 		if ( err != 0 )
 		{
+			ocfs2_free_cached_inode (ocfs2, ci);
 			continue;
 		}
 
@@ -1003,6 +1008,7 @@ wfs_ocfs_wipe_unrm (
 			journal_block_numer, (char *)buf);
 		if ( err != 0 )
 		{
+			ocfs2_free_cached_inode (ocfs2, ci);
 			continue;
 		}
 
@@ -1010,6 +1016,7 @@ wfs_ocfs_wipe_unrm (
 		/*ocfs2_swap_journal_superblock (jsb);*/
 		if ( jsb->s_header.h_magic != JBD2_MAGIC_NUMBER )
 		{
+			ocfs2_free_cached_inode (ocfs2, ci);
 			continue;
 		}
 
@@ -1022,6 +1029,7 @@ wfs_ocfs_wipe_unrm (
 		jbuf = (unsigned char *) malloc ( (size_t)jsb->s_blocksize );
 		if ( jbuf == NULL )
 		{
+			ocfs2_free_cached_inode (ocfs2, ci);
 # ifdef HAVE_ERRNO_H
 			error = errno;
 # else
@@ -1061,6 +1069,7 @@ wfs_ocfs_wipe_unrm (
 					{
 						*error_ret = err;
 					}
+					ocfs2_free_cached_inode (ocfs2, ci);
 					return WFS_BLKWR;
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
@@ -1098,6 +1107,7 @@ wfs_ocfs_wipe_unrm (
 						{
 							*error_ret = err;
 						}
+						ocfs2_free_cached_inode (ocfs2, ci);
 						return WFS_BLKWR;
 					}
 					/* No need to flush the last writing of a given block. *

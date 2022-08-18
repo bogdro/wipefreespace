@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -128,6 +128,10 @@
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
+
 /*#define USE_NTFSWIPE*/
 
 /* ====================== list definitions ================================ */
@@ -222,7 +226,7 @@ struct ufile
 	char		 padding[4];	/* Unused: padding to 64 bit. */
 };
 
-#else /* defined HAVE_LIBNTFS_3G */
+#else /* HAVE_LIBNTFS_3G */
 struct ufile {
         long long        inode;         /* MFT record number */
         time_t           date;          /* Last modification date/time */

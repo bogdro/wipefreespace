@@ -1,4 +1,47 @@
-2019-10-25	Bogdan Drozdowski <bogdandr@op.pl>
+2021-08-18	Bogdan Drozdowski <bogdro@users.sourceforge.net>
+
+	* WipeFreeSpace version 2.3.1
+	  This is a compatibility-improvement-only release. No new features
+	  are added. Fixed compile errors on newer systems, fixed some memory
+	  and flow errors found by cppcheck, Address Sanitizer and Valgrind.
+	  Documentation updates.
+	* configure.ac: When checking for the OCFS2 headers, include the
+	  sys/types.h, otherwise the test may fail beaucse of missing types
+	  even though the file is present and valid. Added checking for the
+	  -Wstringop-truncation, -Wduplicated-branches and -fstack-check
+	  compiler options. Unconditionally check for the kill() function,
+	  because it's used when either of ReiserFS or MinixFS are enabled,
+	  not just with XFS.
+	* src/wfs_{reiser,util}.c: include sys/sysmacros.h and sys/mkdev.h
+	  properly to avoid compilation errors
+	* src/wfs_fat.c (wfs_fat_wipe_file_tail): removed duplicated condition
+	* src/wfs_ext234.c (wfs_e234_wipe_part): stop processing the file if
+	  the last block can't be found because of a read error.
+	* src/wfs_ext234.c (wfs_e234_wipe_journal): skip wiping th journal if
+	  the journal block can't be read because of a read error.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm_dir): removed invalid condition.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): fixed memory leaks on errors
+	* src/*.c: added a preprocessor block that marks ANSI C as disabled,
+	  for internal testing compiler compatibility.
+	* doc/wipefreespace.texi.in, doc/wipefreespace.1, *.desktop, src/*.c,
+	  src/*.h*, AUTHORS, ChangeLog: updated addresses
+	* test/test_wfs_util.c (test_wfs_check_mounted): fixed a memory leak
+	  found by Valgrind, corrected the parameter size in the error message
+	* test/test_wfs_util.c (mount_and_get_result): corrected the parameter
+	  size in the error message, sleeping 1 second between each test to
+	  avoid EBUSY errors, increased the error variable's allocated size
+	  to fit all known sizes with extra space to avoid Sanitizer errors
+	* test/Makefile.am: added a target to just compile the tests
+	* wipefreespace.spec.in: removed obsolete commented-out commands,
+	  updated the URL, added BugURL. Using macros for common elements.
+	* doc/wipefreespace.texi.in, README: added information that you can
+	  run multiple WipeFreeSpace processes as a substitute for
+	  multi-threading.
+	* wipefreespace.desktop: fix warnings shown by 'desktop-file-validate'
+	* patches/libaal-1.0.5-uint64.diff: added a patch that makes compiling
+	  libaal work on newer systems
+
+2019-10-25	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.3
 	  This is a major bugfix release. No new features are introduced.
@@ -92,9 +135,9 @@
 	  longer strictly required (it's not present in the official package)
 	* src/wfs_fat.c (wfs_fat_wipe_unrm_dir): correctly update the progress
 	  bar also when sub-directories are processed
-	* src/wfs_et234.c (wfs_e234_wipe_part): correctly update the progress
+	* src/wfs_ext234.c (wfs_e234_wipe_part): correctly update the progress
 	  bar also when skipping i-nodes
-	* src/wfs_et234.c (e2_wipe_unrm_dir): correctly update the progress
+	* src/wfs_ext234.c (e2_wipe_unrm_dir): correctly update the progress
 	  bar also when sub-directories are processed
 	* src/wfs_jfs.c (wfs_jfs_wipe_fs, wfs_jfs_wipe_unrm): correctly update
 	  the progress bar also when skipping blocks and wiping the journal
@@ -146,7 +189,7 @@
 	  the required macros are properly defined on the target systems) and
 	  removed some rpmlint warnings and errors
 
-2018-01-14	Bogdan Drozdowski <bogdandr@op.pl>
+2018-01-14	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.2.2
 	  HFS+ filesystem support fixes. Thanks goes to Gregory Grosse for
@@ -157,7 +200,7 @@
 	* src/wfs_hfsp.c: removed unnecessary declaration of wfs_hfsp_sig().
 	  It was meant only to fix compiler warnings, but caused problems.
 
-2017-09-17	Bogdan Drozdowski <bogdandr@op.pl>
+2017-09-17	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.2.1
 	  FAT filesystem support improvements and fixes. Binary version linked
@@ -216,7 +259,7 @@
 	* src/wfs_ntfs.c (wfs_ntfs_open_fs): check if the umount() function is
 	  available before using, in addition to checking for sys/mount.h.
 
-2016-05-15	Bogdan Drozdowski <bogdandr@op.pl>
+2016-05-15	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.2
 	  New command-line option: --no-wipe-zero-blocks, for not wiping empty
@@ -261,7 +304,7 @@
 	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): fixed re-creating the journal to
 	  avoid writing beyond the device size.
 
-2015-09-26	Bogdan Drozdowski <bogdandr@op.pl>
+2015-09-26	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.1
 	  Improved checking if the filesystem to be wiped is mounted. Added
@@ -295,7 +338,7 @@
 	* src/wfs_reiser4.c (wfs_r4_wipe_journal): removed unnecessary
 	  checking of uninitialized variable
 
-2013-11-01	Bogdan Drozdowski <bogdandr@op.pl>
+2013-11-01	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.0
 	  Portability improvements. Documentation improvements. Code cleanup.
@@ -387,7 +430,7 @@
 	* src/wfs_hfsp.c (wfs_hfsp_open_fs): fixed a resource leak after a
 	  failed open attempt.
 
-2013-01-06	Bogdan Drozdowski <bogdandr@op.pl>
+2013-01-06	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.7.2
 	  This is a bugfix-only release.
@@ -398,7 +441,7 @@
 	* src/wfs_signal.c (wfs_set_sigh): added a variable missing if the
 	  memset() function is not found
 
-2012-09-03	Bogdan Drozdowski <bogdandr@op.pl>
+2012-09-03	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.7.1
 	  This is a bugfix-only release.
@@ -415,7 +458,7 @@
 	  wiping of partially-used blocks
 	* src/wfs_ntfs.c (wfs_ntfs_wipe_part): more checks for NULL
 
-2012-08-23	Bogdan Drozdowski <bogdandr@op.pl>
+2012-08-23	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.7
 	  Improved NTFS support. Code cleanup and portability improvements.
@@ -461,7 +504,7 @@
 	* src/wfs_e234.c: more checks for NULL
 	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): fixed wiping the journal
 
-2012-06-01	Bogdan Drozdowski <bogdandr@op.pl>
+2012-06-01	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.6.1
 	  This is a bugfix-only release.
@@ -472,7 +515,7 @@
 	  other filesystems disabled. Changed checking for detected
 	  filesystems' support.
 
-2012-05-06	Bogdan Drozdowski <bogdandr@op.pl>
+2012-05-06	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.6
 	  Improved NTFS compile-time support. Added support for OCFS/OCFS2.
@@ -491,7 +534,7 @@
 	  src/wfs_wrappers.c, configure.ac: OCFS/OCFS2 support.
 	* configure.ac: printing a summary of wiping areas enabled.
 
-2011-12-04	Bogdan Drozdowski <bogdandr@op.pl>
+2011-12-04	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.5
 	  Fixes for compiler warnings. Improved compatibility with non-ANSI
@@ -521,7 +564,7 @@
 	  from ntfs3g.
 	* wipefreespace.spec.in: added a link "hfswipefreespace".
 
-2011-05-22	Bogdan Drozdowski <bogdandr@op.pl>
+2011-05-22	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.4
 	  Run cppcheck on the code. Compiling parts of the wiping code is
@@ -580,7 +623,7 @@
 	  wipefreespace.spec.in: HFS+ filesystem information added.
 	* src/wfs_fat.c (wfs_fat_open_fs): less strlen() calls.
 
-2010-09-12	Bogdan Drozdowski <bogdandr@op.pl>
+2010-09-12	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.3
 	  JFS filesystem now supported. Updated gettext version and related
@@ -618,7 +661,7 @@
 	* wfs_ntfs.c (wfs_ntfs_wipe_unrm): releasing unused resources.
 	* wipefreespace.spec.in: fixed rpmlint warnings and added docs.
 
-2009-11-28	Bogdan Drozdowski <bogdandr@op.pl>
+2009-11-28	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.2
 	  MinixFS version 1 and 2 now supported.
@@ -636,7 +679,7 @@
 	* wfs_ext234.c (wfs_e234_wipe_journal): added test if feature checking
 	  and the journal feature are defined.
 
-2009-04-25	Bogdan Drozdowski <bogdandr@op.pl>
+2009-04-25	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.1
 	  Renamed wfs_ext23.* to wfs_ext234.*. Better closing routines for
@@ -690,7 +733,7 @@
 	  that executes a single command, waiting for child processes and
 	  checking if a child process has already exited.
 
-2008-09-28	Bogdan Drozdowski <bogdandr@op.pl>
+2008-09-28	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 1.0
 	  All files prefixed with "wfs_". Gutmann method as default. Fixed
@@ -746,7 +789,7 @@
 	* wipefreespace.spec: Changed the URL, added more symbolic links,
 	  added '-march=i386' to CFLAGS and fixed a few minor things.
 
-2008-06-22	Bogdan Drozdowski <bogdandr@op.pl>
+2008-06-22	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Wipefreespace version 0.9
 	  Compatibility with non-ANSI C compilers. Journal wiping. Better XFS
@@ -787,7 +830,7 @@
 	  attempting to #define them.
 	* wrappers.c (wfs_open_fs): returning error by default.
 
-2008-01-12	Bogdan Drozdowski <bogdandr@op.pl>
+2008-01-12	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Wipefreespace version 0.8
 	  Big portability corrections. The program now compiles on OpenBSD.
@@ -809,7 +852,7 @@
 	* wrappers.c (wfs_open_fs): corrected NTFS part which had EXT2/3
 	  elements.
 
-2007-10-21	Bogdan Drozdowski <bogdandr@op.pl>
+2007-10-21	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Version 0.7
 	  More GNU Coding Style ('info standards'). More enum using.
@@ -843,7 +886,7 @@
 	  values), when an error occurred.
 	* README: added XFS info, some minor corrections.
 
-2007-07-01	Bogdan Drozdowski <bogdandr@op.pl>
+2007-07-01	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Version 0.6
 	  Switch to autoconf+automake. Works great. Project rename
@@ -856,7 +899,7 @@
 	* ext23.c: Flushing corrected and it shows error just once.
 	* wfs_ntfs.{c,h}: NTFS support based on ntfsprogs, thus experimental.
 
-2007-04-31	Bogdan Drozdowski <bogdandr@op.pl>
+2007-04-31	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Version 0.5
 	  Code rebuild: separate 3 source files (+headers), to allow
@@ -869,7 +912,7 @@
 	* Makefile: updated with translation & manpage.
 	* ext23.c (e2wipe_unrm_dir): corrected: "name_len & 255".
 
-2007-04-10	Bogdan Drozdowski <bogdandr@op.pl>
+2007-04-10	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Version 0.4
 	  Finding last partially used buffer only if needed. More code
@@ -880,7 +923,7 @@
 	  Signals corrected and checked more often. Security: checking
 	  stdout & stdin.
 
-2007-04-08	Bogdan Drozdowski <bogdandr@op.pl>
+2007-04-08	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Version 0.3
 	  Various security fixes (checking of argc&argv and a safer
@@ -894,7 +937,7 @@
 	  Flushing verbose messages - in case of crashes the last message
 	  shown is important for tracking.
 
-2007-04-01	Bogdan Drozdowski <bogdandr@op.pl>
+2007-04-01	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* Version 0.2
 	  Adds generating the error table. Adds flushing the file system
@@ -902,7 +945,7 @@
 	  try for opening the file system, when exclusive access is
 	  impossible. Adds a 'verbose' option. Makefile fixed.
 
-2007-03-24	Bogdan Drozdowski <bogdandr@op.pl>
+2007-03-24	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* First release of e2wipefreespace, version 0.1.
 	  Uses exclusive access, if possible. Checks if the file system is

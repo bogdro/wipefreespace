@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wiping functions.
  *
- * Copyright (C) 2011-2019 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -96,6 +96,10 @@ static unsigned int patterns_dod[] =
 {
 	0xFFF, 0x000	/* will be filled in later */
 };
+
+#ifdef TEST_COMPILE
+# undef WFS_ANSIC
+#endif
 
 /* ======================================================================== */
 
