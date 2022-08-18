@@ -57,7 +57,7 @@ This manual is for wipefreespace, version @VERSION@
 @chapter What is wipefreespace?
 
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
-ReiserFSv3, ReiserFSv4, FAT12, FAT16 and FAT32 partitions.
+ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1 and MinixFSv2 partitions.
 
 Normally, when you delete a file, only the information about where the file was is
 deleted, the file contents stays on the drive. If there's no writing to that
@@ -108,7 +108,7 @@ Requirements for compiling the full version of the program:@*
 @itemize
 @item a non-root account. Please, @strong{NEVER} compile or 'make' anything as root.
 @item a working C compiler (with the 'long long' data type for XFS, NTFS, ReiserFSv3
-	and Reiser4 support)
+and Reiser4 support)
 @item development package for the C library (like glibc-devel and glibc-headers).
 @*@*
 
@@ -201,6 +201,16 @@ path for your system in the above command.
 to get the library. After compiling, install the library and ALL its
 header files (including the private ones, from the src directory).
 
+@item MinixFS: "mfstool", the MinixFS tool. Go to@*
+	http://mfstool.sourceforge.net/@*
+to get this program. Before compiling, perform:@*
+  	sed -i 's/opt_squash/0/g' `ls *.c | egrep -v main`@*
+then compile the program (./configure && make), then perform@*
+  	ar surf libminixfs.a `ls *.o | egrep -v main`.@*
+Then copy the files libminixfs.a, minix_fs.h and protos.h to a directory
+where the C compiler can find them (or put the correct -I and -L options
+in the compiler flags).
+
 @end itemize
 
 @strong{WARNING}: If both ReiserFSv3 and ReiserFSv4 are enabled, the program may
@@ -219,9 +229,24 @@ in the root directory of either reiserfsprogs or reiser4progs (but
 different name). Type the command as above, just without the leading and trailing
 apostrophes. The command must be run @strong{BEFORE} compiling the reiserfs programs.
 
+@strong{WARNING}: If both ReiserFSv3 and MinixFS are enabled, the program
+may refuse to link if the compiler doesn't support the command line option
+"-Wl,-z -Wl,muldefs" that makes the linker accept multiple symbol
+definitions. If you have this problem, disable the support for either
+of these filesystems (you can compile two versions of the program).@*
+You can fix either of these libraries yourself, by running
+@*@*
+@command{find . -type f -exec sed -i 's/die/new_die/g' '@{@}' \;}@*
+@*@*
+in the root directory of either reiserfsprogs or mfstool (but
+@strong{NOT} both, because this would bring back the same problem, but with a
+different name). Type the command as above. The command must be run
+BEFORE compiling reiserfs/mfstool.
+
 Type './configure' to configure the program for your system. If you do not
 with support for a filesystem, give the @option{--enable-FS=no} option to ./configure
-(FS=EXT234, NTFS, XFS, REISERFS, REISER4). Run @command{./configure --help} for details.
+(FS=EXT234, NTFS, XFS, REISERFS, REISER4, MINIX).
+Run @command{./configure --help} for details.
 
 Type 'make' to compile the program.
 Documentation is compiled, but may be recompiled, if you have the 'makeinfo'
@@ -299,6 +324,13 @@ by more than 1 object)
 @end itemize
 
 @item FAT12/16/32 (using the library from tffs-lib):
+@itemize
+@item wiping the free space
+@item wiping space in partially used blocks
+@item wiping deleted files' names
+@end itemize
+
+@item MinixFS (using the mfstool program as a library):
 @itemize
 @item wiping the free space
 @item wiping space in partially used blocks
@@ -392,7 +424,7 @@ Print help and exit.
 
 @noindent @option{--last-zero}@*
 @quotation
-Perform additional wiping with zeros
+Perform additional wiping with zeros.
 @end quotation
 
 @noindent @option{-l}@*@option{--license}@*@option{--licence}@*

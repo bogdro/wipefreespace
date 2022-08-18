@@ -99,7 +99,8 @@ enum CURR_FS
 	CURR_XFS,
 	CURR_REISERFS,
 	CURR_REISER4,
-	CURR_FATFS
+	CURR_FATFS,
+	CURR_MINIXFS
 };
 
 typedef enum CURR_FS CURR_FS;
@@ -237,6 +238,15 @@ typedef unsigned short int __u16;
 #  undef	WFS_FATFS
 # endif
 
+# if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
+#  include <stdio.h>	/* FILE for minix_fs.h */
+#  undef BLOCK_SIZE	/* fix conflict with NTFS. Unused in NTFS anyway. */
+#  include <minix_fs.h>
+#  define	WFS_MINIXFS	1
+# else
+#  undef	WFS_MINIXFS
+# endif
+
 /* ================ End of filesystem includes ================ */
 
 # ifdef HAVE_GETTEXT
@@ -283,10 +293,10 @@ struct wfs_fsid_t
 	int zero_pass;	/* whether to perform an additional wiping with zeros on this filesystem */
 
 # ifdef 	WFS_EXT234
-	ext2_filsys	e2fs;
+	ext2_filsys e2fs;
 # endif
 # ifdef		WFS_NTFS
-	ntfs_volume	ntfs;
+	ntfs_volume ntfs;
 # endif
 # ifdef		WFS_XFS
 	struct wfs_xfs
@@ -308,6 +318,9 @@ struct wfs_fsid_t
 # endif
 # ifdef		WFS_FATFS
 	tffs_handle_t fat;
+# endif
+# ifdef		WFS_MINIXFS
+	struct minix_fs_dat * minix;
 # endif
 
 	/* TODO: to be expanded, when other FS come into the program */
@@ -342,10 +355,13 @@ union fselem_t
 	struct key	rfs_elem;
 # endif
 # ifdef		WFS_REISER4
-	reiser4_node_t * r4node;
+	reiser4_node_t	* r4node;
 # endif
 # ifdef		WFS_FATFS
-	tdir_handle_t fatdir;
+	tdir_handle_t	fatdir;
+# endif
+# ifdef		WFS_MINIXFS
+	int 		minix_ino;
 # endif
 
 	/* TODO: to be expanded, when other FS come into the program */

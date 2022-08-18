@@ -1,3 +1,21 @@
+2009-11-28	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.2
+	  MinixFS version 1 and 2 now supported.
+	* configure.ac: fixed command-line parameter "--enable-random-method".
+	* wipefreespace.c (main): fixed command-line parameters --iterations,
+	  --blocksize and --superblock.
+	* wfs_util.c (wfs_create_child): now returning error if fork() is not
+	  available.
+	* wfs_xfs.c: using a better preprocessor check for the availability
+	  of the select() function.
+	* wfs_minixfs.{c,h}: MinixFS version 1 and 2 support.
+	* wfs_ntfs.c: prepare for using ntfswipe in the future.
+	* README, wipefreespace.1, wipefreespace.texi.in, configure.ac,
+	  wipefreespace.spec.in, wfs_wrappers.c, INSTALL: MinixFS support.
+	* wfs_ext234.c (wfs_e234_wipe_journal): added test if feature checking
+	  and the journal feature are defined.
+
 2009-04-25	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.1

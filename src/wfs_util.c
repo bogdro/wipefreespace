@@ -61,7 +61,7 @@
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>	/* access(), close(), dup2(), fork(), sync(), STDIN_FILENO,
-			   STDOUT_FILENO, STDERR_FILENO, select () (the old way) */
+			   STDOUT_FILENO, STDERR_FILENO */
 #endif
 
 #ifdef HAVE_ERRNO_H
@@ -137,16 +137,24 @@ wfs_get_mnt_point (
 	|| defined (WIN32) || defined (__cplusplus)
 	const char * const dev_name
 # if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
-	WFS_ATTR ((unused))
+		WFS_ATTR ((unused))
 # endif
 	, error_type * const error,
-	char * const mnt_point, const size_t mnt_point_len, int * const is_rw )
+	char * const mnt_point, const size_t mnt_point_len
+# if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
+		WFS_ATTR ((unused))
+# endif
+	, int * const is_rw )
 #else
 	dev_name
 # if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
-	WFS_ATTR ((unused))
+		WFS_ATTR ((unused))
 # endif
-	, error, mnt_point, mnt_point_len, is_rw )
+	, error, mnt_point, mnt_point_len
+# if !((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R)))
+		WFS_ATTR ((unused))
+# endif
+	, is_rw )
 	const char * const dev_name;
 	error_type * const error;
 	char * const mnt_point;
@@ -166,7 +174,7 @@ wfs_get_mnt_point (
 		return WFS_BADPARAM;
 */
 	*is_rw = 1;
-	strncpy (mnt_point, "\0", 1);
+	mnt_point[0] = '\0';
 
 #if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
 # ifdef HAVE_ERRNO_H
@@ -395,11 +403,13 @@ wfs_create_child (
 		id->type = CHILD_FORK;
 		return WFS_SUCCESS;
 	}
-#endif
+#else
 	/* PThreads shouldn't be used, because an exit() in a thread causes the whole
-	program to be closed. Besides, there is no portable way to check if a thread
-	is still working / has finished (another thread can't be used, because exec*()
-	kills all threads). */
+	   program to be closed. Besides, there is no portable way to check if a thread
+	   is still working / has finished (another thread can't be used, because exec*()
+	   kills all threads). */
+	return WFS_EXECERR;
+#endif
 }
 
 /**
@@ -452,6 +462,7 @@ wfs_wait_for_child (
 /**
  * Tells if the specified child process finished working.
  * \param id A structure describing the child process to check.
+ * \return 0 if the child is still active.
  */
 int WFS_ATTR ((nonnull))
 wfs_has_child_exited (
@@ -468,7 +479,7 @@ wfs_has_child_exited (
 	int status;
 	int ret;
 #endif
-	if ( id == NULL ) return 0;
+	if ( id == NULL ) return 1;
 	if ( id->type == CHILD_FORK )
 	{
 #ifdef HAVE_WAITPID
@@ -489,6 +500,9 @@ wfs_has_child_exited (
 			if ( errno == ECHILD ) return 1;
 # endif
 		}
+		return 0;
+#else
+		return 1;
 #endif
 	}
 	return 0;

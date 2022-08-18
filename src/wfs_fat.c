@@ -658,7 +658,7 @@ wfs_fat_dirent_find (
 
 
 /**
- * Returns the buffer size needed to work on the smallest physical unit on a FAT filesystem
+ * Returns the buffer size needed to work on the smallest physical unit on a FAT filesystem.
  * \param FS The filesystem.
  * \return Block size on the filesystem.
  */

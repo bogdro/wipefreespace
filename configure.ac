@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.1, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.2, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -18,7 +18,7 @@ AC_ARG_ENABLE(EXT234,[[  --enable-EXT234	Ext2/3/4 support (default=yes).]],
 		feat_ext234=yes
 	 fi
 	]
-	,feat_ext234=yes)
+	,[feat_ext234=yes])
 
 AC_ARG_ENABLE(NTFS,[[  --enable-NTFS		NTFS support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
@@ -27,7 +27,7 @@ AC_ARG_ENABLE(NTFS,[[  --enable-NTFS		NTFS support (default=yes).]],
 		feat_ntfs=yes
 	 fi
 	]
-	,feat_ntfs=yes)
+	,[feat_ntfs=yes])
 
 AC_ARG_ENABLE(XFS,[[  --enable-XFS		XFS support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
@@ -36,7 +36,7 @@ AC_ARG_ENABLE(XFS,[[  --enable-XFS		XFS support (default=yes).]],
 		feat_xfs=yes
 	 fi
 	]
-	,feat_xfs=yes)
+	,[feat_xfs=yes])
 
 AC_ARG_ENABLE(REISERFS,[[  --enable-REISERFS	ReiserFSv3 support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
@@ -45,7 +45,7 @@ AC_ARG_ENABLE(REISERFS,[[  --enable-REISERFS	ReiserFSv3 support (default=yes).]]
 		feat_reiser=yes
 	 fi
 	]
-	,feat_reiser=yes)
+	,[feat_reiser=yes])
 
 AC_ARG_ENABLE(REISER4,[[  --enable-REISER4	ReiserFSv4 support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
@@ -54,25 +54,34 @@ AC_ARG_ENABLE(REISER4,[[  --enable-REISER4	ReiserFSv4 support (default=yes).]],
 		feat_reiser4=yes
 	 fi
 	]
-	,feat_reiser4=yes)
+	,[feat_reiser4=yes])
 
-AC_ARG_ENABLE(FAT,[[  --enable-FAT	FAT12/16/32 support (default=yes).]],
+AC_ARG_ENABLE(FAT,[[  --enable-FAT		FAT12/16/32 support (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
 		feat_fatfs=no
 	 else
 		feat_fatfs=yes
 	 fi
 	]
-	,feat_fatfs=yes)
+	,[feat_fatfs=yes])
 
-AC_ARG_ENABLE(WFS_WANT_RANDOM,[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
+AC_ARG_ENABLE(MINIX,[[  --enable-MINIX	MinixFS support (default=yes).]],
+	[if (test "x$enableval" = "xno"); then
+		feat_minixfs=no
+	 else
+		feat_minixfs=yes
+	 fi
+	]
+	,[feat_minixfs=yes])
+
+AC_ARG_ENABLE([random-method],[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
 	[if (test "x$enableval" = "xyes"); then
 		want_rand=yes
 	 else
 		want_rand=no
 	 fi
 	]
-	,want_rand=no)
+	,[want_rand=no])
 
 if (test "x$want_rand" = "xyes"); then
 	AC_DEFINE(WFS_WANT_RANDOM, [1], [If shred-like wiping method was chosen instead of full Gutmann method.])
@@ -160,6 +169,13 @@ if ( test "x$feat_fatfs" = "xyes" ); then
 
 	libtffs=yes
 	AC_CHECK_LIB([tffs],[TFFS_mount],,[libtffs=no])
+fi
+
+libminixfs=no
+if ( test "x$feat_minixfs" = "xyes" ); then
+
+	libminixfs=yes
+	AC_CHECK_LIB([minixfs],open_fs,,[libminixfs=no])
 fi
 
 # ==================== Checks for header files.
@@ -320,6 +336,19 @@ if ( test "x$feat_fatfs" = "xyes" ); then
 	fi
 fi
 
+has_minixfs_h=no
+if ( test "x$feat_minixfs" = "xyes" ); then
+
+	if ( test "x$libminixfs" = "xyes" ); then
+
+		has_minixfs_h=yes
+		AC_CHECK_HEADER([minix_fs.h],
+			AC_DEFINE([HAVE_MINIX_FS_H],[1],
+				[Whether you have the minix_fs.h header.]),
+			[has_minixfs_h=no])
+	fi
+fi
+
 wfs_have_reiser4=no
 if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	&& test "x$libreiser4"		= "xyes"	\
@@ -346,6 +375,11 @@ AM_CONDITIONAL(FATFS, \
 	[  test "x$has_tffs_h"	= "xyes"	\
 	&& test "x$libtffs"	= "xyes"	\
 	&& test "x$feat_fatfs"	= "xyes"] )
+
+AM_CONDITIONAL(MINIXFS, \
+	[  test "x$has_minixfs_h"	= "xyes"	\
+	&& test "x$libminixfs"		= "xyes"	\
+	&& test "x$feat_minixfs"	= "xyes"] )
 
 has_com_h=yes
 AC_CHECK_HEADER([et/com_err.h],
@@ -747,6 +781,23 @@ else
 
 	else	#if (test "x$libtffs" != "xyes"); then
 		echo " *	FAT12/16/32: no (library missing or unusable)"
+	fi
+fi
+
+if (	   test "x$has_minixfs_h"	= "xyes"	\
+	&& test "x$libminixfs"		= "xyes"	\
+	&& test "x$feat_minixfs"	= "xyes"); then
+
+	echo " *	MinixFS: yes"
+else
+	if (test "x$feat_minixfs" != "xyes"); then
+		echo " *	MinixFS: no (disabled by command line)"
+
+	elif ( test "x$has_minixfs_h"  != "xyes" ); then
+		echo " *	MinixFS: no (minix_fs.h header missing)"
+
+	else	#if (test "x$libminixfs" != "xyes"); then
+		echo " *	MinixFS: no (library missing or unusable)"
 	fi
 fi
 

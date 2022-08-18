@@ -1152,6 +1152,7 @@ main (
 				if ( stdout_open == 1 ) print_help (wfs_progname);
 				return WFS_BAD_CMDLN;
 			}
+			opt_number = 0;
 		}
 
 		if ( (opt_char == (int)'B') || (opt_blksize == 1) )
@@ -1180,6 +1181,7 @@ main (
 				if ( stdout_open == 1 ) print_help (wfs_progname);
 				return WFS_BAD_CMDLN;
 			}
+			opt_blksize = 0;
 		}
 
 		if ( (opt_char == (int)'b') || (opt_super == 1) )
@@ -1208,6 +1210,7 @@ main (
 				if ( stdout_open == 1 ) print_help (wfs_progname);
 				return WFS_BAD_CMDLN;
 			}
+			opt_super = 0;
 		}
 
 		if ( (opt_char == (int)'v') /* do NOT check for opt_verbose here */ )
@@ -1224,7 +1227,9 @@ main (
 	wfs_optind = optind;
 	/* add up '-v' and '--verbose'. */
 	opt_verbose += opt_verbose_temp;
-#else
+
+#else	/* no getopt_long */
+
 	for ( i = 1; i < argc; i++ )	/* argv[0] is the program name */
 	{
 		if ( argv[i] == NULL ) continue;
@@ -1576,8 +1581,8 @@ main (
 			wfs_optind++;
 			continue;
 		}
-#ifdef WFS_REISER
-		/* We need a separate process for ReiserFSv3, because its library can call
+#if (defined WFS_REISER) || (defined WFS_MINIXFS)
+		/* We need a separate process for ReiserFSv3 & MinixFS, because the libraries can call
 		exit() and abort(), which wouldn't be good for our program */
 # ifdef HAVE_ERRNO_H
 		errno = 0;	/* used for gerror */
@@ -1637,7 +1642,7 @@ main (
 			exit (wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind));
 		}
 # endif
-#else /* ! WFS_REISER */
+#else /* ! ((defined WFS_REISER) || (defined WFS_MINIXFS)) */
 		ret = wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind);
 #endif
 		if ( (ret == WFS_SIGNAL) || (sig_recvd != 0) ) break;

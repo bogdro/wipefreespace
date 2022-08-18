@@ -138,6 +138,9 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
+/* Define to 1 if you have the `minixfs' library (-lminixfs). */
+#undef HAVE_LIBMINIXFS
+
 /* Define to 1 if you have the `misc' library (-lmisc). */
 #undef HAVE_LIBMISC
 
@@ -182,6 +185,9 @@
 
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
+
+/* Whether you have the minix_fs.h header. */
+#undef HAVE_MINIX_FS_H
 
 /* Define to 1 if you have the <mntent.h> header file. */
 #undef HAVE_MNTENT_H

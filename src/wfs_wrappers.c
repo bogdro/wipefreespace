@@ -60,6 +60,10 @@
 # include "wfs_fat.h"
 #endif
 
+#ifdef WFS_MINIXFS
+# include "wfs_minixfs.h"
+#endif
+
 /**
  * Starts recursive directory search for deleted inodes and undelete data.
  * \param FS The filesystem.
@@ -126,6 +130,13 @@ wipe_unrm (
 	{
 #ifdef WFS_FATFS
 		ret_wfs = wfs_fat_wipe_unrm (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		elem.minix_ino = MINIX_ROOT_INO;
+		ret_wfs = wfs_minixfs_wipe_unrm (FS, error);
 #endif
 	}
 
@@ -197,6 +208,12 @@ wipe_fs (
 		ret_wfs = wfs_fat_wipe_fs (FS, error);
 #endif
 	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		ret_wfs = wfs_minixfs_wipe_fs (FS, error);
+#endif
+	}
 
 	if ( (ret_wfs != WFS_SUCCESS) && (error->errcode.gerror == 0) )
 	{
@@ -264,6 +281,12 @@ wipe_part (
 	{
 #ifdef WFS_FATFS
 		ret_wfs = wfs_fat_wipe_part (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		ret_wfs = wfs_minixfs_wipe_part (FS, error);
 #endif
 	}
 
@@ -335,6 +358,13 @@ wfs_open_fs (
 		ret_wfs = wfs_reiser_open_fs (dev_name, FS, which_fs, data, error);
 	}
 #endif
+#ifdef WFS_MINIXFS
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		error->errcode.gerror = WFS_SUCCESS;
+		ret_wfs = wfs_minixfs_open_fs (dev_name, FS, which_fs, data, error);
+	}
+#endif
 /* FAT is probably the least specific in its header - the TFFS library can detect
    XFS and ReiserFS3/4 as FAT, which is bad, so leave this on the last position: */
 #ifdef WFS_FATFS
@@ -400,6 +430,10 @@ wfs_chk_mount (
 	ret_wfs = wfs_fat_chk_mount ( dev_name, error );
 	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
 #endif
+#if (defined WFS_MINIXFS)
+	ret_wfs = wfs_minixfs_chk_mount ( dev_name, error );
+	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+#endif
 	return ret_wfs;
 }
 
@@ -458,6 +492,12 @@ wfs_close_fs (
 	{
 #ifdef WFS_FATFS
 		ret_wfs = wfs_fat_close_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		ret_wfs = wfs_minixfs_close_fs (FS, error);
 #endif
 	}
 
@@ -536,6 +576,12 @@ wfs_check_err (
 		return wfs_fat_check_err (FS);
 #endif
 	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		return wfs_minixfs_check_err (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -603,6 +649,12 @@ wfs_is_dirty (
 		return wfs_fat_is_dirty (FS);
 #endif
 	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		return wfs_minixfs_is_dirty (FS);
+#endif
+	}
 
 	return WFS_SUCCESS;
 }
@@ -661,6 +713,12 @@ wfs_flush_fs (
 	{
 #ifdef WFS_FATFS
 		ret_wfs = wfs_fat_flush_fs (FS, error);
+#endif
+	}
+	else if ( which_fs == CURR_MINIXFS )
+	{
+#ifdef WFS_MINIXFS
+		ret_wfs = wfs_minixfs_flush_fs (FS, error);
 #endif
 	}
 

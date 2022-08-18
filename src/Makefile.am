@@ -32,3 +32,7 @@ if FATFS
 wipefreespace_SOURCES += wfs_fat.h wfs_fat.c
 endif
 
+if MINIXFS
+wipefreespace_SOURCES += wfs_minixfs.h wfs_minixfs.c
+endif
+

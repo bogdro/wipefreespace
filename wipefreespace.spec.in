@@ -23,7 +23,7 @@ Obsoletes:	e2wipefreespace
 The wipefreespace is a program which securely cleans free space on given
 filesystems, making confidential removed data recovery impossible. It also
 removes deleted files' names, so that no trace is left. Supported filesystems
-are: ext2/3/4, NTFS, XFS, ReiserFSv3/4 and FAT12/16/32.
+are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32 and MinixFSv1/2.
 
 %prep
 %{__rm} -rf $RPM_BUILD_ROOT
@@ -58,6 +58,7 @@ CFLAGS='-march=i386' ./configure --prefix=%{prefix}
 %{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/reiser4wipefreespace
 %{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/fatwipefreespace
 %{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/vfatwipefreespace
+%{__ln_s} %{prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{prefix}/bin/minixwipefreespace
 #%{__mv} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace $RPM_BUILD_ROOT%{prefix}/bin/wipefreespace
 #%{makeinstall}
 
@@ -79,6 +80,8 @@ CFLAGS='-march=i386' ./configure --prefix=%{prefix}
 %{prefix}/bin/reiser4wipefreespace
 %{prefix}/bin/fatwipefreespace
 %{prefix}/bin/vfatwipefreespace
+%{prefix}/bin/minixwipefreespace
 %doc /usr/share/info/wipefreespace.info.gz
 %doc /usr/share/man/man1/wipefreespace.1.gz
 %{prefix}/share/locale/pl/LC_MESSAGES/wipefreespace.mo
+

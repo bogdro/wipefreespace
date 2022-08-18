@@ -104,7 +104,7 @@ struct wfs_e234_block_data
 };
 
 /**
- * Returns the buffer size needed to work on the smallest physical unit on a ext2/3/4 filesystem
+ * Returns the buffer size needed to work on the smallest physical unit on a ext2/3/4 filesystem.
  * \param FS The filesystem.
  * \return Block size on the filesystem.
  */
@@ -751,12 +751,14 @@ wfs_e234_wipe_journal (
 		return WFS_BADPARAM;
 	}
 
+#if (defined EXT2_HAS_COMPAT_FEATURE) && (defined EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 	if ( EXT2_HAS_COMPAT_FEATURE (FS.e2fs->super, EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 		!= EXT3_FEATURE_COMPAT_HAS_JOURNAL)
 	{
 		show_progress (PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		return ret_journ;
 	}
+#endif
 	/* do nothing if external journal */
 	if ( FS.e2fs->super->s_journal_inum == 0 )
 	{

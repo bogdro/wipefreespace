@@ -1,6 +1,6 @@
 /*
  * A program for secure cleaning of free space on filesystems.
- *	-- XFS file system-specific functions, header file.
+ *	-- XFS file system-specific functions.
  *
  * Copyright (C) 2007-2009 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
@@ -277,9 +277,10 @@ wfs_xfs_wipe_fs	(
 	int selected[NPAT];
 	errcode_enum ret_wfs = WFS_SUCCESS;
 	int bytes_read;
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 	struct timeval tv;
 	fd_set set;
 #endif
@@ -498,9 +499,10 @@ wfs_xfs_wipe_fs	(
 #ifdef HAVE_ERRNO_H
 			errno = 0;
 #endif
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 			/* select() can destroy the descriptor sets */
 			FD_ZERO ( &set );
 			FD_SET ( pipe_fd[PIPE_R], &set );
@@ -516,9 +518,10 @@ wfs_xfs_wipe_fs	(
 				}
 				res++;
 				select_fails = 0;
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 			}
 			else
 			{
@@ -795,9 +798,10 @@ wfs_xfs_wipe_part (
 	unsigned int offset;
 	char inode_cmd[40];
 	int bytes_read;
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 	fd_set set;
 	struct timeval tv;
 # endif
@@ -1037,9 +1041,10 @@ wfs_xfs_wipe_part (
 # ifdef HAVE_ERRNO_H
 			errno = 0;
 # endif
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 			/* select() can destroy the descriptor sets */
 			FD_ZERO ( &set );
 			FD_SET ( pipe_from_ino_db[PIPE_R], &set );
@@ -1055,9 +1060,10 @@ wfs_xfs_wipe_part (
 				}
 				res++;
 				select_fails = 0;
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 			}
 			else
 			{
@@ -1138,9 +1144,10 @@ wfs_xfs_wipe_part (
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 				/* select() can destroy the descriptor sets */
 				FD_ZERO ( &set );
 				FD_SET ( pipe_from_blk_db[PIPE_R], &set );
@@ -1157,9 +1164,10 @@ wfs_xfs_wipe_part (
 					}
 					res++;
 					select_fails = 0;
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 				}
 				else
 				{
@@ -1266,9 +1274,10 @@ wfs_xfs_wipe_part (
 # ifdef HAVE_ERRNO_H
 				errno = 0;
 # endif
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 				/* select() can destroy the descriptor sets */
 				FD_ZERO ( &set );
 				FD_SET ( pipe_from_blk_db[PIPE_R], &set );
@@ -1285,9 +1294,10 @@ wfs_xfs_wipe_part (
 					}
 					res++;
 					select_fails = 0;
-# if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 				}
 				else
 				{
@@ -1510,9 +1520,10 @@ wfs_xfs_check_err (
 	char * args[] = { "xfs_check", "  ", NULL, NULL }; /* xfs_check [-f] dev/file */
 	char buffer[WFS_XFSBUFSIZE];
 	int bytes_read;
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 	fd_set set;
 	struct timeval tv;
 #endif
@@ -1616,9 +1627,10 @@ wfs_xfs_check_err (
 #ifdef HAVE_ERRNO_H
 		errno = 0;
 #endif
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 		/* select() can destroy the descriptor sets */
 		FD_ZERO ( &set );
 		FD_SET ( pipe_fd[PIPE_R], &set );
@@ -1633,9 +1645,10 @@ wfs_xfs_check_err (
 				break;
 			}
 			res++;
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 		}
 		else
 		{
@@ -1784,9 +1797,10 @@ wfs_xfs_open_fs (
 	int is_rw;
 	unsigned long long int inprogress;
 	int bytes_read;
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 	struct timeval tv;
 	fd_set set;
 #endif
@@ -1964,9 +1978,10 @@ wfs_xfs_open_fs (
 #ifdef HAVE_ERRNO_H
 			errno = 0;
 #endif
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 			/* select() can destroy the descriptor sets */
 			FD_ZERO ( &set );
 			FD_SET ( pipe_fd[PIPE_R], &set );
@@ -1982,9 +1997,10 @@ wfs_xfs_open_fs (
 				}
 				res++;
 				select_fails = 0;
-#if ((defined HAVE_SYS_SELECT_H) || (defined TIME_WITH_SYS_TIME)\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))	\
-	&& (defined HAVE_SELECT)
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+ 		&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
 			}
 			else
 			{
@@ -2067,7 +2083,6 @@ wfs_xfs_open_fs (
 			if ( res != 1 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */
-
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
@@ -2082,7 +2097,6 @@ wfs_xfs_open_fs (
 			if ( res != 1 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */
-
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
@@ -2097,7 +2111,6 @@ wfs_xfs_open_fs (
 			if ( res != 1 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */
-
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
@@ -2107,7 +2120,6 @@ wfs_xfs_open_fs (
 			if ( inprogress != 0 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */
-
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
@@ -2122,7 +2134,6 @@ wfs_xfs_open_fs (
 			if ( res != 1 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */
-
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);
@@ -2137,7 +2148,6 @@ wfs_xfs_open_fs (
 			if ( res != 1 )
 			{
 				/* NOTE: waiting for the child has already been taken care of. */
-
 				close (pipe_fd[PIPE_R]);
 				close (pipe_fd[PIPE_W]);
 				free (args[FSNAME_POS_OPEN]);

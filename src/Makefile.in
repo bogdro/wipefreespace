@@ -45,6 +45,7 @@ bin_PROGRAMS = wipefreespace$(EXEEXT)
 @REISERFS_TRUE@am__append_4 = wfs_reiser.h wfs_reiser.c
 @REISER4_TRUE@am__append_5 = wfs_reiser4.h wfs_reiser4.c
 @FATFS_TRUE@am__append_6 = wfs_fat.h wfs_fat.c
+@MINIXFS_TRUE@am__append_7 = wfs_minixfs.h wfs_minixfs.c
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/wfs_cfg.h.in
@@ -68,18 +69,19 @@ am__wipefreespace_SOURCES_DIST = wipefreespace.c wipefreespace.h \
 	wfs_signal.c wfs_signal.h wfs_util.c wfs_util.h wfs_ext234.h \
 	wfs_ext234.c wfs_ntfs.h wfs_ntfs.c wfs_xfs.h wfs_xfs.c \
 	wfs_reiser.h wfs_reiser.c wfs_reiser4.h wfs_reiser4.c \
-	wfs_fat.h wfs_fat.c
+	wfs_fat.h wfs_fat.c wfs_minixfs.h wfs_minixfs.c
 @EXT234FS_TRUE@am__objects_1 = wfs_ext234.$(OBJEXT)
 @NTFS_TRUE@am__objects_2 = wfs_ntfs.$(OBJEXT)
 @XFS_TRUE@am__objects_3 = wfs_xfs.$(OBJEXT)
 @REISERFS_TRUE@am__objects_4 = wfs_reiser.$(OBJEXT)
 @REISER4_TRUE@am__objects_5 = wfs_reiser4.$(OBJEXT)
 @FATFS_TRUE@am__objects_6 = wfs_fat.$(OBJEXT)
+@MINIXFS_TRUE@am__objects_7 = wfs_minixfs.$(OBJEXT)
 am_wipefreespace_OBJECTS = wipefreespace.$(OBJEXT) \
 	wfs_wrappers.$(OBJEXT) wfs_secure.$(OBJEXT) \
 	wfs_signal.$(OBJEXT) wfs_util.$(OBJEXT) $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
-	$(am__objects_5) $(am__objects_6)
+	$(am__objects_5) $(am__objects_6) $(am__objects_7)
 wipefreespace_OBJECTS = $(am_wipefreespace_OBJECTS)
 am__DEPENDENCIES_1 =
 wipefreespace_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -142,6 +144,8 @@ LTLIBICONV = @LTLIBICONV@
 LTLIBINTL = @LTLIBINTL@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
+MINIXFS_FALSE = @MINIXFS_FALSE@
+MINIXFS_TRUE = @MINIXFS_TRUE@
 MKINSTALLDIRS = @MKINSTALLDIRS@
 MSGFMT = @MSGFMT@
 MSGMERGE = @MSGMERGE@
@@ -215,7 +219,7 @@ wipefreespace_SOURCES = wipefreespace.c wipefreespace.h wfs_wrappers.c \
 	wfs_wrappers.h wfs_secure.c wfs_secure.h wfs_signal.c \
 	wfs_signal.h wfs_util.c wfs_util.h $(am__append_1) \
 	$(am__append_2) $(am__append_3) $(am__append_4) \
-	$(am__append_5) $(am__append_6)
+	$(am__append_5) $(am__append_6) $(am__append_7)
 wipefreespace_LDADD = $(INTLLIBS)
 localedir = $(datadir)/locale
 INCLUDES = -I../intl -DLOCALEDIR=\"$(localedir)\"
@@ -290,6 +294,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_ext234.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_fat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_minixfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_ntfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_reiser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wfs_reiser4.Po@am__quote@

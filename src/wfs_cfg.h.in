@@ -118,12 +118,14 @@
 #  define HAVE_LIBCAP			1
 #  define HAVE_LIBCORE			1	/* ReiserFSv3 */
 #  define HAVE_LIBEXT2FS		1
+#  define HAVE_LIBMINIXFS		1
 #  define HAVE_LIBMISC			1	/* ReiserFSv3 */
 #  define HAVE_LIBNTFS			1
 #  define HAVE_LIBREISER4		1
 #  define HAVE_LIBREISER4MISC		1
 #  define HAVE_LIBTFFS			1
 #  define HAVE_LIBUUID			1	/* ReiserFSv3/4 */
+#  define HAVE_MINIX_FS_H		1
 #  define HAVE_NTFS_VOLUME_H		1
 #  define HAVE_REISER4_LIBREISER4_H	1
 #  define HAVE_REISERFS_LIB_H		1	/* ReiserFSv3 */
