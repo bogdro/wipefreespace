@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wipefreespace\n"
 "Report-Msgid-Bugs-To: bogdandr@op.pl\n"
-"POT-Creation-Date: 2012-06-01 18:01+0200\n"
+"POT-Creation-Date: 2012-08-23 18:39+0200\n"
 "PO-Revision-Date: 2007-04-23 17:24+0200\n"
 "Last-Translator: Bogdan Drozdowski <bogdandr@op.pl>\n"
 "Language-Team: Polish\n"
@@ -182,7 +182,7 @@ msgstr "Przechodzenie w t³o nie jest obs³ugiwane lub nie powiod³o siê"
 msgid "unknown"
 msgstr "nieznany"
 
-#: src/wipefreespace.c:457
+#: src/wipefreespace.c:466
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
@@ -190,11 +190,11 @@ msgstr ""
 " - Program do bezpiecznego czyszczenia pustego miejsca na systemach plików\n"
 "Sk³adnia: "
 
-#: src/wipefreespace.c:459
+#: src/wipefreespace.c:468
 msgid " [options] "
 msgstr " [opcje] "
 
-#: src/wipefreespace.c:461
+#: src/wipefreespace.c:470
 msgid ""
 "Options:\n"
 "--all-zeros\t\tUse only zeros for wiping\n"
@@ -210,7 +210,7 @@ msgstr ""
 "-B|--blocksize <size>\tRozmiar bloku na podanych systemach plików\n"
 "-f|--force\t\tCzy¶æ nawet gdy system plików ma b³êdy"
 
-#: src/wipefreespace.c:468
+#: src/wipefreespace.c:477
 msgid ""
 "-h|--help\t\tPrint help\n"
 "-n|--iterations NNN\tNumber of passes (greater than 0)\n"
@@ -226,7 +226,7 @@ msgstr ""
 "--method <nazwa>\tU¿yj podanej metody do wymazywania\n"
 "--nopart\t\tNIE czy¶æ pustego miejsca w czê¶ciowo u¿ywanych blokach"
 
-#: src/wipefreespace.c:475
+#: src/wipefreespace.c:484
 msgid ""
 "--nounrm\t\tDo NOT wipe undelete information\n"
 "--nowfs\t\t\tDo NOT wipe free space on file system\n"

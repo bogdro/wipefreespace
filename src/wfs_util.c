@@ -76,7 +76,7 @@
 #endif
 
 #ifdef HAVE_UNISTD_H
-# include <unistd.h>	/* access(), close(), dup2(), fork(), sync(), STDIN_FILENO,
+# include <unistd.h>	/* close(), dup2(), fork(), sync(), STDIN_FILENO,
 			   STDOUT_FILENO, STDERR_FILENO */
 #endif
 
@@ -183,7 +183,7 @@ extern unsigned long int wfs_util_sig(char c0, char c1, char c2, char c3);
  *	is mounted in read+write mode (=1 if yes).
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
@@ -194,7 +194,7 @@ wfs_get_mnt_point (
 	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
 		WFS_ATTR ((unused))
 # endif
-	, error_type * const error,
+	, wfs_error_type_t * const error,
 	char * const mnt_point, const size_t mnt_point_len
 # if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
 	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
@@ -214,7 +214,7 @@ wfs_get_mnt_point (
 # endif
 	, is_rw )
 	const char * const dev_name;
-	error_type * const error;
+	wfs_error_type_t * const error;
 	char * const mnt_point;
 	const size_t mnt_point_len;
 	int * const is_rw;
@@ -263,8 +263,14 @@ wfs_get_mnt_point (
 # else
 		mnt = getmntent_r (mnt_f, &mnt_copy, buffer, WFS_MNTBUFLEN);
 # endif
-		if ( mnt == NULL ) break;
-		if ( strcmp (dev_name, mnt->mnt_fsname) == 0 ) break;
+		if ( mnt == NULL )
+		{
+			break;
+		}
+		if ( strcmp (dev_name, mnt->mnt_fsname) == 0 )
+		{
+			break;
+		}
 
 	} while ( 1==1 );
 
@@ -339,20 +345,20 @@ wfs_get_mnt_point (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_check_mounted (
 #ifdef WFS_ANSIC
-	const char * const dev_name, error_type * const error )
+	const char * const dev_name, wfs_error_type_t * const error )
 #else
 	dev_name, error )
 	const char * const dev_name;
-	error_type * const error;
+	wfs_error_type_t * const error;
 #endif
 {
-	errcode_enum res;
+	wfs_errcode_t res;
 	int is_rw;
 	char buffer[WFS_MNTBUFLEN];
 
@@ -381,7 +387,7 @@ wfs_check_mounted (
 }
 
 #ifndef WFS_ANSIC
-static void * child_function PARAMS ((void * p));
+static void * child_function WFS_PARAMS ((void * p));
 #endif
 
 /*
@@ -425,7 +431,10 @@ child_function (
 				)
 			{
 				/* error redirecting stdin */
-				if ( id->type == CHILD_FORK ) exit (EXIT_FAILURE);
+				if ( id->type == CHILD_FORK )
+				{
+					exit (EXIT_FAILURE);
+				}
 			}
 		}
 		if ( id->stdout_fd != -1 )
@@ -438,7 +447,10 @@ child_function (
 				)
 			{
 				/* error redirecting stdout */
-				if ( id->type == CHILD_FORK ) exit (EXIT_FAILURE);
+				if ( id->type == CHILD_FORK )
+				{
+					exit (EXIT_FAILURE);
+				}
 			}
 		}
 		if ( id->stderr_fd != -1 )
@@ -451,7 +463,10 @@ child_function (
 				)
 			{
 				/* error redirecting stderr */
-				if ( id->type == CHILD_FORK ) exit (EXIT_FAILURE);
+				if ( id->type == CHILD_FORK )
+				{
+					exit (EXIT_FAILURE);
+				}
 			}
 		}
 		execvp ( id->program_name, id->args );
@@ -481,7 +496,7 @@ child_function (
  * \param id A structure describing the child process to create and containing its data after creation.
  * \return WFS_SUCCESS on success, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
@@ -493,11 +508,17 @@ wfs_create_child (
 	struct child_id * const id;
 #endif
 {
-	if ( id == NULL ) return WFS_BADPARAM;
+	if ( id == NULL )
+	{
+		return WFS_BADPARAM;
+	}
 
 #ifdef HAVE_FORK
 	id->chld_id.chld_pid = fork ();
-	if ( id->chld_id.chld_pid < 0 ) return WFS_FORKERR;
+	if ( id->chld_id.chld_pid < 0 )
+	{
+		return WFS_FORKERR;
+	}
 	else if ( id->chld_id.chld_pid == 0 )
 	{
 		child_function (id);
@@ -536,7 +557,10 @@ wfs_wait_for_child (
 	const struct child_id * const id;
 #endif
 {
-	if ( id == NULL ) return;
+	if ( id == NULL )
+	{
+		return;
+	}
 	if ( id->type == CHILD_FORK )
 	{
 #ifdef HAVE_WAITPID
@@ -589,7 +613,10 @@ wfs_has_child_exited (
 	int status;
 	int ret;
 #endif
-	if ( id == NULL ) return 1;
+	if ( id == NULL )
+	{
+		return 1;
+	}
 	if ( id->type == CHILD_FORK )
 	{
 #ifdef HAVE_WAITPID
@@ -597,17 +624,26 @@ wfs_has_child_exited (
 		if ( ret > 0 )
 		{
 # ifdef WIFEXITED
-			if ( WIFEXITED (status) ) return 1;
+			if ( WIFEXITED (status) )
+			{
+				return 1;
+			}
 # endif
 # ifdef WIFSIGNALED
-			if ( WIFSIGNALED (status) ) return 1;
+			if ( WIFSIGNALED (status) )
+			{
+				return 1;
+			}
 # endif
 		}
 		else if ( ret < 0 )
 		{
 # ifdef HAVE_ERRNO_H
 			/* No child processes? Then the child must have exited already. */
-			if ( errno == ECHILD ) return 1;
+			if ( errno == ECHILD )
+			{
+				return 1;
+			}
 # endif
 		}
 		return 0;
@@ -635,7 +671,10 @@ rpl_malloc (
 	size_t n;
 #  endif
 {
-	if (n == 0) n = 1;
+	if (n == 0)
+	{
+		n = 1;
+	}
 	return malloc (n);
 }
 # endif
@@ -650,10 +689,10 @@ rpl_malloc (
 const char *
 convert_fs_to_name (
 #ifdef WFS_ANSIC
-	const CURR_FS fs)
+	const wfs_curr_fs_t fs)
 #else
 	fs)
-	const CURR_FS fs;
+	const wfs_curr_fs_t fs;
 #endif
 {
 	if ( fs == CURR_NONE )

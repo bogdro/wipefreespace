@@ -68,10 +68,10 @@ static const char * const msg_random      = N_("random");
 static int opt_verbose = 0;
 static int opt_allzero = 0;
 static enum wfs_method opt_method = WFS_METHOD_GUTMANN;
-static unsigned long int wfs_npasses = PASSES;		/* Number of passes (patterns used) */
+static unsigned long int wfs_npasses = WFS_PASSES;		/* Number of passes (patterns used) */
 
 /* Taken from `shred' source */
-static unsigned const int patterns_random[] =
+static const unsigned int patterns_random[] =
 {
 	0x000, 0xFFF,					/* 1-bit */
 	0x555, 0xAAA,					/* 2-bit */
@@ -80,7 +80,7 @@ static unsigned const int patterns_random[] =
 	0x888, 0x999, 0xBBB, 0xCCC, 0xDDD, 0xEEE	/* 4-bit */
 };
 
-static unsigned const int patterns_gutmann[] =
+static const unsigned int patterns_gutmann[] =
 {
 	0x000, 0xFFF,					/* 1-bit */
 	0x555, 0xAAA,					/* 2-bit */
@@ -91,7 +91,7 @@ static unsigned const int patterns_gutmann[] =
 	0x555, 0xAAA, 0x249, 0x492, 0x924
 };
 
-static unsigned const int patterns_schneier[] =
+static const unsigned int patterns_schneier[] =
 {
 	0xFFF, 0x000
 };
@@ -106,7 +106,7 @@ static unsigned int patterns_dod[] =
 #define WFS_TOUPPER(c) ((char)( ((c) >= 'a' && (c) <= 'z')? ((c) & 0x5F) : (c) ))
 
 #ifndef WFS_ANSIC
-static int wfs_compare PARAMS ((const char string1[], const char string2[]));
+static int wfs_compare WFS_PARAMS ((const char string1[], const char string2[]));
 #endif
 
 /**
@@ -128,16 +128,31 @@ wfs_compare (
 	size_t i, len1, len2;
 	char c1, c2;
 
-	if ( (string1 == NULL) && (string2 == NULL) ) return 0;
-	else if ( string1 == NULL ) return -1;
-	else if ( string2 == NULL ) return 1;
+	if ( (string1 == NULL) && (string2 == NULL) )
+	{
+		return 0;
+	}
+	else if ( string1 == NULL )
+	{
+		return -1;
+	}
+	else if ( string2 == NULL )
+	{
+		return 1;
+	}
 	else
 	{
 		/* both strings not-null */
 		len1 = strlen (string1);
 		len2 = strlen (string2);
-		if ( len1 < len2 ) return -1;
-		else if ( len1 > len2 ) return 1;
+		if ( len1 < len2 )
+		{
+			return -1;
+		}
+		else if ( len1 > len2 )
+		{
+			return 1;
+		}
 		else
 		{
 			/* both lengths equal */
@@ -145,8 +160,14 @@ wfs_compare (
 			{
 				c1 = WFS_TOUPPER (string1[i]);
 				c2 = WFS_TOUPPER (string2[i]);
-				if ( c1 < c2 ) return -1;
-				else if ( c1 > c2 ) return 1;
+				if ( c1 < c2 )
+				{
+					return -1;
+				}
+				else if ( c1 > c2 )
+				{
+					return 1;
+				}
 			}
 		}
 	}
@@ -156,7 +177,7 @@ wfs_compare (
 /* ======================================================================== */
 
 #ifndef WFS_ANSIC
-static int wfs_is_pass_random PARAMS ((const unsigned long int pat_no,
+static int wfs_is_pass_random WFS_PARAMS ((const unsigned long int pat_no,
 	const enum wfs_method method));
 #endif
 
@@ -240,6 +261,7 @@ init_wiping (
 	opt_verbose = verbose;
 	opt_allzero = allzero;
 	wfs_npasses = number_of_passes;
+
 	if ( method != NULL )
 	{
 		if ( wfs_compare (method, "gutmann") == 0 )
@@ -281,6 +303,14 @@ init_wiping (
 			number_of_passes = sizeof (patterns_dod)/sizeof (patterns_dod[0])
 				+ 1;
 		}
+	}
+	else
+	{
+		opt_method = WFS_METHOD_GUTMANN;
+		/* the number of passes is the number of predefined patterns
+			+ the number of random patterns. */
+		number_of_passes = sizeof (patterns_gutmann)/sizeof (patterns_gutmann[0])
+			+ 4 + 1 + 4;
 	}
 	if ( wfs_npasses == 0 )
 	{
@@ -331,7 +361,10 @@ fill_buffer (
 	int res;
 	size_t npat;
 
-	if ( (buffer == NULL) || (buflen == 0) ) return;
+	if ( (buffer == NULL) || (buflen == 0) )
+	{
+		return;
+	}
 
 	if ( opt_method == WFS_METHOD_GUTMANN )
 	{
@@ -372,7 +405,10 @@ fill_buffer (
 			}
 		}
 	}
-        if ( sig_recvd != 0 ) return;
+        if ( sig_recvd != 0 )
+	{
+		return;
+	}
         pat_no %= wfs_npasses;
 
 	if ( opt_allzero != 0 )
@@ -411,7 +447,10 @@ fill_buffer (
 					}
 				}
 				while ( sig_recvd == 0 );
-				if ( sig_recvd != 0 ) return;
+				if ( sig_recvd != 0 )
+				{
+					return;
+				}
 			}
 			else
 			{
@@ -441,7 +480,10 @@ fill_buffer (
 		}
     	}
 
-        if ( sig_recvd != 0 ) return;
+        if ( sig_recvd != 0 )
+	{
+		return;
+	}
 	/* Taken from `shred' source and modified */
 	bits |= bits << 12;
 	buffer[0] = (unsigned char) ((bits >> 4) & 0xFF);
@@ -480,7 +522,10 @@ fill_buffer (
 # endif
 #endif
 	}
-        if ( sig_recvd != 0 ) return;
+        if ( sig_recvd != 0 )
+	{
+		return;
+	}
 	if (i < buflen)
 	{
 #ifdef HAVE_MEMCPY

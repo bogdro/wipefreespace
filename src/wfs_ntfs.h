@@ -28,32 +28,32 @@
 
 # include "wipefreespace.h"
 
-extern errcode_enum WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_wipe_part PARAMS((const wfs_fsid_t FS, error_type * const error));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result))
+	wfs_ntfs_wipe_part WFS_PARAMS((const wfs_fsid_t FS, wfs_error_type_t * const error));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_ntfs_wipe_fs PARAMS((const wfs_fsid_t FS, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_ntfs_wipe_fs WFS_PARAMS((const wfs_fsid_t FS, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_wipe_unrm PARAMS(( const wfs_fsid_t FS, const fselem_t node, error_type * const error));
-
-extern int WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_check_err PARAMS(( const wfs_fsid_t FS ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result))
+	wfs_ntfs_wipe_unrm WFS_PARAMS(( const wfs_fsid_t FS, const wfs_fselem_t node, wfs_error_type_t * const error));
 
 extern int WFS_ATTR ((warn_unused_result))
-	wfs_ntfs_is_dirty PARAMS(( const wfs_fsid_t FS ));
+	wfs_ntfs_check_err WFS_PARAMS(( const wfs_fsid_t FS ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_ntfs_chk_mount PARAMS(( const char * const dev_name, error_type * const error ));
+extern int WFS_ATTR ((warn_unused_result))
+	wfs_ntfs_is_dirty WFS_PARAMS(( const wfs_fsid_t FS ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_ntfs_open_fs PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
-		CURR_FS * const which_fs, const fsdata * const data, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_ntfs_chk_mount WFS_PARAMS(( const char * const dev_name, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_ntfs_close_fs PARAMS(( const wfs_fsid_t FS, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_ntfs_open_fs WFS_PARAMS(( const char * const dev_name, wfs_fsid_t* const FS,
+		wfs_curr_fs_t * const which_fs, const wfs_fsdata_t * const data, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_ntfs_flush_fs PARAMS(( const wfs_fsid_t FS,	error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	wfs_ntfs_close_fs WFS_PARAMS(( const wfs_fsid_t FS, wfs_error_type_t * const error ));
+
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	wfs_ntfs_flush_fs WFS_PARAMS(( const wfs_fsid_t FS,	wfs_error_type_t * const error ));
 
 #endif	/* WFS_HEADER_NTFS */

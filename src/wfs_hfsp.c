@@ -67,7 +67,7 @@
 #  error Something wrong. HFS+ requested, but libhfsp.h or libhfsp missing.
 # endif
 #endif
-extern int volume_writetobuf PARAMS ((volume * vol, void * buf, long int block));
+extern int volume_writetobuf WFS_PARAMS ((volume * vol, void * buf, long int block));
 
 #include "wfs_hfsp.h"
 #include "wfs_signal.h"
@@ -78,7 +78,7 @@ extern int volume_writetobuf PARAMS ((volume * vol, void * buf, long int block))
 
 #if (defined WFS_WANT_WFS) || (defined WFS_WANT_PART)
 # ifndef WFS_ANSIC
-static size_t WFS_ATTR ((warn_unused_result)) wfs_hfsp_get_block_size PARAMS ((const wfs_fsid_t FS));
+static size_t WFS_ATTR ((warn_unused_result)) wfs_hfsp_get_block_size WFS_PARAMS ((const wfs_fsid_t FS));
 # endif
 
 /**
@@ -100,11 +100,13 @@ wfs_hfsp_get_block_size (
 }
 #endif /* (defined WFS_WANT_WFS) || (defined WFS_WANT_PART) */
 
+/* ======================================================================== */
+
 #ifdef WFS_WANT_PART
 # ifndef WFS_ANSIC
-static errcode_enum WFS_ATTR ((warn_unused_result))
-	wfs_hfsp_wipe_part_file PARAMS ((
-		wfs_fsid_t FS, record * const file, unsigned char buf[], error_type * const error,
+static wfs_errcode_t WFS_ATTR ((warn_unused_result))
+	wfs_hfsp_wipe_part_file WFS_PARAMS ((
+		wfs_fsid_t FS, record * const file, unsigned char buf[], wfs_error_type_t * const error,
 		UInt32 * const curr_file, unsigned int * const prev_percent));
 # endif
 
@@ -118,45 +120,61 @@ static errcode_enum WFS_ATTR ((warn_unused_result))
  * \param prev_percent Pointer to previous progress.
  * \return 0 in case of no errors, other values otherwise.
  */
-static errcode_enum WFS_ATTR ((warn_unused_result))
+static wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_hfsp_wipe_part_file (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, record * const file, unsigned char buf[], error_type * const error,
+	wfs_fsid_t FS, record * const file, unsigned char buf[], wfs_error_type_t * const error_ret,
 	UInt32 * const curr_file_no, unsigned int * const prev_percent)
 # else
-	FS, file, buf, error, curr_file_no, prev_percent)
+	FS, file, buf, error_ret, curr_file_no, prev_percent)
 	wfs_fsid_t FS;
 	record * const file;
 	unsigned char buf[];
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 	UInt32 * const curr_file_no;
 	unsigned int * const prev_percent;
 # endif
 {
-	errcode_enum ret_part = WFS_SUCCESS;
+	wfs_errcode_t ret_part = WFS_SUCCESS;
 	unsigned long int j;
-	int selected[NPAT];
+	int selected[WFS_NPAT];
 	blockiter iter;
 	UInt32 last_block;
 	int res;
 	UInt64 remainder;
+	wfs_error_type_t error = {CURR_HFSP, {0}};
 
-	if ( (error == NULL) || (buf == NULL) || (file == NULL) )
+	if ( (buf == NULL) || (file == NULL) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 	if ( file->record.type != HFSP_FILE )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_DIRITER;
 	}
 
 	remainder = file->record.u.file.data_fork.total_size % wfs_hfsp_get_block_size (FS);
 	if ( remainder == 0 )
 	{
-		if ( sig_recvd != 0 ) return WFS_SIGNAL;
+		if ( sig_recvd != 0 )
+		{
+			ret_part = WFS_SIGNAL;
+		}
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return ret_part;
 	}
 
@@ -166,6 +184,10 @@ wfs_hfsp_wipe_part_file (
 	if ( blockiter_skip (&iter,
 		file->record.u.file.data_fork.total_blocks/wfs_hfsp_get_block_size (FS)) != 0 )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BLKITER;
 	}
 	/* read the last block here: */
@@ -173,25 +195,29 @@ wfs_hfsp_wipe_part_file (
 	res = volume_readinbuf (&(FS.hfsp_volume), buf, (long int)last_block);
 	if ( res != 0 )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BLKRD;
 	}
 	/* wipe the fail tail here: */
-	for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
+	for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer ( j, &buf[remainder], (size_t)(wfs_hfsp_get_block_size (FS) - remainder),
 			selected, FS );
-		error->errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
+		error.errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
 			buf, (long int)last_block);
-		if ( error->errcode.gerror != 0 )
+		if ( error.errcode.gerror != 0 )
 		{
 			ret_part = WFS_BLKWR;
 			break;
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (npasses > 1) && (sig_recvd == 0) )
+		if ( (FS.npasses > 1) && (sig_recvd == 0) )
 		{
-			error->errcode.gerror = wfs_hfsp_flush_fs ( FS, error );
+			error.errcode.gerror = wfs_hfsp_flush_fs ( FS, &error );
 		}
 	}
 	if ( (FS.zero_pass != 0) && (sig_recvd == 0) && (ret_part == WFS_SUCCESS) )
@@ -205,18 +231,18 @@ wfs_hfsp_wipe_part_file (
 			buf[j] = '\0';
 		}
 # endif
-		error->errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
+		error.errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
 			buf, (long int)last_block);
-		if ( error->errcode.gerror != 0 )
+		if ( error.errcode.gerror != 0 )
 		{
 			ret_part = WFS_BLKWR;
 			/* do NOT break here */
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (npasses > 1) && (sig_recvd == 0) )
+		if ( (FS.npasses > 1) && (sig_recvd == 0) )
 		{
-			error->errcode.gerror = wfs_hfsp_flush_fs ( FS, error );
+			error.errcode.gerror = wfs_hfsp_flush_fs ( FS, &error );
 		}
 	}
 
@@ -225,19 +251,28 @@ wfs_hfsp_wipe_part_file (
 		(*curr_file_no) ++;
 		if ( (prev_percent != NULL) && (FS.hfsp_volume.vol.file_count != 0) )
 		{
-			show_progress (PROGRESS_PART,
+			show_progress (WFS_PROGRESS_PART,
 				(*curr_file_no)/(FS.hfsp_volume.vol.file_count), prev_percent);
 		}
 	}
 
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 	return ret_part;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static errcode_enum WFS_ATTR ((warn_unused_result))
-	wfs_hfsp_wipe_part_dir PARAMS ((
-		wfs_fsid_t FS, record * const dir, unsigned char buf[], error_type * const error,
+static wfs_errcode_t WFS_ATTR ((warn_unused_result))
+	wfs_hfsp_wipe_part_dir WFS_PARAMS ((
+		wfs_fsid_t FS, record * const dir, unsigned char buf[], wfs_error_type_t * const error_ret,
 		UInt32 * const curr_file_no, unsigned int * const prev_percent));
 # endif
 
@@ -251,41 +286,54 @@ static errcode_enum WFS_ATTR ((warn_unused_result))
  * \param prev_percent Pointer to previous progress.
  * \return 0 in case of no errors, other values otherwise.
  */
-static errcode_enum WFS_ATTR ((warn_unused_result))
+static wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_hfsp_wipe_part_dir (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, record * const dir, unsigned char buf[], error_type * const error,
+	wfs_fsid_t FS, record * const dir, unsigned char buf[], wfs_error_type_t * const error_ret,
 	UInt32 * const curr_file_no, unsigned int * const prev_percent)
 # else
-	FS, dir, buf, error, curr_file_no, prev_percent)
+	FS, dir, buf, error_ret, curr_file_no, prev_percent)
 	wfs_fsid_t FS;
 	record * const dir;
 	unsigned char buf[];
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 	UInt32 * const curr_file_no;
 	unsigned int * const prev_percent;
 # endif
 {
-	errcode_enum ret_part = WFS_SUCCESS;
-	errcode_enum ret_temp = WFS_SUCCESS;
+	wfs_errcode_t ret_part = WFS_SUCCESS;
+	wfs_errcode_t ret_temp = WFS_SUCCESS;
 	record curr_elem;
+	wfs_error_type_t error = {CURR_HFSP, {0}};
 
-	if ( (error == NULL) || (buf == NULL) || (dir == NULL) )
+	if ( (buf == NULL) || (dir == NULL) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 	/* the root directory can be marked as HFSP_FOLDER_THREAD (the current directory marker */
 	if ( (dir->record.type != HFSP_FOLDER) && (dir->record.type != HFSP_FOLDER_THREAD) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_DIRITER;
 	}
 
 	/* initialize the record to the first element: */
 	if ( record_init_parent (&curr_elem, dir) != 0 )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_DIRITER;
 	}
 
@@ -301,13 +349,13 @@ wfs_hfsp_wipe_part_dir (
 		{
 			if ( ret_part == WFS_SUCCESS )
 			{
-				ret_part = wfs_hfsp_wipe_part_dir (FS, &curr_elem, buf, error,
+				ret_part = wfs_hfsp_wipe_part_dir (FS, &curr_elem, buf, &error,
 					curr_file_no, prev_percent);
 			}
 			else
 			{
 				/* keep the current error */
-				ret_temp = wfs_hfsp_wipe_part_dir (FS, &curr_elem, buf, error,
+				ret_temp = wfs_hfsp_wipe_part_dir (FS, &curr_elem, buf, &error,
 					curr_file_no, prev_percent);
 			}
 		}
@@ -315,23 +363,35 @@ wfs_hfsp_wipe_part_dir (
 		{
 			if ( ret_part == WFS_SUCCESS )
 			{
-				ret_part = wfs_hfsp_wipe_part_file (FS, &curr_elem, buf, error,
+				ret_part = wfs_hfsp_wipe_part_file (FS, &curr_elem, buf, &error,
 					curr_file_no, prev_percent);
 			}
 			else
 			{
 				/* keep the current error */
-				ret_temp = wfs_hfsp_wipe_part_file (FS, &curr_elem, buf, error,
+				ret_temp = wfs_hfsp_wipe_part_file (FS, &curr_elem, buf, &error,
 					curr_file_no, prev_percent);
 			}
 		}
 
 	} while ( record_next (&curr_elem) == 0 );
 
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
-	if ( ret_part == WFS_SUCCESS ) return ret_temp;
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
+	if ( ret_part == WFS_SUCCESS )
+	{
+		return ret_temp;
+	}
 	return ret_part;
 }
+
+/* ======================================================================== */
 
 /**
  * Wipes the free space in partially used blocks on the given HFS+ filesystem.
@@ -339,39 +399,42 @@ wfs_hfsp_wipe_part_dir (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_hfsp_wipe_part (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error )
+	wfs_fsid_t FS, wfs_error_type_t * const error_ret )
 # else
-	FS, error )
+	FS, error_ret )
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 # endif
 {
-	errcode_enum ret_part = WFS_SUCCESS;
+	wfs_errcode_t ret_part = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	unsigned char * buf;
 	UInt32 curr_file_no = 0;
 	record dir;
 	int res;
-
-	if ( error == NULL )
-	{
-		show_progress (PROGRESS_PART, 100, &prev_percent);
-		return WFS_BADPARAM;
-	}
+	wfs_error_type_t error = {CURR_HFSP, {0}};
 
 	/* get the root directory: */
 	res = record_init_cnid (&dir, &(FS.hfsp_volume.catalog), HFSP_ROOT_CNID);
 	if ( res != 0 )
 	{
-		show_progress (PROGRESS_PART, 100, &prev_percent);
-		if ( sig_recvd != 0 ) return WFS_SIGNAL;
-		return WFS_DIRITER;
+		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		ret_part = WFS_DIRITER;
+		if ( sig_recvd != 0 )
+		{
+			ret_part = WFS_SIGNAL;
+		}
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return ret_part;
 	}
 
 # ifdef HAVE_ERRNO_H
@@ -381,22 +444,31 @@ wfs_hfsp_wipe_part (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 # else
-		error->errcode.gerror = 12L;	/* ENOMEM */
+		error.errcode.gerror = 12L;	/* ENOMEM */
 # endif
-		show_progress (PROGRESS_PART, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
 
-	ret_part = wfs_hfsp_wipe_part_dir (FS, &dir, buf, error, &curr_file_no, &prev_percent);
+	ret_part = wfs_hfsp_wipe_part_dir (FS, &dir, buf, &error, &curr_file_no, &prev_percent);
 
 	free (buf);
-	show_progress (PROGRESS_PART, 100, &prev_percent);
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 	return ret_part;
 }
 #endif /* WFS_WANT_PART */
+
+/* ======================================================================== */
 
 #ifdef WFS_WANT_WFS
 /**
@@ -405,31 +477,26 @@ wfs_hfsp_wipe_part (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_hfsp_wipe_fs (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error )
+	wfs_fsid_t FS, wfs_error_type_t * const error_ret )
 # else
-	FS, error )
+	FS, error_ret )
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 # endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	UInt32 curr_block;
 	unsigned long int j;
-	int selected[NPAT];
+	int selected[WFS_NPAT];
 	unsigned char * buf;
-
-	if ( error == NULL )
-	{
-		show_progress (PROGRESS_WFS, 100, &prev_percent);
-		return WFS_BADPARAM;
-	}
+	wfs_error_type_t error = {CURR_HFSP, {0}};
 
 # ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -438,11 +505,15 @@ wfs_hfsp_wipe_fs (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 # else
-		error->errcode.gerror = 12L;	/* ENOMEM */
+		error.errcode.gerror = 12L;	/* ENOMEM */
 # endif
-		show_progress (PROGRESS_WFS, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
 
@@ -453,21 +524,21 @@ wfs_hfsp_wipe_fs (
 		if ( volume_allocated (&(FS.hfsp_volume), curr_block) == 0 )
 		{
 			/* block is not allocated - wipe it */
-			for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
+			for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
 			{
 				fill_buffer ( j, buf, wfs_hfsp_get_block_size (FS), selected, FS );
-				error->errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
+				error.errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
 					buf, (long int)curr_block);
-				if ( error->errcode.gerror != 0 )
+				if ( error.errcode.gerror != 0 )
 				{
 					ret_wfs = WFS_BLKWR;
 					break;
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (npasses > 1) && (sig_recvd == 0) )
+				if ( (FS.npasses > 1) && (sig_recvd == 0) )
 				{
-					error->errcode.gerror = wfs_hfsp_flush_fs ( FS, error );
+					error.errcode.gerror = wfs_hfsp_flush_fs ( FS, &error );
 				}
 			}
 			if ( (FS.zero_pass != 0) && (sig_recvd == 0) && (ret_wfs == WFS_SUCCESS) )
@@ -481,30 +552,39 @@ wfs_hfsp_wipe_fs (
 					buf[j] = '\0';
 				}
 # endif
-				error->errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
+				error.errcode.gerror = volume_writetobuf (&(FS.hfsp_volume),
 					buf, (long int)curr_block);
-				if ( error->errcode.gerror != 0 )
+				if ( error.errcode.gerror != 0 )
 				{
 					ret_wfs = WFS_BLKWR;
 					/* do NOT break here */
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (npasses > 1) && (sig_recvd == 0) )
+				if ( (FS.npasses > 1) && (sig_recvd == 0) )
 				{
-					error->errcode.gerror = wfs_hfsp_flush_fs ( FS, error );
+					error.errcode.gerror = wfs_hfsp_flush_fs ( FS, &error );
 				}
 			}
 		} /* if (volume_allocated) */
-		show_progress (PROGRESS_WFS, curr_block/FS.hfsp_volume.vol.total_blocks, &prev_percent);
+		show_progress (WFS_PROGRESS_WFS, curr_block/FS.hfsp_volume.vol.total_blocks, &prev_percent);
 	} /* for (curr_block) */
 	free (buf);
 
-	show_progress (PROGRESS_WFS, 100, &prev_percent);
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 	return ret_wfs;
 }
 #endif /* WFS_WANT_WFS */
+
+/* ======================================================================== */
 
 #ifdef WFS_WANT_UNRM
 /**
@@ -515,64 +595,70 @@ wfs_hfsp_wipe_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_hfsp_wipe_unrm (
 # ifdef WFS_ANSIC
 	wfs_fsid_t FS WFS_ATTR ((unused)),
-	const fselem_t node WFS_ATTR ((unused)),
-	error_type * const error WFS_ATTR ((unused)) )
+	const wfs_fselem_t node WFS_ATTR ((unused)),
+	wfs_error_type_t * const error WFS_ATTR ((unused)) )
 # else
 	FS, node, error )
 	wfs_fsid_t FS WFS_ATTR ((unused));
-	const fselem_t node WFS_ATTR ((unused));
-	error_type * const error WFS_ATTR ((unused));
+	const wfs_fselem_t node WFS_ATTR ((unused));
+	wfs_error_type_t * const error WFS_ATTR ((unused));
 # endif
 {
-	errcode_enum ret_unrm = WFS_SUCCESS;
+	wfs_errcode_t ret_unrm = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 
 	/* Don't know how to find deleted entries on HFS+ */
-	show_progress (PROGRESS_UNRM, 100, &prev_percent);
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 	return ret_unrm;
 }
 #endif /* WFS_WANT_UNRM */
 
+
+/* ======================================================================== */
 
 /**
  * Opens a HFS+ filesystem on the given device.
  * \param dev_name Device name, like /dev/hdXY
  * \param FS Pointer to where the result will be put.
  * \param whichfs Pointer to an int saying which fs is curently in use.
- * \param data Pointer to fsdata structure containing information
+ * \param data Pointer to wfs_fsdata_t structure containing information
  *	which may be needed to open the filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_hfsp_open_fs (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
-	const fsdata * const data WFS_ATTR ((unused)), error_type * const error )
+	const char * const dev_name, wfs_fsid_t * const FS, wfs_curr_fs_t * const whichfs,
+	const wfs_fsdata_t * const data WFS_ATTR ((unused)), wfs_error_type_t * const error_ret )
 #else
-	dev_name, FS, whichfs, data, error )
+	dev_name, FS, whichfs, data, error_ret )
 	const char * const dev_name;
 	wfs_fsid_t * const FS;
-	CURR_FS * const whichfs;
-	const fsdata * const data WFS_ATTR ((unused));
-	error_type * const error;
+	wfs_curr_fs_t * const whichfs;
+	const wfs_fsdata_t * const data WFS_ATTR ((unused));
+	wfs_error_type_t * const error_ret;
 #endif
 {
-	errcode_enum ret = WFS_OPENFS;
+	wfs_errcode_t ret = WFS_OPENFS;
 	int res;
 	char * dev_name_copy;
 	size_t namelen;
+	wfs_error_type_t error = {CURR_HFSP, {0}};
 
 	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL))
 	{
@@ -588,10 +674,14 @@ wfs_hfsp_open_fs (
 	if ( dev_name_copy == NULL )
 	{
 #ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 #else
-		error->errcode.gerror = 12L;	/* ENOMEM */
+		error.errcode.gerror = 12L;	/* ENOMEM */
 #endif
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
 
@@ -609,8 +699,14 @@ wfs_hfsp_open_fs (
 	}
 
 	free (dev_name_copy);
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret;
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if the given HFS+ filesystem is mounted in read-write mode.
@@ -618,21 +714,23 @@ wfs_hfsp_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_hfsp_chk_mount (
 #ifdef WFS_ANSIC
-	const char * const dev_name, error_type * const error )
+	const char * const dev_name, wfs_error_type_t * const error )
 #else
 	dev_name, error )
 	const char * const dev_name;
-	error_type * const error;
+	wfs_error_type_t * const error;
 #endif
 {
 	return wfs_check_mounted (dev_name, error);
 }
+
+/* ======================================================================== */
 
 /**
  * Closes the HFS+ filesystem.
@@ -640,23 +738,28 @@ wfs_hfsp_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_hfsp_close_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error WFS_ATTR ((unused)) )
+	wfs_fsid_t FS, wfs_error_type_t * const error WFS_ATTR ((unused)) )
 #else
 	FS, error )
 	wfs_fsid_t FS;
-	error_type * const error WFS_ATTR ((unused));
+	wfs_error_type_t * const error WFS_ATTR ((unused));
 #endif
 {
 	int res = volume_close (&(FS.hfsp_volume));
-	if ( res == 0 ) return WFS_SUCCESS;
+	if ( res == 0 )
+	{
+		return WFS_SUCCESS;
+	}
 	return WFS_FSCLOSE;
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if the HFS+ filesystem has errors.
@@ -674,6 +777,8 @@ wfs_hfsp_check_err (
 {
 	return FS.hfsp_volume.vol.attributes & HFSPLUS_VOL_INCNSTNT;
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if the HFS+ filesystem is dirty (has unsaved changes).
@@ -695,22 +800,24 @@ wfs_hfsp_is_dirty (
 	return wfs_hfsp_check_err (FS);
 }
 
+/* ======================================================================== */
+
 /**
  * Flushes the HFS+ filesystem.
  * \param FS The filesystem.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_hfsp_flush_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS WFS_ATTR ((unused)), error_type * const error WFS_ATTR ((unused)) )
+	wfs_fsid_t FS WFS_ATTR ((unused)), wfs_error_type_t * const error WFS_ATTR ((unused)) )
 #else
 	FS, error )
 	wfs_fsid_t FS WFS_ATTR ((unused));
-	error_type * const error WFS_ATTR ((unused));
+	wfs_error_type_t * const error WFS_ATTR ((unused));
 #endif
 {
 	/* Better than nothing */

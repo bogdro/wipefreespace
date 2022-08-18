@@ -270,13 +270,13 @@ WFS_ATTR ((nonnull))
 #endif
 show_error (
 #ifdef WFS_ANSIC
-	const error_type	err,
+	const wfs_error_type_t	err,
 	const char * const	msg,
 	const char * const	extra,
 	const wfs_fsid_t	FS )
 #else
 	err, msg, extra, FS )
-	const error_type	err;
+	const wfs_error_type_t	err;
 	const char * const	msg;
 	const char * const	extra;
 	const wfs_fsid_t	FS;
@@ -291,7 +291,7 @@ show_error (
 # if (defined WFS_EXT234) || (defined WFS_OCFS)
 	if ( (err.whichfs == CURR_EXT234FS) || (err.whichfs == CURR_OCFS) )
 	{
-		com_err ( wfs_progname, err.errcode.e2error, ERR_MSG_FORMATL,
+		com_err ( wfs_progname, err.errcode.e2error, WFS_WFS_ERR_MSG_FORMATL,
 			_(err_msg), err.errcode.e2error, _(msg),
 			(extra != NULL)? extra : "",
 			(FS.fsname != NULL)? FS.fsname : "" );
@@ -299,13 +299,13 @@ show_error (
 	else
 # endif
 	{
-		com_err ( wfs_progname, err.errcode.gerror, ERR_MSG_FORMAT,
+		com_err ( wfs_progname, err.errcode.gerror, WFS_ERR_MSG_FORMAT,
 			_(err_msg), err.errcode.gerror, _(msg),
 			(extra != NULL)? extra : "",
 			(FS.fsname != NULL)? FS.fsname : "" );
 	}
 #else
-	fprintf ( stderr, "%s:%s: " ERR_MSG_FORMAT, wfs_progname,
+	fprintf ( stderr, "%s:%s: " WFS_ERR_MSG_FORMAT, wfs_progname,
 		(FS.fsname != NULL)? FS.fsname : "", _(err_msg),
 		err.errcode.gerror, _(msg),
 		(extra != NULL)? extra : "",
@@ -402,11 +402,20 @@ show_progress (
 
 	for ( i=*prev_percent; i < percent; i++ )
 	{
-		if ( type == 0 ) printf ("=");
-		else if ( type == 1 ) printf ("-");
-		else if ( type == 2 ) printf ("*");
+		if ( type == 0 )
+		{
+			printf ("=");
+		}
+		else if ( type == 1 )
+		{
+			printf ("-");
+		}
+		else if ( type == 2 )
+		{
+			printf ("*");
+		}
 	}
-	if ( percent == 100 )
+	if ( (percent == 100) && (*prev_percent != 100) )
 	{
 		printf ("\n");
 	}
@@ -417,7 +426,7 @@ show_progress (
 /* ======================================================================== */
 
 #ifndef WFS_ANSIC
-static void print_help PARAMS ((const char * const my_name));
+static void print_help WFS_PARAMS ((const char * const my_name));
 #endif
 
 /**
@@ -484,7 +493,7 @@ print_help (
 /* ======================================================================== */
 
 #ifndef WFS_ANSIC
-static void print_versions PARAMS ((void));
+static void print_versions WFS_PARAMS ((void));
 #endif
 
 static void print_versions (
@@ -541,11 +550,11 @@ static void print_versions (
 /* ======================================================================== */
 
 #ifndef WFS_ANSIC
-static errcode_enum WFS_ATTR((warn_unused_result)) wfs_wipe_filesytem
-	PARAMS ((const char * const dev_name, const int total_fs));
+static wfs_errcode_t WFS_ATTR((warn_unused_result)) wfs_wipe_filesytem
+	WFS_PARAMS ((const char * const dev_name, const int total_fs));
 #endif
 
-static errcode_enum WFS_ATTR((warn_unused_result))
+static wfs_errcode_t WFS_ATTR((warn_unused_result))
 wfs_wipe_filesytem (
 #ifdef WFS_ANSIC
 	const char * const dev_name, const int total_fs)
@@ -555,30 +564,30 @@ wfs_wipe_filesytem (
 	const int total_fs;
 #endif
 {
-	errcode_enum ret = WFS_SUCCESS;	/* Value returned */
+	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned */
 	wfs_fsid_t fs;			/* The file system we're working on */
-	fsdata data;
-	error_type error;
-	CURR_FS curr_fs = CURR_NONE;
-	errcode_enum res;
+	wfs_fsdata_t data;
+	wfs_error_type_t error;
+	wfs_curr_fs_t curr_fs = CURR_NONE;
+	wfs_errcode_t res;
 #ifndef HAVE_MEMSET
 	size_t i;
 #endif
 
 #ifdef HAVE_MEMSET
 	memset ( &fs, 0, sizeof (wfs_fsid_t) );
-	memset ( &error, 0, sizeof (error_type) );
-	memset ( &data, 0, sizeof (fsdata) );
+	memset ( &error, 0, sizeof (wfs_error_type_t) );
+	memset ( &data, 0, sizeof (wfs_fsdata_t) );
 #else
 	for (i = 0; i < sizeof (wfs_fsid_t); i++)
 	{
 		((char *)&fs)[i] = '\0';
 	}
-	for (i = 0; i < sizeof (error_type); i++)
+	for (i = 0; i < sizeof (wfs_error_type_t); i++)
 	{
 		((char *)&error)[i] = '\0';
 	}
-	for (i = 0; i < sizeof (fsdata); i++)
+	for (i = 0; i < sizeof (wfs_fsdata_t); i++)
 	{
 		((char *)&data)[i] = '\0';
 	}
@@ -586,6 +595,7 @@ wfs_wipe_filesytem (
 	error.whichfs = CURR_NONE;
 	fs.fsname = dev_name;
 	fs.zero_pass = opt_zero;
+	fs.npasses = npasses;
 
 	if ( dev_name == NULL )
 	{
@@ -767,7 +777,7 @@ wfs_wipe_filesytem (
 
 /* ======================================================================== */
 #ifndef WFS_ANSIC
-int main PARAMS ((int argc, char* argv[]));
+int main WFS_PARAMS ((int argc, char* argv[]));
 #endif
 
 int
@@ -781,12 +791,12 @@ main (
 #endif
 {
 	int res, i, j;
-	errcode_enum ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
+	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
 #if (defined WFS_REISER) || (defined WFS_MINIXFS)
 	pid_t child_pid;
 	int child_status;
 #endif
-	error_type error;
+	wfs_error_type_t error;
 	wfs_fsid_t wf_gen;
 
 	wf_gen.fsname = "";
@@ -1018,7 +1028,10 @@ main (
 
 	for ( i = 1; i < argc; i++ )	/* argv[0] is the program name */
 	{
-		if ( argv[i] == NULL ) continue;
+		if ( argv[i] == NULL )
+		{
+			continue;
+		}
 		/* NOTE: these shouldn't be a sequence of else-ifs */
 		if ( (strcmp (argv[i], "-h") == 0) || (strcmp (argv[i], "-?") == 0)
 			|| (strcmp (argv[i], "--help") == 0) )
@@ -1241,7 +1254,10 @@ main (
 		{
 			if ( i >= argc-1 )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			opt_method_name = argv[i+1];
@@ -1344,14 +1360,17 @@ main (
 	res = wfs_optind;
 	while ( wfs_optind < argc-1 )
 	{
-		if (argv[wfs_optind] == NULL)
+		if ( argv[wfs_optind] == NULL )
 		{
 			wfs_optind++;
 			continue;
 		}
 		for ( i = wfs_optind+1; i < argc; i++ )
 		{
-			if (argv[i] == NULL) continue;
+			if ( argv[i] == NULL )
+			{
+				continue;
+			}
 			if ( strcmp (argv[wfs_optind], argv[i]) == 0 )
 			{
 				for ( j=0; j < argc-i-1; j++ )

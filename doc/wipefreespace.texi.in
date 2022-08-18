@@ -4,6 +4,11 @@
 @settitle wipefreespace manual @VERSION@
 @c %**end of header
 
+@dircategory Individual utilities
+@direntry
+* WipeFreeSpace: (wipefreespace).		Securely clean the free space.
+@end direntry
+
 @copying
 This manual is for wipefreespace, version @VERSION@
 @end copying

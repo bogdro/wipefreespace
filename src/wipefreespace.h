@@ -40,19 +40,19 @@
 #  define WFS_ATTR(x)
 # endif
 
-# undef		ERR_MSG_FORMATL
-# define 	ERR_MSG_FORMATL			"(%s %ld) %s '%s', FS='%s'"
-# undef		ERR_MSG_FORMAT
-# define 	ERR_MSG_FORMAT			"(%s %d) %s '%s', FS='%s'"
+# undef		WFS_WFS_ERR_MSG_FORMATL
+# define 	WFS_WFS_ERR_MSG_FORMATL		"(%s %ld) %s '%s', FS='%s'"
+# undef		WFS_ERR_MSG_FORMAT
+# define 	WFS_ERR_MSG_FORMAT		"(%s %d) %s '%s', FS='%s'"
 
-# undef		PASSES
-# define	PASSES 35 /* default Gutmann */
-# undef		NPAT
-# define	NPAT 50 /* anything more than the maximum number of patterns in all wiping methods. */
+# undef		WFS_PASSES
+# define	WFS_PASSES 35 /* default Gutmann */
+# undef		WFS_NPAT
+# define	WFS_NPAT 50 /* anything more than the maximum number of patterns in all wiping methods. */
 
-# define WFS_MNTBUFLEN 4096
+# define	WFS_MNTBUFLEN 4096
 
-enum errcode_enum
+enum wfs_errcode_t
 {
 	WFS_SUCCESS		= 0,
 	WFS_NOTHING		= 1,
@@ -84,9 +84,9 @@ enum errcode_enum
 	WFS_SIGNAL		= -100
 };
 
-typedef enum errcode_enum errcode_enum;
+typedef enum wfs_errcode_t wfs_errcode_t;
 
-enum CURR_FS
+enum wfs_curr_fs_t
 {
 	CURR_NONE	= 0,
 	CURR_EXT234FS,
@@ -101,7 +101,7 @@ enum CURR_FS
 	CURR_OCFS
 };
 
-typedef enum CURR_FS CURR_FS;
+typedef enum wfs_curr_fs_t wfs_curr_fs_t;
 
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -296,14 +296,56 @@ typedef unsigned short int __u16;
 
 # if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
 #  include <stdio.h>	/* FILE */
+#  ifndef HAVE_SYS_BYTEORDER_H
+#   define WFS_ADDED_HAVE_SYS_BYTEORDER_H
+#   define HAVE_SYS_BYTEORDER_H 0
+#  endif
+#  ifndef HAVE_MACHINE_ENDIAN_H
+#   define WFS_ADDED_HAVE_MACHINE_ENDIAN_H
+#   define HAVE_MACHINE_ENDIAN_H 0
+#  endif
+#  ifndef HAVE_ENDIAN_H
+#   define WFS_ADDED_HAVE_ENDIAN_H
+#   define HAVE_ENDIAN_H 0
+#  endif
 #  include <jfs/jfs_types.h>
 #  include <jfs/jfs_superblock.h>
+#  ifdef WFS_ADDED_HAVE_SYS_BYTEORDER_H
+#   undef HAVE_SYS_BYTEORDER_H
+#  endif
+#  ifdef WFS_ADDED_HAVE_MACHINE_ENDIAN_H
+#   undef HAVE_MACHINE_ENDIAN_H
+#  endif
+#  ifdef WFS_ADDED_HAVE_ENDIAN_H
+#   undef HAVE_ENDIAN_H
+#  endif
 #  define	WFS_JFS		1
 # else
 #  if (defined HAVE_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
 #   include <stdio.h>	/* FILE  */
+#   ifndef HAVE_SYS_BYTEORDER_H
+#    define WFS_ADDED_
+#    define HAVE_SYS_BYTEORDER_H 0
+#   endif
+#   ifndef HAVE_MACHINE_ENDIAN_H
+#    define WFS_ADDED_
+#    define HAVE_MACHINE_ENDIAN_H 0
+#   endif
+#   ifndef HAVE_ENDIAN_H
+#    define WFS_ADDED_HAVE_ENDIAN_H
+#    define HAVE_ENDIAN_H 0
+#   endif
 #   include <jfs_types.h>
 #   include <jfs_superblock.h>
+#   ifdef WFS_ADDED_HAVE_SYS_BYTEORDER_H
+#    undef HAVE_SYS_BYTEORDER_H
+#   endif
+#   ifdef WFS_ADDED_HAVE_MACHINE_ENDIAN_H
+#    undef HAVE_MACHINE_ENDIAN_H
+#   endif
+#   ifdef WFS_ADDED_HAVE_ENDIAN_H
+#    undef HAVE_ENDIAN_H
+#   endif
 #   define	WFS_JFS		1
 #  else
 #   undef	WFS_JFS
@@ -410,14 +452,14 @@ typedef unsigned short int __u16;
 typedef int sig_atomic_t;
 # endif
 
-struct error_type
+struct wfs_error_type_t
 {
-	CURR_FS whichfs;
+	wfs_curr_fs_t whichfs;
 
-	union errcode_union
+	union wfs_errcode_union
 	{
 		/* general error, if more specific type unavailable */
-		errcode_enum	gerror;
+		wfs_errcode_t	gerror;
 # if (defined WFS_EXT234) || (defined WFS_OCFS)
 		errcode_t	e2error;
 # endif
@@ -428,11 +470,12 @@ struct error_type
 	} errcode;
 };
 
-typedef struct error_type error_type;
+typedef struct wfs_error_type_t wfs_error_type_t;
 
 struct wfs_fsid_t
 {
 	const char * fsname;	/* filesystem name, for informational purposes */
+	unsigned long int npasses;
 	int zero_pass;	/* whether to perform an additional wiping with zeros on this filesystem */
 
 # ifdef 	WFS_EXT234
@@ -486,17 +529,19 @@ typedef struct wfs_fsid_t wfs_fsid_t;
 
 /* Additional data that may be useful when wiping a filesystem, for functions that
    have a strict interface that disallows passing these elements separately. */
-struct wipedata
+struct wfs_wipedata_t
 {
 	unsigned long int	passno;		/* current pass' number */
 	wfs_fsid_t		filesys;	/* filesystem being wiped */
 	int			total_fs;	/* total number of filesystems, for ioctl() */
 	int			ret_val;	/* return value, for threads */
+	unsigned char *		buf;		/* current buffer */
+	int			isjournal;	/* is the journal being wiped currently */
 };
 
-typedef struct wipedata wipedata;
+typedef struct wfs_wipedata_t wfs_wipedata_t;
 
-union fselem_t
+union wfs_fselem_t
 {
 # ifdef 	WFS_EXT234
 	ext2_ino_t	e2elem;
@@ -535,17 +580,18 @@ union fselem_t
 
 
 # if (!defined WFS_EXT234) && (!defined WFS_NTFS) && (!defined WFS_REISER) \
-	&& (!defined WFS_REISER4) && (!defined WFS_FATFS) && (!defined WFS_MINIXFS)
+	&& (!defined WFS_REISER4) && (!defined WFS_FATFS) && (!defined WFS_MINIXFS) \
+	&& (!defined WFS_HFSP) && (!defined WFS_OCFS)
 	char dummy;	/* Make this union non-empty */
 # endif
 };
 
-typedef union fselem_t fselem_t;
+typedef union wfs_fselem_t wfs_fselem_t;
 
 /* Additional data that may be useful when opening a filesystem */
-union fsdata
+union wfs_fsdata_t
 {
-	struct wipe_e2data
+	struct wfs_e2data
 	{
 		unsigned long int super_off;
 		unsigned int blocksize;
@@ -555,39 +601,37 @@ union fsdata
 
 };
 
-typedef union fsdata fsdata;
+typedef union wfs_fsdata_t wfs_fsdata_t;
 
 /* ========================= Common to all ================================ */
-/* autoconf: PARAMS is a macro used to wrap function prototypes, so that
+/* autoconf: WFS_PARAMS is a macro used to wrap function prototypes, so that
         compilers that don't understand ANSI C prototypes still work,
         and ANSI C compilers can issue warnings about type mismatches. */
-# undef PARAMS
+# undef WFS_PARAMS
 # if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
 	|| defined (WIN32) || defined (__cplusplus)
-#  define PARAMS(protos) protos
+#  define WFS_PARAMS(protos) protos
 #  define WFS_ANSIC
 # else
-#  define PARAMS(protos) ()
+#  define WFS_PARAMS(protos) ()
 #  undef WFS_ANSIC
 # endif
 
 extern void WFS_ATTR ((nonnull))
-	show_error PARAMS((const error_type err, const char * const msg,
+	show_error WFS_PARAMS((const wfs_error_type_t err, const char * const msg,
 		const char * const extra, const wfs_fsid_t FS ));
 
 extern void WFS_ATTR ((nonnull))
-	show_msg PARAMS((const int type, const char * const msg,
+	show_msg WFS_PARAMS((const int type, const char * const msg,
 		const char * const extra, const wfs_fsid_t FS ));
 
-# define PROGRESS_WFS	0
-# define PROGRESS_PART	1
-# define PROGRESS_UNRM	2
+# define WFS_PROGRESS_WFS	0
+# define WFS_PROGRESS_PART	1
+# define WFS_PROGRESS_UNRM	2
 extern WFS_ATTR ((nonnull)) void
-	show_progress PARAMS((const unsigned int type, const unsigned int percent,
+	show_progress WFS_PARAMS((const unsigned int type, const unsigned int percent,
 		unsigned int * const prev_percent));
-
-extern unsigned long int npasses;
 
 extern const char * const err_msg;
 extern const char * const err_msg_open;

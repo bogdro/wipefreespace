@@ -1,3 +1,50 @@
+2012-08-23	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.7
+	  Improved NTFS support. Code cleanup and portability improvements.
+	  Corrections in the wiping mechanism. More checks for NULL. Not
+	  showing errors and messages from inside the backends, because this
+	  could make the progress bars unparseable. More compile fixes.
+	  Changed the use of the error parameter, allowing less possibilities
+	  for a NULL dereference. Fixed wiping the journal on JFS.
+	* src/wfs_ntfs.c (destroy_record): corrected errors in cooperation
+	  with the ntfs-3g team.
+	* src/wfs_xfs.c (wfs_xfs_open_fs): not using access() anymore,
+	  because the object's permissions can be changed before open().
+	* src/wfs_wiping.c: portability improvements
+	* src/wipefreespace.h: added prefixes on wipefreespace's types, moved
+	  the number of passes to wfs_fsid_t, moved more common fields
+	  into wfs_wipedata_t. Fixed warnings about missing includes'
+	  constants for JFS. Renamed PARAMS to WFS_PARAMS. Renamed the
+	  progress constants to have the WFS_ prefix. Fixed making the
+	  wfs_fselem_t union non-empty.
+	* doc/wipefreespace.texi.in: added @dircategory and @direntry
+	* src/wfs_wiping.c (init_wiping): fixed initializing the wiping
+	* src/wfs_e234.c (wfs_e234_wipe_journal): corrected the progress bar
+	* src/wfs_ntfs.c (wipe_attribute): fixed wiping of big files' tails
+	* src/wfs_ntfs.c: call strlen() only once on the same string
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm_dir): fixed compiling without
+	  memset() available
+	* src/wfs_fat.c (wfs_fat_dirent_find): fixed compiling without
+	  memset() available
+	* src/wfs_wrappers.c (wipe_unrm), src/wfs_jfs.{c,h}: removed an unused
+	  parameter, allowing compiling without some other filesystems
+	* src/wfs_wrappers.c (wipe_unrm), src/wfs_ocfs.{c,h}: removed an unused
+	  parameter, allowing compiling without some other filesystems
+	* configure.ac: added checking for libuuid when JFS is selected
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): verifying the jounal inode
+	  format string before passing it to s(n)printf.
+	* src/wfs_fat.c (wfs_fat_wipe_fs): fixed checking bytes_per_sector
+	* src/wfs_fat.c (wfs_fat_close_fs): fixed error checking
+	* src/wfs_e234.c (wfs_e234_close_fs): fixed error checking
+	* src/wfs_hfsp.c (wfs_hfsp_open_fs): fixed checking for NULL
+	* src/wfs_jfs.c: fixed warnings about missing includes' constants
+	* src/wfs_reiser.c (wfs_reiser_wipe_fs): fixed a possible NULL usage
+	* src/wipefreespace.c (show_progress): fixed displaying the newline
+	* src/wfs_e234.c: more checks for NULL
+	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): fixed wiping the journal
+
+
 2012-06-01	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.6.1

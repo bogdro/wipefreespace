@@ -67,10 +67,10 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_clear_cap (
 #ifdef WFS_ANSIC
-	error_type * const error)
+	wfs_error_type_t * const error)
 #else
 	error)
-	error_type * const error;
+	wfs_error_type_t * const error;
 #endif
 {
 #ifdef HAVE_SYS_CAPABILITY_H
@@ -258,7 +258,7 @@ wfs_check_stds (
  * Checks if the program is being run setuid(root).
  * \return WFS_SUCCESS if not.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 wfs_check_suid (
 #ifdef WFS_ANSIC
 	void)
@@ -266,7 +266,7 @@ wfs_check_suid (
 	)
 #endif
 {
-	errcode_enum ret = WFS_SUCCESS;
+	wfs_errcode_t ret = WFS_SUCCESS;
 
 #if (defined HAVE_UNISTD_H) && (defined HAVE_GETEUID) && (defined HAVE_GETUID)
 	if ( (geteuid () != getuid () ) && (geteuid () == 0) )

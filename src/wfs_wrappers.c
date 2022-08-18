@@ -91,26 +91,25 @@ extern unsigned long int wfs_wrap_sig(char c0, char c1, char c2, char c3);
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wipe_unrm (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+	wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error )
 # else
 	FS, which_fs, error )
 	wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 # endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 # if (defined WFS_EXT234) || (defined WFS_REISER) \
 	|| (defined WFS_NTFS) || (defined WFS_REISER4) \
-	|| (defined WFS_MINIXFS) || (defined WFS_HFSP) \
-	|| (defined WFS_OCFS)
-	fselem_t elem;
+	|| (defined WFS_MINIXFS) || (defined WFS_HFSP)
+	wfs_fselem_t elem;
 # endif
 
 	if ( which_fs == CURR_EXT234FS )
@@ -143,10 +142,21 @@ wipe_unrm (
 	else if ( which_fs == CURR_REISER4 )
 	{
 # ifdef WFS_REISER4
-		if ( FS.r4->tree == NULL )
-			elem.r4node = NULL;
+		if ( FS.r4 != NULL )
+		{
+			if ( FS.r4->tree == NULL )
+			{
+				elem.r4node = NULL;
+			}
+			else
+			{
+				elem.r4node = FS.r4->tree->root;
+			}
+		}
 		else
-			elem.r4node = FS.r4->tree->root;
+		{
+			elem.r4node = NULL;
+		}
 		ret_wfs = wfs_r4_wipe_unrm (FS, elem, error);
 # endif
 	}
@@ -166,7 +176,7 @@ wipe_unrm (
 	else if ( which_fs == CURR_JFS )
 	{
 # ifdef WFS_JFS
-		ret_wfs = wfs_jfs_wipe_unrm (FS, elem, error);
+		ret_wfs = wfs_jfs_wipe_unrm (FS, error);
 # endif
 	}
 	else if ( which_fs == CURR_HFSP )
@@ -179,7 +189,7 @@ wipe_unrm (
 	else if ( which_fs == CURR_OCFS )
 	{
 # ifdef WFS_OCFS
-		ret_wfs = wfs_ocfs_wipe_unrm (FS, elem, error);
+		ret_wfs = wfs_ocfs_wipe_unrm (FS, error);
 # endif
 	}
 
@@ -202,21 +212,21 @@ wipe_unrm (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wipe_fs (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+	wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error )
 # else
 	FS, which_fs, error )
 	wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 # endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 
 	if ( which_fs == CURR_EXT234FS )
 	{
@@ -298,21 +308,21 @@ wipe_fs (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wipe_part (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+	const wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error )
 # else
 	FS, which_fs, error )
 	const wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 # endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 
 	if ( which_fs == CURR_EXT234FS )
 	{
@@ -394,24 +404,24 @@ wipe_part (
  * \param whichfs Pointer to an int saying which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_open_fs (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const which_fs,
-	const fsdata * const data, error_type * const error )
+	const char * const dev_name, wfs_fsid_t * const FS, wfs_curr_fs_t * const which_fs,
+	const wfs_fsdata_t * const data, wfs_error_type_t * const error )
 #else
 	dev_name, FS, which_fs, data, error )
 	const char * const dev_name;
 	wfs_fsid_t * const FS;
-	CURR_FS * const which_fs;
-	const fsdata * const data;
-	error_type * const error;
+	wfs_curr_fs_t * const which_fs;
+	const wfs_fsdata_t * const data;
+	wfs_error_type_t * const error;
 #endif
 {
-	errcode_enum ret_wfs = WFS_OPENFS;
+	wfs_errcode_t ret_wfs = WFS_OPENFS;
 	*which_fs = CURR_NONE;
 #ifdef WFS_EXT234
 	ret_wfs = wfs_e234_open_fs (dev_name, FS, which_fs, data, error);
@@ -501,60 +511,90 @@ wfs_open_fs (
  * \param devname Device name, like /dev/hdXY
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_chk_mount (
 #ifdef WFS_ANSIC
-	const char * const dev_name, error_type * const error )
+	const char * const dev_name, wfs_error_type_t * const error )
 #else
 	dev_name, error )
 	const char * const dev_name;
-	error_type * const error;
+	wfs_error_type_t * const error;
 #endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 
 #ifdef WFS_EXT234
 	ret_wfs = wfs_e234_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_NTFS)
 	ret_wfs = wfs_ntfs_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_XFS)
 	ret_wfs = wfs_xfs_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_REISER)
 	ret_wfs = wfs_reiser_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_REISER4)
 	ret_wfs = wfs_r4_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_FATFS)
 	ret_wfs = wfs_fat_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_MINIXFS)
 	ret_wfs = wfs_minixfs_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_JFS)
 	ret_wfs = wfs_jfs_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_HFSP)
 	ret_wfs = wfs_hfsp_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 #if (defined WFS_OCFS)
 	ret_wfs = wfs_ocfs_chk_mount ( dev_name, error );
-	if ( ret_wfs != WFS_SUCCESS ) return ret_wfs;
+	if ( ret_wfs != WFS_SUCCESS )
+	{
+		return ret_wfs;
+	}
 #endif
 
 	return ret_wfs;
@@ -566,21 +606,21 @@ wfs_chk_mount (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_close_fs (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+	const wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error )
 #else
 	FS, which_fs, error )
 	const wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 #endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 
 	if ( which_fs == CURR_EXT234FS )
 	{
@@ -664,7 +704,7 @@ wfs_close_fs (
 int WFS_ATTR ((warn_unused_result))
 wfs_check_err (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
+	wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error
 # ifndef WFS_XFS
 		WFS_ATTR((unused))
 # endif
@@ -676,8 +716,8 @@ wfs_check_err (
 # endif
 	 )
 	wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 #endif
 {
 	if ( which_fs == CURR_EXT234FS )
@@ -753,7 +793,7 @@ wfs_check_err (
 int WFS_ATTR ((warn_unused_result))
 wfs_is_dirty (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error
+	wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error
 # ifndef WFS_XFS
 		WFS_ATTR((unused))
 # endif
@@ -765,8 +805,8 @@ wfs_is_dirty (
 # endif
 	 )
 	wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 #endif
 {
 	if ( which_fs == CURR_EXT234FS )
@@ -839,21 +879,21 @@ wfs_is_dirty (
  * \param whichfs Tells which fs is curently in use.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_flush_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error )
+	wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error )
 #else
 	FS, which_fs, error )
 	wfs_fsid_t FS;
-	const CURR_FS which_fs;
-	error_type * const error;
+	const wfs_curr_fs_t which_fs;
+	wfs_error_type_t * const error;
 #endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	if ( which_fs == CURR_EXT234FS )
 	{
 #ifdef WFS_EXT234

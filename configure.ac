@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.6.1, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.7, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -226,7 +226,8 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 fi
 
 libuuid=no
-if ( test "x$feat_reiser" = "xyes" || test "x$feat_reiser4" = "xyes" ); then
+if ( test "x$feat_reiser" = "xyes" || test "x$feat_reiser4" = "xyes" \
+	|| test "x$feat_jfs" = "xyes" ); then
 	libuuid=yes
 	AC_CHECK_LIB([uuid],[uuid_unparse],,[libuuid=no])
 fi

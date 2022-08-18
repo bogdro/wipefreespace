@@ -99,7 +99,7 @@ static byte wfs_fat_fopen_mode[] = "a";
 
 #ifdef WFS_WANT_WFS
 # ifndef WFS_ANSIC
-static unsigned short int _get_fat_entry_len PARAMS ((const tfat_t * const pfat));
+static unsigned short int _get_fat_entry_len WFS_PARAMS ((const tfat_t * const pfat));
 # endif
 
 static unsigned short int
@@ -135,8 +135,10 @@ _get_fat_entry_len (
 	return 0;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static unsigned int _get_fat_entry PARAMS ((const tfat_t * const pfat, const unsigned int clus));
+static unsigned int _get_fat_entry WFS_PARAMS ((const tfat_t * const pfat, const unsigned int clus));
 # endif
 
 static unsigned int
@@ -154,11 +156,11 @@ _get_fat_entry (
 	unsigned int entry_val = 0x0FFFFFFF;
 	unsigned short int fat_entry;
 
-	/*
 	if ( pfat == NULL )
 	{
 		return 0;
-	}*/
+	}
+
 	if ( (pfat->ptffs == NULL) || (pfat->secbuf == NULL) )
 	{
 		return 0;
@@ -168,7 +170,10 @@ _get_fat_entry (
 		return 0;
 	}
 	ptffs = pfat->ptffs;
-	if ( ptffs->pbs->byts_per_sec == 0 ) return 0;
+	if ( ptffs->pbs->byts_per_sec == 0 )
+	{
+		return 0;
+	}
 
 	pclus = pfat->secbuf + ((clus * _get_fat_entry_len (pfat)) / 8) % ptffs->pbs->byts_per_sec;
 
@@ -196,8 +201,10 @@ _get_fat_entry (
 	return entry_val;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static int _read_fat_sector PARAMS ((tfat_t * pfat, int fat_sec));
+static int _read_fat_sector WFS_PARAMS ((tfat_t * pfat, int fat_sec));
 # endif
 
 static int
@@ -225,7 +232,10 @@ _read_fat_sector (
 	}
 
 	ptffs = pfat->ptffs;
-	if ( (ptffs->hdev == NULL) || (pfat->secbuf == NULL) ) return 0;
+	if ( (ptffs->hdev == NULL) || (pfat->secbuf == NULL) )
+	{
+		return 0;
+	}
 	if (HAI_readsector (ptffs->hdev, fat_sec, pfat->secbuf) != HAI_OK)
 	{
 		return FALSE;
@@ -252,8 +262,10 @@ _read_fat_sector (
 	return TRUE;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static int _write_fat_sector PARAMS ((tfat_t * pfat, int fat_sec));
+static int _write_fat_sector WFS_PARAMS ((tfat_t * pfat, int fat_sec));
 # endif
 
 static int
@@ -271,18 +283,21 @@ _write_fat_sector (
 {
 	tffs_t * ptffs;
 
-	/*
 	if ( pfat == NULL )
 	{
 		return 0;
-	}*/
+	}
+
 	if ( pfat->ptffs == NULL )
 	{
 		return 0;
 	}
 
 	ptffs = pfat->ptffs;
-	if ( (ptffs->hdev == NULL) || (pfat->secbuf == NULL) ) return 0;
+	if ( (ptffs->hdev == NULL) || (pfat->secbuf == NULL) )
+	{
+		return 0;
+	}
 	if (HAI_writesector (ptffs->hdev, fat_sec, pfat->secbuf) != HAI_OK)
 	{
 		return FALSE;
@@ -299,8 +314,10 @@ _write_fat_sector (
 	return TRUE;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static int _is_entry_free PARAMS ((const tfat_t * const pfat, const unsigned int entry_val));
+static int _is_entry_free WFS_PARAMS ((const tfat_t * const pfat, const unsigned int entry_val));
 # endif
 
 static int
@@ -313,11 +330,10 @@ _is_entry_free (
 	const unsigned int entry_val;
 # endif
 {
-	/*
 	if ( pfat == NULL )
 	{
 		return 0;
-	}*/
+	}
 
 	if ( pfat->ptffs == NULL )
 	{
@@ -339,8 +355,10 @@ _is_entry_free (
 	return FALSE;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static int _clus2fatsec PARAMS ((tfat_t * pfat, unsigned int clus));
+static int _clus2fatsec WFS_PARAMS ((tfat_t * pfat, unsigned int clus));
 # endif
 
 static int
@@ -368,14 +386,19 @@ _clus2fatsec (
 	{
 		return 0;
 	}
-	if ( pfat->ptffs->pbs->byts_per_sec == 0 ) return 0;
+	if ( pfat->ptffs->pbs->byts_per_sec == 0 )
+	{
+		return 0;
+	}
 
 	return (int)(pfat->ptffs->sec_fat + ((clus * _get_fat_entry_len (pfat)) / 8)
 		/ pfat->ptffs->pbs->byts_per_sec);
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static int _lookup_free_clus PARAMS ((tfat_t * pfat, unsigned int * pfree_clus));
+static int _lookup_free_clus WFS_PARAMS ((tfat_t * pfat, unsigned int * pfree_clus));
 # endif
 
 static int
@@ -395,11 +418,10 @@ _lookup_free_clus (
 	unsigned int cur_clus;
 	int ret;
 
-	/*
 	if ( (pfat == NULL) || (pfree_clus == NULL) )
 	{
 		return 0;
-	}*/
+	}
 
 	if ( pfat->ptffs == NULL )
 	{
@@ -410,7 +432,9 @@ _lookup_free_clus (
 	ret = FAT_OK;
 	cur_clus = pfat->last_free_clus;
 	if (_read_fat_sector (pfat, _clus2fatsec (pfat, pfat->last_free_clus)) == FALSE)
+	{
 		return ERR_FAT_DEVICE_FAIL;
+	}
 
 	while (sig_recvd == 0)
 	{
@@ -447,9 +471,11 @@ _lookup_free_clus (
 }
 #endif /* WFS_WANT_WFS */
 
+/* ======================================================================== */
+
 #ifdef WFS_WANT_PART
 # ifndef WFS_ANSIC
-static void _file_seek PARAMS ((tfile_t * pfile, unsigned int offset));
+static void _file_seek WFS_PARAMS ((tfile_t * pfile, unsigned int offset));
 # endif
 
 static void
@@ -478,7 +504,10 @@ _file_seek (
 	{
 		return;
 	}
-	if ( pfile->ptffs->pbs->byts_per_sec == 0 ) return;
+	if ( pfile->ptffs->pbs->byts_per_sec == 0 )
+	{
+		return;
+	}
 
 	while ( (cur_offset - pfile->ptffs->pbs->byts_per_sec > 0) &&
 		(fat_get_next_sec (pfile->ptffs->pfat, &pfile->cur_clus, &pfile->cur_sec) != 0)
@@ -490,9 +519,11 @@ _file_seek (
 }
 #endif /* WFS_WANT_PART */
 
+/* ======================================================================== */
+
 #ifdef WFS_WANT_UNRM
 # ifndef WFS_ANSIC
-static int _get_dirent PARAMS ((tdir_t * pdir, dir_entry_t * pdirent));
+static int _get_dirent WFS_PARAMS ((tdir_t * pdir, dir_entry_t * pdirent));
 # endif
 
 static int
@@ -509,11 +540,11 @@ _get_dirent (
 # ifndef HAVE_MEMCPY
 	size_t j;
 # endif
-	/*
+
 	if ( (pdir == NULL) || (pdirent == NULL) )
 	{
 		return ERR_DIRENTRY_NOMORE_ENTRY;
-	}*/
+	}
 	if ( (pdir->ptffs == NULL) || (pdir->secbuf == NULL) )
 	{
 		return ERR_DIRENTRY_NOMORE_ENTRY;
@@ -522,7 +553,10 @@ _get_dirent (
 	{
 		return ERR_DIRENTRY_NOMORE_ENTRY;
 	}
-	if ( pdir->ptffs->pbs->byts_per_sec == 0 ) return ERR_DIRENTRY_NOMORE_ENTRY;
+	if ( pdir->ptffs->pbs->byts_per_sec == 0 )
+	{
+		return ERR_DIRENTRY_NOMORE_ENTRY;
+	}
 
 	if (pdir->cur_dir_entry < (pdir->ptffs->pbs->byts_per_sec / sizeof (dir_entry_t)))
 	{
@@ -574,8 +608,10 @@ _get_dirent (
 	return ret;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static int wfs_fat_dirent_find PARAMS ((const wfs_fsid_t FS, tdir_t * pdir, error_type * const error));
+static int wfs_fat_dirent_find WFS_PARAMS ((const wfs_fsid_t FS, tdir_t * pdir, wfs_error_type_t * const error));
 # endif
 
 static int
@@ -584,29 +620,48 @@ WFS_ATTR ((nonnull))
 # endif
 wfs_fat_dirent_find (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, tdir_t * pdir, error_type * const error)
+	const wfs_fsid_t FS, tdir_t * pdir, wfs_error_type_t * const error_ret)
 # else
-	FS, pdir, error)
+	FS, pdir, error_ret)
 	const wfs_fsid_t FS;
 	tdir_t * pdir;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 # endif
 {
 	int ret;
 	dir_entry_t dirent;
 	unsigned long int j;
-	int selected[NPAT];
+	int selected[WFS_NPAT];
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (pdir == NULL) || (FS.fat == NULL) || (error == NULL) )
+	if ( (pdir == NULL) || (FS.fat == NULL) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return ERR_DIRENTRY_NOT_FOUND;
 	}
-	if ( pdir->secbuf == NULL ) return ERR_DIRENTRY_NOT_FOUND;
+	if ( pdir->secbuf == NULL )
+	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return ERR_DIRENTRY_NOT_FOUND;
+	}
 
 	pdir->cur_clus = pdir->start_clus;
 	pdir->cur_sec = 0;
 	pdir->cur_dir_entry = 0;
-	if (dir_read_sector (pdir) != DIR_OK) return ERR_DIRENTRY_NOT_FOUND;
+	if (dir_read_sector (pdir) != DIR_OK)
+	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
+		return ERR_DIRENTRY_NOT_FOUND;
+	}
 
 	ret = DIRENTRY_OK;
 	while (sig_recvd == 0)
@@ -623,7 +678,7 @@ wfs_fat_dirent_find (
 			else if (dirent.dir_name[0] == 0xE5)
 			{
 				/* wipe the name here */
-				for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
+				for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
 				{
 					if ( dirent.dir_attr == ATTR_LONG_NAME )
 					{
@@ -645,18 +700,17 @@ wfs_fat_dirent_find (
 						break;
 					}
 					/* write the wiped name: */
-					error->errcode.gerror = dir_write_sector (pdir);
-					if ( error->errcode.gerror != DIR_OK )
+					error.errcode.gerror = dir_write_sector (pdir);
+					if ( error.errcode.gerror != DIR_OK )
 					{
-						show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 						break;
 					}
 					/* Flush after each writing, if more than 1 overwriting
 					   needs to be done. Allow I/O bufferring (efficiency),
 					   if just one pass is needed. */
-					if ( (npasses > 1) && (sig_recvd == 0) )
+					if ( (FS.npasses > 1) && (sig_recvd == 0) )
 					{
-						error->errcode.gerror = wfs_fat_flush_fs ( FS, error );
+						error.errcode.gerror = wfs_fat_flush_fs ( FS, &error );
 					}
 				}
 				/* last pass with zeros: */
@@ -670,8 +724,8 @@ wfs_fat_dirent_find (
 					for ( j=0; j < 13 /*dirent.h->long_dir_entry_t*/
 							* 2 /*sizeof UTF-16 character */; j++ )
 					{
-						(char*)((dir_entry_t*)pdir->secbuf
-							+pdir->cur_dir_entry-1)[j]='\0';
+						((char *)((dir_entry_t *)pdir->secbuf
+							+pdir->cur_dir_entry-1))[j] = '\0';
 					}
 # endif
 				}
@@ -683,8 +737,8 @@ wfs_fat_dirent_find (
 # else
 					for ( j=0; j < sizeof (dirent.dir_name); j++ )
 					{
-						(char*)((dir_entry_t*)pdir->secbuf
-							+pdir->cur_dir_entry-1)[j]='\0';
+						((char *)((dir_entry_t *)pdir->secbuf
+							+pdir->cur_dir_entry-1))[j] = '\0';
 					}
 # endif
 				}
@@ -693,17 +747,16 @@ wfs_fat_dirent_find (
 					break;
 				}
 				/* write the wiped name: */
-				error->errcode.gerror = dir_write_sector (pdir);
-				if ( error->errcode.gerror != DIR_OK )
+				error.errcode.gerror = dir_write_sector (pdir);
+				if ( error.errcode.gerror != DIR_OK )
 				{
-					show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 					break;
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( (npasses > 1) && (sig_recvd == 0) )
+				if ( (FS.npasses > 1) && (sig_recvd == 0) )
 				{
-					error->errcode.gerror = wfs_fat_flush_fs ( FS, error );
+					error.errcode.gerror = wfs_fat_flush_fs ( FS, &error );
 				}
 				continue;
 			}
@@ -718,13 +771,19 @@ wfs_fat_dirent_find (
 			break;
 		}
 	}
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret;
 }
 #endif /* WFS_WANT_UNRM */
 
+/* ======================================================================== */
+
 #if (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART)
 # ifndef WFS_ANSIC
-static size_t WFS_ATTR ((warn_unused_result)) wfs_fat_get_block_size PARAMS ((const wfs_fsid_t FS));
+static size_t WFS_ATTR ((warn_unused_result)) wfs_fat_get_block_size WFS_PARAMS ((const wfs_fsid_t FS));
 # endif
 
 /**
@@ -754,10 +813,12 @@ wfs_fat_get_block_size (
 }
 #endif /* (defined WFS_WANT_UNRM) || (defined WFS_WANT_PART) */
 
+/* ======================================================================== */
+
 #ifdef WFS_WANT_PART
 # ifndef WFS_ANSIC
-static errcode_enum wfs_fat_wipe_file_tail PARAMS ((wfs_fsid_t FS,
-	error_type * const error, tfile_handle_t file, unsigned char * buf));
+static wfs_errcode_t wfs_fat_wipe_file_tail WFS_PARAMS ((wfs_fsid_t FS,
+	wfs_error_type_t * const error, tfile_handle_t file, unsigned char * buf));
 # endif
 
 /**
@@ -767,30 +828,31 @@ static errcode_enum wfs_fat_wipe_file_tail PARAMS ((wfs_fsid_t FS,
  * \param file The file to wipe data after.
  * \param buf The buffer to use.
  */
-static errcode_enum
+static wfs_errcode_t
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_file_tail (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error, tfile_handle_t file, unsigned char * buf)
+	wfs_fsid_t FS, wfs_error_type_t * const error_ret, tfile_handle_t file, unsigned char * buf)
 # else
-	FS, error, file, buf)
+	FS, error_ret, file, buf)
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 	tfile_handle_t file;
 	unsigned char * buf;
 # endif
 {
 	unsigned long int j;
-	int selected[NPAT];
+	int selected[WFS_NPAT];
 	tfile_t * fh = (tfile_t *) file;
 	unsigned int file_len;
 	size_t bufsize;
 	int written;
-	errcode_enum ret_tail = WFS_SUCCESS;
+	wfs_errcode_t ret_tail = WFS_SUCCESS;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (error == NULL) || (FS.fat == NULL) || (file == NULL) || (buf == NULL) )
+	if ( (FS.fat == NULL) || (file == NULL) || (buf == NULL) )
 	{
 		return WFS_BADPARAM;
 	}
@@ -798,7 +860,7 @@ wfs_fat_wipe_file_tail (
 	file_len = dirent_get_file_size (fh->pdir_entry);
 	bufsize = wfs_fat_get_block_size (FS) -	(file_len % wfs_fat_get_block_size (FS));
 
-	for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
+	for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
 	{
 		fill_buffer ( j, buf, bufsize, selected, FS );
 		if ( sig_recvd != 0 )
@@ -811,24 +873,26 @@ wfs_fat_wipe_file_tail (
 		written = TFFS_fwrite (file, bufsize, buf);
 		if ( written != (int)bufsize )
 		{
-			show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 			ret_tail = WFS_BLKWR;
 			break;
 		}
 		/* workaround a bug in tffs? */
-		if ( written > 0 ) fh->file_size -= (uint32)written;
+		if ( written > 0 )
+		{
+			fh->file_size -= (uint32)written;
+		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( (npasses > 1) && (sig_recvd == 0) )
+		if ( (FS.npasses > 1) && (sig_recvd == 0) )
 		{
-			error->errcode.gerror = wfs_fat_flush_fs ( FS, error );
+			error.errcode.gerror = wfs_fat_flush_fs ( FS, &error );
 		}
 	}
 	if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-		memset ( buf, 0, bufsize );
+		memset (buf, 0, bufsize);
 # else
 		for ( j=0; j < bufsize; j++ )
 		{
@@ -842,22 +906,28 @@ wfs_fat_wipe_file_tail (
 			written = TFFS_fwrite (file, bufsize, buf);
 			if ( written != (int)bufsize )
 			{
-				show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 				ret_tail = WFS_BLKWR;
 			}
 			/* workaround a bug in tffs? */
-			if ( written > 0 ) fh->file_size -= (uint32)written;
+			if ( written > 0 )
+			{
+				fh->file_size -= (uint32)written;
+			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (npasses > 1) && (sig_recvd == 0) )
+			if ( (FS.npasses > 1) && (sig_recvd == 0) )
 			{
-				error->errcode.gerror = wfs_fat_flush_fs ( FS, error );
+				error.errcode.gerror = wfs_fat_flush_fs ( FS, &error );
 			}
 		}
 	}
 	/* restore file's original size */
 	dirent_set_file_size (fh->pdir_entry, file_len);
 
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	if ( sig_recvd != 0 )
 	{
 		return WFS_SIGNAL;
@@ -865,9 +935,11 @@ wfs_fat_wipe_file_tail (
 	return ret_tail;
 }
 
+/* ======================================================================== */
+
 # ifndef WFS_ANSIC
-static errcode_enum wfs_fat_wipe_file_tails_in_dir PARAMS ((wfs_fsid_t FS,
-	error_type * const error, tdir_handle_t dir, unsigned char * buf));
+static wfs_errcode_t wfs_fat_wipe_file_tails_in_dir WFS_PARAMS ((wfs_fsid_t FS,
+	wfs_error_type_t * const error, tdir_handle_t dir, unsigned char * buf));
 # endif
 
 /**
@@ -877,29 +949,30 @@ static errcode_enum wfs_fat_wipe_file_tails_in_dir PARAMS ((wfs_fsid_t FS,
  * \param dir The directory to browse for files.
  * \param buf The buffer to use.
  */
-static errcode_enum
+static wfs_errcode_t
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_file_tails_in_dir (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error, tdir_handle_t dir, unsigned char * buf)
+	wfs_fsid_t FS, wfs_error_type_t * const error_ret, tdir_handle_t dir, unsigned char * buf)
 # else
-	FS, error, dir, buf)
+	FS, error_ret, dir, buf)
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 	tdir_handle_t dir;
 	unsigned char * buf;
 # endif
 {
 	int dir_res = TFFS_OK;
-	errcode_enum ret_part_dir = WFS_SUCCESS;
+	wfs_errcode_t ret_part_dir = WFS_SUCCESS;
 	dirent_t entry;
 	tfile_handle_t fh;
 	unsigned int prev_percent = 0;
 	unsigned int curr_direlem = 0;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (error == NULL) || (FS.fat == NULL) || (dir == NULL) || (buf == NULL) )
+	if ( (FS.fat == NULL) || (dir == NULL) || (buf == NULL) )
 	{
 		return WFS_BADPARAM;
 	}
@@ -907,7 +980,10 @@ wfs_fat_wipe_file_tails_in_dir (
 	do
 	{
 		dir_res = TFFS_readdir (dir, &entry);
-		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) ) break;
+		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) )
+		{
+			break;
+		}
 		if ( ((unsigned char)(entry.d_name[0]) == 0xE5)
 			|| ((unsigned char)(entry.d_name_short[0]) == 0xE5) )
 		{
@@ -938,7 +1014,7 @@ wfs_fat_wipe_file_tails_in_dir (
 				continue;
 			}
 			ret_part_dir = wfs_fat_wipe_file_tails_in_dir
-				(FS, error, (tdir_handle_t) (((tffs_t *)(FS.fat))->cur_dir), buf);
+				(FS, &error, (tdir_handle_t) (((tffs_t *)(FS.fat))->cur_dir), buf);
 			TFFS_chdir (FS.fat, wfs_fat_parent_dir);
 		}
 		else if ( (entry.dir_attr & DIR_ATTR_VOLUME_ID) != DIR_ATTR_VOLUME_ID )
@@ -949,22 +1025,31 @@ wfs_fat_wipe_file_tails_in_dir (
 			{
 				continue;
 			}
-			wfs_fat_wipe_file_tail (FS, error, fh, buf);
+			wfs_fat_wipe_file_tail (FS, &error, fh, buf);
 			TFFS_fclose (fh);
 		}
 		if ( (dir == (tdir_handle_t) ((tffs_t *)(FS.fat))->root_dir)
 			&& (((tffs_t *)(FS.fat))->pbs != NULL) )
 		{
 			curr_direlem++;
-			show_progress (PROGRESS_PART,
+			show_progress (WFS_PROGRESS_PART,
 				curr_direlem/((tffs_t *)(FS.fat))->pbs->root_ent_cnt, &prev_percent);
 		}
 	}
 	while ( sig_recvd == 0 );
-	if ( dir_res != TFFS_OK ) ret_part_dir = WFS_DIRITER;
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
+	if ( dir_res != TFFS_OK )
+	{
+		ret_part_dir = WFS_DIRITER;
+	}
 
 	return ret_part_dir;
 }
+
+/* ======================================================================== */
 
 /**
  * Wipes the free space in partially used blocks on the given FAT filesystem.
@@ -972,27 +1057,32 @@ wfs_fat_wipe_file_tails_in_dir (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_part (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error )
+	wfs_fsid_t FS, wfs_error_type_t * const error_ret )
 # else
-	FS, error )
+	FS, error_ret )
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 # endif
 {
-	errcode_enum ret_part = WFS_SUCCESS;
+	wfs_errcode_t ret_part = WFS_SUCCESS;
 	tdir_handle_t dirh;
 	unsigned char * buf = NULL;
 	unsigned int prev_percent = 0;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (error == NULL) || (FS.fat == NULL) )
+	if ( FS.fat == NULL )
 	{
-		show_progress (PROGRESS_PART, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
@@ -1000,7 +1090,11 @@ wfs_fat_wipe_part (
 	dirh = (tdir_handle_t) ((tffs_t *)(FS.fat))->root_dir;
 	if ( dirh == NULL )
 	{
-		show_progress (PROGRESS_PART, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_DIRITER;
 	}
 
@@ -1011,19 +1105,29 @@ wfs_fat_wipe_part (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 # else
-		error->errcode.gerror = 12L;	/* ENOMEM */
+		error.errcode.gerror = 12L;	/* ENOMEM */
 # endif
-		show_progress (PROGRESS_PART, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
-        ret_part = wfs_fat_wipe_file_tails_in_dir (FS, error, dirh, buf);
-	show_progress (PROGRESS_PART, 100, &prev_percent);
+        ret_part = wfs_fat_wipe_file_tails_in_dir (FS, &error, dirh, buf);
+	show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 	free (buf);
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret_part;
 }
 #endif /* WFS_WANT_PART */
+
+/* ======================================================================== */
 
 #ifdef WFS_WANT_WFS
 /**
@@ -1032,23 +1136,23 @@ wfs_fat_wipe_part (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_fs (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, error_type * const error )
+	const wfs_fsid_t FS, wfs_error_type_t * const error_ret )
 # else
-	FS, error )
+	FS, error_ret )
 	const wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 # endif
 {
-	errcode_enum ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int cluster = 0;
 	unsigned long int j;
-	int selected[NPAT];
+	int selected[WFS_NPAT];
 	tfat_t * pfat;
 	tffs_t * ptffs;
 	int sec_per_clus = 1;
@@ -1056,10 +1160,15 @@ wfs_fat_wipe_fs (
 	int sec_iter;
 	unsigned int prev_percent = 0;
 	unsigned int curr_sector = 0;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (error == NULL) || (FS.fat == NULL) )
+	if ( FS.fat == NULL )
 	{
-		show_progress (PROGRESS_WFS, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
@@ -1070,24 +1179,36 @@ wfs_fat_wipe_fs (
 		sec_per_clus = ptffs->pbs->sec_per_clus;
 		bytes_per_sector = ptffs->pbs->byts_per_sec;
 	}
-	if ( sec_per_clus == 0 ) sec_per_clus = 1;
-	if ( bytes_per_sector == 0 ) sec_per_clus = 512;
+	if ( sec_per_clus == 0 )
+	{
+		sec_per_clus = 1;
+	}
+	if ( bytes_per_sector == 0 )
+	{
+		bytes_per_sector = 512;
+	}
 	pfat->last_free_clus = 0;
 	cluster = 0;
 	while (sig_recvd == 0)
 	{
-		if ( _lookup_free_clus (pfat, &cluster) != FAT_OK ) break;
+		if ( _lookup_free_clus (pfat, &cluster) != FAT_OK )
+		{
+			break;
+		}
 		/* better not wipe anything before the first data sector, even if marked unused */
 		if ( clus2sec (ptffs, cluster) < ptffs->sec_first_data )
 		{
 			pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
 			cluster = (cluster+1) % (ptffs->total_clusters);
-			if ( cluster == 0 ) break;
+			if ( cluster == 0 )
+			{
+				break;
+			}
 			continue;
 		}
 		/* save the sector after the last wiped in a cluster (FAT12 reads/writes two at a time):*/
 		_read_fat_sector (pfat, (int)clus2sec (ptffs, cluster) + sec_per_clus-1);
-		for ( j = 0; (j < npasses) && (sig_recvd == 0); j++ )
+		for ( j = 0; (j < FS.npasses) && (sig_recvd == 0); j++ )
 		{
 			fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, FS );
 			if ( sig_recvd != 0 )
@@ -1095,32 +1216,34 @@ wfs_fat_wipe_fs (
 				ret_wfs = WFS_SIGNAL;
 				break;
 			}
-			error->errcode.gerror = 0;
+			error.errcode.gerror = 0;
 			/* wipe all sectors of cluster 'cluster' */
 			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
 			{
-				error->errcode.gerror = _write_fat_sector (pfat,
+				error.errcode.gerror = _write_fat_sector (pfat,
 					(int)clus2sec (ptffs, cluster) + sec_iter);
-				if ( error->errcode.gerror == 0 ) break;
+				if ( error.errcode.gerror == 0 )
+				{
+					break;
+				}
 			}
-			if ( error->errcode.gerror == 0 /* _write_fat_sector returns 1 on success */ )
+			if ( error.errcode.gerror == 0 /* _write_fat_sector returns 1 on success */ )
 			{
-				show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 				ret_wfs = WFS_BLKWR;
 				break;
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (npasses > 1) && (sig_recvd == 0) )
+			if ( (FS.npasses > 1) && (sig_recvd == 0) )
 			{
-				error->errcode.gerror = wfs_fat_flush_fs ( FS, error );
+				error.errcode.gerror = wfs_fat_flush_fs ( FS, &error );
 			}
 		}
 		if ( (FS.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros: */
 # ifdef HAVE_MEMSET
-			memset ( pfat->secbuf, 0, bytes_per_sector );
+			memset (pfat->secbuf, 0, bytes_per_sector);
 # else
 			for ( j=0; j < bytes_per_sector; j++ )
 			{
@@ -1132,43 +1255,57 @@ wfs_fat_wipe_fs (
 				ret_wfs = WFS_SIGNAL;
 				break;
 			}
-			error->errcode.gerror = 0;
+			error.errcode.gerror = 0;
 			/* wipe all sectors of cluster 'cluster' */
 			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
 			{
-				error->errcode.gerror = _write_fat_sector (pfat,
+				error.errcode.gerror = _write_fat_sector (pfat,
 					(int)clus2sec (ptffs, cluster) + sec_iter);
-				if ( error->errcode.gerror == 0 ) break;
+				if ( error.errcode.gerror == 0 )
+				{
+					break;
+				}
 			}
-			if ( error->errcode.gerror == 0 /* _write_fat_sector returns 1 on success */ )
+			if ( error.errcode.gerror == 0 /* _write_fat_sector returns 1 on success */ )
 			{
-				show_error ( *error, err_msg_wrtblk, FS.fsname, FS );
 				ret_wfs = WFS_BLKWR;
 				break;
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( (npasses > 1) && (sig_recvd == 0) )
+			if ( (FS.npasses > 1) && (sig_recvd == 0) )
 			{
-				error->errcode.gerror = wfs_fat_flush_fs ( FS, error );
+				error.errcode.gerror = wfs_fat_flush_fs ( FS, &error );
 			}
 		}
 		curr_sector++;
-		show_progress (PROGRESS_WFS, (curr_sector * 100)/ptffs->total_clusters, &prev_percent);
+		show_progress (WFS_PROGRESS_WFS, (curr_sector * 100)/ptffs->total_clusters, &prev_percent);
 		pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
 		cluster = (cluster+1) % (ptffs->total_clusters);
-		if ( cluster == 0 ) break;
+		if ( cluster == 0 )
+		{
+			break;
+		}
 	}
-	show_progress (PROGRESS_WFS, 100, &prev_percent);
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 	return ret_wfs;
 }
 #endif /* WFS_WANT_WFS */
 
+/* ======================================================================== */
+
 #ifdef WFS_WANT_UNRM
 # ifndef WFS_ANSIC
-static errcode_enum wfs_fat_wipe_unrm_dir PARAMS ((wfs_fsid_t FS,
-	error_type * const error, tdir_handle_t dir, unsigned char * buf));
+static wfs_errcode_t wfs_fat_wipe_unrm_dir WFS_PARAMS ((wfs_fsid_t FS,
+	wfs_error_type_t * const error_ret, tdir_handle_t dir, unsigned char * buf));
 # endif
 
 /**
@@ -1178,29 +1315,34 @@ static errcode_enum wfs_fat_wipe_unrm_dir PARAMS ((wfs_fsid_t FS,
  * \param dir The directory to browse for deleted files.
  * \param buf The buffer to use.
  */
-static errcode_enum
+static wfs_errcode_t
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_unrm_dir (
 # ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error, tdir_handle_t dir, unsigned char * buf)
+	wfs_fsid_t FS, wfs_error_type_t * const error_ret, tdir_handle_t dir, unsigned char * buf)
 # else
-	FS, error, dir, buf)
+	FS, error_ret, dir, buf)
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 	tdir_handle_t dir;
 	unsigned char * buf;
 # endif
 {
-	errcode_enum ret_unrm_dir = WFS_SUCCESS;
+	wfs_errcode_t ret_unrm_dir = WFS_SUCCESS;
 	int dir_res = TFFS_OK;
 	dirent_t entry;
 	unsigned int prev_percent = 0;
 	unsigned int curr_direlem = 0;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (error == NULL) || (FS.fat == NULL) || (dir == NULL) || (buf == NULL) )
+	if ( (FS.fat == NULL) || (dir == NULL) || (buf == NULL) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
@@ -1208,7 +1350,10 @@ wfs_fat_wipe_unrm_dir (
 	while (sig_recvd == 0)
 	{
 		dir_res = TFFS_readdir (dir, &entry);
-		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) ) break;
+		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) )
+		{
+			break;
+		}
 		if ( (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
 			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
 			|| (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
@@ -1227,28 +1372,40 @@ wfs_fat_wipe_unrm_dir (
 				continue;
 			}
 			ret_unrm_dir = wfs_fat_wipe_unrm_dir
-				(FS, error, (tdir_handle_t) (((tffs_t *)(FS.fat))->cur_dir), buf);
+				(FS, &error, (tdir_handle_t) (((tffs_t *)(FS.fat))->cur_dir), buf);
 			TFFS_chdir (FS.fat, wfs_fat_parent_dir);
 		}
 	}
 
-	if ( dir_res != TFFS_OK ) ret_unrm_dir = WFS_DIRITER;
+	if ( dir_res != TFFS_OK )
+	{
+		ret_unrm_dir = WFS_DIRITER;
+	}
 	/* now take care of this directory: */
 	while (sig_recvd == 0)
 	{
-		dir_res = wfs_fat_dirent_find (FS, (tdir_t *)dir, error);
-		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) ) break;
+		dir_res = wfs_fat_dirent_find (FS, (tdir_t *)dir, &error);
+		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) )
+		{
+			break;
+		}
 		if ( (dir == (tdir_handle_t) ((tffs_t *)(FS.fat))->root_dir)
 			&& (((tffs_t *)(FS.fat))->pbs != NULL) )
 		{
 			curr_direlem++;
-			show_progress (PROGRESS_UNRM,
+			show_progress (WFS_PROGRESS_UNRM,
 				curr_direlem/((tffs_t *)(FS.fat))->pbs->root_ent_cnt, &prev_percent);
 		}
 	}
 
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret_unrm_dir;
 }
+
+/* ======================================================================== */
 
 /**
  * Starts recursive directory search for deleted files and undelete data on the given FAT fs.
@@ -1256,27 +1413,32 @@ wfs_fat_wipe_unrm_dir (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 # ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 # endif
 wfs_fat_wipe_unrm (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t FS, error_type * const error )
+	const wfs_fsid_t FS, wfs_error_type_t * const error_ret )
 # else
-	FS, error )
+	FS, error_ret )
 	const wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error_ret;
 # endif
 {
-	errcode_enum ret_unrm = WFS_SUCCESS;
+	wfs_errcode_t ret_unrm = WFS_SUCCESS;
 	tdir_handle_t dirh;
 	unsigned char * buf = NULL;
 	unsigned int prev_percent = 0;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ( (error == NULL) || (FS.fat == NULL) )
+	if ( FS.fat == NULL )
 	{
-		show_progress (PROGRESS_UNRM, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
@@ -1284,7 +1446,11 @@ wfs_fat_wipe_unrm (
 	dirh = (tdir_handle_t) ((tffs_t *)(FS.fat))->root_dir;
 	if ( dirh == NULL )
 	{
-		show_progress (PROGRESS_UNRM, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_DIRITER;
 	}
 
@@ -1295,49 +1461,59 @@ wfs_fat_wipe_unrm (
 	if ( buf == NULL )
 	{
 # ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 # else
-		error->errcode.gerror = 12L;	/* ENOMEM */
+		error.errcode.gerror = 12L;	/* ENOMEM */
 # endif
-		show_progress (PROGRESS_UNRM, 100, &prev_percent);
+		show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
-        ret_unrm = wfs_fat_wipe_unrm_dir (FS, error, dirh, buf);
-	show_progress (PROGRESS_UNRM, 100, &prev_percent);
+        ret_unrm = wfs_fat_wipe_unrm_dir (FS, &error, dirh, buf);
+	show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 	free (buf);
 
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret_unrm;
 }
 #endif /* WFS_WANT_UNRM */
+
+/* ======================================================================== */
 
 /**
  * Opens a FAT filesystem on the given device.
  * \param devname Device name, like /dev/hdXY
  * \param FS Pointer to where the result will be put.
  * \param whichfs Pointer to an int saying which fs is curently in use.
- * \param data Pointer to fsdata structure containing information which may be needed to
+ * \param data Pointer to wfs_fsdata_t structure containing information which may be needed to
  *	open the filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_fat_open_fs (
 #ifdef WFS_ANSIC
-	const char * const dev_name, wfs_fsid_t * const FS, CURR_FS * const whichfs,
-	const fsdata * const data WFS_ATTR ((unused)), error_type * const error )
+	const char * const dev_name, wfs_fsid_t * const FS, wfs_curr_fs_t * const whichfs,
+	const wfs_fsdata_t * const data WFS_ATTR ((unused)), wfs_error_type_t * const error_ret )
 #else
-	dev_name, FS, whichfs, data, error )
+	dev_name, FS, whichfs, data, error_ret )
 	const char * const dev_name;
 	wfs_fsid_t * const FS;
-	CURR_FS * const whichfs;
-	const fsdata * const data WFS_ATTR ((unused));
-	error_type * const error;
+	wfs_curr_fs_t * const whichfs;
+	const wfs_fsdata_t * const data WFS_ATTR ((unused));
+	wfs_error_type_t * const error_ret;
 #endif
 {
-	errcode_enum ret = WFS_SUCCESS;
+	wfs_errcode_t ret = WFS_SUCCESS;
 	char * dev_name_copy;
 #ifndef HAVE_MEMCPY
 	unsigned int i;
@@ -1350,9 +1526,14 @@ wfs_fat_open_fs (
 		unsigned char bytes[512]; /* to make sure we have at leat 512 bytes in "union bootsec" */
 	} bsec;
 	size_t namelen;
+	wfs_error_type_t error = {CURR_FATFS, {0}};
 
-	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL) || (error == NULL))
+	if ((dev_name == NULL) || (FS == NULL) || (whichfs == NULL))
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_BADPARAM;
 	}
 
@@ -1377,21 +1558,33 @@ wfs_fat_open_fs (
 	   )
 	{
 #ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 #else
-		error->errcode.gerror = 1L;	/* EPERM */
+		error.errcode.gerror = 1L;	/* EPERM */
 #endif
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_OPENFS;
 	}
 	boot_read = read (fs_fd, &bsec, 512);
 	close (fs_fd);
 	if ( boot_read != 512 )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_OPENFS;
 	}
 	if ( (bsec.pbs.byts_per_sec < 512) || (bsec.pbs.sec_per_clus < 1)
 		|| ((bsec.pbs.byts_per_sec & 0x1ff) != 0) )
 	{
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_OPENFS;
 	}
 
@@ -1400,14 +1593,18 @@ wfs_fat_open_fs (
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
-	dev_name_copy = (char *) malloc ( namelen + 1 );
+	dev_name_copy = (char *) malloc (namelen + 1);
 	if ( dev_name_copy == NULL )
 	{
 #ifdef HAVE_ERRNO_H
-		error->errcode.gerror = errno;
+		error.errcode.gerror = errno;
 #else
-		error->errcode.gerror = 12L;	/* ENOMEM */
+		error.errcode.gerror = 12L;	/* ENOMEM */
 #endif
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
 
@@ -1420,9 +1617,9 @@ wfs_fat_open_fs (
 	}
 #endif
 
-	error->errcode.gerror = TFFS_mount ( dev_name_copy, & (FS->fat) );
+	error.errcode.gerror = TFFS_mount ( dev_name_copy, & (FS->fat) );
 	free (dev_name_copy);
-	if ( error->errcode.gerror != TFFS_OK )
+	if ( error.errcode.gerror != TFFS_OK )
 	{
 		ret = WFS_OPENFS;
 	}
@@ -1431,8 +1628,14 @@ wfs_fat_open_fs (
 		*whichfs = CURR_FATFS;
 		ret = WFS_SUCCESS;
 	}
+	if ( error_ret != NULL )
+	{
+		*error_ret = error;
+	}
 	return ret;
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if the given FAT filesystem is mounted in read-write mode.
@@ -1440,21 +1643,23 @@ wfs_fat_open_fs (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum WFS_ATTR ((warn_unused_result))
+wfs_errcode_t WFS_ATTR ((warn_unused_result))
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_fat_chk_mount (
 #ifdef WFS_ANSIC
-	const char * const dev_name, error_type * const error )
+	const char * const dev_name, wfs_error_type_t * const error )
 #else
 	dev_name, error )
 	const char * const dev_name;
-	error_type * const error;
+	wfs_error_type_t * const error;
 #endif
 {
 	return wfs_check_mounted (dev_name, error);
 }
+
+/* ======================================================================== */
 
 /**
  * Closes the FAT filesystem.
@@ -1462,20 +1667,20 @@ wfs_fat_chk_mount (
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
 wfs_fat_close_fs (
 #ifdef WFS_ANSIC
-	wfs_fsid_t FS, error_type * const error )
+	wfs_fsid_t FS, wfs_error_type_t * const error )
 #else
 	FS, error )
 	wfs_fsid_t FS;
-	error_type * const error;
+	wfs_error_type_t * const error;
 #endif
 {
-	errcode_enum ret = WFS_SUCCESS;
+	wfs_errcode_t ret = WFS_SUCCESS;
 	int wfs_err;
 
 	if ( FS.fat == NULL )
@@ -1484,18 +1689,19 @@ wfs_fat_close_fs (
 	}
 
 	wfs_err = TFFS_umount ( FS.fat );
-	if ( error != NULL )
+	if ( wfs_err != TFFS_OK )
 	{
-		error->errcode.gerror = wfs_err;
-		if ( wfs_err != TFFS_OK )
+		ret = WFS_FSCLOSE;
+		if ( error != NULL )
 		{
-			show_error ( *error, err_msg_close, FS.fsname, FS );
-			ret = WFS_FSCLOSE;
+			error->errcode.gerror = wfs_err;
 		}
 	}
 	FS.fat = NULL;
 	return ret;
 }
+
+/* ======================================================================== */
 
 /**
  * Checks if the FAT filesystem has errors.
@@ -1515,6 +1721,8 @@ wfs_fat_check_err (
 	return 0;
 }
 
+
+/* ======================================================================== */
 
 /**
  * Checks if the FAT filesystem is dirty (has unsaved changes).
@@ -1537,13 +1745,15 @@ wfs_fat_is_dirty (
 	return 0;
 }
 
+/* ======================================================================== */
+
 /**
  * Flushes the FAT filesystem.
  * \param FS The filesystem.
  * \param error Pointer to error variable.
  * \return 0 in case of no errors, other values otherwise.
  */
-errcode_enum
+wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
@@ -1553,7 +1763,7 @@ wfs_fat_flush_fs (
 # if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)
 		WFS_ATTR ((unused))
 # endif
-	, error_type * const error
+	, wfs_error_type_t * const error
 # if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)	\
 	|| (!defined HAVE_ERRNO_H)
 		WFS_ATTR ((unused))
@@ -1566,7 +1776,7 @@ wfs_fat_flush_fs (
 		WFS_ATTR ((unused))
 # endif
 	;
-	error_type * const error
+	wfs_error_type_t * const error
 # if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)	\
 	|| (!defined HAVE_ERRNO_H)
 		WFS_ATTR ((unused))
@@ -1574,17 +1784,12 @@ wfs_fat_flush_fs (
 	;
 #endif
 {
-	errcode_enum ret = WFS_SUCCESS;
+	wfs_errcode_t ret = WFS_SUCCESS;
 #if (!defined __STRICT_ANSI__) && (defined HAVE_UNISTD_H) && (defined HAVE_FSYNC)
 	tdev_t * dev;
 #endif
 
-	if (
-#if (defined __STRICT_ANSI__) || (!defined HAVE_UNISTD_H) || (!defined HAVE_FSYNC)	\
-	|| (!defined HAVE_ERRNO_H)
-		(error == NULL) ||
-#endif
-		(FS.fat == NULL) )
+	if ( FS.fat == NULL )
 	{
 		return WFS_BADPARAM;
 	}
@@ -1601,7 +1806,10 @@ wfs_fat_flush_fs (
 #  ifdef HAVE_ERRNO_H
 		if ( errno != 0 )
 		{
-			if ( error != NULL ) error->errcode.gerror = errno;
+			if ( error != NULL )
+			{
+				error->errcode.gerror = errno;
+			}
 			ret = WFS_FLUSHFS;
 		}
 #  endif

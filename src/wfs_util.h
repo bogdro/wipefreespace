@@ -63,28 +63,28 @@ struct fs_ioctl
 typedef struct fs_ioctl fs_ioctl;
 
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_check_mounted PARAMS ((const char * const dev_name, error_type * const error));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_check_mounted WFS_PARAMS ((const char * const dev_name, wfs_error_type_t * const error));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_get_mnt_point PARAMS ((const char * const dev_name, error_type * const error,
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_get_mnt_point WFS_PARAMS ((const char * const dev_name, wfs_error_type_t * const error,
 				char * const mnt_point, const size_t mnt_point_len, int * const is_rw));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_create_child PARAMS ((struct child_id * const id));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_create_child WFS_PARAMS ((struct child_id * const id));
 
 extern void WFS_ATTR ((nonnull))
-	wfs_wait_for_child PARAMS ((const struct child_id * const id));
+	wfs_wait_for_child WFS_PARAMS ((const struct child_id * const id));
 
 extern int WFS_ATTR ((nonnull))
-	wfs_has_child_exited PARAMS ((const struct child_id * const id));
+	wfs_has_child_exited WFS_PARAMS ((const struct child_id * const id));
 
-extern const char * convert_fs_to_name PARAMS ((const CURR_FS fs));
+extern const char * convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
 
-extern void WFS_ATTR ((nonnull)) enable_drive_cache PARAMS ((const char dev_name[],
+extern void WFS_ATTR ((nonnull)) enable_drive_cache WFS_PARAMS ((const char dev_name[],
 	const int total_fs, fs_ioctl ioctls[]));
 
-extern void WFS_ATTR ((nonnull)) disable_drive_cache PARAMS ((const char dev_name[],
+extern void WFS_ATTR ((nonnull)) disable_drive_cache WFS_PARAMS ((const char dev_name[],
 	const int total_fs, fs_ioctl ioctls[]));
 
 #endif	/* WFS_UTIL_H */

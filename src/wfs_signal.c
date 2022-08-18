@@ -153,7 +153,7 @@ static const int signals[] =
 };
 
 # ifndef WFS_ANSIC
-static RETSIGTYPE term_signal_received PARAMS ((const int signum));
+static RETSIGTYPE term_signal_received WFS_PARAMS ((const int signum));
 # endif
 
 # ifndef RETSIGTYPE
@@ -184,7 +184,7 @@ term_signal_received (
 }
 
 # ifndef WFS_ANSIC
-static RETSIGTYPE child_signal_received PARAMS ((const int signum));
+static RETSIGTYPE child_signal_received WFS_PARAMS ((const int signum));
 # endif
 
 /**
@@ -216,10 +216,10 @@ child_signal_received (
 
 void wfs_set_sigh (
 #ifdef WFS_ANSIC
-	error_type * const error, const int opt_verbose)
+	wfs_error_type_t * const error, const int opt_verbose)
 #else
 	error, opt_verbose)
-	error_type * const error;
+	wfs_error_type_t * const error;
 	const int opt_verbose;
 #endif
 {

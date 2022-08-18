@@ -28,32 +28,32 @@
 
 # include "wipefreespace.h"
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_open_fs PARAMS((   const char * const dev_name, wfs_fsid_t * const FS,
-		CURR_FS * const which_fs, const fsdata * const data, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_open_fs WFS_PARAMS((   const char * const dev_name, wfs_fsid_t * const FS,
+		wfs_curr_fs_t * const which_fs, const wfs_fsdata_t * const data, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wfs_chk_mount PARAMS(( const char * const dev_name, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wfs_chk_mount WFS_PARAMS(( const char * const dev_name, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wipe_unrm PARAMS(( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wipe_unrm WFS_PARAMS(( wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wipe_fs	PARAMS(( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wipe_fs	WFS_PARAMS(( wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
-	wipe_part PARAMS(( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((warn_unused_result)) WFS_ATTR ((nonnull))
+	wipe_part WFS_PARAMS(( const wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_close_fs PARAMS(( const wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	wfs_close_fs WFS_PARAMS(( const wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
 
-extern errcode_enum WFS_ATTR ((nonnull))
-	wfs_flush_fs PARAMS(( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
-
-extern int WFS_ATTR ((warn_unused_result))
-	wfs_check_err PARAMS(( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
+extern wfs_errcode_t WFS_ATTR ((nonnull))
+	wfs_flush_fs WFS_PARAMS(( wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
 
 extern int WFS_ATTR ((warn_unused_result))
-	wfs_is_dirty PARAMS(( wfs_fsid_t FS, const CURR_FS which_fs, error_type * const error ));
+	wfs_check_err WFS_PARAMS(( wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
+
+extern int WFS_ATTR ((warn_unused_result))
+	wfs_is_dirty WFS_PARAMS(( wfs_fsid_t FS, const wfs_curr_fs_t which_fs, wfs_error_type_t * const error ));
 
 #endif	/* WFS_HEADER_WRAP */
