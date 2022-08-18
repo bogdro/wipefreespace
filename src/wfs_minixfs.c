@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions.
  *
- * Copyright (C) 2009-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2009-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -464,9 +464,6 @@ wfs_minixfs_wipe_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_minixfs_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -529,9 +526,6 @@ wfs_minixfs_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_minixfs_wipe_fs (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -697,9 +691,6 @@ wfs_minixfs_wipe_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_minixfs_wipe_unrm (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -790,6 +781,13 @@ wfs_minixfs_open_fs (
 	error_ret = (wfs_errcode_t *) wfs_fs->fs_error;
 	wfs_fs->whichfs = WFS_CURR_FS_NONE;
 
+	/* fseek fails badly when given a loop device that is not
+	   backed by anything. Check this here: */
+	if ( wfs_check_loop_mounted (wfs_fs->fsname) == 0 )
+	{
+		return WFS_OPENFS;
+	}
+
 	/* Open the filesystem our way, because open_fs() calls exit() and closes the
 	   process, so if this filesystem is not MinixFS, filesystems checked after
 	   MinixFS will not have a chance to get tried. */
@@ -875,9 +873,6 @@ wfs_minixfs_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_minixfs_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -898,9 +893,6 @@ wfs_minixfs_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_minixfs_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1049,9 +1041,6 @@ wfs_minixfs_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_minixfs_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)

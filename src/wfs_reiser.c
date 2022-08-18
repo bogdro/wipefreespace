@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv3 file system-specific functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -159,9 +159,6 @@ wfs_reiser_get_block_size (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_reiser_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -318,7 +315,8 @@ wfs_reiser_wipe_part (
 				|| (head->ih2_item_location >= wfs_reiser_get_block_size (wfs_fs))
 				|| (head->ih2_item_location + head->ih2_item_len >=
 					(int)wfs_reiser_get_block_size (wfs_fs))
-				|| (head->ih2_item_location + head->ih2_item_len >= bh->b_size)
+				|| ((unsigned long)head->ih2_item_location
+					+ (unsigned long)head->ih2_item_len >= bh->b_size)
 				)
 			{
 				continue;
@@ -485,9 +483,6 @@ wfs_reiser_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_reiser_wipe_fs (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -691,9 +686,6 @@ wfs_reiser_wipe_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_reiser_wipe_unrm (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1315,9 +1307,6 @@ wfs_reiser_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_reiser_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1338,9 +1327,6 @@ wfs_reiser_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_reiser_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1466,9 +1452,6 @@ wfs_reiser_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_reiser_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs )

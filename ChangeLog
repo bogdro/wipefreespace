@@ -1,3 +1,37 @@
+2015-09-26	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 2.1
+	  Improved checking if the filesystem to be wiped is mounted. Added
+	  unit tests for WipeFreeSpace. Improved MinixFS opening of unattached
+	  loop devices.
+	* configure.ac: checking for the -z muldefs linker option (apart from
+	  the compiler option). Checking for the "check" library and
+	  additional headers and functions for unit tests.
+	* test: added unit tests for WipeFreeSpace
+	* src/wfs_util.c (wfs_get_mnt_point, en/disable_drive_cache): cleaned
+	  up common #defines
+	* wipefreespace*.desktop: updated URL addresses
+	* src/wfs_util.c: split up wfs_get_mnt_point into 2 functions (one for
+	  getmntent and the other for getmntinfo) and added a third mount
+	  check, using the /proc/mounts file. Fixed mount point buffer string
+	  termination. Added checking what file is a loop device connected to.
+	* src/wfs_ntfs.c (wfs_ntfs_chk_mount): additionally using the generic
+	  mount check function (wfs_check_mounted)
+	* src/wfs_ocfs.c (wfs_ocfs_chk_mount): additionally using the generic
+	  mount check function (wfs_check_mounted), not checking the "busy"
+	  flag anymore (false results)
+	* src/wfs_e234.c (wfs_e234_chk_mount): additionally using the generic
+	  mount check function (wfs_check_mounted)
+	* doc/wipefreespace.texi.in: added program limitations, updated exit
+	  codes
+	* src/wipefreespace.c (main): fix enabling LibHideIP and LibNetBlock
+	* src/wfs_minixfs.c (wfs_minixfs_open_fs): checking if the device is
+	  a loop device not connected to any backing device and leaving if so,
+	  because otherwise fseek() aborts the whole program.
+	* src/*.{c,h}: removed unnecessary WFS_ATTR((nonnull)) attributes
+	* src/wfs_reiser4.c (wfs_r4_wipe_journal): removed unnecessary
+	  checking of uninitialized variable
+
 2013-11-01	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 2.0
@@ -90,7 +124,6 @@
 	* src/wfs_hfsp.c (wfs_hfsp_open_fs): fixed a resource leak after a
 	  failed open attempt.
 
-
 2013-01-06	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.7.2
@@ -118,7 +151,6 @@
 	* src/wfs_fat.c (_file_seek): corrected seeking in the file, fixing
 	  wiping of partially-used blocks
 	* src/wfs_ntfs.c (wfs_ntfs_wipe_part): more checks for NULL
-
 
 2012-08-23	Bogdan Drozdowski <bogdandr@op.pl>
 
@@ -165,7 +197,6 @@
 	* src/wipefreespace.c (show_progress): fixed displaying the newline
 	* src/wfs_e234.c: more checks for NULL
 	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): fixed wiping the journal
-
 
 2012-06-01	Bogdan Drozdowski <bogdandr@op.pl>
 

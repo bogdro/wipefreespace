@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -137,7 +137,7 @@
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2013 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
+static const char author_str[] = "Copyright (C) 2007-2015 Bogdan 'bogdro' Drozdowski, bogdandr@op.pl\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -685,7 +685,7 @@ wfs_wipe_filesytem (
 		return WFS_SIGNAL;
 	}
 
-	/* checking if fs mounted *
+	/* checking if fs mounted */
 	ret = wfs_chk_mount (fs);
 	if ( ret != WFS_SUCCESS )
 	{
@@ -696,7 +696,7 @@ wfs_wipe_filesytem (
 			free (fs.fs_error);
 		}
 		return ret;
-	}*/
+	}
 
 	if ( sig_recvd != 0 )
 	{
@@ -710,7 +710,7 @@ wfs_wipe_filesytem (
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
 	{
-		/* opening the file system */
+		/* disabling the hardware disk cache */
 		if ( (sig_recvd == 0) && (opt_verbose > 0) )
 		{
 			wfs_show_msg (1, msg_cacheoff, dev_name, fs);
@@ -737,6 +737,7 @@ wfs_wipe_filesytem (
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
+			/* re-enabling the hardware disk cache in case of errors */
 			res = enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
@@ -760,10 +761,12 @@ wfs_wipe_filesytem (
 
 	if ( sig_recvd != 0 )
 	{
+		/* close the filesystems if a signal was received */
 		wfs_close_fs (fs);
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
+			/* re-enabling the hardware disk cache */
 			res = enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
@@ -779,6 +782,7 @@ wfs_wipe_filesytem (
 		return WFS_SIGNAL;
 	}
 
+	/* checking for filesystem errors */
 	if ( (opt_force == 0) && (wfs_check_err (fs) != 0) )
 	{
 		wfs_show_msg (1, wfs_err_msg_fserr, dev_name, fs);
@@ -786,6 +790,7 @@ wfs_wipe_filesytem (
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
+			/* re-enabling the hardware disk cache in case of errors */
 			res = enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
@@ -813,10 +818,12 @@ wfs_wipe_filesytem (
 
         if ( sig_recvd != 0 )
         {
+		/* close the filesystems if a signal was received */
 		wfs_close_fs (fs);
 #ifdef HAVE_IOCTL
 		if ( opt_ioctl != 0 )
 		{
+			/* re-enabling the hardware disk cache */
 			res = enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
@@ -873,6 +880,7 @@ wfs_wipe_filesytem (
 	}
 #endif
 #ifdef WFS_WANT_WFS
+	/* wiping the free space in the filesystem */
 	if ( (opt_nowfs == 0) && (sig_recvd == 0) )
 	{
 		if ( opt_verbose > 0 )
@@ -896,6 +904,7 @@ wfs_wipe_filesytem (
 		wfs_show_msg (1, msg_closefs, dev_name, fs);
 	}
 
+	/* flush the changes and close the filesystem */
 	wfs_flush_fs (fs);
 	res = wfs_close_fs (fs);
 	if ( res != WFS_SUCCESS )
@@ -910,6 +919,7 @@ wfs_wipe_filesytem (
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
 	{
+		/* re-enabling the hardware disk cache after work */
 		res = enable_drive_cache (fs, total_fs, ioctls);
 		if ( res != WFS_SUCCESS )
 		{
@@ -962,10 +972,10 @@ main (
 	textdomain (PACKAGE);
 #endif
 
-#ifdef IMYP_HAVE_LIBNETBLOCK
+#ifdef WFS_HAVE_LIBNETBLOCK
 	libnetblock_enable ();
 #endif
-#ifdef IMYP_HAVE_LIBHIDEIP
+#ifdef WFS_HAVE_LIBHIDEIP
 	libhideip_enable ();
 #endif
 

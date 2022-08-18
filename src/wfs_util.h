@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions, header file.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@ struct child_id
 #endif
 		char * dummy;
 	} chld_id;
-	char * program_name;
+	const char * program_name;
 	char ** args;
 	char * const * child_env;
 	int stdin_fd;
@@ -66,7 +66,7 @@ struct fs_ioctl
 typedef struct fs_ioctl fs_ioctl_t;
 
 
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
 	wfs_check_mounted WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
 extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
@@ -102,6 +102,9 @@ extern void WFS_ATTR ((nonnull))
 		const char * const	extra,
 		const wfs_fsid_t	wfs_fs));
 
+extern int GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+	wfs_check_loop_mounted WFS_PARAMS ((
+		const char * const dev_name));
 
 #endif	/* WFS_UTIL_H */
 

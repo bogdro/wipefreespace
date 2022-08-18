@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- JFS file system-specific functions.
  *
- * Copyright (C) 2010-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2010-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -428,9 +428,6 @@ wfs_jfs_wipe_block (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_jfs_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -482,9 +479,6 @@ wfs_jfs_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_jfs_wipe_fs (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -708,9 +702,6 @@ wfs_jfs_wipe_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_jfs_wipe_unrm (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1124,9 +1115,6 @@ wfs_jfs_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_jfs_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1147,9 +1135,6 @@ wfs_jfs_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_jfs_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1291,9 +1276,6 @@ wfs_jfs_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_jfs_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)

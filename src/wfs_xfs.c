@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -409,9 +409,6 @@ wfs_xfs_get_block_size (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_xfs_wipe_fs	(
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -458,7 +455,7 @@ wfs_xfs_wipe_fs	(
 		return WFS_BADPARAM;
 	}
 
-	/* Copy the file system name info the right places */
+	/* Copy the file system name into the right places */
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
@@ -950,7 +947,7 @@ wfs_xfs_wipe_part (
 		return WFS_BADPARAM;
 	}
 
-	/* Copy the file system name info the right places */
+	/* Copy the file system name into the right places */
 #  ifdef HAVE_ERRNO_H
 	errno = 0;
 #  endif
@@ -1547,7 +1544,7 @@ wfs_xfs_check_err (
 	}
 #endif
 
-	/* Copy the file system name info the right places */
+	/* Copy the file system name into the right places */
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif
@@ -1684,9 +1681,6 @@ wfs_xfs_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_xfs_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1834,7 +1828,7 @@ wfs_xfs_open_fs (
 		return WFS_MALLOC;
 	}
 	strncpy (xxfs->dev_name, wfs_fs->fsname, namelen + 1);
-	/* Copy the file system name info the right places */
+	/* Copy the file system name into the right places */
 #ifdef HAVE_ERRNO_H
 	errno = 0;
 #endif

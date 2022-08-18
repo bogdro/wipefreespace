@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -1530,9 +1530,6 @@ static wfs_errcode_t wfs_ntfs_wipe_journal WFS_PARAMS ((wfs_fsid_t wfs_fs));
  * \return 0 in case of no errors, other values otherwise.
  */
 static wfs_errcode_t
-#  ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#  endif
 wfs_ntfs_wipe_journal (
 #  ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -2028,9 +2025,6 @@ wfs_ntfs_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_ntfs_wipe_fs (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -2634,9 +2628,6 @@ wfs_ntfs_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_ntfs_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -2676,6 +2667,15 @@ wfs_ntfs_chk_mount (
 		ret = WFS_MNTRW;
 	}
 
+	if ( ret == WFS_SUCCESS )
+	{
+		ret = wfs_check_mounted (wfs_fs);
+		if ( ret == WFS_MNTRW )
+		{
+			error = 1L;
+		}
+	}
+
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -2692,9 +2692,6 @@ wfs_ntfs_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_ntfs_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -2819,9 +2816,6 @@ wfs_ntfs_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_ntfs_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)

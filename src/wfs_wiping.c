@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wiping functions.
  *
- * Copyright (C) 2011-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -106,7 +106,7 @@ static int wfs_compare WFS_PARAMS ((const char string1[], const char string2[]))
 #endif
 
 /**
- * Comapres the give strings case-insensitively.
+ * Compares the given strings case-insensitively.
  * \param string1 The first string.
  * \param string2 The second string.
  * \return 0 if the strings are equal, -1 is string1 is "less" than string2 and 1 otherwise.
@@ -539,4 +539,3 @@ fill_buffer (
 #endif
 	}
 }
-

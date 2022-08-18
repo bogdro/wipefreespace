@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- FAT12/16/32 file system-specific functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -1104,9 +1104,6 @@ wfs_fat_wipe_file_tails_in_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_fat_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1195,9 +1192,6 @@ wfs_fat_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_fat_wipe_fs (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1481,9 +1475,6 @@ wfs_fat_wipe_unrm_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_fat_wipe_unrm (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1636,11 +1627,11 @@ wfs_fat_open_fs (
 # endif
 	   )
 	{
-#ifdef HAVE_ERRNO_H
+# ifdef HAVE_ERRNO_H
 		error = errno;
-#else
+# else
 		error = 1L;	/* EPERM */
-#endif
+# endif
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1725,9 +1716,6 @@ wfs_fat_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_fat_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1748,9 +1736,6 @@ wfs_fat_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_fat_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1836,9 +1821,6 @@ wfs_fat_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_fat_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs

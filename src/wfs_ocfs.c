@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- OCFS file system-specific functions.
  *
- * Copyright (C) 2011-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2011-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -277,9 +277,6 @@ static int wfs_ocfs_wipe_part_blocks (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_ocfs_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -538,9 +535,6 @@ wfs_ocfs_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_ocfs_wipe_fs (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -825,9 +819,6 @@ static int wfs_ocfs_wipe_unrm_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_ocfs_wipe_unrm (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -846,7 +837,7 @@ wfs_ocfs_wipe_unrm (
 	unsigned char * buf;
 	unsigned char * jbuf;
 	size_t cluster_size;
-	int i;
+	unsigned int i;
 	/*uint32_t journal_size_in_clusters;*/
 	uint64_t journal_block_numer;
 	char jorunal_object_name[20];
@@ -1203,9 +1194,6 @@ wfs_ocfs_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_ocfs_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1224,24 +1212,27 @@ wfs_ocfs_chk_mount (
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = (wfs_errcode_t)err;
+			*error_ret = err;
 		}
 		return WFS_BADPARAM;
 	}
 
 	err = ocfs2_check_if_mounted (wfs_fs.fsname, &flags);
+
 	if ( err != 0 )
 	{
 		if ( error_ret != NULL )
 		{
-			*error_ret = (wfs_errcode_t)err;
+			*error_ret = err;
 		}
 		ret = WFS_MNTRW;
 	}
 	else
 	{
 		if ( ((flags & OCFS2_MF_SWAP) == OCFS2_MF_SWAP)
-			|| ((flags & OCFS2_MF_BUSY) == OCFS2_MF_BUSY)
+			/* the "busy" flag is set even when the filesystem
+			   is mounted read-only */
+			/*|| ((flags & OCFS2_MF_BUSY) == OCFS2_MF_BUSY)*/
 			)
 		{
 			ret = WFS_MNTRW;
@@ -1251,6 +1242,18 @@ wfs_ocfs_chk_mount (
 			&& ((flags & OCFS2_MF_READONLY) == 0) )
 		{
 			ret = WFS_MNTRW;
+		}
+	}
+
+	if ( ret == WFS_SUCCESS )
+	{
+		ret = wfs_check_mounted (wfs_fs);
+		if ( ret == WFS_MNTRW )
+		{
+			if ( error_ret != NULL )
+			{
+				*error_ret = (errcode_t)ret;
+			}
 		}
 	}
 	return ret;
@@ -1265,9 +1268,6 @@ wfs_ocfs_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_ocfs_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1353,9 +1353,6 @@ wfs_ocfs_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_ocfs_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)

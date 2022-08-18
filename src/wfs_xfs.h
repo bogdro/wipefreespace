@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions, header file.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -28,13 +28,13 @@
 
 # include "wipefreespace.h"
 
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
 	wfs_xfs_wipe_unrm WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
 	wfs_xfs_wipe_fs	WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
 	wfs_xfs_wipe_part WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
 extern int GCC_WARN_UNUSED_RESULT
@@ -43,7 +43,7 @@ extern int GCC_WARN_UNUSED_RESULT
 extern int GCC_WARN_UNUSED_RESULT
 	wfs_xfs_is_dirty WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
+extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
 	wfs_xfs_chk_mount WFS_PARAMS ((const wfs_fsid_t wfs_fs));
 
 extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))

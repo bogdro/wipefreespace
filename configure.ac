@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 2.0, bogdandr@op.pl)
+AC_INIT(wipefreespace, 2.1, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
-	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
+	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADER([config.h])
 
@@ -180,6 +180,7 @@ fi
 
 # ==================== Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_RANLIB
 AM_CONDITIONAL(ISGCC, [test "x$GCC" = "xyes"])
 
@@ -905,6 +906,21 @@ AM_GNU_GETTEXT([external])
 
 AC_CHECK_HEADERS([libintl.h])
 
+have_check=no
+#ACTION-IF-NOT-FOUND is required, otherwise 'configure' fails
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], [have_check=yes], [have_check=no])
+#AM_PATH_CHECK([], [have_check=yes])
+
+AM_CONDITIONAL([WFS_TESTS_ENABLED], [test "x$have_check" = "xyes"])
+
+if (test "x$have_check" = "xyes"); then
+
+	AC_CHECK_HEADERS([loop.h linux/loop.h])
+	AC_CHECK_FUNCS([mount umount open])
+fi
+
+# ==================== Checks for compiler options.
+
 if (test "x$GCC" = "xyes" ); then
 
 	AX_GCC_WARN_UNUSED_RESULT()
@@ -955,6 +971,7 @@ fi
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes"); then
 
 	AX_C_CHECK_FLAG([-Wl,-z -Wl,muldefs], [CFLAGS="$CFLAGS -Wl,-z -Wl,muldefs"], [CFLAGS="$CFLAGS"])
+	AX_CHECK_LINK_FLAG([-z muldefs])
 fi
 
 # this doubles the CFLAGS on compile:

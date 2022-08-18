@@ -1,10 +1,10 @@
-SUBDIRS = doc src po
+SUBDIRS = doc src po test
 
 ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST = config.rpath mkinstalldirs m4/ChangeLog wipefreespace.spec.in \
 	m4/ax_c_check_flag.m4 wipefreespace.desktop wipefreespace-kde4.desktop \
-	THANKS patches
+	THANKS patches m4/ax_check_link_flag.m4
 
 pack:	doc/wipefreespace.info
 	make dist-gzip

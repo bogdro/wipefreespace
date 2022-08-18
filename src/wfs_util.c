@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -67,10 +67,6 @@
 # include <paths.h>
 #endif
 
-#ifndef _PATH_DEVNULL
-# define	_PATH_DEVNULL	"/dev/null"
-#endif
-
 #ifndef _PATH_MOUNTED
 # ifdef MNT_MNTTAB
 #  define	_PATH_MOUNTED	MNT_MNTTAB
@@ -78,6 +74,8 @@
 #  define	_PATH_MOUNTED	"/etc/mtab"
 # endif
 #endif
+
+#define WFS_PATH_MOUNTS "/proc/mounts"
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>	/* close(), dup2(), fork(), sync(), STDIN_FILENO,
@@ -127,7 +125,7 @@
 #endif
 
 #ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>	/* for open() */
+# include <sys/stat.h>
 #endif
 
 #if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H)
@@ -157,6 +155,10 @@
 # include <locale.h>
 #endif
 
+#ifdef HAVE_LINUX_LOOP_H
+# include <linux/loop.h>
+#endif
+
 #include "wipefreespace.h"
 #include "wfs_util.h"
 
@@ -180,75 +182,107 @@
 # define STDERR_FILENO	2
 #endif
 
+#ifndef LOOPMAJOR
+# define LOOPMAJOR	7
+#endif
+
+#if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
+# define WFS_HAVE_MNTENT 1
+#else
+# undef WFS_HAVE_MNTENT
+#endif
+
+#if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
+# define WFS_HAVE_MNTINFO 1
+#else
+# undef WFS_HAVE_MNTINFO
+#endif
+
+#if !( (defined WFS_HAVE_MNTENT) || (defined WFS_HAVE_MNTINFO) )
+# define WFS_USED_ONLY_WITH_MOUNTS WFS_ATTR ((unused))
+#else
+# define WFS_USED_ONLY_WITH_MOUNTS
+#endif
+
+#ifndef HAVE_IOCTL
+# define WFS_USED_ONLY_WITH_IOCTL WFS_ATTR ((unused))
+#else
+# define WFS_USED_ONLY_WITH_IOCTL
+#endif
+
+#if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H) \
+	&& (defined HAVE_IOCTL) && (defined HAVE_SYS_STAT_H) \
+	&& (defined HAVE_LINUX_LOOP_H)
+# define WFS_HAVE_IOCTL_LOOP 1
+# define WFS_USED_ONLY_WITH_LOOP WFS_ATTR ((unused))
+#else
+# undef WFS_HAVE_IOCTL_LOOP
+# define WFS_USED_ONLY_WITH_LOOP
+#endif
+
+
 /* ======================================================================== */
 
+#ifdef WFS_HAVE_MNTENT
+
+# ifndef WFS_ANSIC
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT wfs_get_mnt_point_getmntent WFS_PARAMS ((
+	const char * const dev_name,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len,
+	int * const is_rw));
+# endif
+
 /**
- * Gets the mount point of the given device (if mounted).
+ * Gets the mount point of the given device (if mounted), using getmntent(_r).
  * \param dev_name Device to check.
  * \param error Pointer to error variable.
  * \param mnt_point Array for the mount point.
- * \param is_rw Pointer to a variavle which will tell if the filesystem
+ * \param mnt_point_len The length of the "mnt_point" array.
+ * \param is_rw Pointer to a variable which will tell if the filesystem
  *	is mounted in read+write mode (=1 if yes).
  * \return 0 in case of no errors, other values otherwise.
  */
-wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT
+# ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
-#endif
-wfs_get_mnt_point (
-#ifdef WFS_ANSIC
-	const char * const dev_name
-# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
-	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
-		WFS_ATTR ((unused))
 # endif
-	, wfs_errcode_t * const error,
-	char * const mnt_point, const size_t mnt_point_len
-# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
-	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
-		WFS_ATTR ((unused))
-# endif
-	, int * const is_rw )
-#else
-	dev_name
-# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
-	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
-		WFS_ATTR ((unused))
-# endif
-	, error, mnt_point, mnt_point_len
-# if !(((defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))) \
-	|| ((defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)))
-		WFS_ATTR ((unused))
-# endif
-	, is_rw )
+wfs_get_mnt_point_getmntent (
+# ifdef WFS_ANSIC
+	const char * const dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	int * const is_rw )
+# else
+	dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	error,
+	mnt_point,
+	mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	is_rw )
 	const char * const dev_name;
 	wfs_errcode_t * const error;
 	char * const mnt_point;
 	const size_t mnt_point_len;
 	int * const is_rw;
-#endif
+# endif
 {
-#if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
 	FILE *mnt_f;
 	struct mntent *mnt, mnt_copy;
 # ifdef HAVE_GETMNTENT_R
 	char buffer[WFS_MNTBUFLEN];
 # endif
-#else	/* ! HAVE_MNTENT_H */
-# if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
-	struct statfs * filesystems = NULL;
-	int count;
-	int i;
-# endif
-#endif
-/*
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL) || (is_rw == NULL) )
+
+	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+		|| (is_rw == NULL) || (mnt_point_len == 0) )
+	{
 		return WFS_BADPARAM;
-*/
+	}
+
 	*is_rw = 1;
 	mnt_point[0] = '\0';
 
-#if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
 # ifdef HAVE_ERRNO_H
 	errno = 0;
 # endif
@@ -295,6 +329,8 @@ wfs_get_mnt_point (
 		*is_rw = 0;
 		return WFS_SUCCESS;	/* seems not to be mounted */
 	}
+	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
+	mnt_point[mnt_point_len - 1] = '\0';
 # ifdef HAVE_HASMNTOPT
 	if (hasmntopt (mnt, MNTOPT_RW) != NULL)
 	{
@@ -303,8 +339,6 @@ wfs_get_mnt_point (
 			*error = (wfs_errcode_t)1L;
 		}
 		*is_rw = 1;
-		strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
-		mnt_point[mnt_point_len] = '\0';
 		return WFS_MNTRW;
 	}
 # else
@@ -313,16 +347,289 @@ wfs_get_mnt_point (
 		*error = (wfs_errcode_t)1L;
 	}
 	*is_rw = 1;
-	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
-	mnt_point[mnt_point_len] = '\0';
 	return WFS_MNTRW;	/* can't check for r/w, so don't do anything */
 # endif
 	*is_rw = 0;
-	strncpy (mnt_point, mnt->mnt_dir, mnt_point_len);
-	mnt_point[mnt_point_len] = '\0';
 	return WFS_SUCCESS;
-#else	/* ! HAVE_MNTENT_H */
-# if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
+}
+#endif /* WFS_HAVE_MNTENT */
+
+/* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT wfs_get_mnt_point_mounts WFS_PARAMS ((
+	const char * const dev_name,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len,
+	int * const is_rw));
+#endif
+
+static char mounts_buffer[WFS_MNTBUFLEN+1];
+static char mounts_device[WFS_MNTBUFLEN+1];
+static char mounts_flags[WFS_MNTBUFLEN+1];
+
+/**
+ * Gets the mount point of the given device (if mounted), using the mounts' file.
+ * \param dev_name Device to check.
+ * \param error Pointer to error variable.
+ * \param mnt_point Array for the mount point (must be at least WFS_MNTBUFLEN characters long).
+ * \param mnt_point_len The length of the "mnt_point" array.
+ * \param is_rw Pointer to a variable which will tell if the filesystem
+ *	is mounted in read+write mode (=1 if yes).
+ * \return 0 in case of no errors, other values otherwise.
+ */
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_get_mnt_point_mounts (
+#ifdef WFS_ANSIC
+	const char * const dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	int * const is_rw )
+#else
+	dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	error,
+	mnt_point,
+	mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	is_rw )
+	const char * const dev_name;
+	wfs_errcode_t * const error;
+	char * const mnt_point;
+	const size_t mnt_point_len;
+	int * const is_rw;
+#endif
+{
+	FILE * mounts_file;
+#ifdef WFS_HAVE_IOCTL_LOOP
+	struct stat s;
+	int res;
+	int res64;
+	int fd;
+# ifdef LOOP_GET_STATUS64
+	struct loop_info64 li64;
+# endif
+# ifdef LOOP_GET_STATUS
+	struct loop_info li;
+# endif
+#endif
+#ifndef HAVE_MEMSET
+	size_t j;
+#endif
+
+	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+		|| (is_rw == NULL) || (mnt_point_len == 0) )
+	{
+		return WFS_BADPARAM;
+	}
+
+	if ( mnt_point_len < WFS_MNTBUFLEN )
+	{
+		return WFS_MNTCHK;
+	}
+
+	mounts_file = fopen (WFS_PATH_MOUNTS, "r");
+	if ( mounts_file == NULL )
+	{
+#ifdef HAVE_ERRNO_H
+		if ( error != NULL )
+		{
+			*error = (wfs_errcode_t)errno;
+		}
+#endif
+		return WFS_MNTCHK;
+	}
+
+	while ( fgets (mounts_buffer, sizeof (mounts_buffer) - 1,
+		mounts_file) != NULL )
+	{
+		mounts_buffer[sizeof (mounts_buffer) - 1] = '\0';
+		/* sample line:
+		/dev/sda1 /boot ext4 rw,seclabel,relatime,barrier=1,data=ordered 0 0
+		*/
+/* double macros to stringify the constant correctly */
+#define WFS_STR(s) #s
+#define WFS_SCANF_STRING(LEN) "%" WFS_STR(LEN) "s %" WFS_STR(LEN) "s %*s %" WFS_STR(LEN) "s %*d %*d"
+
+		if ( sscanf (mounts_buffer,
+			WFS_SCANF_STRING (WFS_MNTBUFLEN),
+			mounts_device, mnt_point, mounts_flags) == 3 )
+		{
+			mounts_device[sizeof (mounts_device) - 1] = '\0';
+			mnt_point[mnt_point_len - 1] = '\0';
+			mounts_flags[sizeof (mounts_flags) - 1] = '\0';
+			if ( strcmp (mounts_device, dev_name) == 0 )
+			{
+				if ( strstr (mounts_flags, "rw") != NULL )
+				{
+					if ( error != NULL )
+					{
+						*error = (wfs_errcode_t)1L;
+					}
+					*is_rw = 1;
+					fclose (mounts_file);
+					return WFS_MNTRW;
+				}
+			}
+#ifdef WFS_HAVE_IOCTL_LOOP
+			/* check if the device looks like a loop device: */
+			res = stat (dev_name, &s);
+			if ( ((res >= 0)
+					&& (S_ISBLK (s.st_mode))
+					&& major (s.st_rdev) == LOOPMAJOR)
+				|| (strncmp (mounts_device, "/dev/loop", 9) == 0) )
+			{
+				/* if so, find out what it's connected to: */
+				fd = open (mounts_device, O_RDONLY);
+				if ( fd < 0 )
+				{
+					continue;
+				}
+# ifdef HAVE_MEMSET
+#  ifdef LOOP_GET_STATUS64
+				memset ( &li64, 0, sizeof (struct loop_info64) );
+#  endif
+#  ifdef LOOP_GET_STATUS
+				memset ( &li, 0, sizeof (struct loop_info) );
+#  endif
+# else /* ! HAVE_MEMSET */
+#  ifdef LOOP_GET_STATUS64
+				for ( j=0; j < sizeof (struct loop_info64); j++ )
+				{
+					((char *)&li64)[j] = '\0';
+				}
+#  endif
+#  ifdef LOOP_GET_STATUS
+				for ( j=0; j < sizeof (struct loop_info); j++ )
+				{
+					((char *)&li)[j] = '\0';
+				}
+#  endif
+# endif /* HAVE_MEMSET */
+				res = -1;
+				res64 = -1;
+# ifdef LOOP_GET_STATUS64
+				res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
+				res = res64;
+				if ( res64 < 0 )
+# endif
+				{
+# ifdef LOOP_GET_STATUS
+					res = ioctl (fd, LOOP_GET_STATUS, &li);
+# endif
+				}
+				close (fd);
+				if ( res < 0 )
+				{
+					continue;
+				}
+				res = stat (dev_name, &s);
+				if ( res < 0 )
+				{
+					continue;
+				}
+				if (
+# ifdef LOOP_GET_STATUS64
+					((res64 >= 0)
+					&& (li64.lo_device == s.st_dev)
+					&& (li64.lo_inode == s.st_ino))
+# endif
+					||
+# ifdef LOOP_GET_STATUS
+					((res >= 0)
+					&& (li.lo_device == s.st_dev)
+					&& (li.lo_inode == s.st_ino))
+# endif
+# if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
+					0
+# endif
+					)
+				{
+					/* The device being checked and the
+					   loop back-device are the same object.
+					   Check the flags. */
+					if ( strstr (mounts_flags, "rw") != NULL )
+					{
+						if ( error != NULL )
+						{
+							*error = (wfs_errcode_t)1L;
+						}
+						*is_rw = 1;
+						fclose (mounts_file);
+						return WFS_MNTRW;
+					}
+				}
+			}
+#endif
+		}
+	}
+	fclose (mounts_file);
+
+	*is_rw = 0;
+	mnt_point[mnt_point_len - 1] = '\0';
+	return WFS_SUCCESS;
+}
+
+/* ======================================================================== */
+
+#ifdef WFS_HAVE_MNTINFO
+
+# ifndef WFS_ANSIC
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT wfs_get_mnt_point_getmntinfo WFS_PARAMS ((
+	const char * const dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	int * const is_rw));
+# endif
+
+/**
+ * Gets the mount point of the given device (if mounted), using getmntinfo.
+ * \param dev_name Device to check.
+ * \param error Pointer to error variable.
+ * \param mnt_point Array for the mount point.
+ * \param mnt_point_len The length of the "mnt_point" array.
+ * \param is_rw Pointer to a variable which will tell if the filesystem
+ *	is mounted in read+write mode (=1 if yes).
+ * \return 0 in case of no errors, other values otherwise.
+ */
+static wfs_errcode_t GCC_WARN_UNUSED_RESULT
+# ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+# endif
+wfs_get_mnt_point_getmntinfo (
+# ifdef WFS_ANSIC
+	const char * const dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	int * const is_rw )
+# else
+	dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	error,
+	mnt_point,
+	mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	is_rw )
+	const char * const dev_name;
+	wfs_errcode_t * const error;
+	char * const mnt_point;
+	const size_t mnt_point_len;
+	int * const is_rw;
+# endif
+{
+	struct statfs * filesystems = NULL;
+	int count;
+	int i;
+
+	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+		|| (is_rw == NULL) || (mnt_point_len == 0) )
+	{
+		return WFS_BADPARAM;
+	}
+
 	count = getmntinfo (&filesystems, 0);
 	if ( (count <= 0) || (filesystems == NULL) )
 	{
@@ -347,21 +654,97 @@ wfs_get_mnt_point (
 				}
 				*is_rw = 1;
 				strncpy (mnt_point, filesystems[i].f_mntonname, mnt_point_len);
-				mnt_point[mnt_point_len] = '\0';
+				mnt_point[mnt_point_len - 1] = '\0';
 				return WFS_MNTRW;
 			}
 		}
 		*is_rw = 0;
 		return WFS_SUCCESS;
 	}
-# else /* ! HAVE_SYS_MOUNT_H && ! HAVE_GETMNTINFO */
-	if ( error != NULL )
+}
+#endif /* WFS_HAVE_MNTENT */
+
+/* ======================================================================== */
+
+/**
+ * Gets the mount point of the given device (if mounted).
+ * \param dev_name Device to check.
+ * \param error Pointer to error variable.
+ * \param mnt_point Array for the mount point (must be at least WFS_MNTBUFLEN characters long).
+ * \param mnt_point_len The length of the "mnt_point" array.
+ * \param is_rw Pointer to a variable which will tell if the filesystem
+ *	is mounted in read+write mode (=1 if yes).
+ * \return 0 in case of no errors, other values otherwise.
+ */
+wfs_errcode_t GCC_WARN_UNUSED_RESULT
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_get_mnt_point (
+#ifdef WFS_ANSIC
+	const char * const dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	wfs_errcode_t * const error,
+	char * const mnt_point,
+	const size_t mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	int * const is_rw )
+#else
+	dev_name WFS_USED_ONLY_WITH_MOUNTS,
+	error,
+	mnt_point,
+	mnt_point_len WFS_USED_ONLY_WITH_MOUNTS,
+	is_rw )
+	const char * const dev_name;
+	wfs_errcode_t * const error;
+	char * const mnt_point;
+	const size_t mnt_point_len;
+	int * const is_rw;
+#endif
+{
+	wfs_errcode_t ret;
+
+	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
-		*error = (wfs_errcode_t)1L;
+		return WFS_BADPARAM;
 	}
-	return WFS_MNTCHK;	/* can't check, so don't do anything */
-# endif
-#endif	/* HAVE_MNTENT_H */
+
+	*is_rw = 1;
+	mnt_point[0] = '\0';
+
+#ifdef WFS_HAVE_MNTENT
+	ret = wfs_get_mnt_point_getmntent (dev_name, error, mnt_point,
+		mnt_point_len, is_rw);
+	/* don't compare only to WFS_MNTCHK, because if one method failed,
+	   other may work */
+	if ( (ret != WFS_SUCCESS) && (ret != WFS_MNTCHK) )
+	{
+		return ret;
+	}
+#endif /* WFS_HAVE_MNTENT */
+
+#ifdef WFS_HAVE_MNTINFO
+	ret = wfs_get_mnt_point_getmntinfo (dev_name, error, mnt_point,
+		mnt_point_len, is_rw);
+	/* don't compare only to WFS_MNTCHK, because if one method failed,
+	   other may work */
+	if ( (ret != WFS_SUCCESS) && (ret != WFS_MNTCHK) )
+	{
+		return ret;
+	}
+#endif
+
+	ret = wfs_get_mnt_point_mounts (dev_name, error, mnt_point,
+		mnt_point_len, is_rw);
+	/* don't compare only to WFS_MNTCHK, because if one method failed,
+	   other may work */
+	if ( (ret != WFS_SUCCESS) && (ret != WFS_MNTCHK) )
+	{
+		return ret;
+	}
+
+	/* at least one test passed, so assume OK */
+	*is_rw = 0;
+	return WFS_SUCCESS;
 }
 
 
@@ -374,9 +757,6 @@ wfs_get_mnt_point (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_check_mounted (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -407,6 +787,78 @@ wfs_check_mounted (
 	{
 		return WFS_SUCCESS;
 	}
+}
+
+/* ======================================================================== */
+
+/**
+ * Checks if the given loop device is assigned a backing device.
+ * \param devname Device name, like /dev/loopX
+ * \return 1 when loop device is assigned, 0 otherwise.
+ */
+int GCC_WARN_UNUSED_RESULT
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_check_loop_mounted (
+#ifdef WFS_ANSIC
+	const char * const dev_name)
+#else
+	dev_name)
+	const char * const dev_name;
+#endif
+{
+#ifdef WFS_HAVE_IOCTL_LOOP
+	struct stat s;
+# ifdef LOOP_GET_STATUS64
+	struct loop_info64 li64;
+# endif
+# ifdef LOOP_GET_STATUS
+	struct loop_info li;
+# endif
+#endif /* WFS_HAVE_IOCTL_LOOP */
+	int res;
+	int fd;
+
+	if ( dev_name == NULL )
+	{
+		return 0;
+	}
+	res = stat (dev_name, &s);
+	if ( ((res >= 0) && S_ISBLK(s.st_mode) && major(s.st_rdev) == LOOPMAJOR)
+		|| (strncmp (dev_name, "/dev/loop", 9) == 0) )
+	{
+		fd = open (dev_name, O_RDONLY);
+		if ( fd < 0 )
+		{
+			return 0;
+		}
+		if ( lseek (fd, 1, SEEK_SET) < 0 )
+		{
+			close (fd);
+			return 0;
+		}
+		res = -1;
+#ifdef WFS_HAVE_IOCTL_LOOP
+# ifdef LOOP_GET_STATUS64
+		res = ioctl (fd, LOOP_GET_STATUS64, &li64);
+		if ( res < 0 )
+# endif
+		{
+# ifdef LOOP_GET_STATUS
+			res = ioctl (fd, LOOP_GET_STATUS, &li);
+# endif
+		}
+#endif /* WFS_HAVE_IOCTL_LOOP */
+		close (fd);
+		if ( res < 0 )
+		{
+			return 0;
+		}
+		return 1;
+	}
+	/* either not a loop device or can't be checked by stat() */
+	return 1;
 }
 
 /* ======================================================================== */
@@ -845,32 +1297,14 @@ WFS_ATTR ((nonnull))
 #endif
 enable_drive_cache (
 #ifdef WFS_ANSIC
-	wfs_fsid_t wfs_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, const int total_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, fs_ioctl_t ioctls[]
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
+	wfs_fsid_t wfs_fs WFS_USED_ONLY_WITH_IOCTL,
+	const int total_fs WFS_USED_ONLY_WITH_IOCTL,
+	fs_ioctl_t ioctls[] WFS_USED_ONLY_WITH_IOCTL
 	)
 #else
-	wfs_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, total_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, ioctls
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
+	wfs_fs WFS_USED_ONLY_WITH_IOCTL,
+	total_fs WFS_USED_ONLY_WITH_IOCTL,
+	ioctls WFS_USED_ONLY_WITH_IOCTL
 	)
 	wfs_fsid_t wfs_fs;
 	const int total_fs;
@@ -968,32 +1402,14 @@ WFS_ATTR ((nonnull))
 #endif
 disable_drive_cache (
 #ifdef WFS_ANSIC
-	wfs_fsid_t wfs_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, const int total_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, fs_ioctl_t ioctls[]
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
+	wfs_fsid_t wfs_fs WFS_USED_ONLY_WITH_IOCTL,
+	const int total_fs WFS_USED_ONLY_WITH_IOCTL,
+	fs_ioctl_t ioctls[] WFS_USED_ONLY_WITH_IOCTL
 	)
 #else
-	wfs_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, total_fs
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
-	, ioctls
-#ifndef HAVE_IOCTL
-		WFS_ATTR ((unused))
-#endif
+	wfs_fs WFS_USED_ONLY_WITH_IOCTL,
+	total_fs WFS_USED_ONLY_WITH_IOCTL,
+	ioctls WFS_USED_ONLY_WITH_IOCTL
 	)
 	wfs_fsid_t wfs_fs;
 	const int total_fs;

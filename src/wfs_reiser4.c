@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ReiserFSv4 file system-specific functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -562,9 +562,6 @@ wfs_r4_wipe_part_work (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_r4_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs
@@ -624,9 +621,6 @@ wfs_r4_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_r4_wipe_fs (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -833,7 +827,7 @@ wfs_r4_wipe_journal (
 	}
 	r4 = (reiser4_fs_t *) bd->wfs_fs.fs_backend;
 	error_ret = (errno_t *) bd->wfs_fs.fs_error;
-	if ( (bd->obj == NULL) || (r4 == NULL) )
+	if ( r4 == NULL )
 	{
 		wfs_show_progress (WFS_PROGRESS_UNRM, 50, &prev_percent);
 		return WFS_BADPARAM;
@@ -1149,6 +1143,7 @@ wfs_r4_wipe_unrm_work (
 	{
 		reiser4_journal_sync (r4->journal);
 		bd.block_number = 0;
+		bd.obj = NULL;
 		error = reiser4_journal_layout (r4->journal,
 			wfs_r4_wipe_journal, &bd);
 		if ( error != 0 )
@@ -1294,9 +1289,6 @@ wfs_r4_wipe_unrm_work (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_r4_wipe_unrm (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1452,9 +1444,6 @@ wfs_r4_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_r4_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1475,9 +1464,6 @@ wfs_r4_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_r4_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1608,9 +1594,6 @@ wfs_r4_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_r4_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs )

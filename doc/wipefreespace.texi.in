@@ -98,6 +98,16 @@ doing any harm to existing files. The wiped blocks are @strong{NOT} marked as us
 This program also tries to wipe the remaining space in blocks partially used by existing files and
 wipe deleted elements' names.
 
+@strong{NOTE}: The program's operations are limited by:
+@itemize
+@item the capabilities of the filesystem-specific library that is used (see @ref{Filesystems support})
+@item the mounting of the filesystem being wiped (filesystems mounted in read+write mode
+will not be wiped, due to data security reasons)
+@item the permissions granted by the operating system, like mounting a read+write filesystem
+with a loop device in read-only mode still doesn't allow it to be wiped
+@item the operating system's limits (like memory)
+@end itemize
+
 THE PROGRAM HAS BEEN TESTED, BUT IT MAY NOW OR LATER CONTAIN ERRORS, WHICH MAY LEAD TO DATA LOSS.
 ALWAYS BACKUP YOUR DATA BEFORE USING THIS PROGRAM. READ THE LICENSE FOR A WARRANTY (THERE IS NONE).
 
@@ -732,6 +742,7 @@ is root. Read the first chapter of this documentation for an explanation and a s
 @item -23: Exec error (XFS).
 @item -24: Seek error (mostly ReiserFSv4).
 @item -25: Block reading failed.
+@item -26: I/O control command (ioctl) failed.
 @item -100: A signal was caught and the program was forced to exit.
 @item 128+N: The program was terminated by signal number N (the signal either wasn't caught
 or was caught after SIGCONT was received).
@@ -1707,7 +1718,7 @@ marked with capital letters in the header:
 
 @quotation
 # YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2013 Bogdan 'bogdro' Drozdowski@*
+# Copyright (C) 2007-2015 Bogdan 'bogdro' Drozdowski@*
 # This file is distributed under the same license as@*
 # the wipefreespace package.@*
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.@*

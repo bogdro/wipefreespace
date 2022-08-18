@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2/3/4 file system-specific functions.
  *
- * Copyright (C) 2007-2013 Bogdan Drozdowski, bogdandr (at) op.pl
+ * Copyright (C) 2007-2015 Bogdan Drozdowski, bogdandr (at) op.pl
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -104,6 +104,7 @@
 
 #include "wfs_ext234.h"
 #include "wfs_signal.h"
+#include "wfs_util.h"
 #include "wfs_wiping.h"
 
 struct wfs_e234_block_data
@@ -637,9 +638,6 @@ e2_wipe_unrm_dir (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_e234_wipe_part (
 # ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -847,9 +845,6 @@ wfs_e234_wipe_part (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_e234_wipe_fs (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -972,9 +967,6 @@ static wfs_errcode_t wfs_e234_wipe_journal WFS_PARAMS ((const wfs_fsid_t wfs_fs)
  * \return 0 in case of no errors, other values otherwise.
  */
 static wfs_errcode_t
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_e234_wipe_journal (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1094,9 +1086,6 @@ wfs_e234_wipe_journal (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-# ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-# endif
 wfs_e234_wipe_unrm (
 # ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1260,9 +1249,6 @@ wfs_e234_open_fs (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t GCC_WARN_UNUSED_RESULT
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_e234_chk_mount (
 #ifdef WFS_ANSIC
 	const wfs_fsid_t wfs_fs)
@@ -1294,6 +1280,7 @@ wfs_e234_chk_mount (
 		error = e2error;
 		ret = WFS_MNTCHK;
 	}
+
 	if ( 	(ret == WFS_SUCCESS) &&
 		((mtflags & EXT2_MF_MOUNTED) != 0) &&
 		((mtflags & EXT2_MF_READONLY) == 0)
@@ -1302,6 +1289,16 @@ wfs_e234_chk_mount (
 		error = 1L;
 		ret = WFS_MNTRW;
 	}
+
+	if ( ret == WFS_SUCCESS )
+	{
+		ret = wfs_check_mounted (wfs_fs);
+		if ( ret == WFS_MNTRW )
+		{
+			error = 1L;
+		}
+	}
+
 	if ( error_ret != NULL )
 	{
 		*error_ret = error;
@@ -1319,9 +1316,6 @@ wfs_e234_chk_mount (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_e234_close_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)
@@ -1426,9 +1420,6 @@ wfs_e234_is_dirty (
  * \return 0 in case of no errors, other values otherwise.
  */
 wfs_errcode_t
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
 wfs_e234_flush_fs (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs)

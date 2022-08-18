@@ -220,11 +220,17 @@
 /* Define to 1 if you have the <linux/hdreg.h> header file. */
 #undef HAVE_LINUX_HDREG_H
 
+/* Define to 1 if you have the <linux/loop.h> header file. */
+#undef HAVE_LINUX_LOOP_H
+
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
 /* Whether you have the long long type. */
 #undef HAVE_LONG_LONG
+
+/* Define to 1 if you have the <loop.h> header file. */
+#undef HAVE_LOOP_H
 
 /* Define to 1 if you have the <machine/endian.h> header file. */
 #undef HAVE_MACHINE_ENDIAN_H
@@ -250,6 +256,9 @@
 /* Define to 1 if you have the <mntent.h> header file. */
 #undef HAVE_MNTENT_H
 
+/* Define to 1 if you have the `mount' function. */
+#undef HAVE_MOUNT
+
 /* Whether you have the ntfs-3g/ntfs_volume.h header. */
 #undef HAVE_NTFS_3G_NTFS_VOLUME_H
 
@@ -270,6 +279,9 @@
 
 /* Define to 1 if the system has the type `off64_t'. */
 #undef HAVE_OFF64_T
+
+/* Define to 1 if you have the `open' function. */
+#undef HAVE_OPEN
 
 /* Define to 1 if you have the <paths.h> header file. */
 #undef HAVE_PATHS_H
@@ -400,6 +412,9 @@
 /* Define to 1 if you have the <time.h> header file. */
 #undef HAVE_TIME_H
 
+/* Define to 1 if you have the `umount' function. */
+#undef HAVE_UMOUNT
+
 /* Whether you have the unistd.h header. */
 #undef HAVE_UNISTD_H
 
@@ -431,6 +446,9 @@
 /* Define to 1 if `major', `minor', and `makedev' are declared in
    <sysmacros.h>. */
 #undef MAJOR_IN_SYSMACROS
+
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
 
 /* Name of package */
 #undef PACKAGE
