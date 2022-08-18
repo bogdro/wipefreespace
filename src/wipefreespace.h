@@ -162,10 +162,12 @@ typedef long int off64_t;
 #   include <ntfs-3g/ntfs_volume.h>
 /*#   include <ntfs-3g/ntfs_version.h> missing */
 #   define	WFS_NTFS	1
+#   if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
 /* fix compatibility with MinixFS: */
-#   define u8 u8_minix
-#   define u16 u16_minix
-#   define u32 u32_minix
+#    define u8 u8_minix
+#    define u16 u16_minix
+#    define u32 u32_minix
+#   endif
 #  endif
 # else
 #  if ((defined HAVE_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_VOLUME_H)) \
@@ -178,16 +180,25 @@ typedef long int off64_t;
 #    include <ntfs-3g/volume.h>
 /*#    include <ntfs-3g/version.h> missing */
 #    define	WFS_NTFS	1
+#    if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
 /* fix compatibility with MinixFS: */
-#    define u8 u8_minix
-#    define u16 u16_minix
-#    define u32 u32_minix
+#     define u8 u8_minix
+#     define u16 u16_minix
+#     define u32 u32_minix
+#    endif
 #   endif
 #  else
 #   if (defined HAVE_VOLUME_H) && ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 #    include <volume.h>
 #    ifndef HAVE_LIBNTFS_3G
 #     include <version.h>
+#    else
+#     if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
+/* fix compatibility with MinixFS: */
+#      define u8 u8_minix
+#      define u16 u16_minix
+#      define u32 u32_minix
+#     endif
 #    endif
 #    define	WFS_NTFS	1
 #   else

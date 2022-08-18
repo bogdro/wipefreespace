@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.6, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.6.1, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -652,23 +652,38 @@ if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	wfs_have_reiser4=yes
 fi
 
-AM_CONDITIONAL(EXT234FS, \
-	[  test "x$has_ext234_h"	= "xyes"	\
-	&& test "x$libext234"		= "xyes"	\
-	&& test "x$feat_ext234"		= "xyes"	\
-	&& test "x$have_dev_t"		= "xyes"] )
-
-AM_CONDITIONAL(NTFS, \
-	[  test "x$has_ntfs_h"		= "xyes"	\
-	&& test "x$libntfs"		= "xyes"	\
-	&& test "x$feat_ntfs"		= "xyes"] )
-
 AM_CONDITIONAL(REISER4, [test "x$wfs_have_reiser4" = "xyes"] )
 
-AM_CONDITIONAL(FATFS, \
-	[  test "x$has_tffs_h"		= "xyes"	\
+wfs_have_ext234fs=no
+if (	   test "x$has_ext234_h"	= "xyes"	\
+	&& test "x$libext234"		= "xyes"	\
+	&& test "x$feat_ext234"		= "xyes"	\
+	&& test "x$have_dev_t"		= "xyes" ); then
+
+	wfs_have_ext234fs=yes
+fi
+
+AM_CONDITIONAL(EXT234FS, [test "x$wfs_have_ext234fs" = "xyes"] )
+
+wfs_have_ntfs=no
+if (	   test "x$has_ntfs_h"		= "xyes"	\
+	&& test "x$libntfs"		= "xyes"	\
+	&& test "x$feat_ntfs"		= "xyes" ); then
+
+	wfs_have_ntfs=yes
+fi
+
+AM_CONDITIONAL(NTFS, [test "x$wfs_have_ntfs" = "xyes"] )
+
+wfs_have_fatfs=no
+if (	   test "x$has_tffs_h"		= "xyes"	\
 	&& test "x$libtffs"		= "xyes"	\
-	&& test "x$feat_fatfs"		= "xyes"] )
+	&& test "x$feat_fatfs"		= "xyes" ); then
+
+	wfs_have_fatfs=yes
+fi
+
+AM_CONDITIONAL(FATFS, [test "x$wfs_have_fatfs" = "xyes"] )
 
 wfs_have_minixfs=no
 if (	   test "x$has_minixfs_h"	= "xyes"	\
@@ -899,17 +914,18 @@ fi
 
 AM_CONDITIONAL(REISERFS, [ test "x$wfs_have_reiserfs" = "xyes" ])
 
-if  (  test "x$has_ext234_h"		!= "xyes"	\
-    && test "x$has_ntfs_h"		!= "xyes"	\
+if  (  test "x$wfs_have_ext234fs"	!= "xyes"	\
+    && test "x$wfs_have_ntfs"		!= "xyes"	\
     && test "x$wfs_have_xfs"		!= "xyes"	\
-    && test "x$has_reiser_h"		!= "xyes"	\
-    && test "x$has_libreiser4_h"	!= "xyes"	\
-    && test "x$has_tffs_h"		!= "xyes"	\
-    && test "x$has_minixfs_h"		!= "xyes"	\
-    && test "x$has_jfs_h"		!= "xyes"	\
-    && test "x$has_hfsp_h"		!= "xyes"
+    && test "x$wfs_have_reiserfs"	!= "xyes"	\
+    && test "x$wfs_have_reiser4"	!= "xyes"	\
+    && test "x$wfs_have_fatfs"		!= "xyes"	\
+    && test "x$wfs_have_minixfs"	!= "xyes"	\
+    && test "x$wfs_have_jfs"		!= "xyes"	\
+    && test "x$wfs_have_hfsp"		!= "xyes"	\
+    && test "x$wfs_have_ocfs"		!= "xyes"
     ); then
-	AC_MSG_ERROR([[I need at least one of the filesystem headers with its required data types (if any).]])
+	AC_MSG_ERROR([[I need headers/libraries/programs for at least one of the filesystems.]])
 fi
 
 AM_GNU_GETTEXT_VERSION([0.17])

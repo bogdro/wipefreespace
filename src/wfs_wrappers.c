@@ -107,7 +107,9 @@ wipe_unrm (
 {
 	errcode_enum ret_wfs = WFS_SUCCESS;
 # if (defined WFS_EXT234) || (defined WFS_REISER) \
-	|| (defined WFS_NTFS) || (defined WFS_REISER4)
+	|| (defined WFS_NTFS) || (defined WFS_REISER4) \
+	|| (defined WFS_MINIXFS) || (defined WFS_HFSP) \
+	|| (defined WFS_OCFS)
 	fselem_t elem;
 # endif
 

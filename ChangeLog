@@ -1,3 +1,14 @@
+2012-06-01	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.6.1
+	  This is a bugfix-only release.
+	* src/wipefreespace.h: fixed compiling with NTFS and without Minix.
+	* src/wfs_wrappers.c (wipe_unrm): fixed compiling with Minix or HFSP
+	  or OCFS and without all of: ext2/3/4, NTFS, Reiser3 and Reiser4.
+	* configure.ac: fixed running with OCFS support enabled and all
+	  other filesystems disabled. Changed checking for detected
+	  filesystems' support.
+
 2012-05-06	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.6
@@ -13,7 +24,7 @@
 	* configure.ac, src/wfs_ntfs.c, src/list.h, src/ntfs/list.h,
 	  src/ntfs-3g/list.h: workaround for the missing NTFS list.h header.
 	* src/wfs_ntfs.c (wfs_ntfs_close_fs): fixed error handling.
-	* src/wfs_ocfs.{c,h}, src/wipefreespace.c, src/wfs_util.c,
+	* src/wfs_ocfs.{c,h}, src/wipefreespace.{c,h}, src/wfs_util.c,
 	  src/wfs_wrappers.c, configure.ac: OCFS/OCFS2 support.
 	* configure.ac: printing a summary of wiping areas enabled.
 
