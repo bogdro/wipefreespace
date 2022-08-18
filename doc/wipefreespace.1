@@ -41,7 +41,9 @@ Perform additional wiping with zeros
 .IP -l|--license
 Print license information
 .IP "-n|--iterations NNN"
-Number of passes (>0, default: 35 in Gutmann method, 25 in random)
+Number of passes (greater than 0)
+.IP "--method NAME"
+Use the given method for wiping (read below).
 .IP --nopart
 Do NOT wipe free space in partially used blocks.
 .IP --nounrm
@@ -55,6 +57,18 @@ Verbose output. Use twice for more. This also enables progress bars, but be warn
 not always be accurate or increase at a constant rate.
 .IP -V|--version
 Print version number
+
+.SH "WIPING METHODS"
+The following method names (case-insensitive) are available:
+.IP Gutmann
+- method similar to Gutmann's, the default, 36 passes
+.IP random
+- shred-like, 25 passes
+.IP schneier
+- Shneier's method, 7 passes, contains ITSG-06
+.IP dod
+- DoD, 3 passes, contains NAVSO P-5239-26 and German Federal Office for Information Security
+
 
 .SH DIAGNOSTICS
 The program returns with 0 exit code if everything went fine. If there

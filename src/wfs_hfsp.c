@@ -161,7 +161,7 @@ wfs_hfsp_wipe_part_file (
 	}
 
 	blockiter_init (&iter, &(FS.hfsp_volume), &(file->record.u.file.data_fork),
-		HFSP_EXTENT_DATA, file->record.u.file.id);
+		(UInt8)HFSP_EXTENT_DATA, file->record.u.file.id);
 	/* skip the full blocks */
 	if ( blockiter_skip (&iter,
 		file->record.u.file.data_fork.total_blocks/wfs_hfsp_get_block_size (FS)) != 0 )

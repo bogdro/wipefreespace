@@ -28,8 +28,8 @@
 
 # include "wipefreespace.h"
 
-extern void init_wiping PARAMS ((const unsigned long int number_of_passes,
-	const int verbose, const int allzero));
+extern unsigned long int init_wiping PARAMS ((unsigned long int number_of_passes,
+	const int verbose, const int allzero, const char * const method));
 
 extern void WFS_ATTR ((nonnull))
 	fill_buffer PARAMS ((unsigned long int pat_no, unsigned char * const buffer,

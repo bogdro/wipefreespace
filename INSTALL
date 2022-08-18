@@ -26,7 +26,10 @@ Requirements for compiling the full version:
   included in something like ntfsprogs-devel). If you don't have anything
   like this installed or available (check twice), then go to
   	http://www.linux-ntfs.org/
-  Then compile and install that package.
+  Then compile and install that package. You can also use ntfs3g-ntfsprogs:
+	http://www.tuxera.com/community/ntfs-3g-download/
+  Remember to copy all the *.h files from the "include" directory to the
+  destination "include" directory (like /usr/include/ntfs/).
 
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/. The following utilities
@@ -154,6 +157,11 @@ If you do not wish support for a particular wiping operation, give the
  are wiping free space, undelete data and partially-used blocks,
  respectively). You cannot disable all of these.
 Run './configure --help' for details.
+
+If you do NOT wish wipefreespace to use the network or get the computer's IP
+ address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
+	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
+NOTE: this may cause network filesystem wiping to fail.
 
 Type 'make' to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program

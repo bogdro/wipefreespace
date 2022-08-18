@@ -49,7 +49,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_e234_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_e234_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 /* fix conflict with reiser4: */
 #undef blk_t
@@ -1037,22 +1039,23 @@ wfs_e234_close_fs (
 #endif
 {
 	errcode_enum ret = WFS_SUCCESS;
+	errcode_t wfs_err;
 
 	if ( FS.e2fs == NULL )
 	{
 		return WFS_BADPARAM;
 	}
 
+	wfs_err = ext2fs_close ( FS.e2fs );
 	if ( error != NULL )
 	{
-		error->errcode.e2error = ext2fs_close ( FS.e2fs );
+		error->errcode.e2error = wfs_err;
 		if ( error->errcode.e2error != 0 )
 		{
 			show_error ( *error, err_msg_close, FS.fsname, FS );
 			ret = WFS_FSCLOSE;
 		}
 	}
-	else ext2fs_close ( FS.e2fs );
 	return ret;
 }
 

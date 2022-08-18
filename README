@@ -63,7 +63,10 @@ Requirements for compiling the full version:
   included in something like ntfsprogs-devel). If you don't have anything
   like this installed or available (check twice), then go to
   	http://www.linux-ntfs.org/
-  Then compile and install that package.
+  Then compile and install that package. You can also use ntfs3g-ntfsprogs:
+	http://www.tuxera.com/community/ntfs-3g-download/
+  Remember to copy all the *.h files from the "include" directory to the
+  destination "include" directory (like /usr/include/ntfs/).
 
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
   Get these at http://oss.sgi.com/projects/xfs/. The following utilities
@@ -127,7 +130,7 @@ Requirements for compiling the full version:
 https://launchpad.net/ubuntu/+archive/primary/+files/hfsplus_1.0.4.orig.tar.gz
   to get it. Before compiling, apply the patch:
 	patch -F10 -p1 < /path/to/wipefreespace-XX/patches/hfsplus-1.0.4.diff
-  After compiling, install all the libraries and ALL the header files
+  After compiling, install all the libraries and ALL the *.h header files
   from the libhfsp/src/ directory where the C compiler can find them (or
   put the correct -I and -L options in the compiler flags).
 
@@ -191,6 +194,11 @@ If you do not wish support for a particular wiping operation, give the
  respectively). You cannot disable all of these.
 Run './configure --help' for details.
 
+If you do NOT wish wipefreespace to use the network or get the computer's IP
+ address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
+	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
+NOTE: this may cause network filesystem wiping to fail.
+
 Type 'make' to compile the program.
 Documentation will be compiled, if you have the 'makeinfo' program
  ('texinfo' package).
@@ -218,9 +226,9 @@ Command line options:
 -f|--force		Wipe even if the file system has errors
 -h|--help		Print help
 --last-zero		Perform additional wiping with zeros
--l|--license		Print license information
--n|--iterations NNN	Number of passes (>0, default: 35 in Gutmann method,
-				25 in random)
+-l|--license|--licence	Print license information
+--method <name>		Use the given method for wiping (read below)
+-n|--iterations NNN	Number of passes (greater than 0)
 --nopart		Do NOT wipe free space in partially used blocks
 --nounrm		Do NOT wipe undelete information
 --nowfs			Do NOT wipe free space on file system
@@ -235,6 +243,12 @@ The '/dev/XY' part stands for a device with a supported file system.
  command line, but they will be wiped sequentially, NOT in
  multiple threads. WipeFreeSpace is not multi-threaded and probably
  won't be, because the libraries used can be not thread-safe.
+The following method names (case-insensitive) are available:
+ - Gutmann (method similar to Gutmann's, the default, 36 passes)
+ - random (shred-like, 25 passes)
+ - schneier (Shneier's method, 7 passes, contains ITSG-06)
+ - dod (DoD, 3 passes, contains NAVSO P-5239-26 and German Federal
+   Office for Information Security)
 Each given filesystem is wiped ONLY ONCE, no matter how many times it
  appears on the command line.
 WipeFreeSpace also works for file systems created inside regular

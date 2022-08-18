@@ -32,7 +32,9 @@
 /*#define REISER4_PLUGIN_H 1 - required for reiser4/types.h */
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_minix_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_minix_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 
 #include <stdio.h>

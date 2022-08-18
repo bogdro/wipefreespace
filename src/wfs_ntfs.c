@@ -76,25 +76,45 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_ntfs_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_ntfs_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #undef BLOCK_SIZE	/* fix conflict with MinixFS. Unused in NTFS anyway. */
 
-#if (defined HAVE_NTFS_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
-# include <ntfs/ntfs_volume.h>
-# include <ntfs/ntfs_attrib.h>	/* ntfs_attr_search_ctx() */
-# include <ntfs/ntfs_list.h>	/* list_for_each_safe() */
-# include <ntfs/ntfs_mft.h>	/* ntfs_mft_records_write() */
-# include <ntfs/ntfs_logfile.h>	/* ntfs_empty_logfile() */
-#else
-# if (defined HAVE_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
-#  include <ntfs/volume.h>
-#  include <ntfs/attrib.h>	/* ntfs_attr_search_ctx() */
-#  include <ntfs/list.h>	/* list_for_each_safe() */
-#  include <ntfs/mft.h>		/* ntfs_mft_records_write() */
-#  include <ntfs/logfile.h>	/* ntfs_empty_logfile() */
+#if ((defined HAVE_NTFS_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_NTFS_VOLUME_H)) \
+	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
+# ifdef HAVE_NTFS_NTFS_VOLUME_H
+#  include <ntfs/ntfs_volume.h>
+#  include <ntfs/ntfs_attrib.h>		/* ntfs_attr_search_ctx() */
+#  include <ntfs/ntfs_list.h>		/* list_for_each_safe() */
+#  include <ntfs/ntfs_mft.h>		/* ntfs_mft_records_write() */
+#  include <ntfs/ntfs_logfile.h>	/* ntfs_empty_logfile() */
 # else
-#  if (defined HAVE_VOLUME_H) && (defined HAVE_LIBNTFS)
+#  include <ntfs-3g/ntfs_volume.h>
+#  include <ntfs-3g/ntfs_attrib.h>	/* ntfs_attr_search_ctx() */
+#  include <ntfs-3g/ntfs_list.h>	/* list_for_each_safe() */
+#  include <ntfs-3g/ntfs_mft.h>		/* ntfs_mft_records_write() */
+#  include <ntfs-3g/ntfs_logfile.h>	/* ntfs_empty_logfile() */
+# endif
+#else
+# if ((defined HAVE_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_VOLUME_H)) \
+	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
+#  ifdef HAVE_NTFS_VOLUME_H
+#   include <ntfs/volume.h>
+#   include <ntfs/attrib.h>		/* ntfs_attr_search_ctx() */
+#   include <ntfs/list.h>		/* list_for_each_safe() */
+#   include <ntfs/mft.h>		/* ntfs_mft_records_write() */
+#   include <ntfs/logfile.h>		/* ntfs_empty_logfile() */
+#  else
+#   include <ntfs-3g/volume.h>
+#   include <ntfs-3g/attrib.h>		/* ntfs_attr_search_ctx() */
+#   include <ntfs-3g/list.h>		/* list_for_each_safe() */
+#   include <ntfs-3g/mft.h>		/* ntfs_mft_records_write() */
+#   include <ntfs-3g/logfile.h>		/* ntfs_empty_logfile() */
+#  endif
+# else
+#  if (defined HAVE_VOLUME_H) && ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 #   include <volume.h>
 #   include <attrib.h>
 #   include <list.h>
@@ -173,32 +193,48 @@ struct data
 	char		 padding[4];	/* Unused: padding to 64 bit. */
 };
 
+#ifndef HAVE_LIBNTFS_3G
 struct ufile
 {
 	long long int	 inode;		/* MFT record number */
 	time_t		 date;		/* Last modification date/time */
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
+# if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	struct ntfs_list_head name;	/* A list of filenames */
-#else
+# else
 	struct list_head name;		/* A list of filenames */
-#endif
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
+# endif
+# if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	struct ntfs_list_head data;	/* A list of data streams */
-#else
+# else
 	struct list_head data;		/* A list of data streams */
-#endif
+# endif
 	char		*pref_name;	/* Preferred filename */
 	char		*pref_pname;	/*	     parent filename */
 	long long int	 max_size;	/* Largest size we find */
 	int		 attr_list;	/* MFT record may be one of many */
 	int		 directory;	/* MFT record represents a directory */
-#if (defined HAVE_NTFS_NTFS_VOLUME_H)
+# if (defined HAVE_NTFS_NTFS_VOLUME_H)
 	NTFS_MFT_RECORD	*mft;		/* Raw MFT record */
-#else
+# else
 	MFT_RECORD	*mft;		/* Raw MFT record */
-#endif
+# endif
 	char		 padding[4];	/* Unused: padding to 64 bit. */
 };
+
+#else /* defined HAVE_LIBNTFS_3G */
+struct ufile {
+        long long        inode;         /* MFT record number */
+        time_t           date;          /* Last modification date/time */
+        struct list_head name;          /* A list of filenames */
+        struct list_head data;          /* A list of data streams */
+        char            *pref_name;     /* Preferred filename */
+        char            *pref_pname;    /*           parent filename */
+        long long        max_size;      /* Largest size we find */
+        int              attr_list;     /* MFT record may be one of many */
+        int              directory;     /* MFT record represents a directory */
+        MFT_RECORD      *mft;           /* Raw MFT record */
+};
+#endif /* ! defined HAVE_LIBNTFS_3G */
 
 #ifndef USE_NTFSWIPE
 # ifndef WFS_ANSIC
@@ -275,6 +311,9 @@ wipe_compressed_attribute (
 	size_t bufsize = 0;
 	unsigned long int j;
 	s64 two = 2;
+#  ifdef HAVE_LIBNTFS_3G
+	s64 s64zero = 0;
+#  endif
 	/*wfs_fsid_t FS;*/
 	int go_back;
 	int selected[NPAT];
@@ -395,11 +434,19 @@ wipe_compressed_attribute (
 			}
 			if ( mybuf != NULL )
 			{
+#  ifndef HAVE_LIBNTFS_3G
 				ret = ntfs_rl_pwrite (vol, na->rl, offset, size, mybuf);
+#  else
+				ret = ntfs_rl_pwrite (vol, na->rl, s64zero, offset, size, mybuf);
+#  endif
 			}
 			else
 			{
+#  ifndef HAVE_LIBNTFS_3G
 				ret = ntfs_rl_pwrite (vol, na->rl, offset, size, buf);
+#  else
+				ret = ntfs_rl_pwrite (vol, na->rl, s64zero, offset, size, buf);
+#  endif
 			}
 			/* Flush after each writing, if more than 1 overwriting needs to be done.
 			   Allow I/O bufferring (efficiency), if just one pass is needed. */
@@ -443,11 +490,19 @@ wipe_compressed_attribute (
 			{
 				if ( mybuf != NULL )
 				{
+#  ifndef HAVE_LIBNTFS_3G
 					ret = ntfs_rl_pwrite (vol, na->rl, offset, size, mybuf);
+#  else
+					ret = ntfs_rl_pwrite (vol, na->rl, s64zero, offset, size, mybuf);
+#  endif
 				}
 				else
 				{
+#  ifndef HAVE_LIBNTFS_3G
 					ret = ntfs_rl_pwrite (vol, na->rl, offset, size, buf);
+#  else
+					ret = ntfs_rl_pwrite (vol, na->rl, s64zero, offset, size, buf);
+#  endif
 				}
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
@@ -526,6 +581,9 @@ wipe_attribute (
 	/*wfs_fsid_t FS;*/
 	int selected[NPAT];
 	error_type error;
+#  ifdef HAVE_LIBNTFS_3G
+	s64 s64zero = 0;
+#  endif
 
 	if ( (vol == NULL) || (na == NULL) || (buf == NULL) ) return 0;
 
@@ -548,7 +606,11 @@ wipe_attribute (
 	       		break;
 		}
 
+#  ifndef HAVE_LIBNTFS_3G
 		ret = ntfs_rl_pwrite (vol, na->rl, offset, size, buf);
+#  else
+		ret = ntfs_rl_pwrite (vol, na->rl, s64zero, offset, size, buf);
+#  endif
 		if ( (ret != size) || (sig_recvd!=0) )
 		{
 			return -1;
@@ -575,7 +637,11 @@ wipe_attribute (
 #  endif
 		if ( sig_recvd == 0 )
 		{
+#  ifndef HAVE_LIBNTFS_3G
 			ret = ntfs_rl_pwrite (vol, na->rl, offset, size, buf);
+#  else
+			ret = ntfs_rl_pwrite (vol, na->rl, s64zero, offset, size, buf);
+#  endif
 			if ( (ret != size) || (sig_recvd!=0) )
 			{
 				return -1;
@@ -2254,17 +2320,18 @@ wfs_ntfs_close_fs (
 #endif
 {
 	errcode_enum ret = WFS_SUCCESS;
+	int wfs_err;
 
+	wfs_err = ntfs_umount (FS.ntfs, FALSE);
 	if ( error != NULL )
 	{
-		error->errcode.gerror = ntfs_umount (FS.ntfs, FALSE);
-		if ( error->errcode.gerror != 0 )
+		error->errcode.gerror = wfs_err;
+		if ( wfs_err != 0 )
 		{
 			show_error ( *error, err_msg_close, FS.fsname, FS );
 			ret = WFS_FSCLOSE;
 		}
 	}
-	else ntfs_umount (FS.ntfs, FALSE);
 	FS.ntfs = NULL;
 	return ret;
 }

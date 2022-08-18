@@ -55,7 +55,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_r4_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_r4_sig(a,b,c,d)
+
 /* this must be here, as it defines blk_t: */
 #include "wipefreespace.h"
 

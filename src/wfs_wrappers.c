@@ -36,7 +36,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_wrap_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_wrap_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 

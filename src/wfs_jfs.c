@@ -59,7 +59,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_jfs_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_jfs_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 
 #if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
@@ -97,6 +99,8 @@
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+
+static char wfs_jfs_dev_path[] = "/dev";
 
 /* ============================================================= */
 /* JFS external symbols, but declared nowhere. */
@@ -688,7 +692,7 @@ wfs_jfs_wipe_unrm (
 	else
 	{
 		/* journal on an external device - FS.jfs.super->s_loguuid has the UUID */
-		journal_fp = walk_dir ("/dev", FS.jfs.super.s_loguuid,
+		journal_fp = walk_dir (wfs_jfs_dev_path, FS.jfs.super.s_loguuid,
 			0 /*is_label*/, 1 /*is_log*/, &journal_in_use);
 		if ( journal_fp == NULL )
 		{
@@ -1010,15 +1014,14 @@ wfs_jfs_flush_fs (
 	error_type * const error;
 #endif
 {
+	int wfs_err;
+
 	if ( FS.jfs.fs != NULL )
 	{
+		wfs_err = ujfs_flush_dev (FS.jfs.fs);;
 		if ( error != NULL )
 		{
-			error->errcode.gerror = ujfs_flush_dev (FS.jfs.fs);
-		}
-		else
-		{
-			ujfs_flush_dev (FS.jfs.fs);
+			error->errcode.gerror = wfs_err;
 		}
 	}
 	else

@@ -79,7 +79,7 @@ extern void WFS_ATTR ((nonnull))
 extern int WFS_ATTR ((nonnull))
 	wfs_has_child_exited PARAMS ((const struct child_id * const id));
 
-extern char * convert_fs_to_name PARAMS ((const CURR_FS fs));
+extern const char * convert_fs_to_name PARAMS ((const CURR_FS fs));
 
 extern void WFS_ATTR ((nonnull)) enable_drive_cache PARAMS ((const char dev_name[],
 	const int total_fs, fs_ioctl ioctls[]));

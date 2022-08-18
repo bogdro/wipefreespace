@@ -45,18 +45,10 @@
 # undef		ERR_MSG_FORMAT
 # define 	ERR_MSG_FORMAT			"(%s %d) %s '%s', FS='%s'"
 
-# undef		NPAT
 # undef		PASSES
-
-# ifdef	WFS_WANT_RANDOM
-	/* shred-like method: 22 patterns and 3 random passes */
-#  define NPAT 22
-#  define PASSES (NPAT+3)
-# else
-	/* Gutmann method: 5 more patterns and 9 random passes */
-#  define NPAT (22+5)
-#  define PASSES (NPAT+9)
-# endif
+# define	PASSES 35 /* default Gutmann */
+# undef		NPAT
+# define	NPAT 50 /* anything more than the maximum number of patterns in all wiping methods. */
 
 # define WFS_MNTBUFLEN 4096
 
@@ -159,20 +151,48 @@ typedef long int off64_t;
 /* fix symbol collision with ReiserFSv3 header files: */
 # define ROUND_UP NTFS_ROUND_UP
 
-# if (defined HAVE_NTFS_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
-#  include <ntfs/ntfs_volume.h>
-#  include <ntfs/ntfs_version.h>
-#  define	WFS_NTFS	1
-# elif (defined HAVE_NTFS_VOLUME_H) && (defined HAVE_LIBNTFS)
-#  include <ntfs/volume.h>
-#  include <ntfs/version.h>
-#  define	WFS_NTFS	1
-# elif (defined HAVE_VOLUME_H) && (defined HAVE_LIBNTFS)
-#  include <volume.h>
-#  include <version.h>
-#  define	WFS_NTFS	1
+# if ((defined HAVE_NTFS_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_NTFS_VOLUME_H)) \
+	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
+#  ifdef HAVE_NTFS_NTFS_VOLUME_H
+#   include <ntfs/ntfs_volume.h>
+#   include <ntfs/ntfs_version.h>
+#   define	WFS_NTFS	1
+#  else
+#   include <ntfs-3g/ntfs_volume.h>
+/*#   include <ntfs-3g/ntfs_version.h> missing */
+#   define	WFS_NTFS	1
+/* fix compatibility with MinixFS: */
+#   define u8 u8_minix
+#   define u16 u16_minix
+#   define u32 u32_minix
+#  endif
 # else
-#  undef	WFS_NTFS
+#  if ((defined HAVE_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_VOLUME_H)) \
+	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
+#   ifdef HAVE_NTFS_VOLUME_H
+#    include <ntfs/volume.h>
+#    include <ntfs/version.h>
+#    define	WFS_NTFS	1
+#   else
+#    include <ntfs-3g/volume.h>
+/*#    include <ntfs-3g/version.h> missing */
+#    define	WFS_NTFS	1
+/* fix compatibility with MinixFS: */
+#    define u8 u8_minix
+#    define u16 u16_minix
+#    define u32 u32_minix
+#   endif
+#  else
+#   if (defined HAVE_VOLUME_H) && ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
+#    include <volume.h>
+#    ifndef HAVE_LIBNTFS_3G
+#     include <version.h>
+#    endif
+#    define	WFS_NTFS	1
+#   else
+#    undef	WFS_NTFS
+#   endif
+#  endif
 # endif
 
 # if (defined HAVE_LONG_LONG) && (defined HAVE_UNISTD_H)	\
@@ -290,6 +310,18 @@ typedef unsigned short int __u16;
 #  else
 #   undef	WFS_HFSP
 #  endif
+# endif
+
+# if (defined HAVE_LIBHIDEIP) && (defined HAVE_LIBHIDEIP_H)
+#  define WFS_HAVE_LIBHIDEIP	1
+# else
+#  undef WFS_HAVE_LIBHIDEIP
+# endif
+
+# if (defined HAVE_LIBNETBLOCK) && (defined HAVE_LIBNETBLOCK_H)
+#  define WFS_HAVE_LIBNETBLOCK	1
+# else
+#  undef WFS_HAVE_LIBNETBLOCK
 # endif
 
 /* ================ End of filesystem includes ================ */

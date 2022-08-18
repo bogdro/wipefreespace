@@ -103,7 +103,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_xfs_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_xfs_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #include "wfs_xfs.h"
 #include "wfs_signal.h"
@@ -129,12 +131,147 @@
 #endif
 
 #define MAX_SELECT_FAILS 5
+#define WFS_XFS_MAX_SELECT_SECONDS 10
 
 /*#define XFS_HAS_SHARED_BLOCKS 1 */
+
+static char wfs_xfs_xfs_db[] = "xfs_db";
+static char wfs_xfs_xfs_db_opt_ro[] = "-i";
+static char wfs_xfs_xfs_db_opt_cmd[] = "-c";
+static char wfs_xfs_xfs_db_opt_end[] = "--";
+static char wfs_xfs_xfs_db_cmd_freespace[] = "freesp -d";
+static char wfs_xfs_xfs_db_cmd_quit[] = "quit";
+static char wfs_xfs_xfs_db_cmd_blocks[] = "blockget -n";
+static char wfs_xfs_xfs_db_cmd_check[] = "ncheck";
+static char wfs_xfs_xfs_db_cmd_superblock_reset[] = "sb 0";
+static char wfs_xfs_xfs_db_cmd_print[] = "print";
+static char wfs_xfs_xfs_check[] = "xfs_check";
+static const char wfs_xfs_xfs_check_opt_init_default[] = "  ";
+static char wfs_xfs_xfs_check_opt_init[] = "  ";
+static char wfs_xfs_xfs_freeze[] = "xfs_freeze";
+static char wfs_xfs_xfs_freeze_opt_freeze[] = "-f";
+static char wfs_xfs_xfs_freeze_opt_unfreeze[] = "-u";
+
+/* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static int WFS_ATTR ((nonnull)) WFS_ATTR ((warn_unused_result)) wfs_xfs_read_line
+	PARAMS ((int fd, char * const buf, struct child_id * const child, const size_t bufsize));
+#endif
+
+/**
+ * Reads a line of text from the given file descriptor and puts it in the buffer. Waits at most
+ *	WFS_XFS_MAX_SELECT_SECONDS seconds for data.
+ * @param fd The file descriptor to read the line from.
+ * @param buf The buffer to put the line into.
+ * @param child The child process that is supposed to produce the data.
+ * @param bufsize The size of the given buffer.
+ * @return the number of bytes read, excluding the trailing newline (negative in case of error).
+ */
+static int WFS_ATTR ((warn_unused_result))
+#ifdef WFS_ANSIC
+WFS_ATTR ((nonnull))
+#endif
+wfs_xfs_read_line (
+#ifdef WFS_ANSIC
+	int fd, char * const buf, struct child_id * const child, const size_t bufsize)
+#else
+	fd, buf, child, bufsize)
+	int fd;
+	char * const buf;
+	struct child_id * const child;
+	const size_t bufsize;
+#endif
+{
+	/* read just 1 line */
+	int res = 0;
+	int select_fails = 0;
+	int bytes_read = -1;
+	struct timeval tv;
+	fd_set set;
+#ifndef HAVE_MEMSET
+	int offset;
+#endif
+
+	if ( (buf == NULL) || (child == NULL) || (bufsize == 0) || (fd < 0) )
+	{
+		return -1;
+	}
+
+#ifdef HAVE_MEMSET
+	memset (buf, 0, bufsize);
+#else
+	for ( offset = 0; offset < bufsize; offset++ )
+	{
+		buf[offset] = '\0';
+	}
+#endif
+	do
+	{
+#ifdef HAVE_ERRNO_H
+		errno = 0;
+#endif
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+	&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
+		/* select() can destroy the descriptor sets */
+		FD_ZERO (&set);
+		FD_SET (fd, &set);	/* warnings are inside this macro */
+		tv.tv_sec = WFS_XFS_MAX_SELECT_SECONDS;
+		tv.tv_usec = 0;
+		if ( select (fd+1, &set, NULL, NULL, &tv) > 0 )
+		{
+#endif
+			bytes_read = read (fd, &(buf[res]), 1);
+			if ( (buf[res] == '\n') || (buf[res] == '\r') )
+			{
+				break;
+			}
+			res++;
+			select_fails = 0;
+#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
+	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
+	&& (defined HAVE_UNISTD_H)))				\
+	&& (defined HAVE_SELECT))
+		}
+		else
+		{
+			bytes_read = 1;	/* just a marker */
+			if ( /*(sigchld_recvd != 0) ||*/
+				(wfs_has_child_exited (child) == 1) )
+			{
+				res = -2;
+				break;
+			}
+			select_fails++;
+			if ( select_fails > MAX_SELECT_FAILS )
+			{
+				res = -3;
+				break;
+			}
+		}
+#endif
+	}
+	while (    ((size_t)res < bufsize)
+		&& (bytes_read == 1)
+		&& (sig_recvd == 0)
+		);
+	if ( bytes_read < 0 )
+	{
+		res = -4;
+	}
+	return res;
+}
 
 /* ======================================================================== */
 
 #ifdef WFS_WANT_PART
+
+# ifndef WFS_ANSIC
+static void flush_pipe_output PARAMS ((const int fd));
+# endif
+
 /**
  * Flushes the given pipe so that hopefully the data sent will be
  *  received at the other end.
@@ -158,6 +295,10 @@ flush_pipe_output (
 	fsync (fd);
 # endif
 }
+
+# ifndef WFS_ANSIC
+static void flush_pipe_input PARAMS ((const int fd));
+# endif
 
 /**
  * Reads the given pipe until end of data is reached.
@@ -220,6 +361,12 @@ wfs_xfs_wipe_unrm (
 #endif /* WFS_WANT_UNRM */
 
 #if (defined WFS_WANT_WFS) || (defined WFS_WANT_PART)
+
+# ifndef WFS_ANSIC
+static size_t WFS_ATTR ((warn_unused_result)) wfs_xfs_get_block_size
+	PARAMS ((const wfs_fsid_t FS));
+# endif
+
 /**
  * Returns the buffer size needed to work on the
  *	smallest physical unit on a XFS filesystem.
@@ -268,33 +415,22 @@ wfs_xfs_wipe_fs	(
 	errcode_enum ret_child;
 	/* 	 xfs_freeze -f (freeze) | -u (unfreeze) mount-point */
 # define FSNAME_POS_FREEZE 2
-	char * args_freeze[] = { "xfs_freeze", "-f", NULL, NULL };
+	char * args_freeze[] = { wfs_xfs_xfs_freeze, wfs_xfs_xfs_freeze_opt_freeze, NULL, NULL };
 # define FSNAME_POS_UNFREEZE 2
-	char * args_unfreeze[] = { "xfs_freeze", "-u", NULL, NULL };
+	char * args_unfreeze[] = { wfs_xfs_xfs_freeze, wfs_xfs_xfs_freeze_opt_unfreeze, NULL, NULL };
 	/*	 xfs_db  -c 'freesp -d' dev_name */
 # define FSNAME_POS_FREESP 7
-	char *  args_db[] = { "xfs_db", "-i", "-c", "freesp -d", "-c", "quit", "--",
-		NULL, NULL };
+	char * args_db[] = { wfs_xfs_xfs_db, wfs_xfs_xfs_db_opt_ro, wfs_xfs_xfs_db_opt_cmd,
+		wfs_xfs_xfs_db_cmd_freespace, wfs_xfs_xfs_db_opt_cmd, wfs_xfs_xfs_db_cmd_quit,
+		wfs_xfs_xfs_db_opt_end, NULL, NULL };
 	char read_buffer[WFS_XFSBUFSIZE];
 	unsigned long long int agno, agoff, length;
 	unsigned char * buffer;
 	unsigned long long int j;
 	int selected[NPAT];
 	errcode_enum ret_wfs = WFS_SUCCESS;
-	int bytes_read;
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-	struct timeval tv;
-	fd_set set;
-# endif
-# ifndef HAVE_MEMSET
-	size_t offset;
-# endif
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_block = 0;
-	int select_fails = 0;
 	size_t mnt_point_len;
 	size_t dev_name_len;
 
@@ -493,67 +629,7 @@ wfs_xfs_wipe_fs	(
 	while ( (sig_recvd == 0) && (fs_fd >= 0) /*&& (ret_wfs == WFS_SUCCESS)*/ )
 	{
 		/* read just 1 line */
-		res = 0;
-# ifdef HAVE_MEMSET
-		memset (read_buffer, 0, sizeof (read_buffer) );
-# else
-		for ( offset = 0; offset < sizeof (read_buffer); offset++ )
-		{
-			read_buffer[offset] = '\0';
-		}
-# endif
-		do
-		{
-# ifdef HAVE_ERRNO_H
-			errno = 0;
-# endif
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-			/* select() can destroy the descriptor sets */
-			FD_ZERO ( &set );
-			FD_SET ( pipe_fd[PIPE_R], &set );
-			tv.tv_sec = 10;
-			tv.tv_usec = 0;
-			if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
-			{
-# endif
-				bytes_read = read (pipe_fd[PIPE_R], &(read_buffer[res]), 1);
-				if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
-				{
-					break;
-				}
-				res++;
-				select_fails = 0;
-# if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-			}
-			else
-			{
-				bytes_read = 1;	/* just a marker */
-				if ( /*(sigchld_recvd != 0) ||*/
-					(wfs_has_child_exited (&child_xfsdb) == 1) )
-				{
-					res = -1;
-					break;
-				}
-				select_fails++;
-				if ( select_fails > MAX_SELECT_FAILS )
-				{
-					res = -1;
-					ret_wfs = WFS_BLKITER;
-					break;
-				}
-			}
-# endif
-		}
-		while (    (res < WFS_XFSBUFSIZE)
-			&& (bytes_read == 1)
-			&& (sig_recvd == 0)
-			);
+		res = wfs_xfs_read_line (pipe_fd[PIPE_R], read_buffer, &child_xfsdb, sizeof (read_buffer) );
 # ifdef HAVE_ERRNO_H
 		/*if ( errno == EAGAIN ) continue;*/
 # endif
@@ -567,11 +643,7 @@ wfs_xfs_wipe_fs	(
 			ret_wfs = WFS_INOREAD;
 			break;
 		}
-		if ( bytes_read < 0 )
-		{
-			break;
-		}
-		read_buffer[WFS_XFSBUFSIZE-1] = '\0';
+		read_buffer[sizeof (read_buffer)-1] = '\0';
 
 			/*
 				xfs_db output format is:
@@ -788,10 +860,11 @@ wfs_xfs_wipe_part (
 	errcode_enum ret_child;
 	/*	 xfs_db   dev_name */
 #  define FSNAME_POS_PART_NCHECK 9
-	char * args_db_ncheck[] = { "xfs_db", "-i", "-c", "blockget -n",
-		"-c", "ncheck", "-c", "quit", "--", NULL, NULL };
+	char * args_db_ncheck[] = { wfs_xfs_xfs_db, wfs_xfs_xfs_db_opt_ro, wfs_xfs_xfs_db_opt_cmd,
+		wfs_xfs_xfs_db_cmd_blocks, wfs_xfs_xfs_db_opt_cmd, wfs_xfs_xfs_db_cmd_check,
+		wfs_xfs_xfs_db_opt_cmd, wfs_xfs_xfs_db_cmd_quit, wfs_xfs_xfs_db_opt_end, NULL, NULL };
 #  define FSNAME_POS_PART_DB 3
-	char * args_db[] = { "xfs_db", "-i", "--", NULL, NULL };
+	char * args_db[] = { wfs_xfs_xfs_db, wfs_xfs_xfs_db_opt_ro, wfs_xfs_xfs_db_opt_end, NULL, NULL };
 	char read_buffer[WFS_XFSBUFSIZE];
 	char * pos1 = NULL;
 	char * pos2 = NULL;
@@ -804,19 +877,9 @@ wfs_xfs_wipe_part (
 	unsigned int mode;
 	unsigned int offset;
 	char inode_cmd[40];
-	int bytes_read;
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-	fd_set set;
-	struct timeval tv;
-#  endif
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_inode = 0;
-	int select_fails = 0;
 	size_t dev_name_len;
-	size_t mnt_point_len;
 
 	if ( error == NULL )
 	{
@@ -1037,71 +1100,12 @@ wfs_xfs_wipe_part (
 	while ( (sig_recvd == 0) && (fs_fd >= 0) /*&& (ret_part == WFS_SUCCESS)*/ )
 	{
 		/* read just 1 line with inode-file pair */
-#  ifdef HAVE_MEMSET
-		memset (read_buffer, 0, sizeof (read_buffer) );
-#  else
-		for ( offset = 0; offset < sizeof (read_buffer); offset++ )
-		{
-			read_buffer[offset] = '\0';
-		}
-#  endif
-		res = 0;
-		do
-		{
-#  ifdef HAVE_ERRNO_H
-			errno = 0;
-#  endif
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-			/* select() can destroy the descriptor sets */
-			FD_ZERO ( &set );
-			FD_SET ( pipe_from_ino_db[PIPE_R], &set );
-			tv.tv_sec = 10;
-			tv.tv_usec = 0;
-			if ( select ( pipe_from_ino_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
-			{
-#  endif
-				bytes_read = read (pipe_from_ino_db[PIPE_R], &(read_buffer[res]), 1);
-				if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
-				{
-					break;
-				}
-				res++;
-				select_fails = 0;
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-			}
-			else
-			{
-				bytes_read = 1;	/* just a marker to continue the loop */
-				if ( /*(sigchld_recvd != 0) ||*/
-					(wfs_has_child_exited (&child_ncheck) == 1) )
-				{
-					res = -1;
-					break;
-				}
-				select_fails++;
-				if ( select_fails > MAX_SELECT_FAILS )
-				{
-					res = -1;
-					ret_part = WFS_INOREAD;
-					break;
-				}
-			}
-#  endif
-		}
-		while (	   (res < WFS_XFSBUFSIZE)
-			&& (bytes_read == 1)
-			&& (sig_recvd == 0)
-			);
+		res = wfs_xfs_read_line (pipe_from_ino_db[PIPE_R], read_buffer,
+			&child_ncheck, sizeof (read_buffer) );
 #  ifdef HAVE_ERRNO_H
 		/*if ( errno == EAGAIN ) continue;*/
 #  endif
-		if ( (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
+		if ( (res < 0) || (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
 #  ifdef HAVE_ERRNO_H
 /*			|| ( errno != 0 )*/
 #  endif
@@ -1110,11 +1114,7 @@ wfs_xfs_wipe_part (
 			ret_part = WFS_INOREAD;
 			break;
 		}
-		if ( (res < 0) || (bytes_read < 0) )
-		{
-			break;
-		}
-		read_buffer[WFS_XFSBUFSIZE-1] = '\0';
+		read_buffer[sizeof (read_buffer)-1] = '\0';
 		res = sscanf ( read_buffer, " %llu", &inode );
 		if ( res != 1 )
 		{
@@ -1141,80 +1141,12 @@ wfs_xfs_wipe_part (
 		while (((got_mode_line == 0) || (got_size_line == 0)) && (sig_recvd == 0))
 		{
 			/* read just 1 line */
-#  ifdef HAVE_MEMSET
-			memset (read_buffer, 0, sizeof (read_buffer) );
-#  else
-			for ( offset = 0; offset < sizeof (read_buffer); offset++ )
-			{
-				read_buffer[offset] = '\0';
-			}
-#  endif
-			res = 0;
-			do
-			{
-#  ifdef HAVE_ERRNO_H
-				errno = 0;
-#  endif
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-				/* select() can destroy the descriptor sets */
-				FD_ZERO ( &set );
-				FD_SET ( pipe_from_blk_db[PIPE_R], &set );
-				tv.tv_sec = 10;
-				tv.tv_usec = 0;
-				if ( select ( pipe_from_blk_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
-				{
-#  endif
-					bytes_read = read (pipe_from_blk_db[PIPE_R],
-						&(read_buffer[res]), 1);
-					if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
-					{
-						break;
-					}
-					res++;
-					select_fails = 0;
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-				}
-				else
-				{
-					if ( /*(sigchld_recvd != 0) ||*/
-						(wfs_has_child_exited (&child_xfsdb) == 1) )
-					{
-						res = -1;
-						break;
-					}
-					select_fails++;
-					if ( select_fails > MAX_SELECT_FAILS )
-					{
-						res = -1;
-						ret_part = WFS_INOREAD;
-						break;
-					}
-					/* re-send the inode command */
-					if ( write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd))
-						<= 0 )
-					{
-						break;
-					}
-					flush_pipe_output (pipe_to_blk_db[PIPE_W]);
-					bytes_read = 1;	/* just a marker */
-				}
-#  endif
-			}
-			while (    (res < WFS_XFSBUFSIZE)
-			 	&& (bytes_read == 1)
-			 	&& (sig_recvd == 0)
-				);
+			res = wfs_xfs_read_line (pipe_from_blk_db[PIPE_R], read_buffer,
+				&child_xfsdb, sizeof (read_buffer) );
 #  ifdef HAVE_ERRNO_H
 			/*if ( errno == EAGAIN ) continue;*/
 #  endif
 			if ( (res < 0) || (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
-				|| (bytes_read < 0)
 #  ifdef HAVE_ERRNO_H
 /*				|| ( errno != 0 )*/
 #  endif
@@ -1224,7 +1156,7 @@ wfs_xfs_wipe_part (
 			}
 #  define modeline "core.mode = "
 #  define sizeline "core.size = "
-			read_buffer[WFS_XFSBUFSIZE-1] = '\0';
+			read_buffer[sizeof (read_buffer)-1] = '\0';
 			pos1 = strstr (read_buffer, modeline);
 			pos2 = strstr (read_buffer, sizeline);
 			/* get inode mode */
@@ -1271,86 +1203,12 @@ wfs_xfs_wipe_part (
 		do
 		{
 			/* read just 1 line */
-#  ifdef HAVE_MEMSET
-			memset (read_buffer, 0, sizeof (read_buffer) );
-#  else
-			for ( offset = 0; offset < sizeof (read_buffer); offset++ )
-			{
-				read_buffer[offset] = '\0';
-			}
-#  endif
-			res = 0;
-			do
-			{
-#  ifdef HAVE_ERRNO_H
-				errno = 0;
-#  endif
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-				/* select() can destroy the descriptor sets */
-				FD_ZERO ( &set );
-				FD_SET ( pipe_from_blk_db[PIPE_R], &set );
-				tv.tv_sec = 10;
-				tv.tv_usec = 0;
-				if ( select ( pipe_from_blk_db[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
-				{
-#  endif
-					bytes_read = read (pipe_from_blk_db[PIPE_R],
-						&(read_buffer[res]), 1);
-					if ( (read_buffer[res] == '\n') || (read_buffer[res] == '\r') )
-					{
-						break;
-					}
-					res++;
-					select_fails = 0;
-#  if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-				}
-				else
-				{
-					if ( /*(sigchld_recvd != 0)
-						||*/ (wfs_has_child_exited (&child_xfsdb) == 1) )
-					{
-						res = -1;
-						break;
-					}
-					select_fails++;
-					if ( select_fails > MAX_SELECT_FAILS )
-					{
-						res = -1;
-						ret_part = WFS_INOREAD;
-						break;
-					}
-					/* re-send the inode command *
-					res = write (pipe_to_blk_db[PIPE_W],inode_cmd,strlen (inode_cmd));
-					if ( res <= 0 )
-					{
-						break;
-					}
-					flush_pipe_output (pipe_to_blk_db[PIPE_W]); */
-					/* send "bmap -d" again */
-					if ( write (pipe_to_blk_db[PIPE_W], "bmap -d\n", 8) <= 0 )
-					{
-						break;
-					}
-					flush_pipe_output (pipe_to_blk_db[PIPE_W]);
-					bytes_read = 1;	/* just a marker */
-				}
-#  endif
-			}
-			while (    (res < WFS_XFSBUFSIZE)
-		 		&& (bytes_read == 1)
-		 		&& (sig_recvd == 0)
-		  		);
+			res = wfs_xfs_read_line (pipe_from_blk_db[PIPE_R], read_buffer,
+				&child_xfsdb, sizeof (read_buffer) );
 #  ifdef HAVE_ERRNO_H
 			/*if ( errno == EAGAIN ) continue;*/
 #  endif
 			if ( (res < 0) || (sig_recvd != 0) /*|| (sigchld_recvd != 0)*/
-				|| (bytes_read < 0)
 #  ifdef HAVE_ERRNO_H
 /*				|| ( errno != 0 )*/
 #  endif
@@ -1358,7 +1216,7 @@ wfs_xfs_wipe_part (
 			{
 				break;
 			}
-			read_buffer[WFS_XFSBUFSIZE-1] = '\0';
+			read_buffer[sizeof (read_buffer)-1] = '\0';
 			/* parse line into block numbers. Read line has data:
 				data offset 0 startblock 1215 (0/1215) count 7 flag 0
 			 */
@@ -1378,8 +1236,8 @@ wfs_xfs_wipe_part (
 			{
 				/* if missing, but first is present, joing this reading
 				   with the next one */
-				strncpy (read_buffer, pos1, (size_t)(&read_buffer[WFS_XFSBUFSIZE] - pos1));
-				res = &read_buffer[WFS_XFSBUFSIZE] - pos1;
+				strncpy (read_buffer, pos1, (size_t)(&read_buffer[sizeof (read_buffer)] - pos1));
+				res = &read_buffer[sizeof (read_buffer)] - pos1;
 				read_buffer[res] = '\0';
 				continue;
 			}
@@ -1527,19 +1385,9 @@ wfs_xfs_check_err (
 	struct child_id child_xfschk;
 	errcode_enum ret_child;
 #define FSNAME_POS_CHECK 2
-	char * args[] = { "xfs_check", "  ", NULL, NULL }; /* xfs_check [-f] dev/file */
+	char * args[] = { wfs_xfs_xfs_check, wfs_xfs_xfs_check_opt_init,
+		NULL, NULL }; /* xfs_check [-f] dev/file */
 	char buffer[WFS_XFSBUFSIZE];
-	int bytes_read;
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-	fd_set set;
-	struct timeval tv;
-#endif
-#ifndef HAVE_MEMSET
-	size_t offset;
-#endif
 	size_t dev_name_len;
 
 #ifdef HAVE_STAT_H
@@ -1554,6 +1402,9 @@ wfs_xfs_check_err (
 	}
 #endif
 
+	/* Re-set the parameter that may have been overwritten: */
+	strncpy (wfs_xfs_xfs_check_opt_init, wfs_xfs_xfs_check_opt_init_default,
+		sizeof (wfs_xfs_xfs_check_opt_init));
 	/* Copy the file system name info the right places */
 #ifdef HAVE_ERRNO_H
 	errno = 0;
@@ -1621,62 +1472,11 @@ wfs_xfs_check_err (
 		free (args[FSNAME_POS_CHECK]);
 		return WFS_FORKERR;
 	}
+	/* Any output means error. Read just 1 line */
 	/* NOTE: do NOT wait for the child here. It may be stuck writing to
 	   the pipe and WFS will hang
 	  */
-# ifdef HAVE_MEMSET
-	memset (buffer, 0, sizeof (buffer) );
-# else
-	for ( offset = 0; offset < sizeof (buffer); offset++ )
-	{
-		buffer[offset] = '\0';
-	}
-# endif
-	res = 0;
-	/* Any output means error. Read just 1 line */
-	do
-	{
-#ifdef HAVE_ERRNO_H
-		errno = 0;
-#endif
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-		/* select() can destroy the descriptor sets */
-		FD_ZERO ( &set );
-		FD_SET ( pipe_fd[PIPE_R], &set );
-		tv.tv_sec = 1;
-		tv.tv_usec = 0;
-		if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
-		{
-#endif
-			bytes_read = read (pipe_fd[PIPE_R], &(buffer[res]), 1);
-			if ( (buffer[res] == '\n') || (buffer[res] == '\r') )
-			{
-				break;
-			}
-			res++;
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-		}
-		else
-		{
-			bytes_read = 1;	/* just a marker */
-			if ( /*(sigchld_recvd != 0) ||*/ (wfs_has_child_exited (&child_xfschk) == 1) )
-			{
-				res = -1;
-				break;
-			}
-		}
-#endif
-	}
-	while (    (res < WFS_XFSBUFSIZE)
-		&& (bytes_read == 1)
-		&& (sig_recvd == 0)
-		);
+	res = wfs_xfs_read_line (pipe_fd[PIPE_R], buffer, &child_xfschk, sizeof (buffer) );
 
 	close (pipe_fd[PIPE_R]);
 	close (pipe_fd[PIPE_W]);
@@ -1711,6 +1511,12 @@ wfs_xfs_is_dirty (
 	return WFS_SUCCESS;*/
 	return wfs_xfs_check_err (FS, error);
 }
+
+#ifndef WFS_ANSIC
+static errcode_enum WFS_ATTR ((warn_unused_result))
+	wfs_xfs_get_mnt_point PARAMS ((const char * const dev_name, error_type * const error,
+		char * const mnt_point, const size_t mnt_point_len, int * const is_rw ));
+#endif
 
 /**
  * Gets the mount point of the given device (if mounted).
@@ -1799,8 +1605,10 @@ wfs_xfs_open_fs (
 	unsigned char xfs_sig[4];
 	ssize_t sig_read;
 #define FSNAME_POS_OPEN 9
-	char * args[] = { "xfs_db", "-i", "-c", "sb 0", "-c", "print", "-c", "quit", "--",
-		NULL, NULL }; /* xfs_db -c 'sb 0' -c print dev_name */
+	char * args[] = { wfs_xfs_xfs_db, wfs_xfs_xfs_db_opt_ro, wfs_xfs_xfs_db_opt_cmd,
+		wfs_xfs_xfs_db_cmd_superblock_reset, wfs_xfs_xfs_db_opt_cmd,
+		wfs_xfs_xfs_db_cmd_print, wfs_xfs_xfs_db_opt_cmd, wfs_xfs_xfs_db_cmd_quit,
+		wfs_xfs_xfs_db_opt_end, NULL, NULL }; /* xfs_db -c 'sb 0' -c print dev_name */
 	char buffer[WFS_XFSBUFSIZE];
 	int blocksize_set = 0, agblocks_set = 0, inprogress_found = 0, used_inodes_set = 0,
 		free_blocks_set = 0;
@@ -1808,18 +1616,6 @@ wfs_xfs_open_fs (
 	char *pos1 = NULL, *pos2 = NULL, *pos3 = NULL, *pos4 = NULL, *pos5 = NULL;
 	int is_rw;
 	unsigned long long int inprogress;
-	int bytes_read;
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-	struct timeval tv;
-	fd_set set;
-#endif
-#ifndef HAVE_MEMSET
-	size_t offset;
-#endif
-	int select_fails = 0;
 	size_t namelen;
 	size_t buffer_len;
 
@@ -1984,74 +1780,8 @@ wfs_xfs_open_fs (
 			agblocks = 4096
 			agcount = 1
 		*/
-#ifdef HAVE_ERRNO_H
-		errno = 0;
-#endif
-# ifdef HAVE_MEMSET
-		memset (buffer, 0, sizeof (buffer) );
-# else
-		for ( offset = 0; offset < sizeof (buffer); offset++ )
-		{
-			buffer[offset] = '\0';
-		}
-# endif
-		/* read just 1 line */
-		res = 0;
-		do
-		{
-#ifdef HAVE_ERRNO_H
-			errno = 0;
-#endif
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-			/* select() can destroy the descriptor sets */
-			FD_ZERO ( &set );
-			FD_SET ( pipe_fd[PIPE_R], &set );
-			tv.tv_sec = 10;
-			tv.tv_usec = 0;
-			if ( select ( pipe_fd[PIPE_R]+1, &set, NULL, NULL, &tv ) > 0 )
-			{
-#endif
-				bytes_read = read (pipe_fd[PIPE_R], &(buffer[res]), 1);
-				if ( (buffer[res] == '\n') || (buffer[res] == '\r') )
-				{
-					break;
-				}
-				res++;
-				select_fails = 0;
-#if (((defined HAVE_SYS_SELECT_H) || (((defined TIME_WITH_SYS_TIME)	\
-	|| (defined HAVE_SYS_TIME_H) || (defined HAVE_TIME_H))		\
- 		&& (defined HAVE_UNISTD_H)))				\
-	&& (defined HAVE_SELECT))
-			}
-			else
-			{
-				bytes_read = 1;	/* just a marker */
-				if ( /*(sigchld_recvd != 0) ||*/
-					(wfs_has_child_exited (&child_xfsdb) == 1) )
-				{
-					res = -1;
-					break;
-				}
-				select_fails++;
-				if ( select_fails > MAX_SELECT_FAILS )
-				{
-					/* NOTE: waiting for the child has already been taken care of. */
-					close (pipe_fd[PIPE_R]);
-					close (pipe_fd[PIPE_W]);
-					free (args[FSNAME_POS_OPEN]);
-					free (FS->xxfs.dev_name);
-					return WFS_OPENFS;
-				}
-			}
-#endif
-		}
-		while (    (res < WFS_XFSBUFSIZE)
-			&& (bytes_read == 1)
-			&& (sig_recvd == 0)
-			);
+		res = wfs_xfs_read_line (pipe_fd[PIPE_R], buffer,
+			&child_xfsdb, sizeof (buffer) );
 #ifdef HAVE_ERRNO_H
 		/*if ( errno == EAGAIN ) continue;*/
 #endif
@@ -2069,12 +1799,8 @@ wfs_xfs_open_fs (
 			FS->xxfs.dev_name = NULL;
 			return WFS_OPENFS;
 		}
-		if ( bytes_read < 0 )
-		{
-			break;
-		}
 
-		buffer[WFS_XFSBUFSIZE-1] = '\0';
+		buffer[sizeof (buffer)-1] = '\0';
 #define err_str "xfs_db:"
 		if ( strstr (buffer, err_str) != NULL )
 		{
@@ -2209,7 +1935,7 @@ wfs_xfs_open_fs (
 #ifdef HAVE_ERRNO_H
 		errno = 0;
 #endif
-		buffer[WFS_XFSBUFSIZE] = '\0';
+		buffer[sizeof (buffer)-1] = '\0';
 		buffer_len = strlen (buffer);
 		FS->xxfs.mnt_point = (char *) malloc ( buffer_len + 1 );
 		if ( FS->xxfs.mnt_point == NULL )

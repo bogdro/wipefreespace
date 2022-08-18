@@ -1,3 +1,33 @@
+2011-12-04	Bogdan Drozdowski <bogdandr@op.pl>
+
+	* WipeFreeSpace version 1.5
+	  Fixes for compiler warnings. Improved compatibility with non-ANSI
+	  C compilers. Wiping method selectable at runtime. Two new wiping
+	  methods: Schneier and DoD. Support for ntfsprogs from ntfs3g.
+	* configure.ac: added new C compiler flags to check for:
+	  -Wwrite-strings and -Waggregate-return. Display warnings when
+	  conflicting filesystems enabled. Enable support for LibNetBlock
+	  and LibHideIP. Deprecated --enable-random-method (all wiping methods
+	  are enabled and selectable at run-time). Support for ntfsprogs from
+	  ntfs3g.
+	* src/wfs_fat.c, src/wfs_jfs.c, src/wfs_hfsp.c, src/wfs_ntfs.c
+	  src/wfs_e234.c, src/wfs_xfs.c, src/wfs_wrappers.c, src/wfs_wiping.c,
+	  src/wfs_util.c, src/wfs_signal.c, src/wfs_secure.c,
+	  src/wfs_reiser4.c, src/wfs_reiser.c, src/wfs_minix.c,
+	  src/wipefreespace.c: fixed compiler warnings
+	* src/wfs_wiping.c: added missing includes
+	* src/wfs_xfs.c (wfs_xfs_open_fs): fixed buffer overflow
+	* src/wipefreespace.c: Enable support for LibNetBlock and LibHideIP.
+	  Moved versions' display to a separate function. Corrected command
+	  line handling when getopt_long is not available.
+	* src/wfs_xfs.c: moved common line-reading code to a new function.
+	* src/wipefreespace.c, src/wfs_wiping.c: Wiping method selectable
+	  at runtime.
+	* src/wfs_wiping.c: Two new wiping methods: Schneier and DoD.
+	* src/wipefreespace.{c,h}, src/wfs_ntfs.c: Support for ntfsprogs
+	  from ntfs3g.
+	* wipefreespace.spec.in: added a link "hfswipefreespace".
+
 2011-05-22	Bogdan Drozdowski <bogdandr@op.pl>
 
 	* WipeFreeSpace version 1.4
@@ -9,9 +39,9 @@
 	* wfs_secure.c (wfs_check_stds): fixed syntax error.
 	* README: Updated RPM creating. Wrote about the provided patches.
 	* INSTALL: Updated RPM creating. Wrote about the provided patches.
-        * doc/wipefreespace.texi.in: updated RPM creating. Wrote about
+	* doc/wipefreespace.texi.in: updated RPM creating. Wrote about
 	  the provided patches.
-        * configure.ac: fixed double CFLAGS on compile. Added new options:
+	 configure.ac: fixed double CFLAGS on compile. Added new options:
 	  --enable-wfs, --enable-unrm and --enable-part. Added missing test
 	  for minix_fs.h when checking if any filesystem support is present.
 	* patches: a directory with some patches for the libraries used by

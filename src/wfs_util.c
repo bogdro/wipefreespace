@@ -146,7 +146,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_util_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_util_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #include "wfs_util.h"
 
@@ -377,6 +379,10 @@ wfs_check_mounted (
 		return WFS_SUCCESS;
 	}
 }
+
+#ifndef WFS_ANSIC
+static void * child_function PARAMS ((void * p));
+#endif
 
 /*
  * The child function called after successful creating a child process.
@@ -641,7 +647,7 @@ rpl_malloc (
  * \param fs The filesystem to convert.
  * \return The filesystem name
  */
-char *
+const char *
 convert_fs_to_name (
 #ifdef WFS_ANSIC
 	const CURR_FS fs)
@@ -717,7 +723,7 @@ enable_drive_cache (
 #endif
 	)
 #else
-	drive_no
+	dev_name
 #ifndef HAVE_IOCTL
 		WFS_ATTR ((unused))
 #endif

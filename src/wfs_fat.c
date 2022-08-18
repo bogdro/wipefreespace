@@ -28,7 +28,9 @@
 #include "wfs_cfg.h"
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_fat_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_fat_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 
 #if (defined HAVE_TFFS_H) && (defined HAVE_LIBTFFS)
@@ -89,6 +91,9 @@
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 
+static byte wfs_fat_cur_dir[] = ".";
+static byte wfs_fat_parent_dir[] = "..";
+static byte wfs_fat_fopen_mode[] = "a";
 
 /* ============================================================= */
 
@@ -915,10 +920,10 @@ wfs_fat_wipe_file_tails_in_dir (
 			/* deleted element - don't wipe */
 			continue;
 		}
-		if ( (strncmp (entry.d_name, ".", 1) == 0)
-			|| (strncmp (entry.d_name_short, ".", 1) == 0)
-			|| (strncmp (entry.d_name, "..", 2) == 0)
-			|| (strncmp (entry.d_name_short, "..", 2) == 0)
+		if ( (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
+			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
+			|| (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
+			|| (strncmp (entry.d_name_short, wfs_fat_parent_dir, 2) == 0)
 		)
 		{
 			continue;
@@ -934,12 +939,12 @@ wfs_fat_wipe_file_tails_in_dir (
 			}
 			ret_part_dir = wfs_fat_wipe_file_tails_in_dir
 				(FS, error, (tdir_handle_t) (((tffs_t *)(FS.fat))->cur_dir), buf);
-			TFFS_chdir (FS.fat, "..");
+			TFFS_chdir (FS.fat, wfs_fat_parent_dir);
 		}
 		else if ( (entry.dir_attr & DIR_ATTR_VOLUME_ID) != DIR_ATTR_VOLUME_ID )
 		{
 			/* wipe this file's last sector's free space */
-			dir_res = TFFS_fopen (FS.fat, entry.d_name, "a", &fh);
+			dir_res = TFFS_fopen (FS.fat, entry.d_name, wfs_fat_fopen_mode, &fh);
 			if ( dir_res != TFFS_OK )
 			{
 				continue;
@@ -1204,10 +1209,10 @@ wfs_fat_wipe_unrm_dir (
 	{
 		dir_res = TFFS_readdir (dir, &entry);
 		if ( (dir_res == ERR_TFFS_LAST_DIRENTRY) || (dir_res != TFFS_OK) ) break;
-		if ( (strncmp (entry.d_name, ".", 1) == 0)
-			|| (strncmp (entry.d_name_short, ".", 1) == 0)
-			|| (strncmp (entry.d_name, "..", 2) == 0)
-			|| (strncmp (entry.d_name_short, "..", 2) == 0)
+		if ( (strncmp (entry.d_name, wfs_fat_cur_dir, 1) == 0)
+			|| (strncmp (entry.d_name_short, wfs_fat_cur_dir, 1) == 0)
+			|| (strncmp (entry.d_name, wfs_fat_parent_dir, 2) == 0)
+			|| (strncmp (entry.d_name_short, wfs_fat_parent_dir, 2) == 0)
 		)
 		{
 			continue;
@@ -1223,7 +1228,7 @@ wfs_fat_wipe_unrm_dir (
 			}
 			ret_unrm_dir = wfs_fat_wipe_unrm_dir
 				(FS, error, (tdir_handle_t) (((tffs_t *)(FS.fat))->cur_dir), buf);
-			TFFS_chdir (FS.fat, "..");
+			TFFS_chdir (FS.fat, wfs_fat_parent_dir);
 		}
 	}
 
@@ -1471,22 +1476,23 @@ wfs_fat_close_fs (
 #endif
 {
 	errcode_enum ret = WFS_SUCCESS;
+	int wfs_err;
 
 	if ( FS.fat == NULL )
 	{
 		return WFS_BADPARAM;
 	}
 
+	wfs_err = TFFS_umount ( FS.fat );
 	if ( error != NULL )
 	{
-		error->errcode.gerror = TFFS_umount ( FS.fat );
-		if ( error->errcode.gerror != TFFS_OK )
+		error->errcode.gerror = wfs_err;
+		if ( wfs_err != TFFS_OK )
 		{
 			show_error ( *error, err_msg_close, FS.fsname, FS );
 			ret = WFS_FSCLOSE;
 		}
 	}
-	else TFFS_umount ( FS.fat );
 	FS.fat = NULL;
 	return ret;
 }

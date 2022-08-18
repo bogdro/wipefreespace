@@ -170,7 +170,10 @@ Then compile and install that package. Ext4 support requires new versions, like 
 included in something like ntfsprogs-devel). If you don't have anything
 like this installed or available (check twice), then go to@*
    	http://www.linux-ntfs.org/@*
-Then compile and install that package.
+Then compile and install that package. You can also use ntfs3g-ntfsprogs:@*
+	http://www.tuxera.com/community/ntfs-3g-download/@*
+Remember to copy all the *.h files from the "include" directory to the
+destination "include" directory (like /usr/include/ntfs/).
 
 @item XFS: xfsprogs installed and in your PATH variable (devel package unusable, so
 not required). Can be downloaded from@*
@@ -311,7 +314,12 @@ respectively). You cannot disable all of these.
 
 Run @command{./configure --help} for details.
 
-Type 'make' to compile the program.
+If you do NOT wish wipefreespace to use the network or get the computer's IP address,
+get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with@*
+	@command{./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK}@*
+@strong{NOTE}: this may cause network filesystem wiping to fail.
+
+Type @command{make} to compile the program.
 Documentation is compiled, but may be recompiled, if you have the 'makeinfo'
 program ('texinfo' package).
 Translations will be compiled, if you have the 'gettext' package.
@@ -524,9 +532,14 @@ Perform additional wiping with zeros.
 Print license information and exit.
 @end quotation
 
+@noindent @option{--method <name>}@*
+@quotation
+Use the given method for wiping (read below).
+@end quotation
+
 @noindent @option{-n NNN}@*@option{--iterations NNN}@*
 @quotation
-Number of passes (must be greater than 0, default is 35 in Gutmann method, 25 in random).
+Number of passes (must be greater than 0).
 This is also the number of patterns (including random) used to wipe the free space.
 @end quotation
 
@@ -562,6 +575,16 @@ increase at a constant rate.
 @quotation
 Print version number and exit.
 @end quotation
+
+The following method names (case-insensitive) are available:
+@itemize
+@item Gutmann (method similar to Gutmann's, the default, 36 passes)
+@item random (shred-like, 25 passes)
+@item schneier (Shneier's method, 7 passes, contains ITSG-06)
+@item dod (DoD, 3 passes, contains NAVSO P-5239-26 and German Federal
+Office for Information Security)
+@end itemize
+
 
 @strong{NOTE}: All three options @option{--nopart}, @option{--nounrm}, @option{--nowfs} must
 @strong{NOT} be given at once. This would mean that no work must be done and the program will

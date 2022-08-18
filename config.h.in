@@ -162,6 +162,12 @@
 /* Whether you have the libhfsp.h header. */
 #undef HAVE_LIBHFSP_H
 
+/* Define to 1 if you have the `hideip' library (-lhideip). */
+#undef HAVE_LIBHIDEIP
+
+/* Whether you have the libhideip.h header. */
+#undef HAVE_LIBHIDEIP_H
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
@@ -171,8 +177,17 @@
 /* Define to 1 if you have the `misc' library (-lmisc). */
 #undef HAVE_LIBMISC
 
+/* Define to 1 if you have the `netblock' library (-lnetblock). */
+#undef HAVE_LIBNETBLOCK
+
+/* Whether you have the libnetblock.h header. */
+#undef HAVE_LIBNETBLOCK_H
+
 /* Define to 1 if you have the `ntfs' library (-lntfs). */
 #undef HAVE_LIBNTFS
+
+/* Define to 1 if you have the `ntfs-3g' library (-lntfs-3g). */
+#undef HAVE_LIBNTFS_3G
 
 /* Define to 1 if you have the `reiser4' library (-lreiser4). */
 #undef HAVE_LIBREISER4
@@ -221,6 +236,12 @@
 
 /* Define to 1 if you have the <mntent.h> header file. */
 #undef HAVE_MNTENT_H
+
+/* Whether you have the ntfs-3g/ntfs_volume.h header. */
+#undef HAVE_NTFS_3G_NTFS_VOLUME_H
+
+/* Whether you have the ntfs-3g/volume.h header. */
+#undef HAVE_NTFS_3G_VOLUME_H
 
 /* Whether you have the ntfs/ntfs_volume.h header. */
 #undef HAVE_NTFS_NTFS_VOLUME_H
@@ -418,9 +439,6 @@
 
 /* If wiping partially-used blocks has been enabled. */
 #undef WFS_WANT_PART
-
-/* If shred-like wiping method was chosen instead of full Gutmann method. */
-#undef WFS_WANT_RANDOM
 
 /* If wiping undelete data has been enabled. */
 #undef WFS_WANT_UNRM

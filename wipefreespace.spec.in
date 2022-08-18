@@ -72,6 +72,7 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 %{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/minix2wipefreespace
 %{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/jfswipefreespace
 %{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/hfspwipefreespace
+%{__ln_s} %{wfs_prefix}/bin/wipefreespace $RPM_BUILD_ROOT/%{wfs_prefix}/bin/hfswipefreespace
 # {__mv} -f $RPM_BUILD_ROOT/usr/bin/wipefreespace $RPM_BUILD_ROOT {wfs_prefix}/bin/wipefreespace
 # {makeinstall}
 
@@ -98,6 +99,7 @@ CFLAGS='-march=i386' ./configure --prefix=%{wfs_prefix} --mandir=/usr/share/man 
 %{wfs_prefix}/bin/minix2wipefreespace
 %{wfs_prefix}/bin/jfswipefreespace
 %{wfs_prefix}/bin/hfspwipefreespace
+%{wfs_prefix}/bin/hfswipefreespace
 %doc /usr/share/info/wipefreespace.info.gz
 %doc /usr/share/man/man1/wipefreespace.1.gz
 %doc README

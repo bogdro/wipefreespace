@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(wipefreespace, 1.4, bogdandr@op.pl)
+AC_INIT(wipefreespace, 1.5, bogdandr@op.pl)
 AM_INIT_AUTOMAKE
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile])
@@ -92,7 +92,7 @@ AC_ARG_ENABLE(HFSP,[[  --enable-HFSP		HFS+ support (default=yes).]],
 	]
 	,[feat_hfsp=yes])
 
-AC_ARG_ENABLE([random-method],[[  --enable-random-method	Random pattern method (like shred) instead of full Gutmann.]],
+AC_ARG_ENABLE([random-method],[[  --enable-random-method	DEPRECATED: Random pattern method (like shred) instead of full Gutmann.]],
 	[if (test "x$enableval" = "xyes"); then
 		want_rand=yes
 	 else
@@ -128,8 +128,26 @@ AC_ARG_ENABLE(part,[[  --enable-part		enable wiping partially-used blocks (defau
 	]
 	,[feat_part=yes])
 
+AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for wipefreespace.]],
+	[if (test "x$enableval" = "xno"); then
+		feat_LIBHIDEIP=no
+	 else
+		feat_LIBHIDEIP=yes
+	 fi
+	]
+	,feat_LIBHIDEIP=no)
+
+AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for wipefreespace.]],
+	[if (test "x$enableval" = "xno"); then
+		feat_LIBNETBLOCK=no
+	 else
+		feat_LIBNETBLOCK=yes
+	 fi
+	]
+	,feat_LIBNETBLOCK=no)
+
 if ( test "x$want_rand" = "xyes" ); then
-	AC_DEFINE(WFS_WANT_RANDOM, [1], [If shred-like wiping method was chosen instead of full Gutmann method.])
+	AC_MSG_WARN([--enable-random-method if deprecated. Use --method <name> when running the program.])
 fi
 
 if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
@@ -181,10 +199,21 @@ libcap=yes
 AC_CHECK_LIB([cap],[cap_init],,[libcap=no])
 
 libntfs=no
+libntfs3g=no
 if ( test "x$feat_ntfs" = "xyes" ); then
 
 	libntfs=yes
 	AC_CHECK_LIB([ntfs],[ntfs_pwrite],,[libntfs=no])
+	if ( test "x$libntfs" = "xno" ); then
+
+		libntfs=yes
+
+		AC_CHECK_LIB([ntfs-3g],[ntfs_pwrite],,[libntfs=no])
+		if ( test "x$libntfs" = "xyes" ); then
+
+			libntfs3g=yes
+		fi
+	fi
 fi
 
 libuuid=no
@@ -251,6 +280,18 @@ if ( test "x$feat_hfsp" = "xyes" ); then
 
 	libhfsp=yes
 	AC_CHECK_LIB([hfsp],volume_open,,[libhfsp=no])
+fi
+
+if ( test "x$feat_LIBHIDEIP" = "xyes" ); then
+
+	libhip=yes
+	AC_CHECK_LIB(hideip,[libhideip_enable],,[libhip=no])
+fi
+
+if ( test "x$feat_LIBNETBLOCK" = "xyes" ); then
+
+	libnb=yes
+	AC_CHECK_LIB(netblock,[libnetblock_enable],,[libnb=no])
 fi
 
 # ==================== Checks for header files.
@@ -346,31 +387,59 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 	elif (test "x$have_ll" = "xyes" && test "x$libntfs" = "xyes"); then
 
 		has_ntfs_h=yes
-		AC_CHECK_HEADER([ntfs/ntfs_volume.h],
-				AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
-					[Whether you have the ntfs/ntfs_volume.h header.]),
-				[AC_CHECK_HEADER([ntfs/volume.h],
-					AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
-						[Whether you have the ntfs/volume.h header.]),
-					[AC_CHECK_HEADER([volume.h],
-						AC_DEFINE([HAVE_VOLUME_H],[1],
-							[Whether you have the volume.h header.]),
-						[has_ntfs_h=no],
+		if ( test "x$libntfs3g" = "xno" ); then
+			AC_CHECK_HEADER([ntfs/ntfs_volume.h],
+					AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
+						[Whether you have the ntfs/ntfs_volume.h header.]),
+					[AC_CHECK_HEADER([ntfs/volume.h],
+						AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
+							[Whether you have the ntfs/volume.h header.]),
+						[AC_CHECK_HEADER([volume.h],
+							AC_DEFINE([HAVE_VOLUME_H],[1],
+								[Whether you have the volume.h header.]),
+							[has_ntfs_h=no],
+						[[#ifdef HAVE_STDARG_H
+						# include <stdarg.h>
+						#endif
+						]]
+						)],
 					[[#ifdef HAVE_STDARG_H
-			  		  # include <stdarg.h>
-					  #endif
-					  ]]
-					  )],
+					# include <stdarg.h>
+					#endif
+					]]
+					)],
 				[[#ifdef HAVE_STDARG_H
-			  	  # include <stdarg.h>
-				  #endif
-				  ]]
-				  )],
-			[[#ifdef HAVE_STDARG_H
-		  	  # include <stdarg.h>
-			  #endif
-			  ]]
-			 )
+				# include <stdarg.h>
+				#endif
+				]]
+				)
+		else
+			AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
+					AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
+						[Whether you have the ntfs-3g/ntfs_volume.h header.]),
+					[AC_CHECK_HEADER([ntfs-3g/volume.h],
+						AC_DEFINE([HAVE_NTFS_3G_VOLUME_H],[1],
+							[Whether you have the ntfs-3g/volume.h header.]),
+						[AC_CHECK_HEADER([volume.h],
+							AC_DEFINE([HAVE_VOLUME_H],[1],
+								[Whether you have the volume.h header.]),
+							[has_ntfs_h=no],
+						[[#ifdef HAVE_STDARG_H
+						# include <stdarg.h>
+						#endif
+						]]
+						)],
+					[[#ifdef HAVE_STDARG_H
+					# include <stdarg.h>
+					#endif
+					]]
+					)],
+				[[#ifdef HAVE_STDARG_H
+				# include <stdarg.h>
+				#endif
+				]]
+				)
+		fi
 	fi
 fi
 
@@ -473,6 +542,20 @@ if ( test "x$feat_hfsp" = "xyes" ); then
 	fi
 fi
 
+if ( test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" ); then
+
+	have_libhideip_h=yes
+	AC_CHECK_HEADER([libhideip.h],AC_DEFINE([HAVE_LIBHIDEIP_H],[1],
+		[Whether you have the libhideip.h header.]), have_libhideip_h=no)
+fi
+
+if ( test "x$feat_LIBNETBLOCK" = "xyes" && test "x$libnb" = "xyes" ); then
+
+	have_libnetblock_h=yes
+	AC_CHECK_HEADER([libnetblock.h],AC_DEFINE([HAVE_LIBNETBLOCK_H],[1],
+		[Whether you have the libnetblock.h header.]), have_libnetblock_h=no)
+fi
+
 wfs_have_reiser4=no
 if (	   test "x$has_libreiser4_h"	= "xyes"	\
 	&& test "x$libreiser4"		= "xyes"	\
@@ -483,38 +566,53 @@ if (	   test "x$has_libreiser4_h"	= "xyes"	\
 fi
 
 AM_CONDITIONAL(EXT234FS, \
-	[  test "x$has_ext234_h" = "xyes"	\
-	&& test "x$libext234"	= "xyes"	\
-	&& test "x$feat_ext234"	= "xyes"	\
-	&& test "x$have_dev_t"	= "xyes"] )
+	[  test "x$has_ext234_h"	= "xyes"	\
+	&& test "x$libext234"		= "xyes"	\
+	&& test "x$feat_ext234"		= "xyes"	\
+	&& test "x$have_dev_t"		= "xyes"] )
 
 AM_CONDITIONAL(NTFS, \
-	[  test "x$has_ntfs_h"	= "xyes"	\
-	&& test "x$libntfs"	= "xyes"	\
-	&& test "x$feat_ntfs"	= "xyes"] )
+	[  test "x$has_ntfs_h"		= "xyes"	\
+	&& test "x$libntfs"		= "xyes"	\
+	&& test "x$feat_ntfs"		= "xyes"] )
 
 AM_CONDITIONAL(REISER4, [test "x$wfs_have_reiser4" = "xyes"] )
 
 AM_CONDITIONAL(FATFS, \
-	[  test "x$has_tffs_h"	= "xyes"	\
-	&& test "x$libtffs"	= "xyes"	\
-	&& test "x$feat_fatfs"	= "xyes"] )
+	[  test "x$has_tffs_h"		= "xyes"	\
+	&& test "x$libtffs"		= "xyes"	\
+	&& test "x$feat_fatfs"		= "xyes"] )
 
-AM_CONDITIONAL(MINIXFS, \
-	[  test "x$has_minixfs_h"	= "xyes"	\
+wfs_have_minixfs=no
+if (	   test "x$has_minixfs_h"	= "xyes"	\
 	&& test "x$libminixfs"		= "xyes"	\
-	&& test "x$feat_minixfs"	= "xyes"] )
+	&& test "x$feat_minixfs"	= "xyes" ); then
 
-AM_CONDITIONAL(JFS, \
-	[  test "x$has_jfs_h"	= "xyes"	\
-	&& test "x$libjfs"	= "xyes"	\
-	&& test "x$has_uuid_h"	= "xyes"	\
-	&& test "x$feat_jfs"	= "xyes"] )
+	wfs_have_minixfs=yes
+fi
 
-AM_CONDITIONAL(HFSP, \
-	[  test "x$has_hfsp_h"	= "xyes"	\
-	&& test "x$libhfsp"	= "xyes"	\
-	&& test "x$feat_hfsp"	= "xyes"] )
+AM_CONDITIONAL(MINIXFS, [test "x$wfs_have_minixfs" = "xyes"] )
+
+wfs_have_jfs=no
+if (	   test "x$has_jfs_h"		= "xyes"	\
+	&& test "x$libjfs"		= "xyes"	\
+	&& test "x$has_uuid_h"		= "xyes"	\
+	&& test "x$feat_jfs"		= "xyes" ); then
+
+	wfs_have_jfs=yes
+fi
+
+AM_CONDITIONAL(JFS, [test "x$wfs_have_jfs" = "xyes"] )
+
+wfs_have_hfsp=no
+if (	   test "x$has_hfsp_h"		= "xyes"	\
+	&& test "x$libhfsp"		= "xyes"	\
+	&& test "x$feat_hfsp"		= "xyes" ); then
+
+	wfs_have_hfsp=yes
+fi
+
+AM_CONDITIONAL(HFSP, [test "x$wfs_have_hfsp" = "xyes"] )
 
 has_com_h=yes
 AC_CHECK_HEADER([et/com_err.h],
@@ -757,6 +855,8 @@ if (test "x$GCC" = "xyes" ); then
 	AX_C_CHECK_FLAG([-Wlogical-op], [CFLAGS="$CFLAGS -Wlogical-op"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-fstack-protector-all], [CFLAGS="$CFLAGS -fstack-protector-all"], [CFLAGS="$CFLAGS"])
 	AX_C_CHECK_FLAG([-O2], [CFLAGS="$CFLAGS -O2"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Waggregate-return], [CFLAGS="$CFLAGS -Waggregate-return"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-Wwrite-strings], [CFLAGS="$CFLAGS -Wwrite-strings"], [CFLAGS="$CFLAGS"])
 
 	if (test "x$have_ll" = "xyes"); then
 
@@ -801,14 +901,14 @@ fi
 if (       test "x$has_ntfs_h"	= "xyes"	\
 	&& test "x$libntfs"	= "xyes"); then
 
-		echo " *	NTFS: yes"
+		echo " *	NTFS/NTFS-3G: yes"
 else
 	if (test "x$feat_ntfs" != "xyes"); then
-		echo " *	NTFS: no (disabled by command line)"
+		echo " *	NTFS/NTFS-3G: no (disabled by command line)"
 	elif (test "x$libntfs" != "xyes"); then
-		echo " *	NTFS: no (library missing or unusable)"
+		echo " *	NTFS/NTFS-3G: no (library missing or unusable)"
 	else
-		echo " *	NTFS: no (headers missing or unusable)"
+		echo " *	NTFS/NTFS-3G: no (headers missing or unusable)"
 	fi
 fi
 
@@ -987,3 +1087,66 @@ fi
 
 echo "***********************************"
 
+if (	test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" \
+	&& test "x$have_libhideip_h" = "xyes" ); then
+
+	echo " *	LibHideIP enabled: yes"
+	AC_MSG_WARN([LibHideIP may cause network filesystem wiping not to work.])
+	AC_MSG_WARN([If you do not wish to enable LibHideIP, re-configure wipefreespace with])
+	AC_MSG_WARN([./configure --enable-LIBHIDEIP=no])
+else
+	if (test "x$feat_LIBHIDEIP" != "xyes"); then
+		echo " *	LibHideIP enabled: no (disabled by command line)"
+
+	elif ( test "x$libhip" != "xyes" ); then
+		echo " *	LibHideIP enabled: no (library missing)"
+
+	else	#( test "x$have_libhideip_h" != "xyes" ); then
+		echo " *	LibHideIP enabled: no (libhideip.h header missing)"
+
+	fi
+fi
+
+if (	test "x$feat_LIBNETBLOCK" = "xyes" && test "x$libnb" = "xyes" \
+	&& test "x$have_libnetblock_h" = "xyes" ); then
+
+	echo " *	LibNetBlock enabled: yes"
+	AC_MSG_WARN([LibNetBlock may cause network filesystem wiping not to work.])
+	AC_MSG_WARN([If you do not wish to enable LibNetBlock, re-configure wipefreespace with])
+	AC_MSG_WARN([./configure --enable-LIBNETBLOCK=no])
+else
+	if (test "x$feat_LIBNETBLOCK" != "xyes"); then
+		echo " *	LibNetBlock enabled: no (disabled by command line)"
+
+	elif ( test "x$libnb" != "xyes" ); then
+		echo " *	LibNetBlock enabled: no (library missing)"
+
+	else	#( test "x$have_libnetblock_h" != "xyes" ); then
+		echo " *	LibNetBlock enabled: no (libnetblock.h header missing)"
+
+	fi
+fi
+
+echo "***********************************"
+
+if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes" ); then
+
+	AC_MSG_WARN([ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the REDME file.])
+fi
+
+if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_minixfs" = "xyes" ); then
+
+	AC_MSG_WARN([ReiserFSv3 and MinixFS both enabled. They may conflict - read the REDME file.])
+fi
+
+if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" ); then
+
+	AC_MSG_WARN([ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file.])
+fi
+
+if ( test "x$wfs_have_hfsp" = "xyes"  ); then
+
+	AC_MSG_WARN([HFS+ enabled. Make sure it's patched - read the REDME file.])
+fi
+
+echo "***********************************"

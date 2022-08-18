@@ -52,7 +52,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_signal_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_signal_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #include "wfs_signal.h"
 
@@ -150,6 +152,10 @@ static const int signals[] =
 # endif
 };
 
+# ifndef WFS_ANSIC
+static RETSIGTYPE term_signal_received PARAMS ((const int signum));
+# endif
+
 # ifndef RETSIGTYPE
 #  define RETSIGTYPE void
 # endif
@@ -177,6 +183,14 @@ term_signal_received (
 # undef void
 }
 
+# ifndef WFS_ANSIC
+static RETSIGTYPE child_signal_received PARAMS ((const int signum));
+# endif
+
+/**
+ * Signal handler fir SIGCHLD - Sets a flag that means that SIGCHLD has been received.
+ * \param signum Signal number.
+ */
 static RETSIGTYPE
 child_signal_received (
 #ifdef WFS_ANSIC

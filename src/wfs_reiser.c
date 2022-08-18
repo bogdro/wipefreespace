@@ -108,7 +108,9 @@ typedef short int __u16;
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_reiser_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_reiser_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #include "wfs_reiser.h"
 #include "wfs_signal.h"

@@ -109,7 +109,9 @@
 #endif
 
 /* redefine the inline sig function from hfsp, each time with a different name */
+extern unsigned long int wfs_main_sig(char c0, char c1, char c2, char c3);
 #define sig(a,b,c,d) wfs_main_sig(a,b,c,d)
+
 #include "wipefreespace.h"
 #include "wfs_wrappers.h"
 #include "wfs_secure.h"
@@ -206,6 +208,8 @@ static int opt_license = 0;
 static int opt_number  = 0;
 static int opt_super   = 0;
 static int opt_version = 0;
+static int opt_method  = 0;
+static char * opt_method_name = NULL;
 /* have to use a temp variable, to add both '-v' and '--verbose' together. */
 static int opt_verbose_temp = 0;
 static int opt_char    = 0;
@@ -221,6 +225,7 @@ static const struct option opts[] =
 	{ "last-zero",  no_argument,       &opt_zero,    1 },
 	{ "licence",    no_argument,       &opt_license, 1 },
 	{ "license",    no_argument,       &opt_license, 1 },
+	{ "method",     required_argument, &opt_method,  1 },
 	{ "nopart",     no_argument,       &opt_nopart,  1 },
 	{ "nounrm",     no_argument,       &opt_nounrm,  1 },
 	{ "nowfs",      no_argument,       &opt_nowfs,   1 },
@@ -245,10 +250,10 @@ const char * const sig_unk = N_("unknown");
 static unsigned long int blocksize = 0;
 static unsigned long int super_off = 0;
 
-static /*@observer@*/ char *wfs_progname;	/* The name of the program */
+static /*@observer@*/ const char *wfs_progname;	/* The name of the program */
 static int stdout_open = 1, stderr_open = 1;
 
-unsigned long int npasses = PASSES;		/* Number of passes (patterns used) */
+unsigned long int npasses = 0;		/* Number of passes (patterns used) */
 
 /* ======================================================================== */
 
@@ -277,7 +282,10 @@ show_error (
 	const wfs_fsid_t	FS;
 #endif
 {
-	if ( (stderr_open == 0) || (msg == NULL) ) return;
+	if ( (stderr_open == 0) || (msg == NULL) )
+	{
+		return;
+	}
 
 #if ((defined HAVE_ET_COM_ERR_H) || (defined HAVE_COM_ERR_H)) && (defined HAVE_LIBCOM_ERR)
 # if (defined WFS_EXT234)
@@ -333,7 +341,10 @@ show_msg (
 	const wfs_fsid_t	FS;
 #endif
 {
-	if ( (stdout_open == 0) || (msg == NULL) ) return;
+	if ( (stdout_open == 0) || (msg == NULL) )
+	{
+		return;
+	}
 
 	if ( (type == 0) || (extra == NULL) )
 	{
@@ -375,8 +386,14 @@ show_progress (
 {
 	unsigned int i;
 	if ( (stdout_open == 0) || (opt_verbose == 0) || (prev_percent == NULL)
-		|| ((type != 0) && (type != 1) && (type != 2)) ) return;
-	if ( (percent == *prev_percent) || (percent == 0) ) return;
+		|| ((type != 0) && (type != 1) && (type != 2)) )
+	{
+		return;
+	}
+	if ( (percent == *prev_percent) || (percent == 0) )
+	{
+		return;
+	}
 	if ( percent > 100 )
 	{
 		*prev_percent = percent;
@@ -389,12 +406,19 @@ show_progress (
 		else if ( type == 1 ) printf ("-");
 		else if ( type == 2 ) printf ("*");
 	}
-	if ( percent == 100 ) printf ("\n");
+	if ( percent == 100 )
+	{
+		printf ("\n");
+	}
 	*prev_percent = percent;
 	fflush (stdout);
 }
 
 /* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static void print_help PARAMS ((const char * const my_name));
+#endif
 
 /**
  * Prints the help screen.
@@ -442,9 +466,10 @@ print_help (
 \n-f|--force\t\tWipe even if the file system has errors") );
 	puts (
 		_("-h|--help\t\tPrint help\
-\n-n|--iterations NNN\tNumber of passes (>0, default: 35 in Gutmann method, 25 in random)\
+\n-n|--iterations NNN\tNumber of passes (greater than 0)\
 \n--last-zero\t\tPerform additional wiping with zeros\
 \n-l|--license\t\tPrint license information\
+\n--method <name>\t\tUse the given method for wiping\
 \n--nopart\t\tDo NOT wipe free space in partially used blocks")		);
 	puts (
 		_("--nounrm\t\tDo NOT wipe undelete information\
@@ -457,6 +482,65 @@ print_help (
 }
 
 /* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static void print_versions PARAMS ((void));
+#endif
+
+static void print_versions (
+#ifdef WFS_ANSIC
+	void
+#endif
+)
+{
+#if (defined WFS_EXT234) || (defined WFS_NTFS) || (defined WFS_REISER4)
+	const char *lib_ver = NULL;
+#endif
+#ifdef WFS_EXT234
+	ext2fs_get_library_version ( &lib_ver, NULL );
+	printf ( "Libext2fs %s Copyright (C) Theodore Ts'o\n",
+		(lib_ver != NULL)? lib_ver: "<?>" );
+#endif
+#ifdef WFS_NTFS
+# ifndef HAVE_LIBNTFS_3G
+	lib_ver = ntfs_libntfs_version ();
+	printf ( "LibNTFS %s, http://www.linux-ntfs.org\n",
+		(lib_ver != NULL)? lib_ver : "<?>" );
+# else
+	printf ( "NTFS-3G: ?\n");
+# endif
+#endif
+#ifdef WFS_XFS
+	printf ( "XFS: ?\n");
+#endif
+#ifdef WFS_REISER
+	printf ( "ReiserFSv3: ?\n");
+#endif
+#ifdef WFS_REISER4
+	lib_ver = libreiser4_version ();
+	printf ( "LibReiser4 %s\n",
+		(lib_ver != NULL)? lib_ver : "<?>" );
+#endif
+#ifdef WFS_FATFS
+	printf ( "FAT (TFFS): ?\n");
+#endif
+#ifdef WFS_MINIXFS
+	printf ( "MinixFS: ?\n");
+#endif
+#ifdef WFS_JFS
+	printf ( "JFS: ?\n");
+#endif
+#ifdef WFS_HFSP
+	printf ( "HFS+: ?\n");
+#endif
+}
+
+/* ======================================================================== */
+
+#ifndef WFS_ANSIC
+static errcode_enum WFS_ATTR((warn_unused_result)) wfs_wipe_filesytem
+	PARAMS ((const char * const dev_name, const int total_fs));
+#endif
 
 static errcode_enum WFS_ATTR((warn_unused_result))
 wfs_wipe_filesytem (
@@ -483,15 +567,15 @@ wfs_wipe_filesytem (
 	memset ( &error, 0, sizeof (error_type) );
 	memset ( &data, 0, sizeof (fsdata) );
 #else
-	for (i=0; i < sizeof (wfs_fsid_t); i++)
+	for (i = 0; i < sizeof (wfs_fsid_t); i++)
 	{
 		((char *)&fs)[i] = '\0';
 	}
-	for (i=0; i < sizeof (error_type); i++)
+	for (i = 0; i < sizeof (error_type); i++)
 	{
 		((char *)&error)[i] = '\0';
 	}
-	for (i=0; i < sizeof (fsdata); i++)
+	for (i = 0; i < sizeof (fsdata); i++)
 	{
 		((char *)&data)[i] = '\0';
 	}
@@ -512,7 +596,10 @@ wfs_wipe_filesytem (
 		show_msg ( 1, msg_chkmnt, dev_name, fs );
 	}
 
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 
 	/* checking if fs mounted */
 	ret = wfs_chk_mount ( dev_name, &error );
@@ -529,7 +616,10 @@ wfs_wipe_filesytem (
 		show_msg ( 1, msg_openfs, dev_name, fs );
 	}
 
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
@@ -613,7 +703,10 @@ wfs_wipe_filesytem (
 			show_msg ( 1, msg_wipeunrm, dev_name, fs );
 		}
 		res = wipe_unrm (fs, curr_fs, &error);
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+		{
+			ret = res;
+		}
 	}
 #endif
 #ifdef WFS_WANT_PART
@@ -626,7 +719,10 @@ wfs_wipe_filesytem (
 		}
 
 		res = wipe_part (fs, curr_fs, &error);
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+		{
+			ret = res;
+		}
 	}
 #endif
 #ifdef WFS_WANT_WFS
@@ -637,7 +733,10 @@ wfs_wipe_filesytem (
 			show_msg ( 1, msg_wipefs, dev_name, fs );
 		}
 		res = wipe_fs (fs, curr_fs, &error);
-		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+		if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+		{
+			ret = res;
+		}
 	}
 #endif
 	if ( opt_verbose > 0 )
@@ -647,7 +746,10 @@ wfs_wipe_filesytem (
 
 	wfs_flush_fs ( fs, curr_fs, &error );
 	res = wfs_close_fs ( fs, curr_fs, &error );
-	if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) ) ret = res;
+	if ( (res != WFS_SUCCESS) && (ret == WFS_SUCCESS) )
+	{
+		ret = res;
+	}
 #ifdef HAVE_IOCTL
 	if ( opt_ioctl != 0 )
 	{
@@ -658,6 +760,10 @@ wfs_wipe_filesytem (
 }
 
 /* ======================================================================== */
+#ifndef WFS_ANSIC
+int main PARAMS ((int argc, char* argv[]));
+#endif
+
 int
 main (
 #ifdef WFS_ANSIC
@@ -670,9 +776,6 @@ main (
 {
 	int res, i, j;
 	errcode_enum ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
-#if (defined WFS_EXT234) || (defined WFS_NTFS) || (defined WFS_REISER4)
-	const char *lib_ver = NULL;
-#endif
 #if (defined WFS_REISER) || (defined WFS_MINIXFS)
 	pid_t child_pid;
 	int child_status;
@@ -691,10 +794,19 @@ main (
 	textdomain (PACKAGE);
 #endif
 
+#ifdef IMYP_HAVE_LIBNETBLOCK
+	libnetblock_enable ();
+#endif
+#ifdef IMYP_HAVE_LIBHIDEIP
+	libhideip_enable ();
+#endif
+
 	if ( (argc <= 1) || (argv == NULL) )
 	{
 		if ( stdout_open == 1 )
+		{
 			print_help ("");
+		}
 		return WFS_BAD_CMDLN;
 	}
 
@@ -750,34 +862,26 @@ main (
 		/* NOTE: these shouldn't be a sequence of else-ifs */
 		if ( (opt_char == (int)'?') || (opt_char == (int)':') )
 		{
-			if ( stdout_open == 1 ) print_help (wfs_progname);
+			if ( stdout_open == 1 )
+			{
+				print_help (wfs_progname);
+			}
 			return WFS_BAD_CMDLN;
 		}
 
 		if ( (opt_char == (int)'h') || (opt_help == 1) )
 		{
-			if ( stdout_open == 1 ) print_help (wfs_progname);
+			if ( stdout_open == 1 )
+			{
+				print_help (wfs_progname);
+			}
 			return WFS_NOTHING;
 		}
 
 		if ( (opt_char == (int)'V') || (opt_version == 1) )
 		{
 			show_msg ( 1, ver_str, VERSION, wf_gen );
-# ifdef WFS_EXT234
-			ext2fs_get_library_version ( &lib_ver, NULL );
-			printf ( "Libext2fs version %s Copyright (C) Theodore Ts'o\n",
-				(lib_ver != NULL)? lib_ver: "<?>" );
-# endif
-# ifdef WFS_NTFS
-			lib_ver = ntfs_libntfs_version ();
-			printf("LibNTFS version %s, http://www.linux-ntfs.org\n",
-				(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
-# ifdef WFS_REISER4
-			lib_ver = libreiser4_version ();
-			printf("LibReiser4 version %s\n",
-				(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
+			print_versions ();
 			return WFS_NOTHING;
 		}
 
@@ -787,21 +891,7 @@ main (
 			{
 				show_msg ( 0, lic_str, "", wf_gen );
 				puts ( author_str );
-# ifdef WFS_EXT234
-				ext2fs_get_library_version ( &lib_ver, NULL );
-				printf ( "Libext2fs version %s Copyright (C) Theodore Ts'o\n",
-					(lib_ver != NULL)? lib_ver: "<?>" );
-# endif
-# ifdef WFS_NTFS
-				lib_ver = ntfs_libntfs_version ();
-				printf("LibNTFS version %s, http://www.linux-ntfs.org\n",
-					(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
-# ifdef WFS_REISER4
-				lib_ver = libreiser4_version ();
-				printf("LibReiser4 version %s\n",
-					(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
+				print_versions ();
 			}
 			return WFS_NOTHING;
 		}
@@ -826,7 +916,10 @@ main (
 # endif
 			   )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			opt_number = 0;
@@ -855,7 +948,10 @@ main (
 # endif
 			   )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			opt_blksize = 0;
@@ -884,7 +980,10 @@ main (
 # endif
 			   )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			opt_super = 0;
@@ -899,7 +998,11 @@ main (
 		{
 			opt_force = 1;
 		}
-
+		if ( opt_method == 1 )
+		{
+			opt_method_name = optarg;
+			opt_method = 0;
+		}
 	}
 	wfs_optind = optind;
 	/* add up '-v' and '--verbose'. */
@@ -911,66 +1014,44 @@ main (
 	{
 		if ( argv[i] == NULL ) continue;
 		/* NOTE: these shouldn't be a sequence of else-ifs */
-		if ( (strstr (argv[i], "-h") == argv[i]) || (strstr (argv[i], "-?") == argv[i])
-			|| (strstr (argv[i], "--help") == argv[i]) )
+		if ( (strcmp (argv[i], "-h") == 0) || (strcmp (argv[i], "-?") == 0)
+			|| (strcmp (argv[i], "--help") == 0) )
 		{
-			if ( stdout_open == 1 ) print_help (wfs_progname);
+			if ( stdout_open == 1 )
+			{
+				print_help (wfs_progname);
+			}
 			return WFS_NOTHING;
 		}
 
-		if ( (strstr (argv[i], "-V") == argv[i]) || (strstr (argv[i], "--version") == argv[i]) )
+		if ( (strcmp (argv[i], "-V") == 0) || (strcmp (argv[i], "--version") == 0) )
 		{
 			show_msg ( 1, ver_str, VERSION, wf_gen );
-# ifdef WFS_EXT234
-			ext2fs_get_library_version ( &lib_ver, NULL );
-			printf ( "Libext2fs version %s Copyright (C) Theodore Ts'o\n",
-				(lib_ver != NULL)? lib_ver: "<?>" );
-# endif
-# ifdef WFS_NTFS
-			lib_ver = ntfs_libntfs_version ();
-			printf("LibNTFS version %s, http://www.linux-ntfs.org\n",
-				(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
-# ifdef WFS_REISER4
-			lib_ver = libreiser4_version ();
-			printf("LibReiser4 version %s\n",
-				(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
+			print_versions ();
 			return WFS_NOTHING;
 		}
 
-		if ( (strstr (argv[i], "-l") == argv[i]) || (strstr (argv[i], "--licence") == argv[i])
-			|| (strstr (argv[i], "--license") == argv[i]) )
+		if ( (strcmp (argv[i], "-l") == 0) || (strcmp (argv[i], "--licence") == 0)
+			|| (strcmp (argv[i], "--license") == 0) )
 		{
 			if ( stdout_open == 1 )
 			{
 				show_msg ( 0, lic_str, "", wf_gen );
 				puts ( author_str );
-# ifdef WFS_EXT234
-				ext2fs_get_library_version ( &lib_ver, NULL );
-				printf ( "Libext2fs version %s Copyright (C) Theodore Ts'o\n",
-					(lib_ver != NULL)? lib_ver: "<?>" );
-# endif
-# ifdef WFS_NTFS
-				lib_ver = ntfs_libntfs_version ();
-				printf("LibNTFS version %s, http://www.linux-ntfs.org\n",
-					(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
-# ifdef WFS_REISER4
-				lib_ver = libreiser4_version ();
-				printf("LibReiser4 version %s\n",
-					(lib_ver != NULL)? lib_ver : "<?>" );
-# endif
+				print_versions ();
 			}
 			return WFS_NOTHING;
 		}
 
-		if ( (strstr (argv[i], "-n") == argv[i])
-			|| (strstr (argv[i], "--iterations") == argv[i]) )
+		if ( (strcmp (argv[i], "-n") == 0)
+			|| (strcmp (argv[i], "--iterations") == 0) )
 		{
 			if ( i >= argc-1 )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 # ifdef HAVE_ERRNO_H
@@ -991,7 +1072,10 @@ main (
 # endif
 			   )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			argv[i] = NULL;
@@ -999,11 +1083,14 @@ main (
 			continue;
 		}
 
-		if ( (strstr (argv[i], "-B") == argv[i]) || (strstr (argv[i], "--blocksize") == argv[i]) )
+		if ( (strcmp (argv[i], "-B") == 0) || (strcmp (argv[i], "--blocksize") == 0) )
 		{
 			if ( i >= argc-1 )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 # ifdef HAVE_ERRNO_H
@@ -1027,7 +1114,10 @@ main (
 # endif
 			   )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			argv[i] = NULL;
@@ -1035,12 +1125,15 @@ main (
 			continue;
 		}
 
-		if ( (strstr (argv[i], "-b") == argv[i])
-			|| (strstr (argv[i], "--superblock") == argv[i]) )
+		if ( (strcmp (argv[i], "-b") == 0)
+			|| (strcmp (argv[i], "--superblock") == 0) )
 		{
 			if ( i >= argc-1 )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 # ifdef HAVE_ERRNO_H
@@ -1064,7 +1157,10 @@ main (
 # endif
 			   )
 			{
-				if ( stdout_open == 1 ) print_help (wfs_progname);
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
 				return WFS_BAD_CMDLN;
 			}
 			argv[i] = NULL;
@@ -1072,70 +1168,83 @@ main (
 			continue;
 		}
 
-		if ( (strstr (argv[i], "-v") == argv[i]) || (strstr (argv[i], "--verbose") == argv[i]) )
+		if ( (strcmp (argv[i], "-v") == 0) || (strcmp (argv[i], "--verbose") == 0) )
 		{
 			opt_verbose++;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( (strstr (argv[i], "-f") == argv[i]) || (strstr (argv[i], "--force") == argv[i]) )
+		if ( (strcmp (argv[i], "-f") == 0) || (strcmp (argv[i], "--force") == 0) )
 		{
 			opt_force = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--background") == argv[i] )
+		if ( strcmp (argv[i], "--background") == 0 )
 		{
 			opt_bg = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--no-unrm") == argv[i] )
+		if ( strcmp (argv[i], "--no-unrm") == 0 )
 		{
 			opt_nounrm = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--no-part") == argv[i] )
+		if ( strcmp (argv[i], "--no-part") == 0 )
 		{
 			opt_nopart = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--no-wfs") == argv[i] )
+		if ( strcmp (argv[i], "--no-wfs") == 0 )
 		{
 			opt_nowfs = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--use-ioctl") == argv[i] )
+		if ( strcmp (argv[i], "--use-ioctl") == 0 )
 		{
 			opt_ioctl = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--last-zero") == argv[i] )
+		if ( strcmp (argv[i], "--last-zero") == 0 )
 		{
 			opt_zero = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--all-zeros") == argv[i] )
+		if ( strcmp (argv[i], "--all-zeros") == 0 )
 		{
 			opt_allzero = 1;
 			argv[i] = NULL;
 			continue;
 		}
 
-		if ( strstr (argv[i], "--") == argv[i] && strlen (argv[i]) == 2 )
+		if ( strcmp (argv[i], "--method") == 0 )
+		{
+			if ( i >= argc-1 )
+			{
+				if ( stdout_open == 1 ) print_help (wfs_progname);
+				return WFS_BAD_CMDLN;
+			}
+			opt_method_name = argv[i+1];
+			argv[i] = NULL;
+			argv[i+1] = NULL;
+			continue;
+		}
+
+		if ( strcmp (argv[i], "--") == 0 )
 		{
 			/* end-of-arguments marker */
 			argv[i] = NULL;
@@ -1151,7 +1260,9 @@ main (
 	if ( wfs_optind >= argc )
 	{
 		if ( stdout_open == 1 )
+		{
 			print_help (wfs_progname);
+		}
 		return WFS_BAD_CMDLN;
 	}
 
@@ -1162,9 +1273,10 @@ main (
 		return WFS_BAD_CMDLN;
 	}
 
-	init_wiping (npasses, opt_verbose, opt_allzero);
-
-	if ( stdout_open == 0 ) opt_verbose = 0;
+	if ( stdout_open == 0 )
+	{
+		opt_verbose = 0;
+	}
 
 	if ( opt_bg == 1 )
 	{
@@ -1192,7 +1304,10 @@ main (
 	wfs_set_sigh (&error, opt_verbose);
 #endif		/* HAVE_SIGNAL_H */
 
-        if ( sig_recvd != 0 ) return WFS_SIGNAL;
+        if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
 
 #if (!defined __STRICT_ANSI__) && (defined HAVE_SRANDOM)
 # if (defined HAVE_TIME_H) || (defined HAVE_SYS_TIME_H) || (defined TIME_WITH_SYS_TIME)
@@ -1209,6 +1324,16 @@ main (
 	srand (0xabadcafe);
 # endif
 #endif
+	/* initialize wiping AFTER initializing the pseudorandom number generator */
+	if ( npasses == 0 )
+	{
+		npasses = init_wiping (npasses, opt_verbose, opt_allzero, opt_method_name);
+	}
+	else
+	{
+		init_wiping (npasses, opt_verbose, opt_allzero, opt_method_name);
+	}
+
 	/* remove duplicate command-line parameters */
 	res = wfs_optind;
 	while ( wfs_optind < argc-1 )
@@ -1218,7 +1343,7 @@ main (
 			wfs_optind++;
 			continue;
 		}
-		for ( i=wfs_optind+1; i < argc; i++ )
+		for ( i = wfs_optind+1; i < argc; i++ )
 		{
 			if (argv[i] == NULL) continue;
 			if ( strcmp (argv[wfs_optind], argv[i]) == 0 )
@@ -1242,7 +1367,7 @@ main (
 		ioctls = (fs_ioctl *) malloc ( (size_t)(argc - wfs_optind) * sizeof (fs_ioctl) );
 		if ( ioctls != NULL )
 		{
-			for ( i=0; i < argc - wfs_optind; i++ )
+			for ( i = 0; i < argc - wfs_optind; i++ )
 			{
 				ioctls[i].how_many = 0;
 				ioctls[i].was_enabled = 0;
@@ -1330,7 +1455,10 @@ main (
 #else /* ! ((defined WFS_REISER) || (defined WFS_MINIXFS)) */
 		ret = wfs_wipe_filesytem (argv[wfs_optind], argc - wfs_optind);
 #endif
-		if ( (ret == WFS_SIGNAL) || (sig_recvd != 0) ) break;
+		if ( (ret == WFS_SIGNAL) || (sig_recvd != 0) )
+		{
+			break;
+		}
 		wfs_optind++;
 	} /* while optind<argc && !signal */
 
@@ -1345,7 +1473,13 @@ main (
 	remove_error_table (&et_ext2_error_table);
 #endif
 
-	if ( sig_recvd != 0 ) return WFS_SIGNAL;
-	else return ret;	/* return the last error value or zero */
+	if ( sig_recvd != 0 )
+	{
+		return WFS_SIGNAL;
+	}
+	else
+	{
+		return ret;	/* return the last error value or zero */
+	}
 }	/* main() */
 
