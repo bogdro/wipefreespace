@@ -3,7 +3,7 @@ autom4te.cache
 config.h
 config.log
 config.status
-# Makefile
+Makefile
 stamp-*
 
 TODO*
@@ -15,7 +15,7 @@ wipefreespace
 *.info
 *.html
 *~
-# wipefreespace.spec
+wipefreespace.spec
 wfs_cfg.h
 
 po/POTFILES
