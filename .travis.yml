@@ -15,5 +15,13 @@ branches:
 #        - master
         - dev
 
-script: ./configure && make
+addons:
+        apt:
+                packages: libext2fs-dev ntfs-3g-dev xfsprogs libreiser4-dev libhfsp-dev ocfs2-tools-dev
+        homebrew:
+                packages: e2fsprogs tuxera-ntfs ntfs-3g hfsutils
+        pkg:
+                #packages: e2fsprogs-roothardlinks xfsprogs  progsreiserfs hfsutils
+                packages: e2fsprogs xfsprogs progsreiserfs hfsutils
 
+script: mkdir $HOME/bin && echo '#!/bin/bash' > $HOME/bin/xfs_db && chmod 700 $HOME/bin/xfs_db && export PATH=$PATH:$HOME/bin && ./configure && make
