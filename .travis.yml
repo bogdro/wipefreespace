@@ -24,4 +24,5 @@ addons:
                 #packages: e2fsprogs-roothardlinks xfsprogs  progsreiserfs hfsutils
                 packages: e2fsprogs xfsprogs progsreiserfs hfsutils
 
-script: mkdir $HOME/bin && echo '#!/bin/bash' > $HOME/bin/xfs_db && chmod 700 $HOME/bin/xfs_db && export PATH=$PATH:$HOME/bin && ./configure && make
+script: mkdir $HOME/bin && echo '#!/bin/bash' > $HOME/bin/xfs_db && chmod 700 $HOME/bin/xfs_db && export PATH=$PATH:$HOME/bin &&
+        touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in && ./configure && make
