@@ -18,8 +18,8 @@ Requirements for compiling the full version:
   (usually included in something like e2fsprogs-devel). If you don't have
   anything like this installed or available (check twice), then go to
   	http://e2fsprogs.sf.net/
-  Then compile and install that package. Ext4 support requires new versions,
-  like 1.41.
+  Then compile and install that package. Ext4 support requires new enough
+  versions, like 1.41.
 
 - NTFS: the development package for the NTFS file system library,
   ntfs3g-ntfsprogs. If you don't have anything like this installed or
@@ -29,12 +29,12 @@ Requirements for compiling the full version:
   included in something like ntfsprogs-devel).
 
 - XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
-  Get these at http://oss.sgi.com/projects/xfs/. The following utilities
-  should be available: xfs_db, xfs_freeze, xfs_unfreeze. The xfs_db program
-  should support the following command-line options: "-i", "-c" and the
-  following interactive mode commands: "quit", "freesp -d", "blockget -n",
-  "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier versions will
-  probably also work.
+  Get these at https://kernel.org/pub/linux/utils/fs/xfs/xfsprogs/. The
+  following utilities should be available: xfs_db, xfs_freeze, xfs_unfreeze.
+  The xfs_db program should support the following command-line options: "-i",
+  "-c" and the following interactive mode commands: "quit", "freesp -d",
+  "blockget -n", "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier
+  versions will probably also work.
 
 - ReiserFSv3: development package for reiserfsprogs (header files - *.h - and
   compiled static libraries - *.a - from the package). ReiserFS requires either
