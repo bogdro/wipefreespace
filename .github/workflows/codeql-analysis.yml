@@ -66,7 +66,7 @@ jobs:
 
     - run: |
        echo "Run, Build Application using script"
-       touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in po/*gmo &&
+       touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in &&
        ./configure && make
     #   ./location_of_script_within_repo/buildscript.sh
 
