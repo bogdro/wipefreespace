@@ -157,7 +157,6 @@ TEXINFOS = wipefreespace.texi
 TEXI2DVI = texi2dvi
 TEXI2PDF = $(TEXI2DVI) --pdf --batch
 MAKEINFOHTML = $(MAKEINFO) --html
-AM_MAKEINFOHTMLFLAGS = $(AM_MAKEINFOFLAGS)
 DVIPS = dvips
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
@@ -329,6 +328,7 @@ info_TEXINFOS = wipefreespace.texi
 dist_man1_MANS = wipefreespace.1
 #man_MANS = wipefreespace.1
 EXTRA_DIST = wipefreespace.texi.in
+AM_MAKEINFOHTMLFLAGS = --css-ref=../sf_bogdro.css
 all: all-am
 
 .SUFFIXES:
