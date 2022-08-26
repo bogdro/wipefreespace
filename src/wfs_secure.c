@@ -72,13 +72,13 @@
 int GCC_WARN_UNUSED_RESULT
 wfs_clear_cap (WFS_VOID)
 {
-#ifdef HAVE_SYS_CAPABILITY_H
+#if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP)
 	int res;
 	cap_t my_capab;
 #endif
 	wfs_errcode_t ret = WFS_SUCCESS;
 
-#ifdef HAVE_SYS_CAPABILITY_H
+#if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP)
 
 	WFS_SET_ERRNO (0);
 	/* NOTE: Valgring says this calls capget(..., NULL), but
@@ -147,7 +147,7 @@ wfs_clear_cap (WFS_VOID)
 			ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		}
 	}
-#endif /* HAVE_SYS_CAPABILITY_H */
+#endif /* #if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP) */
 
 	return ret;
 }
