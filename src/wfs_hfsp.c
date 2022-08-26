@@ -50,8 +50,8 @@
 # include <string.h>
 #endif
 
-/* add the missing prototype */
-extern unsigned long int wfs_hfsp_sig(char c0, char c1, char c2, char c3);
+/* add the missing prototype * /
+extern unsigned long int wfs_hfsp_sig(char c0, char c1, char c2, char c3); */
 /* redefine the inline sig function from hfsp, each time with a different name */
 #define sig(a,b,c,d) wfs_hfsp_sig(a,b,c,d)
 
