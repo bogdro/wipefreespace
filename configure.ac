@@ -765,7 +765,7 @@ AC_CHECK_HEADER([endian.h],
 
 AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h \
 	malloc.h libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
-	sys/sysmacros.h sys/mkdev.h sys/ioctl.h Sys/statfs.h sys/vfs.h \
+	sys/sysmacros.h sys/mkdev.h sys/ioctl.h sys/statfs.h sys/vfs.h \
 	sys/byteorder.h stdbool.h strings.h])
 
 if ( test "x$feat_xfs" = "xyes" ); then
