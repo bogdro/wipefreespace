@@ -25,16 +25,11 @@
 
 #include "wfs_cfg.h"
 
-#ifdef HAVE_GETMNTENT_R
-	/* getmntent_r() */
-# define _GNU_SOURCE	1
-#endif
-
-#if (defined HAVE_PUTENV) || (defined HAVE_SETENV)
-# define _XOPEN_SOURCE 600
-#endif
-
 #include <stdio.h>	/* FILE */
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>	/* for open() */
+#endif
 
 #ifdef HAVE_STRING_H
 # if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
@@ -118,10 +113,6 @@
 
 #ifdef HAVE_SCHED_H
 # include <sched.h>
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>	/* for open() */
 #endif
 
 #ifdef MAJOR_IN_MKDEV

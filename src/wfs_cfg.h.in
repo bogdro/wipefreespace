@@ -189,4 +189,15 @@
 #  define __attribute(x)
 # endif
 
+# define _SVID_SOURCE 1
+# define _BSD_SOURCE 1
+# define _BSD_TYPES 1
+# define _XOPEN_SOURCE 700
+# define _POSIX_C_SOURCE 200809L
+# define _DEFAULT_SOURCE 1
+# define _ATFILE_SOURCE 1
+# define _GNU_SOURCE 1		/* getaddrinfo_a + struct gaicb in lhip_priv.h */
+# define _DARWIN_C_SOURCE 1
+# define __BSD_VISIBLE 1
+
 #endif	/* WFS_CFG_H */

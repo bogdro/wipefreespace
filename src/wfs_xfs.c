@@ -27,9 +27,9 @@
 
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE64_SOURCE 1
-#define _BSD_SOURCE /* fsync() */
 /* used for fsync(), but this makes BSD's select() impossible. Same for _POSIX_SOURCE - don't define. */
 /*#define _XOPEN_SOURCE*/
+#undef _XOPEN_SOURCE
 #define _DEFAULT_SOURCE 1
 
 #include <stdio.h>	/* sscanf() */
