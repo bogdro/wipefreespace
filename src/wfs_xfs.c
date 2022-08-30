@@ -267,7 +267,7 @@ flush_pipe_output (
 	int i;
 	for (i=0; i < PIPE_BUF; i++)
 	{
-		write (fd, "\n", 1);
+		(void)write (fd, "\n", 1);
 	}
 # if (defined HAVE_FSYNC) && (defined HAVE_UNISTD_H)
 	fsync (fd);
@@ -1460,7 +1460,7 @@ wfs_xfs_wipe_part (
 		} while (sig_recvd == 0);
 	} /* while: reading inode-file */
 	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
-	write (pipe_to_blk_db[PIPE_W], "quit\n", 5);
+	(void)write (pipe_to_blk_db[PIPE_W], "quit\n", 5);
 	close (pipe_to_blk_db[PIPE_R]);
 	close (pipe_to_blk_db[PIPE_W]);
 
