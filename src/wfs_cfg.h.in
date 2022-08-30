@@ -29,7 +29,6 @@
 # else
 	/* be optimisitc - glibc has all of these, except the filesystem-specific, of course */
 #  define ENABLE_NLS		1
-#  define HAVE_ACCESS		1
 #  define HAVE_ASM_TYPES_H	1
 #  define HAVE_BASENAME		1
 #  define HAVE_CLEARENV		1
@@ -48,6 +47,7 @@
 #  define HAVE_FCNTL_H		1
 #  define HAVE_FOPEN64		1
 #  define HAVE_FORK		1
+#  define HAVE_WORKING_FORK	1
 #  define HAVE_FSTAT		1
 #  define HAVE_FSTAT64		1
 #  define HAVE_FSYNC		1
@@ -167,12 +167,14 @@
 #  define HAVE_XFS_DB			1
 
 #  undef const
+#  undef mode_t
+#  undef pid_t
 #  undef size_t
 #  undef ssize_t
 #  undef volatile
 
-#  define PACKAGE_NAME "wipefreespace"
-#  define PACKAGE PACKAGE_NAME
+#  define PACKAGE_NAME "WipeFreeSpace"
+#  define PACKAGE "wipefreespace"
 #  define PACKAGE_VERSION "@VERSION@"
 #  define VERSION PACKAGE_VERSION
 #  define LOCALEDIR "/usr/share/locale"
