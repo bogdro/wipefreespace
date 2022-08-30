@@ -1672,11 +1672,6 @@ deep_copy_array (
 	}
 	for ( i = 0; i < len; i++ )
 	{
-		new_arr[i] = NULL;
-	}
-
-	for ( i = 0; i < len; i++ )
-	{
 		if ( array[i] == NULL )
 		{
 			new_arr[i] = NULL;
@@ -1685,7 +1680,8 @@ deep_copy_array (
 		new_arr[i] = WFS_STRDUP (array[i]);
 		if ( new_arr[i] == NULL )
 		{
-			free_array_deep_copy (new_arr, len);
+			/* free only as many as set */
+			free_array_deep_copy (new_arr, i);
 			return NULL;
 		}
 	}
