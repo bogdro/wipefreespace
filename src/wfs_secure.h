@@ -31,7 +31,7 @@ extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
 	wfs_check_suid WFS_PARAMS ((void));
 
 extern void WFS_ATTR ((nonnull))
-	wfs_check_stds WFS_PARAMS ((int *stdout_open, int *stderr_open));
+	wfs_check_stds WFS_PARAMS ((int * const stdout_open, int * const stderr_open));
 
 extern void
 	wfs_clear_env WFS_PARAMS ((void));

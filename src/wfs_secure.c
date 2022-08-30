@@ -163,11 +163,11 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_check_stds (
 #ifdef WFS_ANSIC
-	int *stdout_open, int *stderr_open)
+	int * const stdout_open, int * const stderr_open)
 #else
 	stdout_open, stderr_open)
-	int *stdout_open;
-	int *stderr_open;
+	int * const stdout_open;
+	int * const stderr_open;
 #endif
 {
 #ifdef WFS_HAVE_STAT
