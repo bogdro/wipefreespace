@@ -757,7 +757,7 @@ Basic syntax is:
 The @file{/dev/XY} part stands for a device with a supported file system. Examples:
 @file{/dev/hda1}, @file{/dev/fd0}.
 More than one device can be given on the command line, but they will be wiped sequentially,
-@strong{NOT} in multiple threads. WipeFreeSpace is not multi-threaded and probably won't be,
+@strong{NOT} in multiple threads. WipeFreeSpace is not multithreaded and probably won't be,
 because the libraries used can be not thread-safe and the program can't tell if a library will
 be used until it's used.
 

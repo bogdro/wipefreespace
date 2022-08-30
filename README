@@ -321,7 +321,7 @@ Command line options:
 The '/dev/XY' part stands for a device with a supported file system.
  Examples: /dev/hda1, /dev/fd0. More than one device can be given on the
  command line, but they will be wiped sequentially, NOT in
- multiple threads. WipeFreeSpace is not multi-threaded and probably
+ multiple threads. WipeFreeSpace is not multithreaded and probably
  won't be, because the libraries used can be not thread-safe.
  But, you can run multiple WipeFreeSpace processes (but not wiping the same
  filesystem) in multiple terminals (or under screen/nohup) as a substitute
