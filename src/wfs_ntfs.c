@@ -919,10 +919,22 @@ free_file (
 		return;
 	}
 
-	WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->name))
+	item = (&(file->name))->next;
+	if ( item == NULL )
+	{
+		if (file->mft != NULL)
+		{
+			free (file->mft);
+		}
+		free (file);
+		return;
+	}
+	tmp = item->next;
+	while (item != (&(file->name)))
 	{ /* List of filenames */
 
-		f = WFS_NTFS_LIST_ENTRY (item, struct filename, list);
+		/*f = WFS_NTFS_LIST_ENTRY (item, struct filename, list);*/
+		f = ((struct filename *)((char *)(item) - (unsigned long int)(&((struct filename *)0)->list)));
 		if (f != NULL)
 		{
 			if (f->name != NULL)
@@ -933,27 +945,64 @@ free_file (
 			{
 				free (f->parent_name);
 			}
+			free (f);
 		}
-		free (f);
+		item = tmp;
+		if ( item == NULL )
+		{
+			break;
+		}
+		tmp = item->next;
 	}
 
-	WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->data))
+	/*WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->data))*/
+	item = (&(file->data))->next;
+	if ( item == NULL )
+	{
+		if (file->mft != NULL)
+		{
+			free (file->mft);
+		}
+		free (file);
+		return;
+	}
+	tmp = item->next;
+	while (item != (&(file->data)))
 	{ /* List of data streams */
 
-		d = WFS_NTFS_LIST_ENTRY (item, struct data, list);
+		/*d = WFS_NTFS_LIST_ENTRY (item, struct data, list);*/
+		/* XXX: A cheat for the GCC analyzer, "d" points to the same place, the code is correct... */
+		if ( item->next != NULL )
+		{
+			d = ((struct data *)((char *)(item->next->prev) - (unsigned long int)(&((struct data *)0)->list)));
+		}
+		else
+		{
+			d = ((struct data *)((char *)(item) - (unsigned long int)(&((struct data *)0)->list)));
+		}
 		if (d != NULL)
 		{
 			if (d->name != NULL)
 			{
 				free (d->name);
+				d->name = NULL;
 			}
 			if (d->runlist != NULL)
 			{
 				free (d->runlist);
+				d->runlist = NULL;
 			}
+			free (d);
+			d = NULL;
 		}
-		free (d);
+		item = tmp;
+		if ( item == NULL )
+		{
+			break;
+		}
+		tmp = item->next;
 	}
+
 	if (file->mft != NULL)
 	{
 		free (file->mft);
