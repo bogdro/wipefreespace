@@ -721,32 +721,37 @@ Operations:
 @chapter Usage
 
 @menu
-* KDE::					Konqueror's/Dolphin's context menu.
+* KDE::					Context menu.
+* Xfce::				Context menu.
 * Command line syntax and options::	Running from the command line.
 @end menu
 
 
-@node KDE, Command line syntax and options, Usage, Usage
+@node KDE, Xfce, Usage, Usage
 @comment  node-name, next,      previous,  up
 @section KDE
 
-@strong{KDE3}:
-Copy the @file{wipefreespace.desktop} file from the distribution tarball to
-@file{$KDEHOME/share/apps/konqueror/servicemenus/}, creating the directory if necessary.
-@env{$KDEHOME} is usually @file{$HOME/.kde}. Then, restart Konqueror. A new context menu entry
-under the "Actions" submenu should be available for block devices and all files
-(a filesystem can reside inside a regular file).
-@sp 1
+To use WipeFreeSpace in KDE, download and install
+@url{https://fmsec.sourceforge.io, FMSec}, a set of extensions
+to file managers that enable some security-related operations to be
+easily performed (formerly: KonqSec/Konq4Sec/Konq5Sec).
 
-@strong{KDE4}:
-Copy the @file{wipefreespace-kde4.desktop} file from the distribution tarball to
-@file{$HOME/.kde4/share/kde4/services/ServiceMenus/}, creating the directory if necessary.
-Then, restart Konqueror/Dolphin. A new context menu entry under the "Actions" submenu
-should be available for block devices and all files
-(a filesystem can reside inside a regular file).
+The *.desktop files previously bundled with WipeFreeSpace are
+considered deprecated.
 
 
-@node Command line syntax and options, , KDE, Usage
+@node Xfce, Command line syntax and options, KDE, Usage
+@comment  node-name, next,      previous,  up
+@section Xfce
+
+To use WipeFreeSpace in Xfce, download and install
+@url{https://fmsec.sourceforge.io, FMSec}, a set of extensions
+to file managers that enable some security-related operations to be
+easily performed (formerly: KonqSec/Konq4Sec/Konq5Sec).
+
+
+
+@node Command line syntax and options, , Xfce, Usage
 @comment  node-name, next,      previous,  up
 @section Command line syntax and options
 

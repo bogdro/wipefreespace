@@ -1,4 +1,4 @@
-Wipefreespace - a program for secure cleaning of free space on filesystems.
+WipeFreeSpace - a program for secure cleaning of free space on filesystems.
 
 Requirements for compiling the full version:
 
