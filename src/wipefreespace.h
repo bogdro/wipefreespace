@@ -323,8 +323,7 @@ union wfs_fsdata
 		unsigned int blocksize;
 	} e2fs;
 
-	/* TODO: to be expanded, when other filesystems come into the program */
-
+	/* to be expanded, when other filesystems come into the program */
 };
 
 typedef union wfs_fsdata wfs_fsdata_t;
@@ -356,29 +355,6 @@ typedef union wfs_fsdata wfs_fsdata_t;
 # else
 #  define WFS_GET_ERRNO_OR_DEFAULT(val) (val)
 #  define WFS_SET_ERRNO(value)
-# endif
-
-# ifdef HAVE_MEMCPY
-#  define WFS_MEMCOPY memcpy
-# else
-extern void wfs_memcopy WFS_PARAMS ((void * const dest,
-	const void * const src, const size_t len));
-#  define WFS_MEMCOPY wfs_memcopy
-# endif
-
-# ifdef HAVE_MEMSET
-#  define WFS_MEMSET memset
-# else
-extern void wfs_mem_set WFS_PARAMS ((void * const dest,
-	const char value, const size_t len));
-#  define WFS_MEMSET wfs_mem_set
-# endif
-
-# ifdef HAVE_STRDUP
-#  define WFS_STRDUP strdup
-# else
-extern char * wfs_duplicate_string WFS_PARAMS ((const char src[]));
-#  define WFS_STRDUP wfs_duplicate_string
 # endif
 
 extern int GCC_WARN_UNUSED_RESULT

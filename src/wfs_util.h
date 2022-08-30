@@ -118,4 +118,27 @@ extern void
 	free_array_deep_copy WFS_PARAMS ((char * array[],
 		const unsigned int len));
 
+# ifdef HAVE_MEMCPY
+#  define WFS_MEMCOPY memcpy
+# else
+extern void wfs_memcopy WFS_PARAMS ((void * const dest,
+	const void * const src, const size_t len));
+#  define WFS_MEMCOPY wfs_memcopy
+# endif
+
+# ifdef HAVE_MEMSET
+#  define WFS_MEMSET memset
+# else
+extern void wfs_mem_set WFS_PARAMS ((void * const dest,
+	const char value, const size_t len));
+#  define WFS_MEMSET wfs_mem_set
+# endif
+
+# ifdef HAVE_STRDUP
+#  define WFS_STRDUP strdup
+# else
+extern char * wfs_duplicate_string WFS_PARAMS ((const char src[]));
+#  define WFS_STRDUP wfs_duplicate_string
+# endif
+
 #endif	/* WFS_UTIL_H */

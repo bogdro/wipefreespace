@@ -53,6 +53,7 @@
 #include "wipefreespace.h"
 #include "wfs_wiping.h"
 #include "wfs_signal.h"
+#include "wfs_util.h"
 
 enum wfs_method
 {

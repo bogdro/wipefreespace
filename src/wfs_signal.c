@@ -53,6 +53,7 @@
 #include "wipefreespace.h"
 #include "wfs_signal.h"
 #include "wfs_wrappers.h"
+#include "wfs_util.h"
 
 #ifdef TEST_COMPILE
 # undef WFS_ANSIC
