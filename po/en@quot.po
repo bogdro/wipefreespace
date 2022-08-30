@@ -1,5 +1,5 @@
 # English translations for wipefreespace package.
-# Copyright (C) 2021 Bogdan bogdro Drozdowski
+# Copyright (C) 2021-2022 Bogdan bogdro Drozdowski
 # This file is distributed under the same license as the wipefreespace package.
 # Automatically generated, 2021.
 #

@@ -74,7 +74,7 @@ Requirements for compiling the full version:
   Then compile and install that package. You can also use libntfs (usually
   included in something like ntfsprogs-devel).
 
-- XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
+- XFS: xfsprogs installed and in your PATH variable.
   Get these at https://kernel.org/pub/linux/utils/fs/xfs/xfsprogs/. The
   following utilities should be available: xfs_db, xfs_freeze, xfs_unfreeze.
   The xfs_db program should support the following command-line options: "-i",
@@ -399,7 +399,7 @@ you wish.
 marked with capital letters in the header:
 
 # YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski
+# Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as
 # the wipefreespace package.
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.
