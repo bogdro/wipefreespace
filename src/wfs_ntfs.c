@@ -1855,6 +1855,8 @@ wfs_ntfs_wipe_part (
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	/* ntfswipe --tails --count wfs_fs.npasses --bytes */
+#define WFSWIPE_PART_POS_COUNT 3
+#define WFSWIPE_PART_POS_FSNAME 6
 	const char * args_ntfswipe[] = { "ntfswipe", "--tails", "--count", "                      ",
 		"--bytes", "0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
@@ -1887,7 +1889,7 @@ wfs_ntfs_wipe_part (
 			return WFS_BADPARAM;
 		}
 		WFS_SET_ERRNO (0);
-		args_ntfswipe[6] = wfs_fs.fsname;
+		args_ntfswipe[WFSWIPE_PART_POS_FSNAME] = wfs_fs.fsname;
 		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
@@ -1905,11 +1907,11 @@ wfs_ntfs_wipe_part (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[3], sizeof (args_ntfswipe[3]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT], sizeof (args_ntfswipe[WFSWIPE_PART_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
-		sprintf (args_ntfswipe_copy[3], "%lu", wfs_fs.npasses);
+		sprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
-		args_ntfswipe_copy[3][22] = '\0';
+		args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT][22] = '\0';
 		child_ntfswipe.program_name = args_ntfswipe_copy[0];
 		child_ntfswipe.args = args_ntfswipe_copy;
 		child_ntfswipe.child_env = NULL;
@@ -2108,6 +2110,8 @@ wfs_ntfs_wipe_fs (
 	unsigned int prev_percent = 0;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	/* ntfswipe --unused --count wfs_fs.npasses --bytes */
+#define WFSWIPE_WFS_POS_COUNT 3
+#define WFSWIPE_WFS_POS_FSNAME 6
 	const char * args_ntfswipe[] = { "ntfswipe", "--unused", "--count", "                      ",
 		"--bytes", "0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
@@ -2135,7 +2139,7 @@ wfs_ntfs_wipe_fs (
 			return WFS_BADPARAM;
 		}
 		WFS_SET_ERRNO (0);
-		args_ntfswipe[6] = wfs_fs.fsname;
+		args_ntfswipe[WFSWIPE_WFS_POS_FSNAME] = wfs_fs.fsname;
 		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
@@ -2153,11 +2157,12 @@ wfs_ntfs_wipe_fs (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[3], sizeof (args_ntfswipe[3]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_WFS_POS_COUNT],
+			sizeof (args_ntfswipe[WFSWIPE_WFS_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
-		sprintf (args_ntfswipe_copy[3], "%lu", wfs_fs.npasses);
+		sprintf (args_ntfswipe_copy[WFSWIPE_WFS_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
-		args_ntfswipe_copy[3][22] = '\0';
+		args_ntfswipe_copy[WFSWIPE_WFS_POS_COUNT][22] = '\0';
 		child_ntfswipe.program_name = args_ntfswipe_copy[0];
 		child_ntfswipe.args = args_ntfswipe_copy;
 		child_ntfswipe.child_env = NULL;
@@ -2339,6 +2344,8 @@ wfs_ntfs_wipe_unrm (
 	unsigned int prev_percent = 0;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	/* ntfswipe --directory --logfile --mft --pagefile --undel --count wfs_fs.npasses --bytes */
+#define WFSWIPE_UNRM_POS_COUNT 6
+#define WFSWIPE_UNRM_POS_FSNAME 7
 	const char * args_ntfswipe[] = { "ntfswipe", "--directory", "--logfile", "--pagefile",
 		"--undel", "--count", "                      ",
 		/* incompatible: "--bytes", "0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",*/
@@ -2371,7 +2378,7 @@ wfs_ntfs_wipe_unrm (
 			return WFS_BADPARAM;
 		}
 		WFS_SET_ERRNO (0);
-		args_ntfswipe[7] = wfs_fs.fsname;
+		args_ntfswipe[WFSWIPE_UNRM_POS_FSNAME] = wfs_fs.fsname;
 		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
@@ -2389,11 +2396,12 @@ wfs_ntfs_wipe_unrm (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[6], sizeof (args_ntfswipe[6]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_UNRM_POS_COUNT],
+			sizeof (args_ntfswipe[WFSWIPE_UNRM_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
-		sprintf (args_ntfswipe_copy[6], "%lu", wfs_fs.npasses);
+		sprintf (args_ntfswipe_copy[WFSWIPE_UNRM_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
-		args_ntfswipe_copy[6][22] = '\0';
+		args_ntfswipe_copy[WFSWIPE_UNRM_POS_COUNT][22] = '\0';
 		child_ntfswipe.program_name = args_ntfswipe_copy[0];
 		child_ntfswipe.args = args_ntfswipe_copy;
 		child_ntfswipe.child_env = NULL;
