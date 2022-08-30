@@ -34,6 +34,10 @@
 # include <strings.h>
 #endif
 
+#ifdef AX_STRCASECMP_HEADER
+# include AX_STRCASECMP_HEADER
+#endif
+
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>	/* random(), srandom(), rand(), srand() */
 #endif
