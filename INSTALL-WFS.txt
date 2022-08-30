@@ -28,7 +28,7 @@ Requirements for compiling the full version:
   Then compile and install that package. You can also use libntfs (usually
   included in something like ntfsprogs-devel).
 
-- XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
+- XFS: xfsprogs installed and in your PATH variable.
   Get these at https://kernel.org/pub/linux/utils/fs/xfs/xfsprogs/. The
   following utilities should be available: xfs_db, xfs_freeze, xfs_unfreeze.
   The xfs_db program should support the following command-line options: "-i",
