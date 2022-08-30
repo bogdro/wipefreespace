@@ -34,7 +34,7 @@ struct child_id
 	enum child_type type;
 	union id
 	{
-#ifdef HAVE_FORK
+#ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		pid_t chld_pid;
 #endif
 		char * dummy;

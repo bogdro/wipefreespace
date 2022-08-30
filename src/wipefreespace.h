@@ -117,11 +117,8 @@ typedef enum wfs_curr_fs wfs_curr_fs_t;
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 # endif
-# ifndef HAVE_SSIZE_T
-typedef int ssize_t;
-# endif
 # ifndef HAVE_OFF64_T
-#  ifdef HAVE_LONG_LONG
+#  if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
 typedef long long int off64_t;
 #  else
 typedef long int off64_t;
@@ -159,8 +156,9 @@ typedef long int off64_t;
 #  endif
 # endif
 
-# if (defined HAVE_LONG_LONG) && (defined HAVE_UNISTD_H)	\
-	&& (defined HAVE_FORK) && (				\
+# if ((defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT))	\
+	&& (defined HAVE_UNISTD_H)				\
+	&& (defined HAVE_WORKING_FORK /* HAVE_FORK */) && (	\
 		(defined HAVE_EXECVP)				\
 		|| (defined HAVE_EXECVPE)			\
 	)							\
@@ -178,7 +176,8 @@ typedef long int off64_t;
 # endif
 
 # if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)	\
-	&& (defined HAVE_FORK) && (defined HAVE_UNISTD_H)	\
+	&& (defined HAVE_WORKING_FORK /* HAVE_FORK */)		\
+	&& (defined HAVE_UNISTD_H)	\
 	&& ((defined HAVE_WAITPID) || (defined HAVE_WAIT))
 
 #  ifdef HAVE_ASM_TYPES_H

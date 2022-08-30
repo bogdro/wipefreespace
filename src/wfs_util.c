@@ -1054,7 +1054,7 @@ wfs_create_child (
 		return WFS_BADPARAM;
 	}
 
-#ifdef HAVE_FORK
+#ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 	id->chld_id.chld_pid = fork ();
 	if ( id->chld_id.chld_pid < 0 )
 	{

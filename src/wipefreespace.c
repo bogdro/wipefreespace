@@ -1556,7 +1556,7 @@ main (
 # ifdef HAVE_ERRNO_H
 		errno = 0;	/* used for gerror */
 # endif
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		child_pid = fork ();
 		if ( child_pid < 0 )
 # endif
@@ -1579,7 +1579,7 @@ main (
 			return WFS_FORKERR;
 		}
 		else
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		if ( child_pid > 0 )	/* NOTE: do NOT write '>= 0' */
 # endif
 		{
@@ -1607,7 +1607,7 @@ main (
 				}
 # endif
 				child_status = 0;
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 #  ifdef HAVE_WAITPID
 				res_pid = waitpid (child_pid, &child_status, 0);
 #  else
@@ -1641,7 +1641,7 @@ main (
 			}
 			sigchld_recvd = 0;
 		}
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		else
 		{
 			/* child process: wipe the given filesystem */
