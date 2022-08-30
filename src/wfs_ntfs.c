@@ -784,7 +784,7 @@ wipe_attribute (
 #if (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM)
 # ifndef WFS_ANSIC
 static int GCC_WARN_UNUSED_RESULT utils_cluster_in_use WFS_PARAMS ((
-	const ntfs_volume * const vol, const long long int lcn));
+	const ntfs_volume * const vol, const s64 lcn));
 # endif
 
 /**
@@ -813,18 +813,18 @@ WFS_ATTR ((nonnull))
 # endif
 utils_cluster_in_use (
 # ifdef WFS_ANSIC
-	const ntfs_volume * const vol, const long long int lcn)
+	const ntfs_volume * const vol, const s64 lcn)
 # else
 	vol, lcn)
 	const ntfs_volume * const vol;
-	const long long int lcn;
+	const s64 lcn;
 # endif
 {
 
 # undef	BUFSIZE
 # define	BUFSIZE	512
 	static unsigned char ntfs_buffer[BUFSIZE];
-	static long long int ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
+	static s64 ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
 	int cbyte, bit;
 	ntfs_attr *attr = NULL;
 
