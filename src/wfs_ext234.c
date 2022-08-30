@@ -598,8 +598,9 @@ e2_wipe_unrm_dir (
 		changed = 1;
 		bd->curr_inode++;
 		wfs_show_progress (WFS_PROGRESS_UNRM,
-			(bd->curr_inode * 50)/(e2fs->super->s_inodes_count
-				- e2fs->super->s_free_inodes_count),
+			(bd->curr_inode * 50) *
+			(unsigned int)(wd->passno / wd->filesys.npasses) /
+			(e2fs->super->s_inodes_count - e2fs->super->s_free_inodes_count),
 			& (bd->prev_percent));
 	}		/* is the current i-node a directory? If so, dig into it. */
 	else if ( 	(entry != DIRENT_DOT_FILE)
@@ -626,8 +627,9 @@ e2_wipe_unrm_dir (
 				NULL, &e2_wipe_unrm_dir, PRIVATE );
 			bd->curr_inode++;
 			wfs_show_progress (WFS_PROGRESS_UNRM,
-				(bd->curr_inode * 50)/(e2fs->super->s_inodes_count
-					- e2fs->super->s_free_inodes_count),
+				(bd->curr_inode * 50) *
+				(unsigned int)(wd->passno / wd->filesys.npasses) /
+				(e2fs->super->s_inodes_count - e2fs->super->s_free_inodes_count),
 				& (bd->prev_percent));
 			if ( e2error != 0 )
 			{
