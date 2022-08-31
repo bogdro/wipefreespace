@@ -1,3 +1,79 @@
+2022-08-31      Bogdan Drozdowski <bogdro@users.sourceforge.net>
+
+	* WipeFreeSpace version 2.6
+	  Important portability updates: WipeFreeSpace now compiles also on
+	  FreeBSD and macOS (as provided by Travis CI). Fixed a potential
+	  compilation error. Enabled GCC advanced code analysis. Better
+	  checking for types and functions. Progress bar for ext2/3/4 fixed.
+	  Small code clean-up. Documentation updates. Other small updates.
+	* configure.ac: Fixed typo "Sys/statfs.h". Changed the program's
+	  configured name, add URL in AC_INIT(). Added checking for the
+	  "-fanalyzer" compiler option. Added enabling all Automake warnings.
+	  Wrote in the summary that disabled LHIP and LNB are the default
+	  option. Use a macro to find the header which contains strcasecmp().
+	  Use dedicated macros to check for the fork() and getmntent()
+	  functions. Use dedicated macros to check for the 'long long int',
+	  mode_t, pid_t and ssize_t types. Removed checking for the
+	  now-unneeded access() function.
+	* src/wfs_util.c: Move <sys/types.h> up to fix building on macOS.
+	  Removed the compatibility #defines.
+	* src/wfs_secure.c: Use capabilities only when the library is also
+	  available, not just the header (this fixes building on FreeBSD).
+	* src/wfs_secure.{c,h}: Made the pointers passed to wfs_check_stds()
+	  constant.
+	* src/wfs_xfs.c: Removed the compatibility #defines.
+	* src/wfs_hfsp.c: Comment-out the function prototype for compatibility.
+	* src/wfs_cfg.h.in: Moved all the compatibility #defines to one place.
+	* src/wfs_wiping.c: Adding the detected header for strcasecmp(). Added
+	  #including wfs_util.h for the replacement functions.
+	* src/wfs_signal.c: Added #including wfs_util.h for the replacement
+	  functions.
+	* src/wipefreespace.h: Delete our own ssize_t typedef. Moved the
+	  declarations of the replacement functions to wfs_util.h.
+	* src/wipefreespace.{c,h}, src/wfs_util.{c,h}: Use the dedicated macro
+	  for a working fork() function.
+	* src/wfs_ntfs.c (free_file): Expand the macros, do workarounds, and
+	  write safer code, because the GCC code analyzer shows warnings.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_part, wfs_ntfs_wipe_fs,
+	  wfs_ntfs_wipe_unrm): The parameter positions for 'ntfswipe' are now
+	  named #defines.
+	* src/wfs_ntfs.c (utils_cluster_in_use): Changed a parameter and
+	  a variable type to ntfs-3g's "s64".
+	* src/wfs_ext234.c (e2_wipe_unrm_dir): Fixed the progress bar values.
+	* src/wfs_hfsp.c (wfs_hfsp_wipe_part): Return the error value on one
+	  of the error paths. Found by 'cppcheck'.
+	* src/wfs_minixfs.c (wfs_minixfs_wipe_unrm): Return the error value
+	  on the error path. Found by 'cppcheck'.
+	* src/wfs_xfs.c (wfs_xfs_open_fs): Return the error value on more
+	  error paths. Found by 'cppcheck'.
+	* src/wfs_util.c (wfs_get_mnt_point_getmntent,
+	  wfs_get_mnt_point_mounts, wfs_get_mnt_point_getmntinfo): Removed
+	  checking for "error" being NULL (it is done later). Found by
+	  'cppcheck'.
+	* src/wfs_util.c (wfs_get_mnt_point_mounts): Fixed compiling when
+	  LOOP_GET_STATUS64 is not available, but LOOP_GET_STATUS is. Found
+	  by 'cppcheck'.
+	* src/*.c, src/*.h, src/*.h.in, test/*.c, po/*.po, **/Makefile.am:
+	  Updated the license block and copyright.
+	* *.desktop, Makefile.am: Removed the *.desktop files which are better
+	  suited in the FMSec project.
+	* Makefile.am: Renamed the 'pack' target to 'x-pack' and made it phony.
+	* test/Makefile.am: Renamed the 'zcompile' target to 'x-compile' and
+	  made it phony.
+	* m4/ax_gcc_warn_unused_result.m4: Updated from Autoconf Archive.
+	* README, INSTALL-WFS.txt: Fixed the URLs to the required software.
+	  Removed the "if you want XFS support" obvious and unneeded clause.
+	* doc/Makefile.am: Added flags for generating the HTML documentation.
+	* doc/wipefreespace.texi.in: Added "Reporting issues". Fixed the
+	  title, fixed the translation block. LibHideIP and LibNetBlock are
+	  now links to the projects' SourceForge pages. Typos fixed. Many
+	  further output enhancements using TeXinfo commands. Removed the
+	  *.desktop files and referring to the FMSec project. Added a usage
+	  chapter for the Xfce environment. Other small updates.
+	* doc/wipefreespace.texi.in, doc/wipefreespace.1: Left just the
+	  SourceForge website address.
+	* doc/wipefreespace.texi.in, README: Small updates from the SF wiki.
+
 2021-09-30	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.5
