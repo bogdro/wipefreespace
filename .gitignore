@@ -25,3 +25,4 @@ test_wfs_util
 test_wfs_wiping
 *.log
 *.trs
+test-fs
