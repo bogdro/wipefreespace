@@ -1310,6 +1310,7 @@ wfs_reiser_close_fs (
 #endif
 	reiserfs_close_ondisk_bitmap (rfs);
 	reiserfs_close (rfs);
+	/*reiserfs_free (rfs);*/
 #if (defined HAVE_CLOSE)
 	/* clean up what reiserfs_close() does not do */
 	if ( fd >= 0 )

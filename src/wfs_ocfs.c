@@ -134,17 +134,17 @@ wfs_ocfs_get_block_size (
 #ifdef WFS_WANT_PART
 
 # ifndef WFS_ANSIC
-static int wfs_ocfs_wipe_part_blocks WFS_PARAMS ((ocfs2_filesys *fs, uint64_t blkno,
+static int wfs_ocfs_wipe_part_blocks WFS_PARAMS ((ocfs2_filesys * const fs, uint64_t blkno,
 	uint64_t bcount, uint16_t ext_flags, void *priv_data));
 # endif
 
 static int wfs_ocfs_wipe_part_blocks (
 # ifdef WFS_ANSIC
-	ocfs2_filesys *fs, uint64_t blkno, uint64_t bcount WFS_ATTR ((unused)),
+	ocfs2_filesys * const fs, uint64_t blkno, uint64_t bcount WFS_ATTR ((unused)),
 	uint16_t ext_flags WFS_ATTR ((unused)), void *priv_data)
 # else
 	fs, blkno, bcount, ext_flags, priv_data)
-	ocfs2_filesys *fs;
+	ocfs2_filesys * const fs;
 	uint64_t blkno;
 	uint64_t bcount WFS_ATTR ((unused));
 	uint16_t ext_flags WFS_ATTR ((unused));
@@ -1270,6 +1270,7 @@ wfs_ocfs_close_fs (
 		return WFS_BADPARAM;
 	}
 	err = ocfs2_close (ocfs2);
+	/*ocfs2_freefs (ocfs2);*/
 	if ( err != 0 )
 	{
 		ret = WFS_FSCLOSE;
