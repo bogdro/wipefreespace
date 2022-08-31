@@ -283,7 +283,7 @@ wfs_get_mnt_point_getmntent (
 	char buffer[WFS_MNTBUFLEN];
 # endif
 
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+	if ( (dev_name == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
 		return WFS_BADPARAM;
@@ -426,7 +426,7 @@ wfs_get_mnt_point_mounts (
 # endif
 #endif /* WFS_HAVE_IOCTL_LOOP */
 
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+	if ( (dev_name == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
 		return WFS_BADPARAM;
@@ -536,8 +536,10 @@ wfs_get_mnt_point_mounts (
 					((res64 >= 0)
 					&& (li64.lo_device == s.st_dev)
 					&& (li64.lo_inode == s.st_ino))
-# endif
+#  ifdef LOOP_GET_STATUS
 					||
+#  endif
+# endif
 # ifdef LOOP_GET_STATUS
 					((res >= 0)
 					&& (li.lo_device == s.st_dev)
@@ -624,7 +626,7 @@ wfs_get_mnt_point_getmntinfo (
 	int count;
 	int i;
 
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+	if ( (dev_name == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
 		return WFS_BADPARAM;
