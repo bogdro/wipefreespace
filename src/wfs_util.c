@@ -1778,9 +1778,12 @@ void wfs_memcopy (
 	char * const d = (char *)dest;
 	const char * const s = (const char *)src;
 
-	for ( i = 0; i < len; i++ )
+	if ( (d != NULL) && (s != NULL) )
 	{
-		d[i] = s[i];
+		for ( i = 0; i < len; i++ )
+		{
+			d[i] = s[i];
+		}
 	}
 }
 #endif
@@ -1799,9 +1802,12 @@ void wfs_mem_set (
 # endif
 {
 	size_t i;
-	for ( i = 0; i < len; i++ )
+	if ( dest != NULL )
 	{
-		((char *)dest)[i] = value;
+		for ( i = 0; i < len; i++ )
+		{
+			((char *)dest)[i] = value;
+		}
 	}
 }
 #endif
