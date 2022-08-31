@@ -1907,7 +1907,8 @@ wfs_ntfs_wipe_part (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT], sizeof (args_ntfswipe[WFSWIPE_PART_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT],
+			sizeof (args_ntfswipe[WFSWIPE_PART_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
 		sprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
