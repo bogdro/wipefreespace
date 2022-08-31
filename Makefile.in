@@ -844,7 +844,7 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-pack:	doc/wipefreespace.info
+x-pack:	doc/wipefreespace.info
 	make dist-gzip
 	tar zxf wipefreespace-@VERSION@.tar.gz
 	echo '\input texinfo'			 > wipefreespace-@VERSION@/doc/wipefreespace.texi
@@ -853,6 +853,8 @@ pack:	doc/wipefreespace.info
 	echo '@bye'				>> wipefreespace-@VERSION@/doc/wipefreespace.texi
 	tar zcf wipefreespace-@VERSION@.tar.gz wipefreespace-@VERSION@
 	rm -fr wipefreespace-@VERSION@
+
+.PHONY: x-pack
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
