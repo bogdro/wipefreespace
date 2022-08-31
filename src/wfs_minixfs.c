@@ -707,7 +707,7 @@ wfs_minixfs_wipe_unrm (
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
 	if ( minix == NULL )
 	{
-		return 	WFS_BADPARAM;
+		return WFS_BADPARAM;
 	}
 	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
 
@@ -716,6 +716,10 @@ wfs_minixfs_wipe_unrm (
 	if ( buf == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		return WFS_MALLOC;
 	}

@@ -1771,6 +1771,10 @@ wfs_xfs_open_fs (
 	if ( xxfs == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
 	xxfs->mnt_point = NULL;
@@ -1816,6 +1820,10 @@ wfs_xfs_open_fs (
 	if ( xxfs->dev_name == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		free (xxfs);
 		return WFS_MALLOC;
 	}

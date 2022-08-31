@@ -499,6 +499,10 @@ wfs_hfsp_wipe_part (
 	if ( buf == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}
