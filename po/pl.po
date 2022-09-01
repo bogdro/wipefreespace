@@ -1,11 +1,11 @@
-# Polish translations for wipefreespace package.
+# Polish translations for WipeFreeSpace package.
 # Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski
-# This file is distributed under the same license as the wipefreespace package.
+# This file is distributed under the same license as the WipeFreeSpace package.
 # Bogdan Drozdowski <bogdro (at) users.sourceforge.net>, 2007.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace\n"
+"Project-Id-Version: WipeFreeSpace\n"
 "Report-Msgid-Bugs-To: bogdro@users.sourceforge.net\n"
 "POT-Creation-Date: 2021-09-21 20:29+0200\n"
 "PO-Revision-Date: 2007-04-23 17:24+0200\n"

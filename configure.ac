@@ -137,7 +137,7 @@ AC_ARG_ENABLE(part,[[  --enable-part		enable wiping partially-used blocks (defau
 	]
 	,[feat_part=yes])
 
-AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for wipefreespace.]],
+AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for WipeFreeSpace.]],
 	[if (test "x$enableval" = "xno"); then
 		feat_LIBHIDEIP=no
 	 else
@@ -146,7 +146,7 @@ AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for wipefreespac
 	]
 	,feat_LIBHIDEIP=no)
 
-AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for wipefreespace.]],
+AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for WipeFreeSpace.]],
 	[if (test "x$enableval" = "xno"); then
 		feat_LIBNETBLOCK=no
 	 else
@@ -1340,7 +1340,7 @@ if (	test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" \
 
 	echo " *	LibHideIP enabled: yes"
 	AC_MSG_WARN([[LibHideIP may cause network filesystem wiping not to work.]])
-	AC_MSG_WARN([[If you do not wish to enable LibHideIP, re-configure wipefreespace with]])
+	AC_MSG_WARN([[If you do not wish to enable LibHideIP, re-configure WipeFreeSpace with]])
 	AC_MSG_WARN([[./configure --enable-LIBHIDEIP=no]])
 else
 	if (test "x$feat_LIBHIDEIP" != "xyes"); then
@@ -1360,7 +1360,7 @@ if (	test "x$feat_LIBNETBLOCK" = "xyes" && test "x$libnb" = "xyes" \
 
 	echo " *	LibNetBlock enabled: yes"
 	AC_MSG_WARN([[LibNetBlock may cause network filesystem wiping not to work.]])
-	AC_MSG_WARN([[If you do not wish to enable LibNetBlock, re-configure wipefreespace with]])
+	AC_MSG_WARN([[If you do not wish to enable LibNetBlock, re-configure WipeFreeSpace with]])
 	AC_MSG_WARN([[./configure --enable-LIBNETBLOCK=no]])
 else
 	if (test "x$feat_LIBNETBLOCK" != "xyes"); then

@@ -190,7 +190,7 @@ WARNING: If both ReiserFSv3 and JFS are enabled, you MUST either disable
  won't help in this case.
 
 The patches for ntfsprogs are optional. Whether or not they will be included
- in the official release of ntfsprogs, wipefreespace still will compile.
+ in the official release of ntfsprogs, WipeFreeSpace still will compile.
 
 Type
 
@@ -206,8 +206,8 @@ If you do not wish support for a particular wiping operation, give the
  respectively). You cannot disable all of these.
 Run './configure --help' for details.
 
-If you do NOT wish wipefreespace to use the network or get the computer's IP
- address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
+If you do NOT wish WipeFreeSpace to use the network or get the computer's IP
+ address, get LibHideIP>=0.2 and LibNetBlock and configure WipeFreeSpace with
 
 	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
 

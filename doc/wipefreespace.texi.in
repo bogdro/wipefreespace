@@ -66,7 +66,7 @@ This manual is for WipeFreeSpace, version @VERSION@
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
 ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2, JFS, HFS+ and OCFS partitions.
 
-Wipefreespace wipes the following things (when supported by the backing
+WipeFreeSpace wipes the following things (when supported by the backing
 library):
 @itemize
 @item free space (space in unused blocks/clusters)
@@ -74,7 +74,7 @@ library):
 @item deleted files' names and other data that can be used to undelete a file
 (like the journal)
 @end itemize
-Wipefreespace does @strong{NOT} decrease the amount of available free space when
+WipeFreeSpace does @strong{NOT} decrease the amount of available free space when
 working.
 
 Normally, when you delete a file, only the information about where the file was is
@@ -1986,15 +1986,15 @@ In the resulting @file{XX.po} file you have to fill in all the fields
 marked with capital letters in the header:
 
 @verbatim
-# YOUR LANGUAGE translations for wipefreespace package.
+# YOUR LANGUAGE translations for WipeFreeSpace package.
 # Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as
-# the wipefreespace package.
+# the WipeFreeSpace package.
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace @VERSION@\n"
+"Project-Id-Version: WipeFreeSpace @VERSION@\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2011-08-03 15:28+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

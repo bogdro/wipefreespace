@@ -967,7 +967,7 @@
 
 2008-06-22	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
-	* Wipefreespace version 0.9
+	* WipeFreeSpace version 0.9
 	  Compatibility with non-ANSI C compilers. Journal wiping. Better XFS
 	  support. Portability fixes. Better error checking.
 	* configure.ac: Better portability. Less relying on autoconf
@@ -1008,7 +1008,7 @@
 
 2008-01-12	Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
-	* Wipefreespace version 0.8
+	* WipeFreeSpace version 0.8
 	  Big portability corrections. The program now compiles on OpenBSD.
 	  Added ReiserFSv3.
 	* wfs_xfs.c: using exit() in child processes. If waitpid() and wait()
