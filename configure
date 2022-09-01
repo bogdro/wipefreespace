@@ -1490,8 +1490,8 @@ Optional Features:
   --enable-wfs		enable wiping free space (default=yes).
   --enable-unrm		enable wiping undelete data (default=yes).
   --enable-part		enable wiping partially-used blocks (default=yes).
-  --enable-LIBHIDEIP	Enable libhideip for wipefreespace.
-  --enable-LIBNETBLOCK	Enable libnetblock for wipefreespace.
+  --enable-LIBHIDEIP	Enable libhideip for WipeFreeSpace.
+  --enable-LIBNETBLOCK	Enable libnetblock for WipeFreeSpace.
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
@@ -24933,8 +24933,8 @@ if (	test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" \
 	echo " *	LibHideIP enabled: yes"
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: LibHideIP may cause network filesystem wiping not to work." >&5
 printf "%s\n" "$as_me: WARNING: LibHideIP may cause network filesystem wiping not to work." >&2;}
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: If you do not wish to enable LibHideIP, re-configure wipefreespace with" >&5
-printf "%s\n" "$as_me: WARNING: If you do not wish to enable LibHideIP, re-configure wipefreespace with" >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: If you do not wish to enable LibHideIP, re-configure WipeFreeSpace with" >&5
+printf "%s\n" "$as_me: WARNING: If you do not wish to enable LibHideIP, re-configure WipeFreeSpace with" >&2;}
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ./configure --enable-LIBHIDEIP=no" >&5
 printf "%s\n" "$as_me: WARNING: ./configure --enable-LIBHIDEIP=no" >&2;}
 else
@@ -24956,8 +24956,8 @@ if (	test "x$feat_LIBNETBLOCK" = "xyes" && test "x$libnb" = "xyes" \
 	echo " *	LibNetBlock enabled: yes"
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: LibNetBlock may cause network filesystem wiping not to work." >&5
 printf "%s\n" "$as_me: WARNING: LibNetBlock may cause network filesystem wiping not to work." >&2;}
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: If you do not wish to enable LibNetBlock, re-configure wipefreespace with" >&5
-printf "%s\n" "$as_me: WARNING: If you do not wish to enable LibNetBlock, re-configure wipefreespace with" >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: If you do not wish to enable LibNetBlock, re-configure WipeFreeSpace with" >&5
+printf "%s\n" "$as_me: WARNING: If you do not wish to enable LibNetBlock, re-configure WipeFreeSpace with" >&2;}
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ./configure --enable-LIBNETBLOCK=no" >&5
 printf "%s\n" "$as_me: WARNING: ./configure --enable-LIBNETBLOCK=no" >&2;}
 else
