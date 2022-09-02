@@ -1,4 +1,4 @@
-2022-08-31      Bogdan Drozdowski <bogdro@users.sourceforge.net>
+2022-09-01      Bogdan Drozdowski <bogdro@users.sourceforge.net>
 
 	* WipeFreeSpace version 2.6
 	  Important portability updates: WipeFreeSpace now compiles also on
@@ -51,13 +51,18 @@
 	  checking for "error" being NULL (it is done later). Found by
 	  'cppcheck'.
 	* src/wfs_util.c (wfs_get_mnt_point_mounts): Fixed compiling when
-	  LOOP_GET_STATUS64 is not available, but LOOP_GET_STATUS is. Found
+	  just one of LOOP_GET_STATUS or LOOP_GET_STATUS64 is available. Found
 	  by 'cppcheck'.
+	* src/wfs_xfs.c (flush_pipe_output, wfs_xfs_wipe_part): Get the result
+	  of write().
 	* src/*.c, src/*.h, src/*.h.in, test/*.c, po/*.po, **/Makefile.am:
 	  Updated the license block and copyright.
 	* *.desktop, Makefile.am: Removed the *.desktop files which are better
 	  suited in the FMSec project.
 	* Makefile.am: Renamed the 'pack' target to 'x-pack' and made it phony.
+	* INSTALL-WFS.txt, README, configure.ac, doc/wipefreespace.1,
+	  doc/wipefreespace.texi.in, po/*.po, po/wipefreespace.pot,
+	  wipefreespace.spec.in: Use one program name everywhere.
 	* test/Makefile.am: Renamed the 'zcompile' target to 'x-compile' and
 	  made it phony.
 	* m4/ax_gcc_warn_unused_result.m4: Updated from Autoconf Archive.
