@@ -67,7 +67,7 @@ jobs:
     - run: |
        echo "Run, Build Application using script"
        touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in po/*gmo &&
-       ./configure && touch doc/wipefreespace.info && make
+       sleep 1 && ./configure && touch doc/wipefreespace.info && make
     #   ./location_of_script_within_repo/buildscript.sh
 
     - name: Perform CodeQL Analysis
