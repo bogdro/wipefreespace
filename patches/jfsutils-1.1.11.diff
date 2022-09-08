@@ -1,0 +1,184 @@
+diff -uraN ../jfsutils-1.1.11/libfs/fsckmsgdef.c ./libfs/fsckmsgdef.c
+--- ../jfsutils-1.1.11/libfs/fsckmsgdef.c	2005-11-22 21:43:55.000000000 +0100
++++ ./libfs/fsckmsgdef.c	2011-05-02 15:07:55.616806899 +0200
+@@ -547,12 +547,12 @@
+   /* 542 */ { lrdo_WRBMPBADTOTPG, "LOGREDO:  Incorrect total pages while writing Block Map.", fsck_debug},
+   /* 543 */ { lrdo_UPDMPBADLFIDX, "LOGREDO:  Invalid leaf index detected while updating dmap page.", fsck_debug},
+   /* 544 */ { lrdo_RXTREADLFFAIL, "LOGREDO:  rXtree() Read first leaf failed.", fsck_debug},
+-  /* 545 */ { lrdo_BRDBADBLOCK, "LOGREDO:  bread() Invalid block number specified (0x0%llx).", fsck_debug},
+-  /* 546 */ { lrdo_BRDREADBLKFAIL, "LOGREDO:  bread() Read block (0x0%llx) failed.", fsck_debug},
++  /* 545 */ { lrdo_BRDBADBLOCK, "LOGREDO:  jfs_bread() Invalid block number specified (0x0%llx).", fsck_debug},
++  /* 546 */ { lrdo_BRDREADBLKFAIL, "LOGREDO:  jfs_bread() Read block (0x0%llx) failed.", fsck_debug},
+   /* 547 */ { lrdo_RBLDGIMAPERROR2, "LOGREDO:  Error for pmap and inoext when rebuilding the Inode Allocation Map (2).", fsck_debug},
+   /* 548 */ { lrdo_DAFTUPDPGFAILED, "LOGREDO:   doAfter: updatePage failed.  (logaddr = 0x0%x, rc = (d) %d)", fsck_debug},
+   /* 549 */ { lrdo_DAFTMRKBMPFAILED, "LOGREDO:   doAfter: markBmap failed.  (logaddr = 0x0%x, rc = (d) %d)", fsck_debug},
+-  /* 550 */ { lrdo_DEDPBREADFAILED, "LOGREDO:   doExtDtPg: bread failed.  (offset = 0x0%llx, rc = (d) %d)", fsck_debug},
++  /* 550 */ { lrdo_DEDPBREADFAILED, "LOGREDO:   doExtDtPg: jfs_bread failed.  (offset = 0x0%llx, rc = (d) %d)", fsck_debug},
+   /* 551 */ { lrdo_DNRPFNDDTRTPGREDOFAIL, "LOGREDO:   doNoRedoPage: type dtpage: findPageRedo failed.  (rc = (d) %d)", fsck_debug},
+   /* 552 */ { lrdo_DNRPFNDDTPGPGREDOFAIL, "LOGREDO:   doNoRedoPage: type dtroot: findPageRedo failed.  (rc = %s)", fsck_debug},
+   /* 553 */ { lrdo_DNRPFNDXTRTPGREDOFAIL, "LOGREDO:   doNoRedoPage: type xtroot: findPageRedo failed.  (rc = (d) %d)", fsck_debug},
+@@ -567,10 +567,10 @@
+   /* 562 */ { lrdo_MBMPBLKOUTRANGE, "LOGREDO:   markBmap: Block number(s) out of range (start=0x0%llx, length=(d)%d).", fsck_debug},
+   /* 563 */ { lrdo_UPPGFNDPGREDOFAIL, "LOGREDO:   updatePage: findPageRedo failed.  (rc = (d) %d)", fsck_debug},
+   /* 564 */ { lrdo_UPPGBADINODESEGOFFSET, "LOGREDO:   updatePage: type=INODE.  Invalid segment offset. (offset = (d) %d)", fsck_debug},
+-  /* 565 */ { lrdo_UPPGBREADFAIL1, "LOGREDO:   updatePage: bread failed (1).  (rc = (d) %d)", fsck_debug},
+-  /* 566 */ { lrdo_UPPGBREADFAIL2, "LOGREDO:   updatePage: bread failed (2).  (rc = (d) %d)", fsck_debug},
+-  /* 567 */ { lrdo_UPPGBREADFAIL3, "LOGREDO:   updatePage: bread failed (3).  (rc = (d) %d)", fsck_debug},
+-  /* 568 */ { lrdo_UPPGBREADFAIL4, "LOGREDO:   updatePage: bread failed (4).  (rc = (d) %d)", fsck_debug},
++  /* 565 */ { lrdo_UPPGBREADFAIL1, "LOGREDO:   updatePage: jfs_bread failed (1).  (rc = (d) %d)", fsck_debug},
++  /* 566 */ { lrdo_UPPGBREADFAIL2, "LOGREDO:   updatePage: jfs_bread failed (2).  (rc = (d) %d)", fsck_debug},
++  /* 567 */ { lrdo_UPPGBREADFAIL3, "LOGREDO:   updatePage: jfs_bread failed (3).  (rc = (d) %d)", fsck_debug},
++  /* 568 */ { lrdo_UPPGBREADFAIL4, "LOGREDO:   updatePage: jfs_bread failed (4).  (rc = (d) %d)", fsck_debug},
+   /* 569 */ { lrdo_UPPGMIMPFAIL, "LOGREDO:   updatePage: markImap failed.  (rc = (d) %d)", fsck_debug},
+   /* 570 */ { lrdo_UPPGMBMPFAIL, "LOGREDO:   updatePage: markBmap failed.  (rc = (d) %d)", fsck_debug},
+   /* 571 */ { lrdo_UPPGDTRTRFLFAIL, "LOGREDO:   updatePage: dtrt_resetFreeList failed.  (rc = (d) %d)", fsck_debug},
+diff -uraN ../jfsutils-1.1.11/libfs/log_map.c ./libfs/log_map.c
+--- ../jfsutils-1.1.11/libfs/log_map.c	2005-11-22 21:43:55.000000000 +0100
++++ ./libfs/log_map.c	2011-05-02 15:07:55.533806959 +0200
+@@ -220,7 +220,7 @@
+ int rXtree(int32_t, struct dinode *, xtpage_t **);
+ signed char adjTree(struct dmapctl *, int32_t, int32_t);
+ static int32_t maxBud(unsigned char *);
+-int bread(int32_t, pxd_t, void **, int32_t);
++int jfs_bread(int32_t, pxd_t, void **, int32_t);
+ 
+ /*
+  * NAME:        initMaps()
+@@ -247,7 +247,7 @@
+ 	/* read in the bmap inode (i_number = 2) in a buffer: */
+ 	PXDaddress(&pxd1, AITBL_OFF >> vopen[vol].l2bsize);
+ 	PXDlength(&pxd1, vopen[vol].lbperpage);
+-	if ((rc = bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
++	if ((rc = jfs_bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
+ 		fsck_send_msg(lrdo_READBMAPINOFAIL, errno);
+ 		return (BREAD_BMAPINIT);
+ 	}
+@@ -266,7 +266,7 @@
+ 	 */
+ 	/* read in the fileset imap inode (i_number = 16) in a buffer: */
+ 	PXDaddress(&pxd1, (AITBL_OFF + (SIZE_OF_MAP_PAGE << 1)) >> vopen[vol].l2bsize);
+-	if ((rc = bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
++	if ((rc = jfs_bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
+ 		fsck_send_msg(lrdo_READIMAPINOFAIL, errno);
+ 		return (BREAD_IMAPINIT);
+ 	}
+@@ -453,7 +453,7 @@
+ 		xaddr = __le64_to_cpu(xp->header.next);
+ 		if (xaddr) {
+ 			PXDaddress(&pxd, xaddr);
+-			if (bread(vol, pxd, (void **) &xp, PB_READ)) {
++			if (jfs_bread(vol, pxd, (void **) &xp, PB_READ)) {
+ 				fsck_send_msg(lrdo_RBMPREADNXTLFFAIL);
+ 				return (BMAP_READERROR3);
+ 			}
+@@ -777,7 +777,7 @@
+ 		xaddr = __le64_to_cpu(p->header.next);
+ 		if (xaddr) {
+ 			PXDaddress(&pxd, xaddr);
+-			if (bread(vol, pxd, (void **) &p, PB_READ)) {
++			if (jfs_bread(vol, pxd, (void **) &p, PB_READ)) {
+ 				fsck_send_msg(lrdo_RIMPREADNXTLFFAIL);
+ 				return (IMAP_READERROR3);
+ 			}
+@@ -932,7 +932,7 @@
+ 	/* read in the fileset imap inode (i_number = 16) in a buffer: */
+ 	PXDaddress(&pxd1, (AITBL_OFF + (SIZE_OF_MAP_PAGE << 1)) >> vopen[vol].l2bsize);
+ 	PXDlength(&pxd1, vopen[vol].lbperpage);
+-	if ((rc = bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
++	if ((rc = jfs_bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
+ 		fsck_send_msg(lrdo_UMPREADIMAPINOFAIL);
+ 		return (IMAP_READERROR5);
+ 	}
+@@ -955,7 +955,7 @@
+ 	if (!Insuff_memory_for_maps) {	/* we do have a local BMap image */
+ 		/* read in the bmap inode (i_number = 2) in a buffer: */
+ 		PXDaddress(&pxd1, AITBL_OFF >> vopen[vol].l2bsize);
+-		if ((rc = bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
++		if ((rc = jfs_bread(vol, pxd1, (void **) &dip, PB_READ)) != 0) {
+ 			fsck_send_msg(lrdo_UMPREADBMAPINOFAIL);
+ 			return (BMAP_READERROR4);
+ 		}
+@@ -1695,7 +1695,7 @@
+ 	 */
+ 	do {
+ 		/* read in the leftmost child page */
+-		if (bread(vol, pxd, (void **) &buf_ptr, PB_READ) != 0) {
++		if (jfs_bread(vol, pxd, (void **) &buf_ptr, PB_READ) != 0) {
+ 			fsck_send_msg(lrdo_RXTREADLFFAIL);
+ 			return (MINOR_ERROR);
+ 		}
+@@ -1853,7 +1853,7 @@
+ }
+ 
+ /*
+- * NAME:        bread ()
++ * NAME:        jfs_bread ()
+  *
+  * FUNCTION:    return with buf set to pointer of page in buffer pool
+  *              containing disk page specified by pxd.
+@@ -1861,7 +1861,7 @@
+  *
+  * NOTE:        offset_t is "long long" type.
+  */
+-int bread(int32_t vol,		/* index in vopen (minor of aggregate)  */
++int jfs_bread(int32_t vol,		/* index in vopen (minor of aggregate)  */
+ 	  pxd_t pxd,		/* on-disk page pxd                     */
+ 	  void **buf,		/* set to point to buffer pool page     */
+ 	  int32_t update)
+diff -uraN ../jfsutils-1.1.11/libfs/log_work.c ./libfs/log_work.c
+--- ../jfsutils-1.1.11/libfs/log_work.c	2006-06-04 23:37:29.000000000 +0200
++++ ./libfs/log_work.c	2011-05-02 15:07:55.051806374 +0200
+@@ -338,7 +338,7 @@
+ /*
+  * external references
+  */
+-extern int bread(int32_t, pxd_t, void **, int32_t);
++extern int jfs_bread(int32_t, pxd_t, void **, int32_t);
+ extern int fsError(int, int, int64_t);
+ extern int openVol(int32_t);
+ extern int alloc_storage(int32_t, void **, int32_t *);
+@@ -719,7 +719,7 @@
+ 		PXDaddress(&a_pxd, edpp->pg_off);
+ 		PXDlength(&a_pxd, vopen[edpp->pg_vol].lbperpage);
+ 
+-		dedp_rc = bread(edpp->pg_vol, a_pxd, (void **) &buf, PB_UPDATE);
++		dedp_rc = jfs_bread(edpp->pg_vol, a_pxd, (void **) &buf, PB_UPDATE);
+ 		if (dedp_rc) {
+ 			fsck_send_msg(lrdo_DEDPBREADFAILED, (long long)edpp->pg_off,
+ 				      dedp_rc);
+@@ -2778,7 +2778,7 @@
+ 			 * read the inode extent page into a buffer
+ 			 */
+ 			if (buf == NULL) {
+-				rc = bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
++				rc = jfs_bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
+ 				if (rc) {
+ 					fsck_send_msg(lrdo_UPPGBREADFAIL1, rc);
+ 					return (INOEXT_READERROR1);
+@@ -2842,7 +2842,7 @@
+ 			 * read in the inode extent page
+ 			 */
+ 			if (buf == NULL) {
+-				rc = bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
++				rc = jfs_bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
+ 				if (rc) {
+ 					fsck_send_msg(lrdo_UPPGBREADFAIL2, rc);
+ 					return (INOEXT_READERROR2);
+@@ -2924,7 +2924,7 @@
+ 			/* read the on-disk page into buffer pool.
+ 			 */
+ 			if (buf == NULL) {
+-				rc = bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
++				rc = jfs_bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
+ 				if (rc) {
+ 					fsck_send_msg(lrdo_UPPGBREADFAIL3, rc);
+ 					return (XTPAGE_READERROR1);
+@@ -2959,7 +2959,7 @@
+ 			 */
+ 			/* read the on-disk page into buffer pool.  */
+ 			if (buf == NULL) {
+-				rc = bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
++				rc = jfs_bread(vol, ld->log.redopage.pxd, (void **) &buf, PB_UPDATE);
+ 				if (rc) {
+ 					fsck_send_msg(lrdo_UPPGBREADFAIL4, rc);
+ 					return (DTREE_READERROR1);

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- wiping functions.
  *
- * Copyright (C) 2011-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2011-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -38,6 +34,10 @@
 # include <strings.h>
 #endif
 
+#ifdef AX_STRCASECMP_HEADER
+# include AX_STRCASECMP_HEADER
+#endif
+
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>	/* random(), srandom(), rand(), srand() */
 #endif
@@ -53,6 +53,7 @@
 #include "wipefreespace.h"
 #include "wfs_wiping.h"
 #include "wfs_signal.h"
+#include "wfs_util.h"
 
 enum wfs_method
 {

@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions, header file.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef WFS_UTIL_H
@@ -38,7 +34,7 @@ struct child_id
 	enum child_type type;
 	union id
 	{
-#ifdef HAVE_FORK
+#ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		pid_t chld_pid;
 #endif
 		char * dummy;
@@ -121,5 +117,28 @@ extern char **
 extern void
 	free_array_deep_copy WFS_PARAMS ((char * array[],
 		const unsigned int len));
+
+# ifdef HAVE_MEMCPY
+#  define WFS_MEMCOPY memcpy
+# else
+extern void wfs_memcopy WFS_PARAMS ((void * const dest,
+	const void * const src, const size_t len));
+#  define WFS_MEMCOPY wfs_memcopy
+# endif
+
+# ifdef HAVE_MEMSET
+#  define WFS_MEMSET memset
+# else
+extern void wfs_mem_set WFS_PARAMS ((void * const dest,
+	const char value, const size_t len));
+#  define WFS_MEMSET wfs_mem_set
+# endif
+
+# ifdef HAVE_STRDUP
+#  define WFS_STRDUP strdup
+# else
+extern char * wfs_duplicate_string WFS_PARAMS ((const char src[]));
+#  define WFS_STRDUP wfs_duplicate_string
+# endif
 
 #endif	/* WFS_UTIL_H */

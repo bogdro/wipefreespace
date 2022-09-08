@@ -1,0 +1,357 @@
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/blockiter.h ./libhfsp/src/blockiter.h
+--- ../hfsplus-1.0.4/libhfsp/src/blockiter.h	2002-03-05 20:50:28.000000000 +0100
++++ ./libhfsp/src/blockiter.h	2019-08-18 19:14:22.283803427 +0200
+@@ -52,9 +52,10 @@
+ extern int blockiter_skip(blockiter *b, UInt32 skip);
+ 
+ /* return current block */
+-extern inline UInt32 blockiter_curr(blockiter *b)
++extern UInt32 blockiter_curr(blockiter *b);
++/*extern inline UInt32 blockiter_curr(blockiter *b)
+ {
+     return b->e->start_block + b->block;
+-}
++}*/
+ 
+ 
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/btree.c ./libhfsp/src/btree.c
+--- ../hfsplus-1.0.4/libhfsp/src/btree.c	2002-03-05 20:50:28.000000000 +0100
++++ ./libhfsp/src/btree.c	2019-08-25 23:24:15.056989050 +0200
+@@ -393,7 +393,7 @@
+ 	{
+ 	    p = volume_readfromfork(vol, nodebuf, fork, 0, bt->blkpernode,
+ 		 HFSP_EXTENT_DATA, bt->cnid);
+-	    ((char*) p) += HEADER_RESERVEDOFFSET; // skip header
++	    p += HEADER_RESERVEDOFFSET; /* skip header */
+ 	}
+ 	
+ 	bt->alloc_bits = malloc(alloc_size);
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/btreecheck.c ./libhfsp/src/btreecheck.c
+--- ../hfsplus-1.0.4/libhfsp/src/btreecheck.c	2002-03-05 20:50:29.000000000 +0100
++++ ./libhfsp/src/btreecheck.c	2019-08-25 23:24:24.591988930 +0200
+@@ -264,7 +264,7 @@
+ 	{
+ 	    p = volume_readfromfork(vol, nodebuf, fork, 0, bt->blkpernode,
+ 		 HFSP_EXTENT_DATA, bt->cnid);
+-	    ((char*) p) += HEADER_RESERVEDOFFSET; // skip header
++	    p += HEADER_RESERVEDOFFSET; /* skip header */
+ 	}
+ 	
+ 	bt->alloc_bits = malloc(alloc_size);
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/fscheck.c ./libhfsp/src/fscheck.c
+--- ../hfsplus-1.0.4/libhfsp/src/fscheck.c	2002-03-25 16:48:37.000000000 +0100
++++ ./libhfsp/src/fscheck.c	2019-08-25 23:24:40.114988735 +0200
+@@ -230,7 +230,7 @@
+     vh->write_count	= bswabU32_inc(p);
+     vh->encodings_bmp	= bswabU64_inc(p);
+     memcpy(vh->finder_info, p, 32); 
+-    ((char*) p) += 32; // So finderinfo must be swapped later, ***
++    p += 32; /* So finderinfo must be swapped later, ***/
+     p = volume_readfork(p, &vh->alloc_file );
+     p = volume_readfork(p, &vh->ext_file   );
+     p = volume_readfork(p, &vh->cat_file   );
+@@ -277,12 +277,12 @@
+ 	    printf("Volume is wrapped in HFS volume "
+ 		   " (use hfsck to check this)\n");
+ 
+-	((char*) p) += 0x12;		/* skip unneded HFS vol fields */
++	p += 0x12;		/* skip unneded HFS vol fields */
+ 	drAlBlkSiz = bswabU32_inc(p);	/* offset 0x14 */
+-	((char*) p) += 0x4;		/* skip unneded HFS vol fields */
++	p += 0x4;		/* skip unneded HFS vol fields */
+ 	drAlBlSt    = bswabU16_inc(p);	/* offset 0x1C */
+ 	
+-	((char*) p) += 0x5E;		/* skip unneded HFS vol fields */
++	p += 0x5E;		/* skip unneded HFS vol fields */
+ 	signature = bswabU16_inc(p);	/* offset 0x7C, drEmbedSigWord */
+ 	if (signature != HFSP_VOLHEAD_SIG)
+ 	    HFSP_ERROR(-1, "This looks like a normal HFS volume");
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/libhfsp.h ./libhfsp/src/libhfsp.h
+--- ../hfsplus-1.0.4/libhfsp/src/libhfsp.h	2002-03-25 16:48:37.000000000 +0100
++++ ./libhfsp/src/libhfsp.h	2019-08-18 19:22:23.867797373 +0200
+@@ -31,7 +31,8 @@
+ # include "hfs.h"
+ # include "hfsp.h"
+ 
+-extern int errno;
++# include <errno.h>
++/*extern int errno;*/
+ /* Last error is eventually found here */
+ extern const char *hfsp_error; 
+ 
+@@ -90,6 +91,7 @@
+ 
+     
+ /** helper function to create those Apple 4 byte Signatures */
++extern UInt32 sig(char c0, char c1, char c2, char c3);/*
+ extern inline UInt32 sig(char c0, char c1, char c2, char c3)
+ {
+     UInt32 sig;
+@@ -99,7 +101,7 @@
+     ((char*)&sig)[3] = c3;
+     return sig;
+ }
+-
++*/
+ 
+ 
+ /* Other Signatures may follow for informational purposes */
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/os.c ./libhfsp/src/os.c
+--- ../hfsplus-1.0.4/libhfsp/src/os.c	2002-03-25 16:48:37.000000000 +0100
++++ ./libhfsp/src/os.c	2019-08-18 19:23:58.124796189 +0200
+@@ -46,6 +46,9 @@
+ # endif
+ 
+ # include <stdio.h>
++#ifdef HAVE_STDLIB_H
++# include <stdlib.h>	/* exit() */
++#endif
+ 
+ 
+ # include <errno.h>
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/partitions.c ./libhfsp/src/partitions.c
+--- ../hfsplus-1.0.4/libhfsp/src/partitions.c	2002-03-26 19:00:29.000000000 +0100
++++ ./libhfsp/src/partitions.c	2019-08-18 19:25:42.155794881 +0200
+@@ -32,6 +32,10 @@
+ #include "libhfsp.h"
+ 
+ #include <stdlib.h>
++#ifdef HAVE_STRING_H
++# include <string.h>
++#endif
++
+ 
+ /*
+  * Returns the number of partitions in the given partition map.
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/record.c ./libhfsp/src/record.c
+--- ../hfsplus-1.0.4/libhfsp/src/record.c	2002-03-17 18:20:01.000000000 +0100
++++ ./libhfsp/src/record.c	2019-08-18 19:27:46.572793317 +0200
+@@ -32,6 +32,13 @@
+ 
+ #include <errno.h>
+ #include <stdio.h>
++#ifdef HAVE_STRING_H
++# include <string.h>
++#endif
++
++#ifdef HAVE_STDLIB_H
++# include <stdlib.h>	/* exit() */
++#endif
+ 
+ #include "libhfsp.h"
+ #include "hfstime.h"
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/swab.h ./libhfsp/src/swab.h
+--- ../hfsplus-1.0.4/libhfsp/src/swab.h	2002-03-05 20:50:29.000000000 +0100
++++ ./libhfsp/src/swab.h	2019-08-25 23:12:24.435997983 +0200
+@@ -36,28 +36,31 @@
+ 
+ #define bswabU16(val) bswap_16(val)
+ 
+-#define bswabU16_inc(ptr) bswap_16(*((UInt16*) (ptr))++)
+-#define bswabU32_inc(ptr) bswap_32(*((UInt32*) (ptr))++)
+-#define bswabU64_inc(ptr) bswap_64(*((UInt64*) (ptr))++)
+-
+-#define bstoreU16_inc(ptr, val) (*((UInt16*) (ptr))++) = bswap_16(val)
+-#define bstoreU32_inc(ptr, val) (*((UInt32*) (ptr))++) = bswap_32(val)
+-#define bstoreU64_inc(ptr, val) (*((UInt64*) (ptr))++) = bswap_64(val)
++/* BD: fix compile on some compilers. */
++#define bswabU16_inc(ptr) bswap_16(*(UInt16*)(ptr=(char*)ptr + 2, (char*)ptr-2))
++#define bswabU32_inc(ptr) bswap_32(*(UInt32*)(ptr=(char*)ptr + 4, (char*)ptr-4))
++#define bswabU64_inc(ptr) bswap_64(*(UInt64*)(ptr=(char*)ptr + 8, (char*)ptr-8))
++
++#define bstoreU16_inc(ptr, val) (*(UInt16*)(ptr=(char*)ptr + 2, (char*)ptr-2)) = bswap_16(val)
++#define bstoreU32_inc(ptr, val) (*(UInt32*)(ptr=(char*)ptr + 4, (char*)ptr-4)) = bswap_32(val)
++#define bstoreU64_inc(ptr, val) (*(UInt64*)(ptr=(char*)ptr + 8, (char*)ptr-8)) = bswap_64(val)
+ 
+ #else // BYTE_ORDER == BIG_ENDIAN
+ 
+ #define bswabU16(val) val
+ 
+-#define bswabU16_inc(ptr) (*((UInt16*) (ptr))++)
+-#define bswabU32_inc(ptr) (*((UInt32*) (ptr))++)
+-#define bswabU64_inc(ptr) (*((UInt64*) (ptr))++)
+-
+-#define bstoreU16_inc(ptr, val) (*((UInt16*) (ptr))++) = val
+-#define bstoreU32_inc(ptr, val) (*((UInt32*) (ptr))++) = val
+-#define bstoreU64_inc(ptr, val) (*((UInt64*) (ptr))++) = val
++/* BD: fix compile on some compilers. */
++#define bswabU16_inc(ptr) (*(UInt16*)(ptr=(char*)ptr + 2, (char*)ptr-2))
++#define bswabU32_inc(ptr) (*(UInt32*)(ptr=(char*)ptr + 4, (char*)ptr-4))
++#define bswabU64_inc(ptr) (*(UInt64*)(ptr=(char*)ptr + 8, (char*)ptr-8))
++
++#define bstoreU16_inc(ptr, val) (*(UInt16*)(ptr=(char*)ptr + 2, (char*)ptr-2)) = val
++#define bstoreU32_inc(ptr, val) (*(UInt32*)(ptr=(char*)ptr + 4, (char*)ptr-4)) = val
++#define bstoreU64_inc(ptr, val) (*(UInt64*)(ptr=(char*)ptr + 8, (char*)ptr-8)) = val
+ 
+ #endif
+ 
+ /* for the sake of compleetness and readability */
+-#define bswabU8_inc(ptr)	(*((UInt8*) (ptr))++)
+-#define bstoreU8_inc(ptr,val)	(*((UInt8*) (ptr))++) = val
++/* BD: fix compile on some compilers. */
++#define bswabU8_inc(ptr)	(*(UInt8*)(ptr=(UInt8*)ptr + 1, (char*)ptr-1))
++#define bstoreU8_inc(ptr,val)	(*(UInt8*)(ptr=(UInt8*)ptr + 1, (char*)ptr-1)) = val
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/volume.c ./libhfsp/src/volume.c
+--- ../hfsplus-1.0.4/libhfsp/src/volume.c	2002-03-26 19:00:29.000000000 +0100
++++ ./libhfsp/src/volume.c	2019-08-25 23:31:09.679983839 +0200
+@@ -345,7 +345,7 @@
+     vh->write_count	= bswabU32_inc(p);
+     vh->encodings_bmp	= bswabU64_inc(p);
+     memcpy(vh->finder_info, p, 32); 
+-    ((char*) p) += 32; // finderinfo is not used by now
++    p += 32; /* finderinfo is not used by now */
+     p = volume_readfork(p, &vh->alloc_file );
+     p = volume_readfork(p, &vh->ext_file   );
+     p = volume_readfork(p, &vh->cat_file   );
+@@ -381,7 +381,7 @@
+     bstoreU32_inc(p, vh->write_count	);
+     bstoreU64_inc(p, vh->encodings_bmp	);
+     memcpy(p, vh->finder_info, 32); 
+-    ((char*) p) += 32; // finderinfo is not used by now
++    p += 32; /* finderinfo is not used by now */
+     p = volume_writefork(p, &vh->alloc_file );
+     p = volume_writefork(p, &vh->ext_file   );
+     p = volume_writefork(p, &vh->cat_file   );
+@@ -417,12 +417,12 @@
+   
+ 	UInt16	embeds, embedl;		/* Start/lenght of embedded area in blocks */
+ 	
+-	((char*) p) += 0x12;		/* skip unneeded HFS vol fields */
++	p += 0x12;		/* skip unneeded HFS vol fields */
+ 	drAlBlkSiz = bswabU32_inc(p);	/* offset 0x14 */
+-	((char*) p) += 0x4;		/* skip unneeded HFS vol fields */
++	p += 0x4;		/* skip unneeded HFS vol fields */
+ 	drAlBlSt    = bswabU16_inc(p);	/* offset 0x1C */
+ 	
+-	((char*) p) += 0x5E;		/* skip unneeded HFS vol fields */
++	p += 0x5E;		/* skip unneeded HFS vol fields */
+ 	signature = bswabU16_inc(p);	/* offset 0x7C, drEmbedSigWord */
+ 	if (signature != HFSP_VOLHEAD_SIG)
+ 	    HFSP_ERROR(-1, "This looks like a normal HFS volume");
+@@ -510,6 +510,8 @@
+ 
+     if (volume_read_wrapper(vol, &vol->vol))
+ 	return -1;
++    /* BD: temporary fix to read the backup header */
++    if ( vol->maxblocks < 5 ) vol->maxblocks = vol->vol.total_blocks*vol->vol.blocksize/HFSP_BLOCKSZ;
+ 
+     if (volume_read(vol, &backup, vol->maxblocks - 2))
+ 	return -1;
+@@ -527,8 +529,9 @@
+ 
+     if (vol->flags & HFSP_MODE_RDWR)
+     {
+-	char buf[HFSP_BLOCKSZ];
++	char buf[vol -> blksize];
+ 	void *p = buf;
++	memset(buf, 0, sizeof(buf));
+ 
+ 	volume_linux_mark(vol);
+ 
+@@ -538,6 +540,9 @@
+ 
+ 	volume_writetobuf(vol, buf, 2);	    // This is always block 2
+     }
++	/* BD: the volume header must be written using the old block size, so set these here, after writing: */
++    vol -> blksize	= vol->vol.blocksize;
++    vol -> blksize_bits = blksize_bits;
+ 
+     if (btree_init_cat(&vol->catalog, vol, &vol->vol.cat_file))
+ 	return -1;
+@@ -605,7 +610,7 @@
+ }
+ 
+ /* accessor for entends btree, is created on demand */
+-/* inline */ btree* volume_get_extents_tree(volume* vol) 
++/*inline */ btree* volume_get_extents_tree(volume* vol) 
+ {
+     if (!vol->extents)
+ 	volume_create_extents_tree(vol);
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/libhfsp/src/volume.h ./libhfsp/src/volume.h
+--- ../hfsplus-1.0.4/libhfsp/src/volume.h	2002-03-16 09:17:00.000000000 +0100
++++ ./libhfsp/src/volume.h	2019-08-18 19:16:23.947801898 +0200
+@@ -75,12 +75,13 @@
+ extern void volume_create_extents_tree(volume* vol);
+ 
+ /* accessor for entends btree, is created on demand */
++extern btree* volume_get_extents_tree(volume* vol);/*
+ extern inline btree* volume_get_extents_tree(volume* vol) 
+ {
+     if (!vol->extents)
+ 	volume_create_extents_tree(vol);
+     return vol->extents;
+-}
++}*/
+ 
+ /* return new Id for files/folder and check for overflow.
+  *
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/src/darray.h ./src/darray.h
+--- ../hfsplus-1.0.4/src/darray.h	2002-03-05 20:50:29.000000000 +0100
++++ ./src/darray.h	2019-08-18 19:20:52.251798525 +0200
+@@ -40,9 +40,10 @@
+ extern	void	    darray_sort(darray *, int (*)(const void *, const void *));
+ 
+ /* return the array as an indexable block */
++extern void *darray_array(darray *array); /*
+ extern inline void *darray_array(darray *array)
+ {
+   return (void *) array->mem;
+ }
+-
++*/
+ 
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/src/dlist.h ./src/dlist.h
+--- ../hfsplus-1.0.4/src/dlist.h	2002-03-05 20:50:29.000000000 +0100
++++ ./src/dlist.h	2019-08-18 19:20:34.012798754 +0200
+@@ -36,14 +36,16 @@
+ extern int	dlist_append(dlist *, const char *);
+ 
+ /* return the array of strings in a list; can dispose with free() */
++extern char **dlist_array(dlist *list); /*
+ extern inline char **dlist_array(dlist *list)
+ {
+     return (char **) list->mem;
+ } 
+-
++*/
+ /* return the number of strings in a list */
++extern int dlist_size(dlist *list); /*
+ extern inline int dlist_size(dlist *list)
+ {
+   return list->eltend - (char **) list->mem;
+ }
+-
++*/
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/src/dstring.h ./src/dstring.h
+--- ../hfsplus-1.0.4/src/dstring.h	2002-03-05 20:50:29.000000000 +0100
++++ ./src/dstring.h	2019-08-18 19:20:02.412799151 +0200
+@@ -42,13 +42,15 @@
+ extern void	dstring_shrink(dstring *, size_t);
+ extern void	dstring_free(dstring *);
+ 
++extern char	*dstring_string(dstring *string); /*
+ extern inline char	*dstring_string(dstring *string)
+ {
+     return string->str;
+ }
+-
++*/
++extern int	dstring_length(dstring *string); /*
+ extern inline int	dstring_length(dstring *string)
+ {
+     return string->len;
+ }  
+-
++*/
+diff -buraN '--exclude-from=../exclude' ../hfsplus-1.0.4/src/glob.c ./src/glob.c
+--- ../hfsplus-1.0.4/src/glob.c	2002-03-05 20:50:29.000000000 +0100
++++ ./src/glob.c	2019-08-18 19:19:24.027799634 +0200
+@@ -48,7 +48,7 @@
+ 
+ 	switch (*pat)
+ 	{
+-	    case NULL:	// pattern at end
++	    case '\0':	// pattern at end
+ 		return (!*str); // String at end ?
+ 
+ 	    case '*':  // match all

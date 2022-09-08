@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- header file.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef WFS_HEADER
@@ -121,11 +117,8 @@ typedef enum wfs_curr_fs wfs_curr_fs_t;
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 # endif
-# ifndef HAVE_SSIZE_T
-typedef int ssize_t;
-# endif
 # ifndef HAVE_OFF64_T
-#  ifdef HAVE_LONG_LONG
+#  if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
 typedef long long int off64_t;
 #  else
 typedef long int off64_t;
@@ -163,8 +156,9 @@ typedef long int off64_t;
 #  endif
 # endif
 
-# if (defined HAVE_LONG_LONG) && (defined HAVE_UNISTD_H)	\
-	&& (defined HAVE_FORK) && (				\
+# if ((defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT))	\
+	&& (defined HAVE_UNISTD_H)				\
+	&& (defined HAVE_WORKING_FORK /* HAVE_FORK */) && (	\
 		(defined HAVE_EXECVP)				\
 		|| (defined HAVE_EXECVPE)			\
 	)							\
@@ -182,7 +176,8 @@ typedef long int off64_t;
 # endif
 
 # if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)	\
-	&& (defined HAVE_FORK) && (defined HAVE_UNISTD_H)	\
+	&& (defined HAVE_WORKING_FORK /* HAVE_FORK */)		\
+	&& (defined HAVE_UNISTD_H)	\
 	&& ((defined HAVE_WAITPID) || (defined HAVE_WAIT))
 
 #  ifdef HAVE_ASM_TYPES_H
@@ -328,8 +323,7 @@ union wfs_fsdata
 		unsigned int blocksize;
 	} e2fs;
 
-	/* TODO: to be expanded, when other filesystems come into the program */
-
+	/* to be expanded, when other filesystems come into the program */
 };
 
 typedef union wfs_fsdata wfs_fsdata_t;
@@ -361,29 +355,6 @@ typedef union wfs_fsdata wfs_fsdata_t;
 # else
 #  define WFS_GET_ERRNO_OR_DEFAULT(val) (val)
 #  define WFS_SET_ERRNO(value)
-# endif
-
-# ifdef HAVE_MEMCPY
-#  define WFS_MEMCOPY memcpy
-# else
-extern void wfs_memcopy WFS_PARAMS ((void * const dest,
-	const void * const src, const size_t len));
-#  define WFS_MEMCOPY wfs_memcopy
-# endif
-
-# ifdef HAVE_MEMSET
-#  define WFS_MEMSET memset
-# else
-extern void wfs_mem_set WFS_PARAMS ((void * const dest,
-	const char value, const size_t len));
-#  define WFS_MEMSET wfs_mem_set
-# endif
-
-# ifdef HAVE_STRDUP
-#  define WFS_STRDUP strdup
-# else
-extern char * wfs_duplicate_string WFS_PARAMS ((const char src[]));
-#  define WFS_STRDUP wfs_duplicate_string
 # endif
 
 extern int GCC_WARN_UNUSED_RESULT

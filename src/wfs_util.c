@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- utility functions.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,25 +16,16 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
 
-#ifdef HAVE_GETMNTENT_R
-	/* getmntent_r() */
-# define _GNU_SOURCE	1
-#endif
-
-#if (defined HAVE_PUTENV) || (defined HAVE_SETENV)
-# define _XOPEN_SOURCE 600
-#endif
-
 #include <stdio.h>	/* FILE */
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>	/* for open() */
+#endif
 
 #ifdef HAVE_STRING_H
 # if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
@@ -118,10 +109,6 @@
 
 #ifdef HAVE_SCHED_H
 # include <sched.h>
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>	/* for open() */
 #endif
 
 #ifdef MAJOR_IN_MKDEV
@@ -296,7 +283,7 @@ wfs_get_mnt_point_getmntent (
 	char buffer[WFS_MNTBUFLEN];
 # endif
 
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+	if ( (dev_name == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
 		return WFS_BADPARAM;
@@ -439,7 +426,7 @@ wfs_get_mnt_point_mounts (
 # endif
 #endif /* WFS_HAVE_IOCTL_LOOP */
 
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+	if ( (dev_name == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
 		return WFS_BADPARAM;
@@ -549,8 +536,10 @@ wfs_get_mnt_point_mounts (
 					((res64 >= 0)
 					&& (li64.lo_device == s.st_dev)
 					&& (li64.lo_inode == s.st_ino))
-# endif
+#  ifdef LOOP_GET_STATUS
 					||
+#  endif
+# endif
 # ifdef LOOP_GET_STATUS
 					((res >= 0)
 					&& (li.lo_device == s.st_dev)
@@ -637,7 +626,7 @@ wfs_get_mnt_point_getmntinfo (
 	int count;
 	int i;
 
-	if ( (dev_name == NULL) || (error == NULL) || (mnt_point == NULL)
+	if ( (dev_name == NULL) || (mnt_point == NULL)
 		|| (is_rw == NULL) || (mnt_point_len == 0) )
 	{
 		return WFS_BADPARAM;
@@ -1067,7 +1056,7 @@ wfs_create_child (
 		return WFS_BADPARAM;
 	}
 
-#ifdef HAVE_FORK
+#ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 	id->chld_id.chld_pid = fork ();
 	if ( id->chld_id.chld_pid < 0 )
 	{
@@ -1685,11 +1674,6 @@ deep_copy_array (
 	}
 	for ( i = 0; i < len; i++ )
 	{
-		new_arr[i] = NULL;
-	}
-
-	for ( i = 0; i < len; i++ )
-	{
 		if ( array[i] == NULL )
 		{
 			new_arr[i] = NULL;
@@ -1698,7 +1682,8 @@ deep_copy_array (
 		new_arr[i] = WFS_STRDUP (array[i]);
 		if ( new_arr[i] == NULL )
 		{
-			free_array_deep_copy (new_arr, len);
+			/* free only as many as set */
+			free_array_deep_copy (new_arr, i);
 			return NULL;
 		}
 	}
@@ -1793,9 +1778,12 @@ void wfs_memcopy (
 	char * const d = (char *)dest;
 	const char * const s = (const char *)src;
 
-	for ( i = 0; i < len; i++ )
+	if ( (d != NULL) && (s != NULL) )
 	{
-		d[i] = s[i];
+		for ( i = 0; i < len; i++ )
+		{
+			d[i] = s[i];
+		}
 	}
 }
 #endif
@@ -1814,9 +1802,12 @@ void wfs_mem_set (
 # endif
 {
 	size_t i;
-	for ( i = 0; i < len; i++ )
+	if ( dest != NULL )
 	{
-		((char *)dest)[i] = value;
+		for ( i = 0; i < len; i++ )
+		{
+			((char *)dest)[i] = value;
+		}
 	}
 }
 #endif

@@ -1,4 +1,4 @@
-This is the README file for wipefreespace, a program for secure wiping
+This is the README file for WipeFreeSpace, a program for secure wiping
  of free space on file systems.
 
 Wipefreespace wipes the following things (when supported by the backing
@@ -24,7 +24,7 @@ License: GPLv2+
 
 ================================================================
 
-The binary version of wipefreespace is linked with the GNU C Library,
+The binary version of WipeFreeSpace is linked with the GNU C Library,
  licensed under the GNU LGPL:
 
 Copyright (C) 1991,92,93,94,95,96,97,98,99,2000,2001,2002,2003,2004,2005,
@@ -64,8 +64,8 @@ Requirements for compiling the full version:
   (usually included in something like e2fsprogs-devel). If you don't have
   anything like this installed or available (check twice), then go to
   	http://e2fsprogs.sf.net/
-  Then compile and install that package. Ext4 support requires new versions,
-  like 1.41.
+  Then compile and install that package. Ext4 support requires new enough
+  versions, like 1.41.
 
 - NTFS: the development package for the NTFS file system library,
   ntfs3g-ntfsprogs. If you don't have anything like this installed or
@@ -74,13 +74,13 @@ Requirements for compiling the full version:
   Then compile and install that package. You can also use libntfs (usually
   included in something like ntfsprogs-devel).
 
-- XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
-  Get these at http://oss.sgi.com/projects/xfs/. The following utilities
-  should be available: xfs_db, xfs_freeze, xfs_unfreeze. The xfs_db program
-  should support the following command-line options: "-i", "-c" and the
-  following interactive mode commands: "quit", "freesp -d", "blockget -n",
-  "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier versions will
-  probably also work.
+- XFS: xfsprogs installed and in your PATH variable.
+  Get these at https://kernel.org/pub/linux/utils/fs/xfs/xfsprogs/. The
+  following utilities should be available: xfs_db, xfs_freeze, xfs_unfreeze.
+  The xfs_db program should support the following command-line options: "-i",
+  "-c" and the following interactive mode commands: "quit", "freesp -d",
+  "blockget -n", "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier
+  versions will probably also work.
 
 - ReiserFSv3: development package for reiserfsprogs (header files - *.h - and
   compiled static libraries - *.a - from the package). ReiserFS requires either
@@ -148,7 +148,7 @@ Requirements for compiling the full version:
 	http://jfs.sourceforge.net/
   to get jfsutils. Libuuid can be a part of "util-linux-ng", which can be
   found on the kernel site:
-	ftp://ftp.kernel.org/pub/linux/utils/util-linux-ng/
+	http://kernel.org/pub/linux/utils/util-linux/
   or as a part of e2fsprogs available at
   	http://e2fsprogs.sf.net/
 
@@ -236,7 +236,7 @@ WARNING: If both ReiserFSv3 and JFS are enabled, you MUST either disable
  won't help in this case.
 
 The patches for ntfsprogs are optional. Whether or not they will be included
- in the official release of ntfsprogs, wipefreespace still will compile.
+ in the official release of ntfsprogs, WipeFreeSpace still will compile.
 
 Type
 
@@ -252,8 +252,8 @@ If you do not wish support for a particular wiping operation, give the
  respectively). You cannot disable all of these.
 Run './configure --help' for details.
 
-If you do NOT wish wipefreespace to use the network or get the computer's IP
- address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
+If you do NOT wish WipeFreeSpace to use the network or get the computer's IP
+ address, get LibHideIP>=0.2 and LibNetBlock and configure WipeFreeSpace with
 
 	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
 
@@ -312,7 +312,7 @@ Command line options:
 			NOTE: this may not work for sub-partitions on drives.
 			To disable the cache, run the 'hdparm' utility with
 			the correct options to disable the cache before
-			running wipefreespace and enable the cache afterwards.
+			running WipeFreeSpace and enable the cache afterwards.
 -v|--verbose		Verbose output. Use twice for more. This also enables
 			progress bars, but be warned: these may not always be
 			accurate or increase at a constant rate.
@@ -321,7 +321,7 @@ Command line options:
 The '/dev/XY' part stands for a device with a supported file system.
  Examples: /dev/hda1, /dev/fd0. More than one device can be given on the
  command line, but they will be wiped sequentially, NOT in
- multiple threads. WipeFreeSpace is not multi-threaded and probably
+ multiple threads. WipeFreeSpace is not multithreaded and probably
  won't be, because the libraries used can be not thread-safe.
  But, you can run multiple WipeFreeSpace processes (but not wiping the same
  filesystem) in multiple terminals (or under screen/nohup) as a substitute
@@ -398,15 +398,15 @@ you wish.
  In the resulting XX.po file you have to fill in all the fields
 marked with capital letters in the header:
 
-# YOUR LANGUAGE translations for wipefreespace package.
-# Copyright (C) 2007-2019 Bogdan 'bogdro' Drozdowski
+# YOUR LANGUAGE translations for WipeFreeSpace package.
+# Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski
 # This file is distributed under the same license as
-# the wipefreespace package.
+# the WipeFreeSpace package.
 # YOUR FULL NAME <EMAILADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace VERSION\n"
+"Project-Id-Version: WipeFreeSpace VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2011-08-03 15:28+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

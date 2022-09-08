@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions.
  *
- * Copyright (C) 2009-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2009-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,12 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
- *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -712,7 +707,7 @@ wfs_minixfs_wipe_unrm (
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
 	if ( minix == NULL )
 	{
-		return 	WFS_BADPARAM;
+		return WFS_BADPARAM;
 	}
 	fs_block_size = wfs_minixfs_get_block_size (wfs_fs);
 
@@ -721,6 +716,10 @@ wfs_minixfs_wipe_unrm (
 	if ( buf == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		return WFS_MALLOC;
 	}

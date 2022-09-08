@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.71])
-AC_INIT([wipefreespace],[2.5],[bogdro@users.sourceforge.net])
-AM_INIT_AUTOMAKE
+AC_INIT([WipeFreeSpace],[2.6],[bogdro@users.sourceforge.net], [wipefreespace], [https://wipefreespace.sourceforge.io])
+AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -137,7 +137,7 @@ AC_ARG_ENABLE(part,[[  --enable-part		enable wiping partially-used blocks (defau
 	]
 	,[feat_part=yes])
 
-AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for wipefreespace.]],
+AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for WipeFreeSpace.]],
 	[if (test "x$enableval" = "xno"); then
 		feat_LIBHIDEIP=no
 	 else
@@ -146,7 +146,7 @@ AC_ARG_ENABLE(LIBHIDEIP,[[  --enable-LIBHIDEIP	Enable libhideip for wipefreespac
 	]
 	,feat_LIBHIDEIP=no)
 
-AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for wipefreespace.]],
+AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for WipeFreeSpace.]],
 	[if (test "x$enableval" = "xno"); then
 		feat_LIBNETBLOCK=no
 	 else
@@ -321,7 +321,7 @@ if ( test "x$feat_LIBNETBLOCK" = "xyes" ); then
 fi
 
 # ==================== Checks for header files.
-# AC_HEADER_STDC
+# AC_ HEADER_ STDC
 # m4_warn([obsolete],
 # [The preprocessor macro `STDC_HEADERS' is obsolete.
 #   Except in unusual embedded environments, you can safely include all
@@ -332,7 +332,7 @@ AC_CHECK_INCLUDES_DEFAULT
 AC_PROG_EGREP
 
 AC_CHECK_HEADERS([sys/time.h time.h sys/stat.h])
-# AC_HEADER_TIME()
+# AC_ HEADER_ TIME()
 # m4_warn([obsolete],
 # [Update your code to rely only on HAVE_SYS_TIME_H,
 # then remove this warning and the obsolete code below it.
@@ -409,7 +409,8 @@ if ( test "x$feat_xfs" = "xyes" ); then
 fi
 
 have_ll=yes
-AC_CHECK_TYPE([long long],AC_DEFINE([HAVE_LONG_LONG],[1],[Whether you have the long long type.]),
+AC_TYPE_LONG_LONG_INT
+AC_CHECK_TYPE([long long int],AC_DEFINE([HAVE_LONG_LONG],[1],[Whether you have the long long type.]),
 	[have_ll=no])
 
 have_dev_t=yes
@@ -595,6 +596,7 @@ if ( test "x$feat_hfsp" = "xyes" ); then
 	fi
 fi
 
+AC_TYPE_MODE_T
 AC_CHECK_TYPES([umode_t],,,
 	[[
 	#ifdef HAVE_LINUX_TYPES_H
@@ -763,9 +765,11 @@ AC_CHECK_HEADER([endian.h],
 		AC_DEFINE([HAVE_MACHINE_ENDIAN_H],[1],[Whether you have the machine/endian.h header.]))]
 )
 
+AX_INCLUDE_STRCASECMP
+
 AC_CHECK_HEADERS([getopt.h locale.h stdlib.h string.h errno.h signal.h \
 	malloc.h libgen.h limits.h paths.h sys/select.h sched.h asm/types.h \
-	sys/sysmacros.h sys/mkdev.h sys/ioctl.h Sys/statfs.h sys/vfs.h \
+	sys/sysmacros.h sys/mkdev.h sys/ioctl.h sys/statfs.h sys/vfs.h \
 	sys/byteorder.h stdbool.h strings.h])
 
 if ( test "x$feat_xfs" = "xyes" ); then
@@ -813,8 +817,8 @@ AC_CHECK_DECLS([__environ],,,
 # ===================== Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
 AC_C_VOLATILE
-AC_CHECK_TYPES([size_t, ssize_t])
 AC_CHECK_TYPES([off64_t],,,
 	[[
 	#define _FILE_OFFSET_BITS 64
@@ -836,6 +840,7 @@ AC_CHECK_TYPES([sig_atomic_t],,,
 	#endif
 	]])
 
+AC_TYPE_PID_T
 # Checks for library functions.
 AC_FUNC_MALLOC
 # AC_TYPE_SIGNAL
@@ -852,10 +857,10 @@ AC_CACHE_CHECK([return type of signal handlers],[ac_cv_type_signal],[AC_COMPILE_
 AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type of signal handlers
 		    (int or void).])
 
-
+AC_FUNC_GETMNTENT
 AC_CHECK_FUNCS([memset memcpy setlocale strtol random srandom clearenv \
-	getuid geteuid snprintf daemon sigaction access sleep getpid getopt_long \
-	hasmntopt getmntent getmntent_r sched_yield sync fsync select ioctl \
+	getuid geteuid snprintf daemon sigaction sleep getpid getopt_long \
+	hasmntopt getmntent_r sched_yield sync fsync select ioctl \
 	getmntinfo fopen64 basename umount open stat stat64 fstat fstat64 \
 	strdup strcasecmp])
 
@@ -893,6 +898,7 @@ if (test "x$has_malloc" != "xyes"); then
 fi
 
 has_fork=yes
+AC_FUNC_FORK
 AC_CHECK_FUNC([fork],
 	AC_DEFINE([HAVE_FORK],[1],[Whether you have the fork function.]),
 	[has_fork=no])
@@ -1050,6 +1056,7 @@ if (test "x$GCC" = "xyes" ); then
         AX_C_CHECK_FLAG([-Wstringop-truncation], [CFLAGS="$CFLAGS -Wstringop-truncation"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-Wduplicated-branches], [CFLAGS="$CFLAGS -Wduplicated-branches"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-fstack-check], [CFLAGS="$CFLAGS -fstack-check"], [CFLAGS="$CFLAGS"])
+        AX_C_CHECK_FLAG([-fanalyzer], [CFLAGS="$CFLAGS -fanalyzer"], [CFLAGS="$CFLAGS"])
         AX_C_CHECK_FLAG([-g], [CFLAGS="$CFLAGS -g"], [CFLAGS="$CFLAGS"])	# needed for the 'debuginfo' rpm package
 
 	if (test "x$have_ll" = "xyes"); then
@@ -1333,11 +1340,11 @@ if (	test "x$feat_LIBHIDEIP" = "xyes" && test "x$libhip" = "xyes" \
 
 	echo " *	LibHideIP enabled: yes"
 	AC_MSG_WARN([[LibHideIP may cause network filesystem wiping not to work.]])
-	AC_MSG_WARN([[If you do not wish to enable LibHideIP, re-configure wipefreespace with]])
+	AC_MSG_WARN([[If you do not wish to enable LibHideIP, re-configure WipeFreeSpace with]])
 	AC_MSG_WARN([[./configure --enable-LIBHIDEIP=no]])
 else
 	if (test "x$feat_LIBHIDEIP" != "xyes"); then
-		echo " *	LibHideIP enabled: no (disabled by command line)"
+		echo " *	LibHideIP enabled: no (default/disabled by command line)"
 
 	elif ( test "x$libhip" != "xyes" ); then
 		echo " *	LibHideIP enabled: no (library missing)"
@@ -1353,11 +1360,11 @@ if (	test "x$feat_LIBNETBLOCK" = "xyes" && test "x$libnb" = "xyes" \
 
 	echo " *	LibNetBlock enabled: yes"
 	AC_MSG_WARN([[LibNetBlock may cause network filesystem wiping not to work.]])
-	AC_MSG_WARN([[If you do not wish to enable LibNetBlock, re-configure wipefreespace with]])
+	AC_MSG_WARN([[If you do not wish to enable LibNetBlock, re-configure WipeFreeSpace with]])
 	AC_MSG_WARN([[./configure --enable-LIBNETBLOCK=no]])
 else
 	if (test "x$feat_LIBNETBLOCK" != "xyes"); then
-		echo " *	LibNetBlock enabled: no (disabled by command line)"
+		echo " *	LibNetBlock enabled: no (default/disabled by command line)"
 
 	elif ( test "x$libnb" != "xyes" ); then
 		echo " *	LibNetBlock enabled: no (library missing)"

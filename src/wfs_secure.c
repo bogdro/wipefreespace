@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- security-related procedures.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -72,13 +68,13 @@
 int GCC_WARN_UNUSED_RESULT
 wfs_clear_cap (WFS_VOID)
 {
-#ifdef HAVE_SYS_CAPABILITY_H
+#if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP)
 	int res;
 	cap_t my_capab;
 #endif
 	wfs_errcode_t ret = WFS_SUCCESS;
 
-#ifdef HAVE_SYS_CAPABILITY_H
+#if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP)
 
 	WFS_SET_ERRNO (0);
 	/* NOTE: Valgring says this calls capget(..., NULL), but
@@ -147,7 +143,7 @@ wfs_clear_cap (WFS_VOID)
 			ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
 		}
 	}
-#endif /* HAVE_SYS_CAPABILITY_H */
+#endif /* #if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP) */
 
 	return ret;
 }
@@ -167,11 +163,11 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_check_stds (
 #ifdef WFS_ANSIC
-	int *stdout_open, int *stderr_open)
+	int * const stdout_open, int * const stderr_open)
 #else
 	stdout_open, stderr_open)
-	int *stdout_open;
-	int *stderr_open;
+	int * const stdout_open;
+	int * const stderr_open;
 #endif
 {
 #ifdef WFS_HAVE_STAT

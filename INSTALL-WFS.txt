@@ -1,4 +1,4 @@
-Wipefreespace - a program for secure cleaning of free space on filesystems.
+WipeFreeSpace - a program for secure cleaning of free space on filesystems.
 
 Requirements for compiling the full version:
 
@@ -18,8 +18,8 @@ Requirements for compiling the full version:
   (usually included in something like e2fsprogs-devel). If you don't have
   anything like this installed or available (check twice), then go to
   	http://e2fsprogs.sf.net/
-  Then compile and install that package. Ext4 support requires new versions,
-  like 1.41.
+  Then compile and install that package. Ext4 support requires new enough
+  versions, like 1.41.
 
 - NTFS: the development package for the NTFS file system library,
   ntfs3g-ntfsprogs. If you don't have anything like this installed or
@@ -28,13 +28,13 @@ Requirements for compiling the full version:
   Then compile and install that package. You can also use libntfs (usually
   included in something like ntfsprogs-devel).
 
-- XFS: xfsprogs installed and in your PATH variable, if you want XFS support.
-  Get these at http://oss.sgi.com/projects/xfs/. The following utilities
-  should be available: xfs_db, xfs_freeze, xfs_unfreeze. The xfs_db program
-  should support the following command-line options: "-i", "-c" and the
-  following interactive mode commands: "quit", "freesp -d", "blockget -n",
-  "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier versions will
-  probably also work.
+- XFS: xfsprogs installed and in your PATH variable.
+  Get these at https://kernel.org/pub/linux/utils/fs/xfs/xfsprogs/. The
+  following utilities should be available: xfs_db, xfs_freeze, xfs_unfreeze.
+  The xfs_db program should support the following command-line options: "-i",
+  "-c" and the following interactive mode commands: "quit", "freesp -d",
+  "blockget -n", "ncheck", "sb 0", "print". Version 2.7.11 is enough, earlier
+  versions will probably also work.
 
 - ReiserFSv3: development package for reiserfsprogs (header files - *.h - and
   compiled static libraries - *.a - from the package). ReiserFS requires either
@@ -190,7 +190,7 @@ WARNING: If both ReiserFSv3 and JFS are enabled, you MUST either disable
  won't help in this case.
 
 The patches for ntfsprogs are optional. Whether or not they will be included
- in the official release of ntfsprogs, wipefreespace still will compile.
+ in the official release of ntfsprogs, WipeFreeSpace still will compile.
 
 Type
 
@@ -206,8 +206,8 @@ If you do not wish support for a particular wiping operation, give the
  respectively). You cannot disable all of these.
 Run './configure --help' for details.
 
-If you do NOT wish wipefreespace to use the network or get the computer's IP
- address, get LibHideIP>=0.2 and LibNetBlock and configure wipefreespace with
+If you do NOT wish WipeFreeSpace to use the network or get the computer's IP
+ address, get LibHideIP>=0.2 and LibNetBlock and configure WipeFreeSpace with
 
 	./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK
 

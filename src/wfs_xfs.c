@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- XFS file system-specific functions.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,21 +16,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
 
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE64_SOURCE 1
-#define _BSD_SOURCE /* fsync() */
 /* used for fsync(), but this makes BSD's select() impossible. Same for _POSIX_SOURCE - don't define. */
 /*#define _XOPEN_SOURCE*/
-#define _DEFAULT_SOURCE 1
 
 #include <stdio.h>	/* sscanf() */
 
@@ -273,7 +267,10 @@ flush_pipe_output (
 	int i;
 	for (i=0; i < PIPE_BUF; i++)
 	{
-		write (fd, "\n", 1);
+		if ( write (fd, "\n", 1) != 1 )
+		{
+			break;
+		}
 	}
 # if (defined HAVE_FSYNC) && (defined HAVE_UNISTD_H)
 	fsync (fd);
@@ -1466,7 +1463,7 @@ wfs_xfs_wipe_part (
 		} while (sig_recvd == 0);
 	} /* while: reading inode-file */
 	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
-	write (pipe_to_blk_db[PIPE_W], "quit\n", 5);
+	write_res = write (pipe_to_blk_db[PIPE_W], "quit\n", 5);
 	close (pipe_to_blk_db[PIPE_R]);
 	close (pipe_to_blk_db[PIPE_W]);
 
@@ -1777,6 +1774,10 @@ wfs_xfs_open_fs (
 	if ( xxfs == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		return WFS_MALLOC;
 	}
 	xxfs->mnt_point = NULL;
@@ -1822,6 +1823,10 @@ wfs_xfs_open_fs (
 	if ( xxfs->dev_name == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		free (xxfs);
 		return WFS_MALLOC;
 	}

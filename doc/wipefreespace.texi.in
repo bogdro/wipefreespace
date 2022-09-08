@@ -2,7 +2,7 @@
 @c @configure_input@
 @c %**start of header
 @setfilename wipefreespace.info
-@settitle WipeFreeSpace manual @VERSION@
+@settitle WipeFreeSpace @VERSION@ manual
 @c %**end of header
 
 @dircategory Individual utilities
@@ -47,6 +47,7 @@ This manual is for WipeFreeSpace, version @VERSION@
 * Usage::				How to use this thing.
 * Return values::			Program's return values.
 * Signals::				Behaviour upon receiving signals.
+* Reporting issues::			How to report issues.
 * Author::				How to contact me.
 * Thanks::				Who I'd like to thank.
 * Copying::				License - your rights and freedoms.
@@ -65,7 +66,7 @@ This manual is for WipeFreeSpace, version @VERSION@
 This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
 ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2, JFS, HFS+ and OCFS partitions.
 
-Wipefreespace wipes the following things (when supported by the backing
+WipeFreeSpace wipes the following things (when supported by the backing
 library):
 @itemize
 @item free space (space in unused blocks/clusters)
@@ -73,7 +74,7 @@ library):
 @item deleted files' names and other data that can be used to undelete a file
 (like the journal)
 @end itemize
-Wipefreespace does @strong{NOT} decrease the amount of available free space when
+WipeFreeSpace does @strong{NOT} decrease the amount of available free space when
 working.
 
 Normally, when you delete a file, only the information about where the file was is
@@ -82,18 +83,18 @@ area, the file can physically stay on the drive for a long time. The file conten
 can be found by e.g. dumping the whole drive with the @command{dd} program to a file
 and looking at the generated image. This may seem not so dangerous, but if you
 delete confidential information (files with passwords, credit card numbers,
-encryption keys), any person with phyical access to the drive can read that
+encryption keys), any person with physical access to the drive can read that
 information and use it against you.
 
 @strong{ALWAYS USE THE @command{shred} (or similar) PROGRAM TO ERASE CONFIDENTIAL DATA.}
 
 Sometimes you may delete confidential data the normal way by accident (or have
-no other choice, because programs like Internet browsers, mail clients, char clients
+no other choice, because programs like Internet browsers, mail clients, chat clients
 delete data the normal way). In such case normally you would have to shred the
 whole partition, which may be a big problem. This is where WipeFreeSpace comes in.
-This program works in a similar way to the @command{shred} program, but instead of shreding
+This program works in a similar way to the @command{shred} program, but instead of shredding
 regular files,
-it overwrites (just like @command{shred}) the free space on a partition, hopefully without
+it overwrites (just like @command{shred}) the free space on a partition, without
 doing any harm to existing files. The wiped blocks are @strong{NOT} marked as used at any stage.
 
 This program also tries to wipe the remaining space in blocks partially used by existing files and
@@ -133,7 +134,8 @@ device/file permissions. This is @strong{MUCH} safer.
 
 Requirements for compiling the full version of the program:@*
 @itemize
-@item a working C compiler. NTFS support may require the @command{gcc} compiler.
+@item a working C compiler. XFS, ReiserFS, Reiser4 and NTFS support require the
+@samp{long long} data type. NTFS support may require the @command{gcc} compiler.
 C++ compilers won't work due to variable casts.
 @item development package for the C library (like glibc-devel and glibc-headers).
 @item the @command{make} program
@@ -158,8 +160,9 @@ respectively). You cannot disable all of these.
 
 Run @samp{./configure --help} for details.
 
-If you do NOT wish WipeFreeSpace to use the network or get the computer's IP address,
-get LibHideIP>=0.2 and LibNetBlock and configure WipeFreeSpace with
+If you do @strong{NOT} wish WipeFreeSpace to use the network or get the computer's IP address,
+get @url{https://libhideip.sourceforge.io, LibHideIP>=0.2} and
+@url{https://libnetblock.sourceforge.io, LibNetBlock} and configure WipeFreeSpace with
 
 	@samp{./configure --enable-LIBHIDEIP --enable-LIBNETBLOCK}
 
@@ -170,6 +173,7 @@ Type
 	@samp{make}
 
 to compile the program.
+
 Documentation is compiled, but may be recompiled, if you have the @command{makeinfo}
 program (@file{texinfo} package).
 Translations will be compiled, if you have the @file{gettext} package.
@@ -194,8 +198,8 @@ Type
 
 to install the program.
 
-@strong{NOTE}: @samp{make install} is NOT recommended. Create and install an RPM package instead,
-if possible.
+@strong{NOTE}: @samp{make install} is @strong{NOT} recommended. Create and
+install an RPM package instead, if possible.
 
 To create an RPM package:
 
@@ -284,6 +288,7 @@ Compiling requirements:
 @item the development package for the NTFS file system library, @file{ntfs3g-ntfsprogs}.@*
 If you don't have anything like this installed or available (check twice), then go to@*
 	@url{http://www.tuxera.com/community/ntfs-3g-download/}
+
 Then compile and install that package. You can also use @file{libntfs} (usually
 included in something like @file{ntfsprogs-devel}).
 @end itemize
@@ -315,9 +320,9 @@ Compiling requirements:
 @item the @file{unistd.h} header
 @item the @file{fcntl.h} header
 @item the @file{mntent.h} header
-@item the @file{wait.h} header or @file{sys/wait.h} (not required, acutally, but a good thing to have)
-@item the @file{sched.h} header (not required, acutally, but a good thing to have)
-@item the @file{paths.h} header (not required, acutally, but a good thing to have)
+@item the @file{wait.h} header or @file{sys/wait.h} (not required, actually, but a good thing to have)
+@item the @file{sched.h} header (not required, actually, but a good thing to have)
+@item the @file{paths.h} header (not required, actually, but a good thing to have)
 @item the @samp{fork()} function
 @item the @samp{execvp()} function
 @item the @samp{dup2()} function
@@ -325,7 +330,7 @@ Compiling requirements:
 @item the @samp{pipe()} function
 @item the @samp{kill()} function
 @item the @samp{waitpid()} or @samp{wait()} function
-@item the @samp{sleep()} function (not required, acutally, but a good thing to have)
+@item the @samp{sleep()} function (not required, actually, but a good thing to have)
 @item the @samp{long long} data type support in the compiler
 @item @file{xfsprogs} installed and in your @env{PATH} variable
 (devel package unusable, so not required). Can be downloaded from@*
@@ -525,7 +530,7 @@ to apply these patches as well:
      @samp{patch -F10 -p0 < /path/to/wipefreespace-XX/patches/tffs-dir-fix.diff}
 
 After applying any patch, you need to recompile and install the library - @file{libtffs.a} - and
-ALL its header - @file{*.h} - files (including the private ones, from the src directory).
+ALL its header - @file{*.h} - files (including the private ones, from the @file{src} directory).
 @end itemize
 
 Operations:
@@ -571,7 +576,7 @@ then compile the program (@samp{./configure && make}), then perform
 Then copy the files @file{libminixfs.a}, @file{minix_fs.h} and @file{protos.h} to a directory
 where the C compiler can find them (or put the correct @option{-I} and @option{-L} options
 in the compiler flags). You can use the provided patches to do this
-instead of the sed command:
+instead of the @command{sed} command:
 
 @samp{patch -F10 -p1 < /path/to/wipefreespace-XX/patches/mfstool-0.5.diff}
 @end itemize
@@ -716,32 +721,37 @@ Operations:
 @chapter Usage
 
 @menu
-* KDE::					Konqueror's/Dolphin's context menu.
+* KDE::					Context menu.
+* Xfce::				Context menu.
 * Command line syntax and options::	Running from the command line.
 @end menu
 
 
-@node KDE, Command line syntax and options, Usage, Usage
+@node KDE, Xfce, Usage, Usage
 @comment  node-name, next,      previous,  up
 @section KDE
 
-@strong{KDE3}:
-Copy the @file{wipefreespace.desktop} file from the distribution tarball to
-@file{$KDEHOME/share/apps/konqueror/servicemenus/}, creating the directory if necessary.
-@env{$KDEHOME} is usually @file{$HOME/.kde}. Then, restart Konqueror. A new context menu entry
-under the "Actions" submenu should be available for block devices and all files
-(a filesystem can reside inside a regular file).
-@sp 1
+To use WipeFreeSpace in KDE, download and install
+@url{https://fmsec.sourceforge.io, FMSec}, a set of extensions
+to file managers that enable some security-related operations to be
+easily performed (formerly: KonqSec/Konq4Sec/Konq5Sec).
 
-@strong{KDE4}:
-Copy the @file{wipefreespace-kde4.desktop} file from the distribution tarball to
-@file{$HOME/.kde4/share/kde4/services/ServiceMenus/}, creating the directory if necessary.
-Then, restart Konqueror/Dolphin. A new context menu entry under the "Actions" submenu
-should be available for block devices and all files
-(a filesystem can reside inside a regular file).
+The *.desktop files previously bundled with WipeFreeSpace are
+considered deprecated.
 
 
-@node Command line syntax and options, , KDE, Usage
+@node Xfce, Command line syntax and options, KDE, Usage
+@comment  node-name, next,      previous,  up
+@section Xfce
+
+To use WipeFreeSpace in Xfce, download and install
+@url{https://fmsec.sourceforge.io, FMSec}, a set of extensions
+to file managers that enable some security-related operations to be
+easily performed (formerly: KonqSec/Konq4Sec/Konq5Sec).
+
+
+
+@node Command line syntax and options, , Xfce, Usage
 @comment  node-name, next,      previous,  up
 @section Command line syntax and options
 
@@ -752,7 +762,7 @@ Basic syntax is:
 The @file{/dev/XY} part stands for a device with a supported file system. Examples:
 @file{/dev/hda1}, @file{/dev/fd0}.
 More than one device can be given on the command line, but they will be wiped sequentially,
-@strong{NOT} in multiple threads. WipeFreeSpace is not multi-threaded and probably won't be,
+@strong{NOT} in multiple threads. WipeFreeSpace is not multithreaded and probably won't be,
 because the libraries used can be not thread-safe and the program can't tell if a library will
 be used until it's used.
 
@@ -856,7 +866,7 @@ Fallback to WipeFreeSpace if unsupported (currently, only
 @noindent @option{--use-ioctl}@*
 @quotation
 Disable device caching during work (can be @strong{DANGEROUS}). This requires
-the fcntl.h header file and the ioctl() function to be present. @strong{NOTE}:
+the @file{fcntl.h} header file and the @samp{ioctl()} function to be present. @strong{NOTE}:
 this may not work for sub-partitions on drives. To disable the cache, run the
 @command{hdparm} utility with the correct options to disable the cache
 before running @command{wipefreespace} and enable the cache afterwards.
@@ -930,7 +940,7 @@ To run WipeFreeSpace with a higher or lower priority, simply use the
 The WipeFreeSpace program can return any of the following values:
 
 @itemize
-@item 0: All actions on the last file system succeded (no errors).
+@item 0: All actions on the last file system succeeded (no errors).
 @item 1: Only version number, help or licence information was requested and printed, no action.
 @item -1: Bad/missing command line syntax.
 @item -2: Unable to check if the file system is mounted. Cannot continue.
@@ -968,7 +978,7 @@ is root. Read the first chapter of this documentation for an explanation and a s
 or was caught after SIGCONT was received).
 @end itemize
 
-@strong{NOTE}: Actually, the negative values are substracted from 256,
+@strong{NOTE}: Actually, the negative values are subtracted from 256,
 so -1 could turn up as 255, -2 as 254 and so on.
 
 @strong{NOTE}: Only the last error is returned. If the last file system was wiped successfully,
@@ -979,7 +989,7 @@ but the previous weren't, the last error will be returned, but not the previous 
 
 
 
-@node Signals, Author, Return values, Top
+@node Signals, Reporting issues, Return values, Top
 @comment  node-name, next,      previous,  up
 @chapter Signals
 
@@ -999,7 +1009,7 @@ The SIGCHLD signal is caught, but doesn't terminate the program.
 If the program receives the SIGKILL signal, it will, of course, be killed. But it
 won't be able to close the file system and finish working normally. The file system
 being worked on
-could be left in an unconsistent state, errors could show up.
+could be left in an inconsistent state, errors could show up.
 Try to avoid stopping the program this way.
 
 You can freeze the program by sending the SIGSTOP signal (like @samp{killall -STOP wipefreespace})
@@ -1012,9 +1022,43 @@ data type. If you are using GCC, no worries.
 
 @c ==================================================================
 
+@node Reporting issues, Author, Signals, Top
+@comment  node-name, next,      previous,  up
+@chapter Reporting issues
+
+To report build or installation problems, include:
+@enumerate
+@item the compiler name and version (e.g. @command{gcc} version 10),
+@item the C standard library name and version (e.g. @file{glibc} version 2.x),
+@item the output of the @command{configure} script. You can capture it by running
+ @samp{./configure > configure-output.txt 2>&1},
+@item the generated @file{config.log} file,
+@item the generated @file{config.h} file, if it exists,
+@item the output of the @command{make} command. You can capture it by running
+ @samp{make > make-output.txt 2>&1},
+@item any other error messages,
+@item any other information that you think could lead to solving the problem.
+@end enumerate
+
+To report usage problems, include:
+@enumerate
+@item all the above things you include when reporting building problems,
+@item a description of the problem that the software causes,
+@item any error messages that are displayed,
+@item information whether you tried other wiping methods and whether they work,
+@item information whether you tried wiping just parts (undelete data, free space, partial blocks)
+of the filesystem and whether it worked,
+@item information whether you tried another filesystems, if possible, and whether it worked,
+@item (if the problem is with a filesystem) if possible, the whole input filesystem or a
+minimalistic input file that causes the problem to show (e.g. file of zero length or with a strange name),
+@item any other information that you think could lead to solving the problem.
+@end enumerate
+
+@c ==================================================================
 
 
-@node Author, Thanks, Signals, Top
+
+@node Author, Thanks, Reporting issues, Top
 @comment  node-name, next,      previous,  up
 @chapter Author
 
@@ -1028,13 +1072,7 @@ bogdro-soft (at) gmx . com
 
 
 or look at my website:@*
-[EN] @url{https://wipefreespace.sourceforge.io}@*
-[EN] @url{http://bogdro.evai.pl/soft/}@*
-[EN] @url{http://bogdro.evai.pl/soft4asm/}@*
-[EN] @url{http://bogdro.evai.pl/index-en.php}@*
-[EN] @url{http://bogdro.byethost18.com/soft/}@*
-[EN] @url{http://bogdro.byethost18.com/soft4asm/}@*
-[EN] @url{http://bogdro.byethost18.com/index-en.php}@*
+@url{https://wipefreespace.sourceforge.io}@*
 
 
 @c ==================================================================
@@ -1046,15 +1084,19 @@ or look at my website:@*
 @enumerate
 @item Theodore Ts'o, for the great ext2fs library and e2fsprogs.
 @item The linux-ntfs team for their research on NTFS and a great programming library.
-@item Colin Plumb, for the great 'shred' program, parts of which are used here.
-The 'shred' utility is:@*
+@item Colin Plumb, for the great @command{shred} program, parts of which are used here.
+The @command{shred} utility is:@*
 	Copyright (C) 1999-2006 Free Software Foundation, Inc.@*
 	Copyright (C) 1997, 1998, 1999 Colin Plumb.
 @item Patrick R. McDonald 'marlowe' (www.antagonism.org) - for
 bug reports, testing and promoting WipeFreeSpace.
-@item Mark Lord (mlord@@pobox.com) for the great hdparm utility.
-@item knightray@@gmail.com for The Tiny FAT FS library (on LGPL).
+@item Mark Lord (mlord /at/ pobox.com) for the great hdparm utility.
+@item knightray /at/ gmail.com for The Tiny FAT FS library (on LGPL).
 @item Gregory Grosse - for bug reports and testing WipeFreeSpace.
+@item @url{https://www.travis-ci.com/, Travis CI} for providing
+build environments.
+@item @url{https://github.com/, GitHub} for providing code versioning,
+security tests, build environments and integration with Travis CI.
 
 @end enumerate
 
@@ -1943,25 +1985,25 @@ manually add the following header, if you wish.@*
 In the resulting @file{XX.po} file you have to fill in all the fields
 marked with capital letters in the header:
 
-@code{
-# YOUR LANGUAGE translations for wipefreespace package.@*
-# Copyright (C) 2007-2021 Bogdan 'bogdro' Drozdowski@*
-# This file is distributed under the same license as@*
-# the wipefreespace package.@*
-# YOUR FULL NAME <EMAILADDRESS>, YEAR.@*
-#@*
-msgid ""@*
-msgstr ""@*
-"Project-Id-Version: wipefreespace @VERSION@\n"@*
-"Report-Msgid-Bugs-To: \n"@*
-"POT-Creation-Date: 2011-08-03 15:28+0200\n"@*
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"@*
-"Last-Translator: FULL NAME <EMAILADDRESS>\n"@*
-"Language-Team: LANGUAGE <EMAILADDRESS>\n"@*
-"MIME-Version: 1.0\n"@*
-"Content-Type: text/plain; charset=CHARSET\n"@*
-"Content-Transfer-Encoding: 8bit\n"@*
-}
+@verbatim
+# YOUR LANGUAGE translations for WipeFreeSpace package.
+# Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski
+# This file is distributed under the same license as
+# the WipeFreeSpace package.
+# YOUR FULL NAME <EMAILADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: WipeFreeSpace @VERSION@\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-08-03 15:28+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAILADDRESS>\n"
+"Language-Team: LANGUAGE <EMAILADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+@end verbatim
 
 The rest of the file will contain messages from the program. Translate them all
 and send me the resulting @file{XX.po} file.

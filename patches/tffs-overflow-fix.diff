@@ -1,0 +1,34 @@
+--- ../tffs-lib-read-only-orig/inc/tffs.h	2016-11-11 13:51:05.000000000 +0100
++++ ./inc/tffs.h	2019-08-27 00:37:40.606937205 +0200
+@@ -28,7 +28,7 @@
+ #define DIR_ATTR_ARCHIVE    0x20
+ 
+ #define DNAME_MAX			64
+-#define DNAME_SHORT_MAX		13
++#define DNAME_SHORT_MAX		14
+ 
+ typedef struct _tffs_time {
+ 	int32 year;
+--- ../tffs-lib-read-only-orig/src/file.c	2016-11-11 13:51:05.393566107 +0100
++++ src/file.c	2017-04-30 13:50:59.092071056 +0200
+@@ -72,7 +72,8 @@
+ 	pfile = (tfile_t *)Malloc(sizeof(tfile_t));
+ 	dup_file_path = dup_string(file_path);
+ 	pdir_entry = dirent_malloc();
+-	fname = (byte *)Malloc(DNAME_MAX);
++	/*fname = (byte *)Malloc(DNAME_MAX);*/
++	fname = (byte *)Malloc(strlen(dup_file_path) + 1);
+ 	pfile->secbuf = (ubyte *)Malloc(ptffs->pbs->byts_per_sec);
+ 	Memset(pfile->secbuf, 0, ptffs->pbs->byts_per_sec);
+
+--- ../tffs-lib-read-only-tmp/src/common.c	2018-01-02 23:04:45.171316184 +0100
++++ src/common.c	2018-01-02 23:05:15.992314969 +0100
+@@ -126,7 +126,7 @@
+ {
+ 	byte * pcur;
+
+-	pcur = file_path + Strlen(file_path);
++	pcur = file_path + Strlen(file_path) - 1;
+ 	while (pcur >= file_path && *pcur != '/')
+ 		pcur--;
+

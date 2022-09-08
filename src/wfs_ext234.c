@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- ext2/3/4 file system-specific functions.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -602,8 +598,9 @@ e2_wipe_unrm_dir (
 		changed = 1;
 		bd->curr_inode++;
 		wfs_show_progress (WFS_PROGRESS_UNRM,
-			(bd->curr_inode * 50)/(e2fs->super->s_inodes_count
-				- e2fs->super->s_free_inodes_count),
+			(bd->curr_inode * 50) *
+			(unsigned int)(wd->passno / wd->filesys.npasses) /
+			(e2fs->super->s_inodes_count - e2fs->super->s_free_inodes_count),
 			& (bd->prev_percent));
 	}		/* is the current i-node a directory? If so, dig into it. */
 	else if ( 	(entry != DIRENT_DOT_FILE)
@@ -630,8 +627,9 @@ e2_wipe_unrm_dir (
 				NULL, &e2_wipe_unrm_dir, PRIVATE );
 			bd->curr_inode++;
 			wfs_show_progress (WFS_PROGRESS_UNRM,
-				(bd->curr_inode * 50)/(e2fs->super->s_inodes_count
-					- e2fs->super->s_free_inodes_count),
+				(bd->curr_inode * 50) *
+				(unsigned int)(wd->passno / wd->filesys.npasses) /
+				(e2fs->super->s_inodes_count - e2fs->super->s_free_inodes_count),
 				& (bd->prev_percent));
 			if ( e2error != 0 )
 			{

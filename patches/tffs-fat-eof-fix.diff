@@ -1,0 +1,19 @@
+--- ../tffs-lib-read-only-orig/src/fat.c	2016-11-11 13:51:05.000000000 +0100
++++ ./src/fat.c	2019-08-26 23:44:55.024976996 +0200
+@@ -411,13 +411,13 @@
+ 	tffs_t * ptffs = pfat->ptffs;
+ 
+ 	if (ptffs->fat_type == FT_FAT12) {
+-		return (entry_val & 0x0FFF) > 0x0FF8;
++		return (entry_val & 0x0FFF) >= 0x0FF8;
+ 	}
+ 	else if (ptffs->fat_type == FT_FAT16) {
+-		return (entry_val & 0xFFFF) > 0xFFF8;
++		return (entry_val & 0xFFFF) >= 0xFFF8;
+ 	}
+ 	else if (ptffs->fat_type == FT_FAT32) {
+-		return (entry_val & 0x0FFFFFFF) > 0x0FFFFFF8;
++		return (entry_val & 0x0FFFFFFF) >= 0x0FFFFFF8;
+ 	}
+ 
+ 	ASSERT(0);

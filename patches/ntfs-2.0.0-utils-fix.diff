@@ -1,0 +1,95 @@
+diff -uraN ../ntfsprogs-2.0.0/ntfsprogs/utils.c ./ntfsprogs/utils.c
+--- ../ntfsprogs-2.0.0/ntfsprogs/utils.c	2007-10-07 13:12:04.000000000 +0200
++++ ./ntfsprogs/utils.c	2007-10-07 13:13:47.000000000 +0200
+@@ -662,7 +662,7 @@
+ 	}
+
+ 	/* Does lcn lie in the section of $Bitmap we already have cached? */
+-	if ((lcn < bmplcn) || (lcn >= (bmplcn + (sizeof(buffer) << 3)))) {
++	if ( (bmplcn < 0) || (lcn < bmplcn) || (lcn >= (bmplcn + (sizeof(buffer) << 3)))) {
+ 		ntfs_log_debug("Bit lies outside cache.\n");
+ 		attr = ntfs_attr_open(vol->lcnbmp_ni, NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
+ 		if (!attr) {
+diff -uraN ../ntfsprogs-2.0.0/ntfsprogs/ntfswipe.c ./ntfsprogs/ntfswipe.c
+--- ../ntfsprogs-2.0.0/ntfsprogs/ntfswipe.c	2007-10-07 13:12:04.000000000 +0200
++++ ./ntfsprogs/ntfswipe.c	2007-10-07 14:27:42.000000000 +0200
+@@ -595,7 +595,7 @@
+ static s64 wipe_tails(ntfs_volume *vol, int byte, enum action act)
+ {
+ 	s64 total = 0;
+-	s64 nr_mft_records, inode_num;
++	s64 nr_mft_records, inode_num, ext_ino_num;
+ 	ntfs_inode *ni;
+ 	ntfs_attr *na;
+
+@@ -611,11 +611,16 @@
+ 		ntfs_log_verbose("Inode %lld - ", inode_num);
+ 		ni = ntfs_inode_open(vol, inode_num);
+ 		if (!ni) {
+-			ntfs_log_verbose("Could not open inode\n");
+-			continue;
++			/* Extent i-nodes are wiped below */
++			/*ni = ntfs_extent_inode_open(vol, inode_num);
++			if (!ni) {*/
++				ntfs_log_verbose("Could not open inode\n");
++				continue;
++			/*}*/
+ 		}
+
+ 		if (ni->mrec->base_mft_record) {
++			/* Extent i-nodes are wiped below */
+ 			ntfs_log_verbose("Not base mft record. Skipping\n");
+ 			goto close_inode;
+ 		}
+@@ -654,6 +659,51 @@
+ 			ntfs_log_verbose("Nothing to wipe\n");
+ close_attr:
+ 		ntfs_attr_close(na);
++		if ( ni->nr_extents > 0 ) {
++			if ( ntfs_inode_attach_all_extents(ni) ) {
++				ntfs_log_verbose("Could not attach extent inodes. Not wiping these.\n");
++				/*continue;*/
++			} else {
++				for (ext_ino_num = 0; ext_ino_num < ni->nr_extents; ext_ino_num++) {
++					na = ntfs_attr_open(ni->extent_nis[ext_ino_num],
++						NTFS_AT_DATA, NTFS_AT_UNNAMED, 0);
++					if (!na) {
++						ntfs_log_verbose("Couldn't open $DATA attribute\n");
++						continue;
++					}
++
++					if (!NAttrNonResident(na)) {
++						ntfs_log_verbose("Resident $DATA attribute. Skipping.\n");
++						goto close_attr2;
++					}
++
++					if (ntfs_attr_map_whole_runlist(na)) {
++						ntfs_log_verbose("Internal error\n");
++						ntfs_log_error("Can't map ntfs_runlist (inode %lld)\n", ext_ino_num);
++						goto close_attr2;
++					}
++
++					if (NAttrCompressed(na))
++						wiped = wipe_compressed_attribute(vol, byte, act, na);
++					else
++						wiped = wipe_attribute(vol, byte, act, na);
++
++					if (wiped == -1) {
++						ntfs_log_error(" (inode %lld)\n", inode_num);
++						goto close_attr2;
++					}
++
++					if (wiped) {
++						ntfs_log_verbose("Wiped %llu bytes\n", wiped);
++						total += wiped;
++					} else {
++						ntfs_log_verbose("Nothing to wipe\n");
++					}
++close_attr2:
++					ntfs_attr_close(na);
++				}
++			}
++		}
+ close_inode:
+ 		ntfs_inode_close(ni);
+ 	}

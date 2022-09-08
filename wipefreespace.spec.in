@@ -5,7 +5,7 @@
 %define wfs_release 1
 %define wfs_name wipefreespace
 %define wfs_url https://wipefreespace.sourceforge.io
-%define wfs_descr Wipefreespace is a program which securely cleans free space on given \
+%define wfs_descr WipeFreeSpace is a program which securely cleans free space on given \
 file systems, making confidential removed data recovery impossible. It also \
 removes deleted files' names, so that no trace is left. Supported file systems \
 are: ext2/3/4, NTFS, XFS, ReiserFSv3/4, FAT12/16/32, MinixFSv1/2, JFS, HFS+ \

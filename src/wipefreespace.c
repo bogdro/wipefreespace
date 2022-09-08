@@ -1,7 +1,7 @@
 /*
  * A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -17,11 +17,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Thanks to:
  * - Theodore Ts'o, for the great ext2fs library and e2fsprogs
@@ -142,7 +138,7 @@ Stat macros broken. Change your C library.
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2021 Bogdan 'bogdro' Drozdowski, bogdro@users.sourceforge.net\n";
+static const char author_str[] = "Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski, bogdro@users.sourceforge.net\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\
@@ -1560,7 +1556,7 @@ main (
 # ifdef HAVE_ERRNO_H
 		errno = 0;	/* used for gerror */
 # endif
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		child_pid = fork ();
 		if ( child_pid < 0 )
 # endif
@@ -1583,7 +1579,7 @@ main (
 			return WFS_FORKERR;
 		}
 		else
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		if ( child_pid > 0 )	/* NOTE: do NOT write '>= 0' */
 # endif
 		{
@@ -1611,7 +1607,7 @@ main (
 				}
 # endif
 				child_status = 0;
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 #  ifdef HAVE_WAITPID
 				res_pid = waitpid (child_pid, &child_status, 0);
 #  else
@@ -1645,7 +1641,7 @@ main (
 			}
 			sigchld_recvd = 0;
 		}
-# ifdef HAVE_FORK
+# ifdef HAVE_WORKING_FORK /* HAVE_FORK */
 		else
 		{
 			/* child process: wipe the given filesystem */

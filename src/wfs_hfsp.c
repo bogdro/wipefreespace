@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- HFS+ file system-specific functions.
  *
- * Copyright (C) 2011-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2011-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -50,8 +46,8 @@
 # include <string.h>
 #endif
 
-/* add the missing prototype */
-extern unsigned long int wfs_hfsp_sig(char c0, char c1, char c2, char c3);
+/* add the missing prototype * /
+extern unsigned long int wfs_hfsp_sig(char c0, char c1, char c2, char c3); */
 /* redefine the inline sig function from hfsp, each time with a different name */
 #define sig(a,b,c,d) wfs_hfsp_sig(a,b,c,d)
 
@@ -214,7 +210,7 @@ wfs_hfsp_wipe_part_file (
 		(UInt8)HFSP_EXTENT_DATA, file->record.u.file.id);
 	/* skip the full blocks */
 	if ( blockiter_skip (&iter,
-		file->record.u.file.data_fork.total_blocks / fs_block_size) != 0 )
+		(size_t)file->record.u.file.data_fork.total_blocks / fs_block_size) != 0 )
 	{
 		if ( error_ret != NULL )
 		{
@@ -503,6 +499,10 @@ wfs_hfsp_wipe_part (
 	if ( buf == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		if ( error_ret != NULL )
+		{
+			*error_ret = error;
+		}
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		return WFS_MALLOC;
 	}

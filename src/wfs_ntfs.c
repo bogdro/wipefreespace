@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- NTFS file system-specific functions.
  *
- * Copyright (C) 2007-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * Parts of this file come from libnfts or ntfsprogs, and are:
@@ -22,11 +22,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -788,7 +784,7 @@ wipe_attribute (
 #if (defined WFS_WANT_WFS) || (defined WFS_WANT_UNRM)
 # ifndef WFS_ANSIC
 static int GCC_WARN_UNUSED_RESULT utils_cluster_in_use WFS_PARAMS ((
-	const ntfs_volume * const vol, const long long int lcn));
+	const ntfs_volume * const vol, const s64 lcn));
 # endif
 
 /**
@@ -817,18 +813,18 @@ WFS_ATTR ((nonnull))
 # endif
 utils_cluster_in_use (
 # ifdef WFS_ANSIC
-	const ntfs_volume * const vol, const long long int lcn)
+	const ntfs_volume * const vol, const s64 lcn)
 # else
 	vol, lcn)
 	const ntfs_volume * const vol;
-	const long long int lcn;
+	const s64 lcn;
 # endif
 {
 
 # undef	BUFSIZE
 # define	BUFSIZE	512
 	static unsigned char ntfs_buffer[BUFSIZE];
-	static long long int ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
+	static s64 ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
 	int cbyte, bit;
 	ntfs_attr *attr = NULL;
 
@@ -923,10 +919,22 @@ free_file (
 		return;
 	}
 
-	WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->name))
+	item = (&(file->name))->next;
+	if ( item == NULL )
+	{
+		if (file->mft != NULL)
+		{
+			free (file->mft);
+		}
+		free (file);
+		return;
+	}
+	tmp = item->next;
+	while (item != (&(file->name)))
 	{ /* List of filenames */
 
-		f = WFS_NTFS_LIST_ENTRY (item, struct filename, list);
+		/*f = WFS_NTFS_LIST_ENTRY (item, struct filename, list);*/
+		f = ((struct filename *)((char *)(item) - (unsigned long int)(&((struct filename *)0)->list)));
 		if (f != NULL)
 		{
 			if (f->name != NULL)
@@ -937,27 +945,64 @@ free_file (
 			{
 				free (f->parent_name);
 			}
+			free (f);
 		}
-		free (f);
+		item = tmp;
+		if ( item == NULL )
+		{
+			break;
+		}
+		tmp = item->next;
 	}
 
-	WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->data))
+	/*WFS_NTFS_LIST_FOR_EACH_SAFE (item, tmp, &(file->data))*/
+	item = (&(file->data))->next;
+	if ( item == NULL )
+	{
+		if (file->mft != NULL)
+		{
+			free (file->mft);
+		}
+		free (file);
+		return;
+	}
+	tmp = item->next;
+	while (item != (&(file->data)))
 	{ /* List of data streams */
 
-		d = WFS_NTFS_LIST_ENTRY (item, struct data, list);
+		/*d = WFS_NTFS_LIST_ENTRY (item, struct data, list);*/
+		/* XXX: A cheat for the GCC analyzer, "d" points to the same place, the code is correct... */
+		if ( item->next != NULL )
+		{
+			d = ((struct data *)((char *)(item->next->prev) - (unsigned long int)(&((struct data *)0)->list)));
+		}
+		else
+		{
+			d = ((struct data *)((char *)(item) - (unsigned long int)(&((struct data *)0)->list)));
+		}
 		if (d != NULL)
 		{
 			if (d->name != NULL)
 			{
 				free (d->name);
+				d->name = NULL;
 			}
 			if (d->runlist != NULL)
 			{
 				free (d->runlist);
+				d->runlist = NULL;
 			}
+			free (d);
+			d = NULL;
 		}
-		free (d);
+		item = tmp;
+		if ( item == NULL )
+		{
+			break;
+		}
+		tmp = item->next;
 	}
+
 	if (file->mft != NULL)
 	{
 		free (file->mft);
@@ -1810,6 +1855,8 @@ wfs_ntfs_wipe_part (
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned int prev_percent = 0;
 	/* ntfswipe --tails --count wfs_fs.npasses --bytes */
+#define WFSWIPE_PART_POS_COUNT 3
+#define WFSWIPE_PART_POS_FSNAME 6
 	const char * args_ntfswipe[] = { "ntfswipe", "--tails", "--count", "                      ",
 		"--bytes", "0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
@@ -1842,7 +1889,7 @@ wfs_ntfs_wipe_part (
 			return WFS_BADPARAM;
 		}
 		WFS_SET_ERRNO (0);
-		args_ntfswipe[6] = wfs_fs.fsname;
+		args_ntfswipe[WFSWIPE_PART_POS_FSNAME] = wfs_fs.fsname;
 		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
@@ -1860,11 +1907,12 @@ wfs_ntfs_wipe_part (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[3], sizeof (args_ntfswipe[3]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT],
+			sizeof (args_ntfswipe[WFSWIPE_PART_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
-		sprintf (args_ntfswipe_copy[3], "%lu", wfs_fs.npasses);
+		sprintf (args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
-		args_ntfswipe_copy[3][22] = '\0';
+		args_ntfswipe_copy[WFSWIPE_PART_POS_COUNT][22] = '\0';
 		child_ntfswipe.program_name = args_ntfswipe_copy[0];
 		child_ntfswipe.args = args_ntfswipe_copy;
 		child_ntfswipe.child_env = NULL;
@@ -2063,6 +2111,8 @@ wfs_ntfs_wipe_fs (
 	unsigned int prev_percent = 0;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	/* ntfswipe --unused --count wfs_fs.npasses --bytes */
+#define WFSWIPE_WFS_POS_COUNT 3
+#define WFSWIPE_WFS_POS_FSNAME 6
 	const char * args_ntfswipe[] = { "ntfswipe", "--unused", "--count", "                      ",
 		"--bytes", "0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",
 		NULL, NULL };
@@ -2090,7 +2140,7 @@ wfs_ntfs_wipe_fs (
 			return WFS_BADPARAM;
 		}
 		WFS_SET_ERRNO (0);
-		args_ntfswipe[6] = wfs_fs.fsname;
+		args_ntfswipe[WFSWIPE_WFS_POS_FSNAME] = wfs_fs.fsname;
 		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
@@ -2108,11 +2158,12 @@ wfs_ntfs_wipe_fs (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[3], sizeof (args_ntfswipe[3]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_WFS_POS_COUNT],
+			sizeof (args_ntfswipe[WFSWIPE_WFS_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
-		sprintf (args_ntfswipe_copy[3], "%lu", wfs_fs.npasses);
+		sprintf (args_ntfswipe_copy[WFSWIPE_WFS_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
-		args_ntfswipe_copy[3][22] = '\0';
+		args_ntfswipe_copy[WFSWIPE_WFS_POS_COUNT][22] = '\0';
 		child_ntfswipe.program_name = args_ntfswipe_copy[0];
 		child_ntfswipe.args = args_ntfswipe_copy;
 		child_ntfswipe.child_env = NULL;
@@ -2294,6 +2345,8 @@ wfs_ntfs_wipe_unrm (
 	unsigned int prev_percent = 0;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	/* ntfswipe --directory --logfile --mft --pagefile --undel --count wfs_fs.npasses --bytes */
+#define WFSWIPE_UNRM_POS_COUNT 6
+#define WFSWIPE_UNRM_POS_FSNAME 7
 	const char * args_ntfswipe[] = { "ntfswipe", "--directory", "--logfile", "--pagefile",
 		"--undel", "--count", "                      ",
 		/* incompatible: "--bytes", "0,0xFF,0x55,0xAA,0x24,0x49,0x92,0x6D,0xB6,0xDB,0x11,0x22,0x33,0x44,0x66,0x77,0x88,0x99,0xBB,0xCC,0xDD,0xEE",*/
@@ -2326,7 +2379,7 @@ wfs_ntfs_wipe_unrm (
 			return WFS_BADPARAM;
 		}
 		WFS_SET_ERRNO (0);
-		args_ntfswipe[7] = wfs_fs.fsname;
+		args_ntfswipe[WFSWIPE_UNRM_POS_FSNAME] = wfs_fs.fsname;
 		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
@@ -2344,11 +2397,12 @@ wfs_ntfs_wipe_unrm (
 		sigchld_recvd = 0;
 # endif
 # ifdef HAVE_SNPRINTF
-		snprintf (args_ntfswipe_copy[6], sizeof (args_ntfswipe[6]) - 1, "%lu", wfs_fs.npasses);
+		snprintf (args_ntfswipe_copy[WFSWIPE_UNRM_POS_COUNT],
+			sizeof (args_ntfswipe[WFSWIPE_UNRM_POS_COUNT]) - 1, "%lu", wfs_fs.npasses);
 # else
-		sprintf (args_ntfswipe_copy[6], "%lu", wfs_fs.npasses);
+		sprintf (args_ntfswipe_copy[WFSWIPE_UNRM_POS_COUNT], "%lu", wfs_fs.npasses);
 # endif
-		args_ntfswipe_copy[6][22] = '\0';
+		args_ntfswipe_copy[WFSWIPE_UNRM_POS_COUNT][22] = '\0';
 		child_ntfswipe.program_name = args_ntfswipe_copy[0];
 		child_ntfswipe.args = args_ntfswipe_copy;
 		child_ntfswipe.child_env = NULL;

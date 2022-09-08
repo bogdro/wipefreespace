@@ -1,0 +1,45 @@
+diff -buraN '--exclude-from=../exclude' ../ocfs2-tools-1.6.4/fsck.ocfs2/pass4.c ./fsck.ocfs2/pass4.c
+--- ../ocfs2-tools-1.6.4/fsck.ocfs2/pass4.c	2010-12-10 20:37:08.000000000 +0100
++++ ./fsck.ocfs2/pass4.c	2019-08-26 00:29:38.715939730 +0200
+@@ -28,6 +28,7 @@
+  */
+ #include <inttypes.h>
+ #include <limits.h>
++#include <et/com_err.h>
+ 
+ #include "ocfs2/ocfs2.h"
+ 
+diff -buraN '--exclude-from=../exclude' ../ocfs2-tools-1.6.4/fsck.ocfs2/refcount.c ./fsck.ocfs2/refcount.c
+--- ../ocfs2-tools-1.6.4/fsck.ocfs2/refcount.c	2010-10-07 00:57:32.000000000 +0200
++++ ./fsck.ocfs2/refcount.c	2019-08-26 00:29:59.739939466 +0200
+@@ -17,6 +17,7 @@
+ 
+ #include <inttypes.h>
+ #include <assert.h>
++#include <et/com_err.h>
+ 
+ #include "ocfs2/kernel-rbtree.h"
+ #include "ocfs2-kernel/kernel-list.h"
+diff -buraN '--exclude-from=../exclude' ../ocfs2-tools-1.6.4/fsck.ocfs2/slot_recovery.c ./fsck.ocfs2/slot_recovery.c
+--- ../ocfs2-tools-1.6.4/fsck.ocfs2/slot_recovery.c	2009-04-14 00:10:40.000000000 +0200
++++ ./fsck.ocfs2/slot_recovery.c	2019-08-26 00:30:13.483939293 +0200
+@@ -18,6 +18,8 @@
+  */
+ 
+ #include <ocfs2/bitops.h>
++#include <et/com_err.h>
++
+ #include "util.h"
+ #include "slot_recovery.h"
+ #include "pass4.h"
+diff -buraN '--exclude-from=../exclude' ../ocfs2-tools-1.6.4/include/ocfs2-kernel/ocfs2_fs.h ./include/ocfs2-kernel/ocfs2_fs.h
+--- ../ocfs2-tools-1.6.4/include/ocfs2-kernel/ocfs2_fs.h	2010-12-29 07:30:55.000000000 +0100
++++ ./include/ocfs2-kernel/ocfs2_fs.h	2019-08-26 00:28:28.971940607 +0200
+@@ -1637,6 +1637,7 @@
+ 	return chars;
+ }
+ 
++typedef mode_t umode_t; /* BD: fix compile on new systems */
+ static inline void ocfs2_set_de_type(struct ocfs2_dir_entry *de,
+ 				    umode_t mode)
+ {

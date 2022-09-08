@@ -1,0 +1,13 @@
+--- ../tffs-lib-read-only-orig/src/dir.c	2016-11-11 13:51:05.000000000 +0100
++++ src/dir.c	2021-09-09 21:38:42.837056513 +0200
+@@ -489,6 +489,10 @@
+ 	int32 ret;
+ 	dir_entry_t * pdst_entry;
+ 
++	if ( pdir->cur_dir_entry < pdir_entry->dirent_num ) {
++		return ERR_DIR_INVALID_DEVICE;
++	}
++
+ 	pdst_entry = (dir_entry_t *)pdir->secbuf + pdir->cur_dir_entry - pdir_entry->dirent_num;
+ 
+ 	ASSERT(!Memcmp(pdst_entry[pdir_entry->dirent_num - 1].dir_name, 

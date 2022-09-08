@@ -2,7 +2,7 @@
  * A program for secure cleaning of free space on filesystems.
  *	-- OCFS file system-specific functions.
  *
- * Copyright (C) 2011-2021 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2011-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
@@ -16,11 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foudation:
- *		Free Software Foundation
- *		51 Franklin Street, Fifth Floor
- *		Boston, MA 02110-1301
- *		USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "wfs_cfg.h"
@@ -138,17 +134,17 @@ wfs_ocfs_get_block_size (
 #ifdef WFS_WANT_PART
 
 # ifndef WFS_ANSIC
-static int wfs_ocfs_wipe_part_blocks WFS_PARAMS ((ocfs2_filesys *fs, uint64_t blkno,
+static int wfs_ocfs_wipe_part_blocks WFS_PARAMS ((ocfs2_filesys * const fs, uint64_t blkno,
 	uint64_t bcount, uint16_t ext_flags, void *priv_data));
 # endif
 
 static int wfs_ocfs_wipe_part_blocks (
 # ifdef WFS_ANSIC
-	ocfs2_filesys *fs, uint64_t blkno, uint64_t bcount WFS_ATTR ((unused)),
+	ocfs2_filesys * const fs, uint64_t blkno, uint64_t bcount WFS_ATTR ((unused)),
 	uint16_t ext_flags WFS_ATTR ((unused)), void *priv_data)
 # else
 	fs, blkno, bcount, ext_flags, priv_data)
-	ocfs2_filesys *fs;
+	ocfs2_filesys * const fs;
 	uint64_t blkno;
 	uint64_t bcount WFS_ATTR ((unused));
 	uint16_t ext_flags WFS_ATTR ((unused));
@@ -1274,6 +1270,7 @@ wfs_ocfs_close_fs (
 		return WFS_BADPARAM;
 	}
 	err = ocfs2_close (ocfs2);
+	/*ocfs2_freefs (ocfs2);*/
 	if ( err != 0 )
 	{
 		ret = WFS_FSCLOSE;
