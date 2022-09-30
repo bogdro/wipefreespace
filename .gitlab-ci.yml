@@ -18,6 +18,7 @@ build:
     - src/wipefreespace
 stages:
 - test
+- build
 sast:
   stage: test
 include:
