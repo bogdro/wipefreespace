@@ -69,7 +69,7 @@ Stat macros broken. Change your C library.
 */
 
 /* time() for randomization purposes */
-#if HAVE_SYS_TIME_H
+#ifdef HAVE_SYS_TIME_H
 # include <sys/time.h>
 #endif
 
