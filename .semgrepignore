@@ -20,3 +20,12 @@ ylwrap
 .git/
 .github/
 .gitlab*
+
+:include .gitignore
+
+# Semgrep rules folder
+.semgrep
+
+# Semgrep-action log folder
+.semgrep_logs/
+
