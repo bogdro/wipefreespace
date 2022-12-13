@@ -59,5 +59,7 @@ jobs:
 script: (mkdir $HOME/bin || true) && echo '#!/bin/bash' > $HOME/bin/xfs_db && chmod 700 $HOME/bin/xfs_db && export PATH=$PATH:$HOME/bin &&
         touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in po/*gmo &&
         ./configure &&
+        sleep 1 &&
         touch doc/wipefreespace.info &&
+        sleep 1 &&
         make
