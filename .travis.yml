@@ -2,7 +2,7 @@
 
 install:
         - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get -y install libext2fs-dev ntfs-3g-dev xfsprogs libreiser4-dev libhfsp-dev ocfs2-tools-dev;
-                elif [ $TRAVIS_OS_NAME = freebsd ]; then su -m root -c 'pkg install -y e2fsprogs e2fsprogs-roothardlinks hfsutils';
+                elif [ $TRAVIS_OS_NAME = freebsd ]; then su -m root -c 'pkg install -y e2fsprogs hfsutils';
                 fi
                 #elif [ $TRAVIS_OS_NAME = osx ]; then export HOMEBREW_NO_INSTALL_CLEANUP=1; brew install e2fsprogs tuxera-ntfs ntfs-3g hfsutils;
                 #elif [ $TRAVIS_OS_NAME = freebsd ]; then su -m root -c 'pkg install -y e2fsprogs tuxera-ntfs ntfs-3g hfsutils';
