@@ -1,13 +1,13 @@
 This is the README file for WipeFreeSpace, a program for secure wiping
  of free space on file systems.
 
-Wipefreespace wipes the following things (when supported by the backing
+WipeFreeSpace wipes the following things (when supported by the backing
  library):
 - free space (space in unused blocks/clusters)
 - free space in partially used blocks (also called the "slack space")
 - deleted files' names and other data that can be used to undelete a file
   (like the journal)
-Wipefreespace does NOT decrease the amount of available free space when
+WipeFreeSpace does NOT decrease the amount of available free space when
  working.
 
 NOTE: it is best to use this program on un-mounted file systems, what
