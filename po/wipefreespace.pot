@@ -1,12 +1,11 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR Bogdan bogdro Drozdowski
-# This file is distributed under the same license as the wipefreespace package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# WipeFreeSpace translation strings.
+# Copyright (C) 2007-2023 Bogdan 'bogdro' Drozdowski
+# This file is distributed under the same license as the WipeFreeSpace package.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: wipefreespace 2.6\n"
+"Project-Id-Version: WipeFreeSpace 2.6\n"
 "Report-Msgid-Bugs-To: bogdro@users.sourceforge.net\n"
 "POT-Creation-Date: 2022-09-08 08:49+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
