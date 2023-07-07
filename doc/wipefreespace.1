@@ -21,7 +21,7 @@ be setuid(root).
 Each given filesystem is wiped ONLY ONCE, no matter how many times it appears on the command line.
 WipeFreeSpace also works for file systems created inside regular files on any host file system.
 
-Wipefreespace wipes the following things (when supported by the backing library):
+WipeFreeSpace wipes the following things (when supported by the backing library):
 .IP - 2
 free space (space in unused blocks/clusters)
 .IP - 2
@@ -30,7 +30,7 @@ free space in partially used blocks (also called the "slack space")
 deleted files' names and other data that can be used to undelete a file (like the journal)
 
 .LP
-Wipefreespace does NOT decrease the amount of available free space when working.
+WipeFreeSpace does NOT decrease the amount of available free space when working.
 
 To perform a command after wiping (like sending e-mail), simply run a
 program after WipeFreeSpace is finished, for example:
