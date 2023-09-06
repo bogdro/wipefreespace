@@ -26,7 +26,7 @@ Group:		Security
 Source:		%{wfs_name}-%{wfs_version}.tar.gz
 BuildRoot:	%{_tmppath}/%{wfs_name}-build
 Requires:	xfsprogs
-BuildRequires:	gcc, glibc, glibc-devel, make
+BuildRequires:	gcc, glibc, glibc-devel, make, texinfo
 Obsoletes:	e2wipefreespace <= 0.5
 Provides:	e2wipefreespace >= 0.6
 
