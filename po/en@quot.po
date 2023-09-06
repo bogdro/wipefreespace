@@ -1,7 +1,7 @@
 # English translations for wipefreespace package.
-# Copyright (C) 2022 Bogdan bogdro Drozdowski
+# Copyright (C) 2023 Bogdan bogdro Drozdowski
 # This file is distributed under the same license as the wipefreespace package.
-# Automatically generated, 2022.
+# Automatically generated, 2023.
 #
 # All this catalog "translates" are quotation characters.
 # The msgids must be ASCII and therefore cannot contain real quotation
@@ -29,8 +29,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wipefreespace 2.6\n"
 "Report-Msgid-Bugs-To: bogdro@users.sourceforge.net\n"
-"POT-Creation-Date: 2022-09-08 08:49+0200\n"
-"PO-Revision-Date: 2022-09-08 08:49+0200\n"
+"POT-Creation-Date: 2023-08-18 18:13+0200\n"
+"PO-Revision-Date: 2023-08-18 18:13+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: en@quot\n"
