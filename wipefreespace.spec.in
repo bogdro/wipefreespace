@@ -16,7 +16,7 @@ and OCFS.
 Summary:	%{wfs_summary}
 Name:		%{wfs_name}
 Version:	%{wfs_version}
-Release:	%{wfs_release}
+Release:	%{wfs_release}%{?dist}
 URL:		%{wfs_url}
 BugURL:		%{wfs_url}
 License:	%{wfs_lic}
