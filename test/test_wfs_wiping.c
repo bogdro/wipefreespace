@@ -1,8 +1,8 @@
 /*
- * A program for secure cleaning of free space on filesystems.
+ * WipeFreeSpace - A program for secure cleaning of free space on filesystems.
  *	-- unit test for the wfs_wiping.c file.
  *
- * Copyright (C) 2021 Bogdan Drozdowski, bogdro (at) users . sourceforge . net
+ * Copyright (C) 2021-2024 Bogdan Drozdowski, bogdro (at) users . sourceforge . net
  * License: GNU General Public License, v3+
  *
  * This program is free software; you can redistribute it and/or

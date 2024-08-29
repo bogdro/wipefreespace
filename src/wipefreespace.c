@@ -1,7 +1,7 @@
 /*
- * A program for secure cleaning of free space on filesystems.
+ * WipeFreeSpace - A program for secure cleaning of free space on filesystems.
  *
- * Copyright (C) 2007-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2007-2024 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * Syntax example: wipefreespace /dev/hdd1
@@ -138,7 +138,7 @@ Stat macros broken. Change your C library.
 #define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
 
 static const char ver_str[] = N_("version");
-static const char author_str[] = "Copyright (C) 2007-2022 Bogdan 'bogdro' Drozdowski, bogdro@users.sourceforge.net\n";
+static const char author_str[] = "Copyright (C) 2007-2024 Bogdan 'bogdro' Drozdowski, bogdro@users.sourceforge.net\n";
 static const char lic_str[] = N_(							\
 	"Program for secure cleaning of free space on filesystems.\n"			\
 	"\nThis program is Free Software; you can redistribute it and/or"		\

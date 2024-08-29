@@ -1,8 +1,8 @@
 /*
- * A program for secure cleaning of free space on filesystems.
+ * WipeFreeSpace - A program for secure cleaning of free space on filesystems.
  *	-- MinixFS file system-specific functions, header file.
  *
- * Copyright (C) 2009-2022 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
+ * Copyright (C) 2009-2024 Bogdan Drozdowski, bogdro (at) users.sourceforge.net
  * License: GNU General Public License, v2+
  *
  * This program is free software; you can redistribute it and/or
