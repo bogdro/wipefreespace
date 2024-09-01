@@ -24,7 +24,7 @@
 
 # include "wipefreespace.h"
 
-extern unsigned long int init_wiping WFS_PARAMS ((
+extern unsigned long int wfs_init_wiping WFS_PARAMS ((
 	unsigned long int number_of_passes,
 	const int verbose, const int allzero,
 	const char * const method));

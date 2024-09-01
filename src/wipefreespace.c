@@ -1476,11 +1476,11 @@ main (
 	/* initialize wiping AFTER initializing the pseudorandom number generator */
 	if ( npasses == 0 )
 	{
-		npasses = init_wiping (npasses, opt_verbose, opt_allzero, opt_method_name);
+		npasses = wfs_init_wiping (npasses, opt_verbose, opt_allzero, opt_method_name);
 	}
 	else
 	{
-		init_wiping (npasses, opt_verbose, opt_allzero, opt_method_name);
+		wfs_init_wiping (npasses, opt_verbose, opt_allzero, opt_method_name);
 	}
 
 	/* remove duplicate command-line parameters */

@@ -1654,7 +1654,7 @@ wfs_flush_pipe_input (
  * @return a new deep copy of the given array.
  */
 char **
-deep_copy_array (
+wfs_deep_copy_array (
 #ifdef WFS_ANSIC
 	const char * const * const array, const unsigned int len)
 #else
@@ -1687,7 +1687,7 @@ deep_copy_array (
 		if ( new_arr[i] == NULL )
 		{
 			/* free only as many as set */
-			free_array_deep_copy (new_arr, i);
+			wfs_free_array_deep_copy (new_arr, i);
 			return NULL;
 		}
 	}
@@ -1702,7 +1702,7 @@ deep_copy_array (
  * @param len The length of the array.
  */
 void
-free_array_deep_copy (
+wfs_free_array_deep_copy (
 #ifdef WFS_ANSIC
 	char * array[], const unsigned int len)
 #else

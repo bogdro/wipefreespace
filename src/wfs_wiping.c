@@ -256,7 +256,7 @@ wfs_is_pass_random (
  * \return The number of wiping passes that would be used by default.
  */
 unsigned long int
-init_wiping (
+wfs_init_wiping (
 #ifdef WFS_ANSIC
 	unsigned long int number_of_passes, const int verbose,
 	const int allzero, const char * const method)

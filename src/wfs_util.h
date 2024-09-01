@@ -111,11 +111,11 @@ extern void
 	wfs_flush_pipe_input WFS_PARAMS ((const int fd));
 
 extern char **
-	deep_copy_array WFS_PARAMS ((const char * const * const array,
+	wfs_deep_copy_array WFS_PARAMS ((const char * const * const array,
 		const unsigned int len));
 
 extern void
-	free_array_deep_copy WFS_PARAMS ((char * array[],
+	wfs_free_array_deep_copy WFS_PARAMS ((char * array[],
 		const unsigned int len));
 
 # ifdef HAVE_MEMCPY

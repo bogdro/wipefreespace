@@ -1890,7 +1890,7 @@ wfs_ntfs_wipe_part (
 		}
 		WFS_SET_ERRNO (0);
 		args_ntfswipe[WFSWIPE_PART_POS_FSNAME] = wfs_fs.fsname;
-		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
+		args_ntfswipe_copy = wfs_deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
 		{
@@ -1926,7 +1926,7 @@ wfs_ntfs_wipe_part (
 			/* error */
 			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 			wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
-			free_array_deep_copy (args_ntfswipe_copy,
+			wfs_free_array_deep_copy (args_ntfswipe_copy,
 				sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 			if ( error_ret != NULL )
 			{
@@ -1936,7 +1936,7 @@ wfs_ntfs_wipe_part (
 		}
 		/* parent */
 		wfs_wait_for_child (&child_ntfswipe);
-		free_array_deep_copy (args_ntfswipe_copy,
+		wfs_free_array_deep_copy (args_ntfswipe_copy,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		return WFS_SUCCESS;
@@ -2141,7 +2141,7 @@ wfs_ntfs_wipe_fs (
 		}
 		WFS_SET_ERRNO (0);
 		args_ntfswipe[WFSWIPE_WFS_POS_FSNAME] = wfs_fs.fsname;
-		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
+		args_ntfswipe_copy = wfs_deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
 		{
@@ -2178,7 +2178,7 @@ wfs_ntfs_wipe_fs (
 			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 			/* yes, compare pointers */
-			free_array_deep_copy (args_ntfswipe_copy,
+			wfs_free_array_deep_copy (args_ntfswipe_copy,
 				sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 			if ( error_ret != NULL )
 			{
@@ -2188,7 +2188,7 @@ wfs_ntfs_wipe_fs (
 		}
 		/* parent */
 		wfs_wait_for_child (&child_ntfswipe);
-		free_array_deep_copy (args_ntfswipe_copy,
+		wfs_free_array_deep_copy (args_ntfswipe_copy,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		return WFS_SUCCESS;
@@ -2380,7 +2380,7 @@ wfs_ntfs_wipe_unrm (
 		}
 		WFS_SET_ERRNO (0);
 		args_ntfswipe[WFSWIPE_UNRM_POS_FSNAME] = wfs_fs.fsname;
-		args_ntfswipe_copy = deep_copy_array (args_ntfswipe,
+		args_ntfswipe_copy = wfs_deep_copy_array (args_ntfswipe,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
 		{
@@ -2416,7 +2416,7 @@ wfs_ntfs_wipe_unrm (
 			/* error */
 			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
-			free_array_deep_copy (args_ntfswipe_copy,
+			wfs_free_array_deep_copy (args_ntfswipe_copy,
 				sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 			if ( error_ret != NULL )
 			{
@@ -2426,7 +2426,7 @@ wfs_ntfs_wipe_unrm (
 		}
 		/* parent */
 		wfs_wait_for_child (&child_ntfswipe);
-		free_array_deep_copy (args_ntfswipe_copy,
+		wfs_free_array_deep_copy (args_ntfswipe_copy,
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		return WFS_SUCCESS;
