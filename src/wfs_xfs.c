@@ -1679,7 +1679,7 @@ wfs_xfs_is_dirty (
 	const wfs_fsid_t wfs_fs;
 #endif
 {
-	/* FIXME Don't know how to get this information *
+	/* Don't know how to get this information *
 	return WFS_SUCCESS;*/
 	return wfs_xfs_check_err (wfs_fs);
 }
@@ -2306,6 +2306,7 @@ size_t wfs_xfs_get_err_size (WFS_VOID)
  */
 void wfs_xfs_init (WFS_VOID)
 {
+	/* nothing needed to do here */
 }
 
 /* ======================================================================== */
@@ -2315,6 +2316,7 @@ void wfs_xfs_init (WFS_VOID)
  */
 void wfs_xfs_deinit (WFS_VOID)
 {
+	/* nothing needed to do here */
 }
 
 /* ======================================================================== */
