@@ -4,9 +4,22 @@ WipeFreeSpace - a program for secure wiping of free space on file systems.
 
 WipeFreeSpace wipes the following things (when supported by the backing library):
 
-- free space (space in unused blocks/clusters)
-- free space in partially used blocks (also called the "slack space")
-- deleted files' names and other data that can be used to undelete a file (like the journal)
+- free space (space in unused blocks/clusters),
+- free space in partially used blocks (also called the "slack space"),
+- deleted files' names and other data that can be used to undelete a file (like the journal).
+
+Supported filesystems:
+
+- Ext2/3/4
+- NTFS
+- XFS
+- ReiserFSv3
+- ReiserFSv4
+- FAT12/16/32
+- MinixFS
+- JFS
+- HFS+
+- OCFS
 
 WipeFreeSpace does NOT decrease the amount of available free space when working.
 
