@@ -1210,7 +1210,7 @@ wfs_xfs_wipe_part (
 #  endif
 		inode_cmd[sizeof (inode_cmd)-1] = '\0';
 		/* flush input to get rid of the rest of inode info and 'xfs_db>' trash */
-		flush_pipe_input (pipe_from_blk_db[PIPE_R]);
+		wfs_flush_pipe_input (pipe_from_blk_db[PIPE_R]);
 		write_res = write (pipe_to_blk_db[PIPE_W], inode_cmd, strlen (inode_cmd));
 		if ( write_res <= 0 )
 		{
@@ -1271,7 +1271,7 @@ wfs_xfs_wipe_part (
 			break;
 		}
 		/* flush input to get rid of the rest of inode info and 'xfs_db>' trash */
-		flush_pipe_input (pipe_from_blk_db[PIPE_R]);
+		wfs_flush_pipe_input (pipe_from_blk_db[PIPE_R]);
 		if ( (got_mode_line == 0) || (got_size_line == 0) )
 		{
 			ret_part = WFS_INOREAD;
@@ -1351,7 +1351,7 @@ wfs_xfs_wipe_part (
 				&offset, &start_block, &trash, &trash, &number_of_blocks, &mode );
 
 			/* flush input to get rid of the rest of inode info and 'xfs_db>' trash */
-			flush_pipe_input (pipe_from_blk_db[PIPE_R]);
+			wfs_flush_pipe_input (pipe_from_blk_db[PIPE_R]);
 			if ( res != 6 )
 			{
 				/* line found, but cannot be parsed */

@@ -1616,7 +1616,7 @@ wfs_is_block_zero (
  * @param fd The file descriptor to empty.
  */
 void
-flush_pipe_input (
+wfs_flush_pipe_input (
 #ifdef WFS_ANSIC
 	const int fd)
 #else

@@ -781,7 +781,7 @@ wfs_hfsp_open_fs (
 	   mode, so put a 'y' in the standard input stream. */
 	ungetc ('y', stdin);
 	res = volume_open (hfsp_volume, dev_name_copy, 0 /*partition*/, HFSP_MODE_RDWR);
-	flush_pipe_input (STDIN_FILENO);
+	wfs_flush_pipe_input (STDIN_FILENO);
 	if ( res == 0 )
 	{
 		wfs_fs->whichfs = WFS_CURR_FS_HFSP;
