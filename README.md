@@ -23,11 +23,13 @@ WipeFreeSpace also works for file systems created inside regular files on any ho
 
 *NOTE*: if a block is damaged, it is only wiped until the first error. There is no guarantee that it will be fully wiped.
 
+Project homepage: <https://wipefreespace.sourceforge.io/>.
+
 Author: Bogdan Drozdowski, bogdro (at) users . sourceforge . net
 
 License: GPLv2+
 
-# WARNING #
+## WARNING ##
 
 The `dev` branch may contain code which is a work in progress and committed just for tests. The code here may not work properly or even compile.
 

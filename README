@@ -19,6 +19,8 @@ NOTE: if a block is damaged, it is only wiped until the first error. There is
 Read the info documentation (type 'info doc/wipefreespace.info') to get more
  information.
 
+Project homepage: https://wipefreespace.sourceforge.io/.
+
 Author: Bogdan Drozdowski, bogdro (at) users . sourceforge . net
 License: GPLv2+
 
