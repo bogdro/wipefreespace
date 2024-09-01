@@ -707,7 +707,7 @@ wfs_wipe_filesytem (
 		{
 			wfs_show_msg (1, msg_cacheoff, dev_name, fs);
 		}
-		res = disable_drive_cache (fs, total_fs, ioctls);
+		res = wfs_disable_drive_cache (fs, total_fs, ioctls);
 		if ( res != WFS_SUCCESS )
 		{
 			wfs_show_error (wfs_err_msg_nocache,
@@ -730,7 +730,7 @@ wfs_wipe_filesytem (
 		if ( opt_ioctl != 0 )
 		{
 			/* re-enabling the hardware disk cache in case of errors */
-			res = enable_drive_cache (fs, total_fs, ioctls);
+			res = wfs_enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
 				wfs_show_error (wfs_err_msg_cacheon,
@@ -769,7 +769,7 @@ wfs_wipe_filesytem (
 		if ( opt_ioctl != 0 )
 		{
 			/* re-enabling the hardware disk cache */
-			res = enable_drive_cache (fs, total_fs, ioctls);
+			res = wfs_enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
 				wfs_show_error (wfs_err_msg_cacheon,
@@ -793,7 +793,7 @@ wfs_wipe_filesytem (
 		if ( opt_ioctl != 0 )
 		{
 			/* re-enabling the hardware disk cache in case of errors */
-			res = enable_drive_cache (fs, total_fs, ioctls);
+			res = wfs_enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
 				wfs_show_error (wfs_err_msg_cacheon,
@@ -826,7 +826,7 @@ wfs_wipe_filesytem (
 		if ( opt_ioctl != 0 )
 		{
 			/* re-enabling the hardware disk cache */
-			res = enable_drive_cache (fs, total_fs, ioctls);
+			res = wfs_enable_drive_cache (fs, total_fs, ioctls);
 			if ( res != WFS_SUCCESS )
 			{
 				wfs_show_error (wfs_err_msg_cacheon,
@@ -922,7 +922,7 @@ wfs_wipe_filesytem (
 	if ( opt_ioctl != 0 )
 	{
 		/* re-enabling the hardware disk cache after work */
-		res = enable_drive_cache (fs, total_fs, ioctls);
+		res = wfs_enable_drive_cache (fs, total_fs, ioctls);
 		if ( res != WFS_SUCCESS )
 		{
 			wfs_show_error (wfs_err_msg_cacheon,

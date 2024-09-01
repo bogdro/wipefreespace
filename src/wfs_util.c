@@ -1313,7 +1313,7 @@ wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
-enable_drive_cache (
+wfs_enable_drive_cache (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs WFS_USED_ONLY_WITH_IOCTL,
 	const int total_fs WFS_USED_ONLY_WITH_IOCTL,
@@ -1418,7 +1418,7 @@ wfs_errcode_t
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
-disable_drive_cache (
+wfs_disable_drive_cache (
 #ifdef WFS_ANSIC
 	wfs_fsid_t wfs_fs WFS_USED_ONLY_WITH_IOCTL,
 	const int total_fs WFS_USED_ONLY_WITH_IOCTL,

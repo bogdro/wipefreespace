@@ -85,11 +85,11 @@ extern const char *
 	wfs_convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
 
 extern wfs_errcode_t WFS_ATTR ((nonnull))
-	enable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
+	wfs_enable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
 		const int total_fs, fs_ioctl_t ioctls[]));
 
 extern wfs_errcode_t WFS_ATTR ((nonnull))
-	disable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
+	wfs_disable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
 		const int total_fs, fs_ioctl_t ioctls[]));
 
 extern void WFS_ATTR ((nonnull))
