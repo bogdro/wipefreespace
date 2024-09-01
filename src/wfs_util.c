@@ -911,12 +911,6 @@ child_function (
 
 	if ( id != NULL )
 	{
-#if (defined HAVE_CLOSE)
-		close (STDIN_FILENO);
-		close (STDOUT_FILENO);
-		close (STDERR_FILENO);
-#endif
-
 #if (defined HAVE_DUP2)
 		WFS_SET_ERRNO (0);
 		if ( id->stdin_fd != -1 )
@@ -935,6 +929,12 @@ child_function (
 				}
 			}
 		}
+# if (defined HAVE_CLOSE)
+		else
+		{
+			close (STDIN_FILENO);
+		}
+# endif
 		if ( id->stdout_fd != -1 )
 		{
 			res = dup2 (id->stdout_fd, STDOUT_FILENO);
@@ -951,6 +951,12 @@ child_function (
 				}
 			}
 		}
+# if (defined HAVE_CLOSE)
+		else
+		{
+			close (STDOUT_FILENO);
+		}
+# endif
 		if ( id->stderr_fd != -1 )
 		{
 			res = dup2 (id->stderr_fd, STDERR_FILENO);
@@ -967,6 +973,12 @@ child_function (
 				}
 			}
 		}
+# if (defined HAVE_CLOSE)
+		else
+		{
+			close (STDERR_FILENO);
+		}
+# endif
 #endif /* HAVE_DUP2 */
 
 #ifdef HAVE_EXECVPE
