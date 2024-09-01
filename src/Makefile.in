@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 #
-# A program for secure cleaning of free space on filesystems.
+# WipeFreeSpace - A program for secure cleaning of free space on filesystems.
 #	-- Makefile.am, part of the build system.
 #
 # Copyright (C) 2007-2024 Bogdan Drozdowski, bogdro (at) users . sourceforge . net
