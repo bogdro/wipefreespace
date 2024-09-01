@@ -758,7 +758,7 @@ wfs_wipe_filesytem (
 
 	if ( (sig_recvd == 0) && (opt_verbose > 0) )
 	{
-		wfs_show_msg (0, convert_fs_to_name (fs.whichfs), dev_name, fs);
+		wfs_show_msg (0, wfs_convert_fs_to_name (fs.whichfs), dev_name, fs);
 	}
 
 	if ( sig_recvd != 0 )

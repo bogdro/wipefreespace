@@ -1246,7 +1246,7 @@ rpl_malloc (
  * \return The filesystem name
  */
 const char *
-convert_fs_to_name (
+wfs_convert_fs_to_name (
 #ifdef WFS_ANSIC
 	const wfs_curr_fs_t fs)
 #else

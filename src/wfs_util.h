@@ -82,7 +82,7 @@ extern int WFS_ATTR ((nonnull))
 	wfs_has_child_exited WFS_PARAMS ((const child_id_t * const id));
 
 extern const char *
-	convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
+	wfs_convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
 
 extern wfs_errcode_t WFS_ATTR ((nonnull))
 	enable_drive_cache WFS_PARAMS ((wfs_fsid_t wfs_fs,
