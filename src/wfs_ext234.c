@@ -273,7 +273,7 @@ e2_do_block (
 				break;
 			}
 		}
-		fill_buffer (j, bd->wd.buf + buf_start /* buf OK */,
+		wfs_fill_buffer (j, bd->wd.buf + buf_start /* buf OK */,
 			fs_block_size - buf_start,
 			selected, bd->wd.filesys);
 		if ( sig_recvd != 0 )
@@ -569,7 +569,7 @@ e2_wipe_unrm_dir (
 		{
 			if ( j < wd->filesys.npasses )
 			{
-				fill_buffer (j, (unsigned char *)filename /* buf OK */,
+				wfs_fill_buffer (j, (unsigned char *)filename /* buf OK */,
 					(size_t) (DIRENT->name_len & 0xFF),
 					selected, wd->filesys);
 			}
@@ -586,7 +586,7 @@ e2_wipe_unrm_dir (
 		}
 		else
 		{
-			fill_buffer (j, (unsigned char *)filename /* buf OK */,
+			wfs_fill_buffer (j, (unsigned char *)filename /* buf OK */,
 				(size_t) (DIRENT->name_len & 0xFF),
 				selected, wd->filesys);
 			if ( j == wd->filesys.npasses-1 )

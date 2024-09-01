@@ -202,7 +202,7 @@ static int wfs_ocfs_wipe_part_blocks (
 							break;
 						}
 					}
-					fill_buffer ( j, &(bd->wd.buf[offset]), to_wipe,
+					wfs_fill_buffer ( j, &(bd->wd.buf[offset]), to_wipe,
 						selected, bd->wd.filesys );/* buf OK */
 					if ( sig_recvd != 0 )
 					{
@@ -429,7 +429,7 @@ wfs_ocfs_wipe_part (
 				for ( j = 0; (j < wfs_fs.npasses)
 					&& (sig_recvd == 0); j++ )
 				{
-					fill_buffer ( j, &(dinode->id2.i_data.id_data[offset]),
+					wfs_fill_buffer ( j, &(dinode->id2.i_data.id_data[offset]),
 						to_wipe, selected, wfs_fs );/* buf OK */
 					if ( sig_recvd != 0 )
 					{
@@ -627,7 +627,7 @@ wfs_ocfs_wipe_fs (
 					break;
 				}
 			}
-			fill_buffer ( j, buf, cluster_size,
+			wfs_fill_buffer ( j, buf, cluster_size,
 				selected, wfs_fs );/* buf OK */
 			if ( sig_recvd != 0 )
 			{
@@ -778,7 +778,7 @@ static int wfs_ocfs_wipe_unrm_dir (
 		}
 		else
 		{
-			fill_buffer ( wd->passno,
+			wfs_fill_buffer ( wd->passno,
 				(unsigned char *)dirent->name,
 				OCFS2_MAX_FILENAME_LEN,
 				selected, wd->filesys );
@@ -984,7 +984,7 @@ wfs_ocfs_wipe_unrm (
 			for ( j = 0; (j < wfs_fs.npasses)
 				&& (sig_recvd == 0); j++ )
 			{
-				fill_buffer ( j, jbuf,
+				wfs_fill_buffer ( j, jbuf,
 					(size_t)jsb->s_blocksize, selected,
 					wfs_fs );/* buf OK */
 				if ( sig_recvd != 0 )

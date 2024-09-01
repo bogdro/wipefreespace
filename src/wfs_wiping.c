@@ -350,7 +350,7 @@ void
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
-fill_buffer (
+wfs_fill_buffer (
 #ifdef WFS_ANSIC
 	unsigned long int 		pat_no,
 	unsigned char * const 		buffer,

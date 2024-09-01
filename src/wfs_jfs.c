@@ -377,7 +377,7 @@ wfs_jfs_wipe_block (
 				break;
 			}
 		}
-		fill_buffer ( j, buf, bufsize, selected, wfs_fs );
+		wfs_fill_buffer ( j, buf, bufsize, selected, wfs_fs );
 		if ( sig_recvd != 0 )
 		{
 			break;

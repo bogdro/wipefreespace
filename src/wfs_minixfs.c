@@ -328,7 +328,7 @@ wfs_minixfs_wipe_dir (
 					for ( k = 0; (k < wfs_fs.npasses)
 						&& (sig_recvd == 0); k++ )
 					{
-						fill_buffer ( k, &blk[j+2],
+						wfs_fill_buffer ( k, &blk[j+2],
 							direntsize-2,
 							selected, wfs_fs );
 						if ( sig_recvd != 0 )
@@ -403,7 +403,7 @@ wfs_minixfs_wipe_dir (
 					break;
 				}
 			}
-			fill_buffer ( j, &buf[was_read],
+			wfs_fill_buffer ( j, &buf[was_read],
 				(unsigned int)(fs_block_size - (size_t)was_read),
 				selected, wfs_fs );
 			if ( sig_recvd != 0 )
@@ -602,7 +602,7 @@ wfs_minixfs_wipe_fs (
 					break;
 				}
 			}
-			fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
+			wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;

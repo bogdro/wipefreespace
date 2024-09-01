@@ -241,7 +241,7 @@ wfs_hfsp_wipe_part_file (
 				break;
 			}
 		}
-		fill_buffer ( j, &buf[remainder], (size_t)(fs_block_size - remainder),
+		wfs_fill_buffer ( j, &buf[remainder], (size_t)(fs_block_size - remainder),
 			selected, wfs_fs );
 		error = volume_writetobuf (hfsp_volume,
 			buf, (long int)last_block);
@@ -613,7 +613,7 @@ wfs_hfsp_wipe_fs (
 						break;
 					}
 				}
-				fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
+				wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
 				error = volume_writetobuf (hfsp_volume,
 					buf, (long int)curr_block);
 				if ( error != 0 )

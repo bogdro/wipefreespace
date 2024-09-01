@@ -338,7 +338,7 @@ wfs_reiser_wipe_part (
 			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
 				/*&& (ret_part == WFS_SUCCESS)*/; j++ )
 			{
-				fill_buffer ( j, (unsigned char *) offset,
+				wfs_fill_buffer ( j, (unsigned char *) offset,
 					(size_t) length, selected, wfs_fs );
 
 				if ( sig_recvd != 0 )
@@ -583,7 +583,7 @@ wfs_reiser_wipe_fs (
 				}
 			}
 
-			fill_buffer ( j, (unsigned char *) bh->b_data,
+			wfs_fill_buffer ( j, (unsigned char *) bh->b_data,
 				fs_block_size, selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
@@ -810,7 +810,7 @@ wfs_reiser_wipe_unrm (
 						}
 					}
 
-					fill_buffer ( j, (unsigned char *) bh->b_data,
+					wfs_fill_buffer ( j, (unsigned char *) bh->b_data,
 						fs_block_size, selected, wfs_fs );
 				}
 				if ( sig_recvd != 0 )
@@ -984,7 +984,7 @@ wfs_reiser_wipe_unrm (
 								head, deh,
 								(int)count) > 0 )
 							{
-								fill_buffer ( j,
+								wfs_fill_buffer ( j,
 									(unsigned char *)
 									 name_in_entry (deh, (int)count),
 									(size_t) name_in_entry_length

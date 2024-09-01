@@ -30,7 +30,7 @@ extern unsigned long int wfs_init_wiping WFS_PARAMS ((
 	const char * const method));
 
 extern void WFS_ATTR ((nonnull))
-	fill_buffer WFS_PARAMS ((unsigned long int pat_no,
+	wfs_fill_buffer WFS_PARAMS ((unsigned long int pat_no,
 		unsigned char * const buffer,
 		const size_t buflen,
 		int * const selected,

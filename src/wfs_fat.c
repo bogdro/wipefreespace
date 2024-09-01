@@ -706,7 +706,7 @@ wfs_fat_dirent_find (
 						printf("wfs_fat_dirent_find: deleted entry has long name\n");
 						fflush(stdout);
 #endif
-						fill_buffer ( j, fname,
+						wfs_fill_buffer ( j, fname,
 							13 /*dirent.h->long_dir_entry_t*/
 							/* 2 / *sizeof UTF-16 character */
 							-1 /* the first marker byte */,
@@ -718,7 +718,7 @@ wfs_fat_dirent_find (
 						printf("wfs_fat_dirent_find: deleted entry has short name\n");
 						fflush(stdout);
 #endif
-						fill_buffer ( j, fname,
+						wfs_fill_buffer ( j, fname,
 							sizeof (dirent.dir_name) - 1 /* the first marker byte */,
 							selected, wfs_fs );
 					}
@@ -948,7 +948,7 @@ wfs_fat_wipe_file_tail (
 #endif
 	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 	{
-		fill_buffer ( j, buf, bufsize, selected, wfs_fs );
+		wfs_fill_buffer ( j, buf, bufsize, selected, wfs_fs );
 		if ( sig_recvd != 0 )
 		{
 			ret_tail = WFS_SIGNAL;
@@ -1502,7 +1502,7 @@ wfs_fat_wipe_fs (
 		}
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, wfs_fs );
+			wfs_fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
 				ret_wfs = WFS_SIGNAL;

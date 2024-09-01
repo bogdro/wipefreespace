@@ -278,7 +278,7 @@ static s64 wipe_compressed_attribute WFS_PARAMS((ntfs_attr * const na,
 
 /**
  * Part of ntfsprogs.
- * Modified: removed logging, memset replaced by fill_buffer, signal handling.
+ * Modified: removed logging, memset replaced by wfs_fill_buffer, signal handling.
  *
  * wipe_compressed_attribute - Wipe compressed $DATA attribute
  * \param	vol	An ntfs volume obtained from ntfs_mount
@@ -506,11 +506,11 @@ wipe_compressed_attribute (
 			}
 			if ( mybuf != NULL )
 			{
-				fill_buffer (j, mybuf, bufsize, selected, wfs_fs);	/* buf OK */
+				wfs_fill_buffer (j, mybuf, bufsize, selected, wfs_fs);	/* buf OK */
 			}
 			else
 			{
-				fill_buffer (j, buf, (size_t) size, selected, wfs_fs);	/* buf OK */
+				wfs_fill_buffer (j, buf, (size_t) size, selected, wfs_fs);	/* buf OK */
 			}
 			if ( sig_recvd != 0 )
 			{
@@ -628,7 +628,7 @@ static s64 wipe_attribute WFS_PARAMS ((ntfs_attr * const na,
 
 /**
  * Part of ntfsprogs.
- * Modified: removed logging, memset replaced by fill_buffer, signal handling.
+ * Modified: removed logging, memset replaced by wfs_fill_buffer, signal handling.
  *
  * wipe_attribute - Wipe not compressed $DATA attribute
  * \param	vol	An ntfs volume obtained from ntfs_mount
@@ -706,7 +706,7 @@ wipe_attribute (
 				break;
 			}
 		}
-		fill_buffer (j, buf, (size_t) size, selected, wfs_fs);	/* buf OK */
+		wfs_fill_buffer (j, buf, (size_t) size, selected, wfs_fs);	/* buf OK */
 		if ( sig_recvd != 0 )
 		{
 	       		break;
@@ -1171,7 +1171,7 @@ destroy_record (
 
 		for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 		{
-			fill_buffer (pass, a_offset, le32_to_cpu(ctx->attr->value_length),
+			wfs_fill_buffer (pass, a_offset, le32_to_cpu(ctx->attr->value_length),
 				selected, wfs_fs);
 			if ( sig_recvd != 0 )
 			{
@@ -1226,7 +1226,7 @@ destroy_record (
 		for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 		{
 
-			fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length),
+			wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length),
 				sizeof(u32), selected, wfs_fs);
 			if ( sig_recvd != 0 )
 			{
@@ -1293,7 +1293,7 @@ destroy_record (
 			/* Wiping the data itself */
 			for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 			{
-				fill_buffer (pass, a_offset, le32_to_cpu(ctx->attr->value_length),
+				wfs_fill_buffer (pass, a_offset, le32_to_cpu(ctx->attr->value_length),
 					selected, wfs_fs);
 				if ( sig_recvd != 0 )
 				{
@@ -1347,7 +1347,7 @@ destroy_record (
 			/* Wiping data length */
 			for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 			{
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->value_length),
 					sizeof(u32), selected, wfs_fs);
 				if ( sig_recvd != 0 )
 				{
@@ -1435,7 +1435,7 @@ destroy_record (
 									break;
 								}
 							}
-							fill_buffer (pass, buf /* buf OK */,
+							wfs_fill_buffer (pass, buf /* buf OK */,
 								fs_block_size,
 								selected, wfs_fs);
 							if ( sig_recvd != 0 )
@@ -1481,42 +1481,42 @@ destroy_record (
 			/* Wipe the data length here */
 			for ( pass = 0; (pass < wfs_fs.npasses) && (sig_recvd == 0); pass++ )
 			{
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->lowest_vcn),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->lowest_vcn),
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 # else
 					sizeof(VCN),
 # endif
 					selected, wfs_fs);
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->highest_vcn),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->highest_vcn),
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 # else
 					sizeof(VCN),
 # endif
 					selected, wfs_fs);
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->allocated_size),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->allocated_size),
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 # else
 					sizeof(VCN),
 # endif
 					selected, wfs_fs);
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->data_size),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->data_size),
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 # else
 					sizeof(VCN),
 # endif
 					selected, wfs_fs);
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->initialized_size),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->initialized_size),
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 # else
 					sizeof(VCN),
 # endif
 					selected, wfs_fs);
-				fill_buffer (pass, (unsigned char *) &(ctx->attr->compressed_size),
+				wfs_fill_buffer (pass, (unsigned char *) &(ctx->attr->compressed_size),
 # if (defined HAVE_NTFS_NTFS_VOLUME_H)
 					sizeof(NTFS_VCN),
 # else
@@ -1759,7 +1759,7 @@ wfs_ntfs_wipe_journal (
 	{
 		if ( j < wfs_fs.npasses )
 		{
-			fill_buffer (j, buf, (size_t) blocksize,
+			wfs_fill_buffer (j, buf, (size_t) blocksize,
 				selected, wfs_fs);/* buf OK */
 		}
 		else
@@ -2252,7 +2252,7 @@ wfs_ntfs_wipe_fs (
 					break;
 				}
 			}
-			fill_buffer (j, buf, fs_block_size, selected, wfs_fs);/* buf OK */
+			wfs_fill_buffer (j, buf, fs_block_size, selected, wfs_fs);/* buf OK */
 			if ( sig_recvd != 0 )
 			{
 		       		break;

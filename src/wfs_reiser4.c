@@ -245,7 +245,7 @@ wfs_r4_wipe_last_block (
 				break;
 			}
 		}
-		fill_buffer ( j, (unsigned char *) &(((char *)(block->data))[to_skip]),
+		wfs_fill_buffer ( j, (unsigned char *) &(((char *)(block->data))[to_skip]),
 			to_wipe, selected, bd->wfs_fs );
 		if ( sig_recvd != 0 )
 		{
@@ -477,7 +477,7 @@ wfs_r4_wipe_part_work (
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
 			/*&& (ret_part == WFS_SUCCESS)*/; j++ )
 		{
-			fill_buffer ( j, buf, fs_block_size,
+			wfs_fill_buffer ( j, buf, fs_block_size,
 				selected, wfs_fs );
 			if ( sig_recvd != 0 )
 			{
@@ -761,7 +761,7 @@ wfs_r4_wipe_fs (
 						break;
 					}
 				}
-				fill_buffer ( j, (unsigned char *) block->data,
+				wfs_fill_buffer ( j, (unsigned char *) block->data,
 					fs_block_size, selected, wfs_fs );
 				if ( sig_recvd != 0 )
 				{
@@ -912,7 +912,7 @@ wfs_r4_wipe_journal (
 					break;
 				}
 			}
-			fill_buffer ( j, (unsigned char *) block->data,
+			wfs_fill_buffer ( j, (unsigned char *) block->data,
 				fs_block_size, selected, bd->wfs_fs );
 			if ( sig_recvd != 0 )
 			{
@@ -1068,7 +1068,7 @@ wfs_r4_wipe_object (
 				* fs_block_size
 				< reiser4_object_size (bd->obj) )
 			{
-				fill_buffer ( j, (unsigned char *) block->data,
+				wfs_fill_buffer ( j, (unsigned char *) block->data,
 					(size_t)((fs_block_size
 						- (reiser4_object_size (bd->obj)
 						% fs_block_size)) & 0xFFFFFFFF),
@@ -1076,7 +1076,7 @@ wfs_r4_wipe_object (
 			}
 			else
 			{
-				fill_buffer ( j, (unsigned char *) block->data,
+				wfs_fill_buffer ( j, (unsigned char *) block->data,
 					fs_block_size,
 					selected, bd->wfs_fs );
 			}

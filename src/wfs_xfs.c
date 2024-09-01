@@ -697,7 +697,7 @@ wfs_xfs_wipe_fs	(
 				}
 				if ( i != wfs_fs.npasses * 2 )
 				{
-					fill_buffer ( i, buffer, fs_block_size, selected, wfs_fs );
+					wfs_fill_buffer ( i, buffer, fs_block_size, selected, wfs_fs );
 					if ( write (fs_fd, buffer, fs_block_size)
 						!= (ssize_t) fs_block_size )
 					{
@@ -1409,7 +1409,7 @@ wfs_xfs_wipe_part (
 				}
 				if ( i != wfs_fs.npasses * 2 )
 				{
-					fill_buffer ( i, buffer, fs_block_size, selected, wfs_fs );
+					wfs_fill_buffer ( i, buffer, fs_block_size, selected, wfs_fs );
 					if ( write (fs_fd, buffer, (size_t)length_to_wipe) != length_to_wipe )
 					{
 						ret_part = WFS_BLKWR;
