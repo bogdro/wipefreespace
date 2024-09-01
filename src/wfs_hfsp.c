@@ -210,7 +210,7 @@ wfs_hfsp_wipe_part_file (
 		(UInt8)HFSP_EXTENT_DATA, file->record.u.file.id);
 	/* skip the full blocks */
 	if ( blockiter_skip (&iter,
-		(size_t)file->record.u.file.data_fork.total_blocks / fs_block_size) != 0 )
+		(UInt32)((size_t)file->record.u.file.data_fork.total_blocks / fs_block_size)) != 0 )
 	{
 		if ( error_ret != NULL )
 		{
