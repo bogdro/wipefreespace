@@ -585,7 +585,7 @@ print_help (
 	}
 
 	/* this has to be printf() because puts() adds a new line at the end. */
-	printf ( "%s", prog );
+	printf ( "%s", PACKAGE_NAME );
 	printf ( "%s",
 		_(" - Program for secure cleaning of free space on filesystems\nSyntax: ") );
 	printf ( "%s", prog );
