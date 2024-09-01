@@ -212,6 +212,8 @@ child_signal_received (
 # undef void
 }
 
+static wfs_fsid_t wf_gen = {"", 0, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0};
+
 /* =============================================================== */
 
 # ifndef WFS_ANSIC
@@ -229,14 +231,11 @@ static void print_signal_error (
 {
 # define 	TMPSIZE	13
 	char tmp[TMPSIZE];		/* Place for a signal number. */
-	wfs_fsid_t wf_gen;
 	wfs_errcode_t err = 0;
 	int res;
 
 	if ( opt_verbose > 0 )
 	{
-		wf_gen.fsname = "";
-		wf_gen.whichfs = WFS_CURR_FS_NONE;
 		wf_gen.fs_error = &err;
 
 		err = WFS_GET_ERRNO_OR_DEFAULT (1L);
