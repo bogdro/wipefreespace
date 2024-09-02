@@ -784,7 +784,7 @@ because the libraries used can be not thread-safe and the program can't tell if 
 be used until it's used.
 
 But, you can run multiple WipeFreeSpace processes (just not wiping the same
-filesystem) in multiple terminals (or under screen/nohup) as a substitute
+filesystem) in multiple terminals (or under @command{screen}/@command{nohup}) as a substitute
 for multi-threading.
 
 Each given filesystem is wiped @strong{ONLY ONCE}, no matter how many times
