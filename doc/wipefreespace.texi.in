@@ -63,8 +63,25 @@ This manual is for WipeFreeSpace, version @VERSION@
 @comment  node-name, next,      previous,  up
 @chapter What is WipeFreeSpace?
 
-This program is used for secure erasing of free space on ext2, ext3, ext4, NTFS, XFS,
-ReiserFSv3, ReiserFSv4, FAT12, FAT16, FAT32, MinixFSv1, MinixFSv2, JFS, HFS+ and OCFS partitions.
+This program is used for secure erasing of free space on the following
+partition/filesystem types:
+@itemize
+@item ext2
+@item ext3
+@item ext4
+@item NTFS
+@item XFS
+@item ReiserFSv3
+@item ReiserFSv4
+@item FAT12
+@item FAT16
+@item FAT32
+@item MinixFSv1
+@item MinixFSv2
+@item JFS
+@item HFS+
+@item OCFS
+@end itemize
 
 WipeFreeSpace wipes the following things (when supported by the backing
 library):
