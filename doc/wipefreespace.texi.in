@@ -340,14 +340,14 @@ Compiling requirements:
 @item the @file{wait.h} header or @file{sys/wait.h} (not required, actually, but a good thing to have)
 @item the @file{sched.h} header (not required, actually, but a good thing to have)
 @item the @file{paths.h} header (not required, actually, but a good thing to have)
-@item the @samp{fork()} function
-@item the @samp{execvp()} function
-@item the @samp{dup2()} function
-@item the @samp{close()} function
-@item the @samp{pipe()} function
-@item the @samp{kill()} function
-@item the @samp{waitpid()} or @samp{wait()} function
-@item the @samp{sleep()} function (not required, actually, but a good thing to have)
+@item the @samp{fork} function
+@item the @samp{execvp} function
+@item the @samp{dup2} function
+@item the @samp{close} function
+@item the @samp{pipe} function
+@item the @samp{kill} function
+@item the @samp{waitpid} or @samp{wait} function
+@item the @samp{sleep} function (not required, actually, but a good thing to have)
 @item the @samp{long long} data type support in the compiler
 @item @file{xfsprogs} installed and in your @env{PATH} variable
 (devel package unusable, so not required). Can be downloaded from@*
@@ -381,9 +381,9 @@ Compiling requirements:
 @itemize
 @item the @file{unistd.h} with @file{wait.h} header or @file{sys/wait.h}
 @item the @file{mntent.h} (with at least one of its functions -
-	@samp{getmntent()} or @samp{getmntent_r()})
-@item the @samp{fork()} function
-@item the @samp{waitpid()} or @samp{wait()} function
+	@samp{getmntent} or @samp{getmntent_r})
+@item the @samp{fork} function
+@item the @samp{waitpid} or @samp{wait} function
 @item the @samp{long long} data type support in the compiler
 @item the development package for reiserfsprogs (header files - @file{*.h}
 - and compiled static libraries - @file{*.a} - from the package).
@@ -470,7 +470,7 @@ Support: using the library from @file{reiser4progs-devel}.
 Compiling requirements:
 @itemize
 @item the @file{mntent.h} (with at least one of its functions -
-	@samp{getmntent()} or @samp{getmntent_r()})
+	@samp{getmntent} or @samp{getmntent_r})
 @item the @samp{long long} data type support in the compiler
 @item development package for @file{reiser4progs}, @file{libuuid} (@file{e2fsprogs} or
 @file{e2fsprogs-libs}) and libaal. Go to@*
@@ -560,7 +560,7 @@ and other exotic objects)
 @end itemize
 
 @strong{NOTE}: the original TFFS library does its own data flushing (in the
-@samp{HAI_writesector()} function), so even when WipeFreeSpace is told to
+@samp{HAI_writesector} function), so even when WipeFreeSpace is told to
 perform just one wiping iteration (which uses the system/drive cache
 on other filesystems and doesn't flush the data immediately), the data
 is flushed after each sector, which makes FAT12/16/32 wiping really slow.
@@ -883,7 +883,7 @@ Fallback to WipeFreeSpace if unsupported (currently, only
 @noindent @option{--use-ioctl}@*
 @quotation
 Disable device caching during work (can be @strong{DANGEROUS}). This requires
-the @file{fcntl.h} header file and the @samp{ioctl()} function to be present. @strong{NOTE}:
+the @file{fcntl.h} header file and the @samp{ioctl} function to be present. @strong{NOTE}:
 this may not work for sub-partitions on drives. To disable the cache, run the
 @command{hdparm} utility with the correct options to disable the cache
 before running @command{wipefreespace} and enable the cache afterwards.
