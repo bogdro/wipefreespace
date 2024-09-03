@@ -21,15 +21,6 @@
 
 #include "wfs_cfg.h"
 
-#include <stdio.h>	/* FILE */
-
-#ifdef HAVE_STRING_H
-# if ((!defined STDC_HEADERS) || (!STDC_HEADERS)) && (defined HAVE_MEMORY_H)
-#  include <memory.h>
-# endif
-# include <string.h>	/* strncpy() */
-#endif
-
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>	/* close(), dup2(), fork(), sync(), STDIN_FILENO,
 			   STDOUT_FILENO, STDERR_FILENO */
@@ -41,12 +32,6 @@
 #ifndef ECHILD
 # define ECHILD 10
 #endif
-
-/*
-#ifdef HAVE_MALLOC_H
-# include <malloc.h>
-#endif
-*/
 
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>	/* exit() */

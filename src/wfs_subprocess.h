@@ -22,8 +22,6 @@
 #ifndef WFS_SUBPROCESS_H
 # define WFS_SUBPROCESS_H 1
 
-# include "wipefreespace.h"
-
 enum child_type
 {
 	CHILD_FORK,

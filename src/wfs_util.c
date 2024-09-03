@@ -69,15 +69,11 @@
 #define WFS_PATH_MOUNTS "/proc/mounts"
 
 #ifdef HAVE_UNISTD_H
-# include <unistd.h>	/* close(), dup2(), fork(), sync(), STDIN_FILENO,
-			   STDOUT_FILENO, STDERR_FILENO */
+# include <unistd.h>	/* close() */
 #endif
 
 #ifdef HAVE_ERRNO_H
 # include <errno.h>
-#endif
-#ifndef ECHILD
-# define ECHILD 10
 #endif
 
 /*
@@ -88,27 +84,6 @@
 
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>	/* exit() */
-#endif
-
-#ifdef HAVE_SYS_WAIT_H
-# include <sys/wait.h>
-#else
-# ifdef HAVE_WAIT_H
-#  include <wait.h>
-# endif
-#endif
-#ifndef WEXITSTATUS
-# define WEXITSTATUS(stat_val) ((unsigned int)(stat_val) >> 8)
-#endif
-#ifndef WIFEXITED
-# define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
-#endif
-#ifndef WIFSIGNALED
-# define WIFSIGNALED(status) (((signed char) (((status) & 0x7f) + 1) >> 1) > 0)
-#endif
-
-#ifdef HAVE_SCHED_H
-# include <sched.h>
 #endif
 
 #ifdef MAJOR_IN_MKDEV
@@ -172,24 +147,8 @@
 #include "wipefreespace.h"
 #include "wfs_util.h"
 
-#ifndef EXIT_FAILURE
-# define EXIT_FAILURE (1)
-#endif
-
 #ifndef MNTOPT_RW
 # define MNTOPT_RW	"rw"
-#endif
-
-#ifndef STDIN_FILENO
-# define STDIN_FILENO	0
-#endif
-
-#ifndef STDOUT_FILENO
-# define STDOUT_FILENO	1
-#endif
-
-#ifndef STDERR_FILENO
-# define STDERR_FILENO	2
 #endif
 
 #ifndef LOOPMAJOR
