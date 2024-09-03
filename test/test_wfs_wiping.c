@@ -113,7 +113,7 @@ START_TEST(test_fill_buffer)
 		{
 			buffer[j] = marker;
 		}
-		fill_buffer (0, &buffer[OFFSET], i, selected, wf_gen);
+		wfs_fill_buffer (0, &buffer[OFFSET], i, selected, wf_gen);
 		for ( j = 0; j < OFFSET; j++ )
 		{
 			if ( buffer[j] != marker )
@@ -142,33 +142,33 @@ END_TEST
 START_TEST(test_init_wiping)
 {
 	/* no name provided = default Gutmann */
-	ck_assert_uint_eq (init_wiping (10, 1, 1, NULL), 27 + 9);
-	ck_assert_uint_eq (init_wiping (1, 1, 1, NULL), 27 + 9);
-	ck_assert_uint_eq (init_wiping (0, 1, 1, NULL), 27 + 9);
+	ck_assert_uint_eq (wfs_init_wiping (10, 1, 1, NULL), 27 + 9);
+	ck_assert_uint_eq (wfs_init_wiping (1, 1, 1, NULL), 27 + 9);
+	ck_assert_uint_eq (wfs_init_wiping (0, 1, 1, NULL), 27 + 9);
 
 	/* the default number of patterns in the Gutmann method: */
-	ck_assert_uint_eq (init_wiping (10, 1, 1, "gutmann"), 27 + 9 );
-	ck_assert_uint_eq (init_wiping (1, 1, 1, "gutmann"), 27 + 9);
-	ck_assert_uint_eq (init_wiping (0, 1, 1, "gutmann"), 27 + 9);
+	ck_assert_uint_eq (wfs_init_wiping (10, 1, 1, "gutmann"), 27 + 9 );
+	ck_assert_uint_eq (wfs_init_wiping (1, 1, 1, "gutmann"), 27 + 9);
+	ck_assert_uint_eq (wfs_init_wiping (0, 1, 1, "gutmann"), 27 + 9);
 
 	/* the default number of patterns in the random method: */
-	ck_assert_uint_eq (init_wiping (10, 1, 1, "random"), 22 + 3);
-	ck_assert_uint_eq (init_wiping (1, 1, 1, "random"), 22 + 3);
-	ck_assert_uint_eq (init_wiping (0, 1, 1, "random"), 22 + 3);
+	ck_assert_uint_eq (wfs_init_wiping (10, 1, 1, "random"), 22 + 3);
+	ck_assert_uint_eq (wfs_init_wiping (1, 1, 1, "random"), 22 + 3);
+	ck_assert_uint_eq (wfs_init_wiping (0, 1, 1, "random"), 22 + 3);
 
 	/* the default number of patterns in the Shneier method: */
-	ck_assert_uint_eq (init_wiping (10, 1, 1, "schneier"), 2 + 5);
-	ck_assert_uint_eq (init_wiping (1, 1, 1, "schneier"), 2 + 5);
-	ck_assert_uint_eq (init_wiping (0, 1, 1, "schneier"), 2 + 5);
+	ck_assert_uint_eq (wfs_init_wiping (10, 1, 1, "schneier"), 2 + 5);
+	ck_assert_uint_eq (wfs_init_wiping (1, 1, 1, "schneier"), 2 + 5);
+	ck_assert_uint_eq (wfs_init_wiping (0, 1, 1, "schneier"), 2 + 5);
 
 	/* the default number of patterns in the DoD method: */
-	ck_assert_uint_eq (init_wiping (10, 1, 1, "dod"), 2 + 1);
-	ck_assert_uint_eq (init_wiping (1, 1, 1, "dod"), 2 + 1);
-	ck_assert_uint_eq (init_wiping (0, 1, 1, "dod"), 2 + 1);
+	ck_assert_uint_eq (wfs_init_wiping (10, 1, 1, "dod"), 2 + 1);
+	ck_assert_uint_eq (wfs_init_wiping (1, 1, 1, "dod"), 2 + 1);
+	ck_assert_uint_eq (wfs_init_wiping (0, 1, 1, "dod"), 2 + 1);
 
-	ck_assert_uint_eq (init_wiping (10, 1, 1, "blah"), 10);
-	ck_assert_uint_eq (init_wiping (1, 1, 1, "blah"), 1);
-	ck_assert_uint_eq (init_wiping (0, 1, 1, "blah"), WFS_PASSES /* the default number of patterns in the Gutmann method */);
+	ck_assert_uint_eq (wfs_init_wiping (10, 1, 1, "blah"), 10);
+	ck_assert_uint_eq (wfs_init_wiping (1, 1, 1, "blah"), 1);
+	ck_assert_uint_eq (wfs_init_wiping (0, 1, 1, "blah"), WFS_PASSES /* the default number of patterns in the Gutmann method */);
 }
 
 static Suite * wfs_create_suite(void)

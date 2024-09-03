@@ -1,6 +1,6 @@
 /*
  * WipeFreeSpace - A program for secure cleaning of free space on filesystems.
- *	-- unit test for the wfs_util.c file.
+ *	-- unit test for the wfs_mount_check.c file.
  *
  * Copyright (C) 2015-2024 Bogdan Drozdowski, bogdro (at) users . sourceforge . net
  * License: GNU General Public License, v3+
@@ -31,7 +31,7 @@
 #endif
 
 #include "src/wipefreespace.h"
-#include "src/wfs_util.h"
+#include "src/wfs_mount_check.h"
 #include "src/wfs_wiping.h"
 
 #ifdef WFS_EXT234
@@ -215,20 +215,18 @@ void
 #ifdef WFS_ANSIC
 WFS_ATTR ((nonnull))
 #endif
-fill_buffer (
+wfs_show_msg (
 #ifdef WFS_ANSIC
-	unsigned long int 		pat_no WFS_ATTR ((unused)),
-	unsigned char * const 		buffer WFS_ATTR ((unused)),
-	const size_t 			buflen WFS_ATTR ((unused)),
-	int * const			selected WFS_ATTR ((unused)),
-	const wfs_fsid_t		wfs_fs WFS_ATTR ((unused)) )
+	const int		type,
+	const char * const	msg,
+	const char * const	extra,
+	const wfs_fsid_t	wfs_fs )
 #else
-	pat_no,	buffer,	buflen,	selected, wfs_fs )
-	unsigned long int 		pat_no WFS_ATTR ((unused));
-	unsigned char * const 		buffer WFS_ATTR ((unused));
-	const size_t 			buflen WFS_ATTR ((unused));
-	int * const			selected WFS_ATTR ((unused));
-	const wfs_fsid_t		wfs_fs WFS_ATTR ((unused));
+	type, msg, extra, wfs_fs )
+	const int		type;
+	const char * const	msg;
+	const char * const	extra;
+	const wfs_fsid_t	wfs_fs;
 #endif
 {
 }
