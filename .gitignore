@@ -22,6 +22,7 @@ po/POTFILES
 po/Makefile.in
 
 test_wfs_util
+test_wfs_mount_check
 test_wfs_wiping
 *.log
 *.trs
