@@ -23,7 +23,7 @@ bin_PROGRAMS = wipefreespace
 datadir = @datadir@
 wipefreespace_SOURCES = wipefreespace.c wipefreespace.h wfs_wrappers.c wfs_wrappers.h	\
 	wfs_secure.c wfs_secure.h wfs_signal.c wfs_signal.h wfs_util.c wfs_util.h	\
-	wfs_wiping.c wfs_wiping.h
+	wfs_wiping.c wfs_wiping.h wfs_subprocess.c wfs_subprocess.h
 
 wipefreespace_LDADD = $(INTLLIBS)
 localedir = $(datadir)/locale
@@ -70,4 +70,3 @@ endif
 if OCFS
 wipefreespace_SOURCES += wfs_ocfs.h wfs_ocfs.c
 endif
-

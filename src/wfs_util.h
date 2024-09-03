@@ -24,31 +24,6 @@
 
 # include "wipefreespace.h"
 
-enum child_type
-{
-	CHILD_FORK,
-};
-
-struct child_id
-{
-	enum child_type type;
-	union id
-	{
-#ifdef HAVE_WORKING_FORK /* HAVE_FORK */
-		pid_t chld_pid;
-#endif
-		char * dummy;
-	} chld_id;
-	const char * program_name;
-	char ** args;
-	char * const * child_env;
-	int stdin_fd;
-	int stdout_fd;
-	int stderr_fd;
-};
-
-typedef struct child_id child_id_t;
-
 /* This structure helps to run ioctl()s once per device */
 struct fs_ioctl
 {
@@ -71,15 +46,6 @@ extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
 		char * const mnt_point,
 		const size_t mnt_point_len,
 		int * const is_rw));
-
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
-	wfs_create_child WFS_PARAMS ((child_id_t * const id));
-
-extern void WFS_ATTR ((nonnull))
-	wfs_wait_for_child WFS_PARAMS ((const child_id_t * const id));
-
-extern int WFS_ATTR ((nonnull))
-	wfs_has_child_exited WFS_PARAMS ((const child_id_t * const id));
 
 extern const char *
 	wfs_convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));

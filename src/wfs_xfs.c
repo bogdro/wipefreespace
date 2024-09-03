@@ -97,6 +97,7 @@
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+#include "wfs_subprocess.h"
 
 #define PIPE_R 0
 #define PIPE_W 1
