@@ -86,6 +86,7 @@ Something wrong. OCFS requested, but ocfsp2.h or libocfs2 missing.
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+#include "wfs_mount_check.h"
 
 struct wfs_ocfs_block_data
 {

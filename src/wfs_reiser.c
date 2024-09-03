@@ -116,6 +116,7 @@ Something wrong. ReiserFS requested, but headers or library missing.
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+#include "wfs_mount_check.h"
 
 #ifdef HAVE_REISER3_NEW_BREAD
 # define bread reiser3_new_bread

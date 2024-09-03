@@ -98,6 +98,7 @@
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 #include "wfs_subprocess.h"
+#include "wfs_mount_check.h"
 
 #define PIPE_R 0
 #define PIPE_W 1

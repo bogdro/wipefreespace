@@ -36,17 +36,6 @@ struct fs_ioctl
 
 typedef struct fs_ioctl fs_ioctl_t;
 
-
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT
-	wfs_check_mounted WFS_PARAMS ((const wfs_fsid_t wfs_fs));
-
-extern wfs_errcode_t GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
-	wfs_get_mnt_point WFS_PARAMS ((const char * const dev_name,
-		wfs_errcode_t * const error,
-		char * const mnt_point,
-		const size_t mnt_point_len,
-		int * const is_rw));
-
 extern const char *
 	wfs_convert_fs_to_name WFS_PARAMS ((const wfs_curr_fs_t fs));
 
@@ -63,10 +52,6 @@ extern void WFS_ATTR ((nonnull))
 		const char * const	msg,
 		const char * const	extra,
 		const wfs_fsid_t	wfs_fs));
-
-extern int GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
-	wfs_check_loop_mounted WFS_PARAMS ((
-		const char * const dev_name));
 
 extern int GCC_WARN_UNUSED_RESULT WFS_ATTR ((nonnull))
 	wfs_is_block_zero WFS_PARAMS ((

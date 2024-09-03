@@ -105,6 +105,7 @@ Something wrong. Ext2/3/4 requested, but ext2fs.h or libext2fs missing.
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+#include "wfs_mount_check.h"
 
 struct wfs_e234_block_data
 {

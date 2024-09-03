@@ -126,6 +126,7 @@ Something wrong. NTFS requested, but headers or library missing.
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 #include "wfs_subprocess.h"
+#include "wfs_mount_check.h"
 
 #ifdef TEST_COMPILE
 # undef WFS_ANSIC

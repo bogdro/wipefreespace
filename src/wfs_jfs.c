@@ -118,6 +118,7 @@ Something wrong. JFS requested, but jfs_superblock.h or libfs missing.
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
+#include "wfs_mount_check.h"
 
 #if (defined WFS_JFS) && (! defined HAVE_JFS_BREAD) && (defined WFS_REISER) && (! defined HAVE_REISER3_NEW_BREAD)
 # warning Detected unpatched JFS library with Reiser3FS enabled. WipeFreeSpace can crash! Read README.
