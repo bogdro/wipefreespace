@@ -92,4 +92,11 @@ extern char * wfs_duplicate_string WFS_PARAMS ((const char src[]));
 #  define WFS_STRDUP wfs_duplicate_string
 # endif
 
+# ifdef HAVE_STRCASECMP
+#  define WFS_STRCASECMP strcasecmp
+# else
+extern int wfs_compare WFS_PARAMS ((const char string1[], const char string2[]));
+#  define WFS_STRCASECMP wfs_compare
+# endif
+
 #endif	/* WFS_UTIL_H */
