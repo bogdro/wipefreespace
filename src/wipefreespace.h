@@ -60,7 +60,10 @@ Stat macros broken. Change your C library.
 # define	WFS_MNTBUFLEN 4096
 
 # undef		WFS_IS_SYNC_NEEDED
-# define	WFS_IS_SYNC_NEEDED(fs) ((((fs).npasses > 1) || ((fs).zero_pass != 0)) && (sig_recvd == 0))
+# define	WFS_IS_SYNC_NEEDED(fs) ( ((((fs).npasses > 1) && ((fs).wipe_mode != WFS_WIPE_MODE_PATTERN)) || ((fs).zero_pass != 0)) && (sig_recvd == 0))
+
+# undef		WFS_IS_SYNC_NEEDED_PAT
+# define	WFS_IS_SYNC_NEEDED_PAT(fs) ( (((fs).npasses > 1) && ((fs).wipe_mode == WFS_WIPE_MODE_PATTERN)) && (sig_recvd == 0))
 
 enum wfs_errcode
 {
@@ -113,6 +116,14 @@ enum wfs_curr_fs
 };
 
 typedef enum wfs_curr_fs wfs_curr_fs_t;
+
+enum wfs_wipe_mode
+{
+	WFS_WIPE_MODE_PATTERN	= 0,
+	WFS_WIPE_MODE_BLOCK
+};
+
+typedef enum wfs_wipe_mode wfs_wipe_mode_t;
 
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -296,6 +307,8 @@ struct wfs_fsid
 	int no_wipe_zero_blocks;
 		/* whether not to use the dedicated wiping tool: */
 	int use_dedicated;
+		/* the wiping mode - block-order or pattern-order: */
+	wfs_wipe_mode_t wipe_mode;
 };
 
 typedef struct wfs_fsid wfs_fsid_t;

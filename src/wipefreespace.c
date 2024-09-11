@@ -219,6 +219,7 @@ static int opt_blksize       = 0;
 static int opt_help          = 0;
 static int opt_license       = 0;
 static int opt_number        = 0;
+static int opt_order         = 0;
 static int opt_super         = 0;
 static int opt_version       = 0;
 static int opt_method        = 0;
@@ -243,6 +244,7 @@ static const struct option opts[] =
 	{ "nounrm",              no_argument,       &opt_nounrm,        1 },
 	{ "nowfs",               no_argument,       &opt_nowfs,         1 },
 	{ "no-wipe-zero-blocks", no_argument,       &opt_no_wipe_zero,  1 },
+	{ "order",               required_argument, &opt_order,         1 },
 	{ "superblock",          required_argument, &opt_super,         1 },
 	{ "use-dedicated",       no_argument,       &opt_use_dedicated, 1 },
 	{ "use-ioctl",           no_argument,       &opt_ioctl,         1 },
@@ -264,6 +266,7 @@ const char * const wfs_sig_unk = N_("unknown");
 
 static unsigned long int blocksize = 0;
 static unsigned long int super_off = 0;
+static wfs_wipe_mode_t wiping_mode = WFS_WIPE_MODE_PATTERN;
 
 static /*@observer@*/ const char *wfs_progname;	/* The name of the program */
 static int stdout_open = 1, stderr_open = 1;
@@ -606,6 +609,7 @@ print_help (
 	puts ( _("--nounrm\t\tDo NOT wipe undelete information") );
 	puts ( _("--nowfs\t\t\tDo NOT wipe free space on file system") );
 	puts ( _("--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system") );
+	puts ( _("--order <mode>\t\tWiping order - pattern or block") );
 	puts ( _("--use-dedicated\t\tUse the program dedicated for the given filesystem type") );
 	puts ( _("--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)") );
 	puts ( _("-v|--verbose\t\tVerbose output") );
@@ -644,6 +648,7 @@ wfs_wipe_filesytem (
 	fs.whichfs = WFS_CURR_FS_NONE;
 	fs.no_wipe_zero_blocks = opt_no_wipe_zero;
 	fs.use_dedicated = opt_use_dedicated;
+	fs.wipe_mode = wiping_mode;
 
 	if ( dev_name == NULL )
 	{
@@ -1184,6 +1189,25 @@ main (
 			opt_method_name = optarg;
 			opt_method = 0;
 		}
+		if ( opt_order == 1 )
+		{
+			if ( WFS_STRCASECMP ( optarg, "block" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_BLOCK;
+			}
+			else if ( WFS_STRCASECMP ( optarg, "pattern" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_PATTERN;
+			}
+			else
+			{
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+		}
 	}
 	wfs_optind = optind;
 	/* add up '-v' and '--verbose'. */
@@ -1393,6 +1417,36 @@ main (
 			continue;
 		}
 
+		if ( strcmp (argv[i], "--order") == 0 )
+		{
+			if ( i >= argc-1 )
+			{
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			if ( WFS_STRCASECMP ( argv[i+1], "block" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_BLOCK;
+			}
+			else if ( WFS_STRCASECMP ( argv[i+1], "pattern" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_PATTERN;
+			}
+			else
+			{
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			argv[i] = NULL;
+			argv[i+1] = NULL;
+			continue;
+		}
 		if ( strcmp (argv[i], "--") == 0 )
 		{
 			/* end-of-arguments marker */

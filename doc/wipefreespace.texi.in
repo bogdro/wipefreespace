@@ -873,6 +873,11 @@ where empty areas are read as all-zeros and do not take physical space unless
 actually written to).
 @end quotation
 
+@noindent @option{--order <type>}@*
+@quotation
+Use the given order for wiping (read below).
+@end quotation
+
 @noindent @option{--use-dedicated}@*
 @quotation
 Use the program dedicated for the given filesystem type if supported.
@@ -908,6 +913,16 @@ The following method names (case-insensitive) are available:
 @item schneier (Shneier's method, 7 passes, contains ITSG-06)
 @item dod (DoD, 3 passes, contains NAVSO P-5239-26 and German Federal
 Office for Information Security)
+@end itemize
+
+WipeFreeSpace supports two wiping orders:
+@itemize
+@item block - wipe block by block with all patterns and flush the overwriting
+data to disk after each pattern (so, each block waits to be wiped until the
+previous one is done),
+@item pattern - wipe the whole filesystem with each pattern (all blocks with the
+first pattern, then all blocks with the second pattern, and so on), and
+flushing the overwriting data to disk after each pattern. This is the default.
 @end itemize
 
 @strong{NOTE}: wiping with just one pattern at a time (@option{-n 1}) will @strong{NOT} perform wiping
