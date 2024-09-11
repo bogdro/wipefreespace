@@ -36,4 +36,7 @@ x-pack:	doc/wipefreespace.info
 	tar zcf wipefreespace-@VERSION@.tar.gz wipefreespace-@VERSION@
 	rm -fr wipefreespace-@VERSION@
 
-.PHONY: x-pack
+x-gen-potfiles-in:
+	/bin/egrep -l '(N|[^\w])_\("' src/*.c
+
+.PHONY: x-pack x-gen-potfiles-in
