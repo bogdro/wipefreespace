@@ -1207,6 +1207,7 @@ main (
 				}
 				return WFS_BAD_CMDLN;
 			}
+			opt_order = 0;
 		}
 	}
 	wfs_optind = optind;
