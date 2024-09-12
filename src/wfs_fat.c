@@ -1463,20 +1463,299 @@ wfs_fat_wipe_fs (
 	{
 		bytes_per_sector = 512;
 	}
-	pfat->last_free_clus = 0;
-	cluster = 0;
-	prev_cluster = 0;
-
-	while (sig_recvd == 0)
+	if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		if ( _lookup_free_clus (pfat, &cluster) != FAT_OK )
+		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			break;
+			pfat->last_free_clus = 0;
+			cluster = 0;
+			prev_cluster = 0;
+			while (sig_recvd == 0)
+			{
+				if ( _lookup_free_clus (pfat, &cluster) != FAT_OK )
+				{
+					break;
+				}
+				sec_num = (int)clus2sec (ptffs, cluster);
+				/* better not wipe anything before the first data sector, even if marked unused */
+				if ( (unsigned int)sec_num < ptffs->sec_first_data )
+				{
+					wfs_show_progress (WFS_PROGRESS_WFS,
+						(unsigned int)(((ptffs->total_clusters * j + cluster) * 100)/(ptffs->total_clusters * wfs_fs.npasses)),
+						&prev_percent);
+					pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
+					cluster = (cluster+1) % (ptffs->total_clusters);
+					if ( (cluster == 0)
+						|| (pfat->last_free_clus == 0) )
+					{
+						break;
+					}
+					continue;
+				}
+				if ( cluster < prev_cluster )
+				{
+					/* started from the beginning - means all clusters are done */
+					break;
+				}
+				prev_cluster = cluster;
+				if ( ptffs->fat_type == FT_FAT12 )
+				{
+					/* save the sector after the last wiped in a cluster
+					(FAT12 reads/writes two at a time): */
+					_read_fat_sector (pfat, sec_num + sec_per_clus-1);
+				}
+				wfs_fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
+				error = 0;
+				/* wipe all sectors of cluster 'cluster' */
+				for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
+				{
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
+					{
+						error = _read_fat_sector (pfat,
+							sec_num + sec_iter);
+						if ( error == 0 )
+						{
+							ret_wfs = WFS_BLKRD;
+							break;
+						}
+						if ( wfs_is_block_zero (pfat->secbuf,
+							fs_block_size) != 0 )
+						{
+							/* this block is all-zeros -
+							don't wipe, as requested */
+							continue;
+						}
+					}
+					error = _write_fat_sector (pfat,
+						sec_num + sec_iter);
+					if ( error == 0 )
+					{
+						break;
+					}
+				}
+				if ( error == 0 /* _write_fat_sector returns 1 on success */ )
+				{
+					ret_wfs = WFS_BLKWR;
+					break;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
+				{
+					error = wfs_fat_flush_fs (wfs_fs);
+				}
+				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+				{
+					/* last pass with zeros: */
+					error = 0;
+					/* wipe all sectors of cluster 'cluster' */
+					for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
+					{
+						if ( sig_recvd != 0 )
+						{
+							ret_wfs = WFS_SIGNAL;
+							break;
+						}
+						if ( wfs_fs.no_wipe_zero_blocks != 0 )
+						{
+							error = _read_fat_sector (pfat,
+								sec_num + sec_iter);
+							if ( error == 0 )
+							{
+								ret_wfs = WFS_BLKRD;
+								break;
+							}
+							if ( wfs_is_block_zero (pfat->secbuf,
+								fs_block_size) == 0 )
+							{
+								/* this block is all-zeros -
+								don't wipe, as requested */
+								continue;
+							}
+						}
+						WFS_MEMSET (pfat->secbuf, 0, bytes_per_sector);
+						error = _write_fat_sector (pfat,
+							sec_num + sec_iter);
+						if ( error == 0 )
+						{
+							break;
+						}
+					}
+					if ( error == 0 /* _write_fat_sector returns 1 on success */ )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+					/* No need to flush the last writing of a given block. *
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_fat_flush_fs (wfs_fs);
+					}*/
+					if ( sig_recvd != 0 )
+					{
+						ret_wfs = WFS_SIGNAL;
+						break;
+					}
+				}
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int)(((ptffs->total_clusters * j + cluster) * 100)/(ptffs->total_clusters * wfs_fs.npasses)),
+					&prev_percent);
+				pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
+				cluster = (cluster+1) % (ptffs->total_clusters);
+				if ( (cluster == 0)
+					|| (pfat->last_free_clus == 0) )
+				{
+					break;
+				}
+			}
 		}
-		sec_num = (int)clus2sec (ptffs, cluster);
-		/* better not wipe anything before the first data sector, even if marked unused */
-		if ( (unsigned int)sec_num < ptffs->sec_first_data )
+	}
+	else /* block-order */
+	{
+		pfat->last_free_clus = 0;
+		cluster = 0;
+		prev_cluster = 0;
+
+		while (sig_recvd == 0)
 		{
+			if ( _lookup_free_clus (pfat, &cluster) != FAT_OK )
+			{
+				break;
+			}
+			sec_num = (int)clus2sec (ptffs, cluster);
+			/* better not wipe anything before the first data sector, even if marked unused */
+			if ( (unsigned int)sec_num < ptffs->sec_first_data )
+			{
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(cluster * 100)/ptffs->total_clusters,
+					&prev_percent);
+				pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
+				cluster = (cluster+1) % (ptffs->total_clusters);
+				if ( (cluster == 0)
+					|| (pfat->last_free_clus == 0) )
+				{
+					break;
+				}
+				continue;
+			}
+			if ( cluster < prev_cluster )
+			{
+				/* started from the beginning - means all clusters are done */
+				break;
+			}
+			prev_cluster = cluster;
+			if ( ptffs->fat_type == FT_FAT12 )
+			{
+				/* save the sector after the last wiped in a cluster
+				(FAT12 reads/writes two at a time): */
+				_read_fat_sector (pfat, sec_num + sec_per_clus-1);
+			}
+			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+			{
+				wfs_fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
+				error = 0;
+				/* wipe all sectors of cluster 'cluster' */
+				for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
+				{
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
+					{
+						error = _read_fat_sector (pfat,
+							sec_num + sec_iter);
+						if ( error == 0 )
+						{
+							ret_wfs = WFS_BLKRD;
+							break;
+						}
+						if ( wfs_is_block_zero (pfat->secbuf,
+							fs_block_size) != 0 )
+						{
+							/* this block is all-zeros -
+							don't wipe, as requested */
+							continue;
+						}
+					}
+					error = _write_fat_sector (pfat,
+						sec_num + sec_iter);
+					if ( error == 0 )
+					{
+						break;
+					}
+				}
+				if ( error == 0 /* _write_fat_sector returns 1 on success */ )
+				{
+					ret_wfs = WFS_BLKWR;
+					break;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+				{
+					error = wfs_fat_flush_fs (wfs_fs);
+				}
+			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				/* last pass with zeros: */
+				error = 0;
+				/* wipe all sectors of cluster 'cluster' */
+				for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
+				{
+					if ( sig_recvd != 0 )
+					{
+						ret_wfs = WFS_SIGNAL;
+						break;
+					}
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
+					{
+						error = _read_fat_sector (pfat,
+							sec_num + sec_iter);
+						if ( error == 0 )
+						{
+							ret_wfs = WFS_BLKRD;
+							break;
+						}
+						if ( wfs_is_block_zero (pfat->secbuf,
+							fs_block_size) == 0 )
+						{
+							/* this block is all-zeros -
+							don't wipe, as requested */
+							continue;
+						}
+					}
+					WFS_MEMSET (pfat->secbuf, 0, bytes_per_sector);
+					error = _write_fat_sector (pfat,
+						sec_num + sec_iter);
+					if ( error == 0 )
+					{
+						break;
+					}
+				}
+				if ( error == 0 /* _write_fat_sector returns 1 on success */ )
+				{
+					ret_wfs = WFS_BLKWR;
+					break;
+				}
+				/* No need to flush the last writing of a given block. *
+				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				{
+					error = wfs_fat_flush_fs (wfs_fs);
+				}*/
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
+			}
 			wfs_show_progress (WFS_PROGRESS_WFS,
 				(cluster * 100)/ptffs->total_clusters,
 				&prev_percent);
@@ -1487,130 +1766,6 @@ wfs_fat_wipe_fs (
 			{
 				break;
 			}
-			continue;
-		}
-		if ( cluster < prev_cluster )
-		{
-			/* started from the beginning - means all clusters are done */
-			break;
-		}
-		prev_cluster = cluster;
-		if ( ptffs->fat_type == FT_FAT12 )
-		{
-			/* save the sector after the last wiped in a cluster
-			(FAT12 reads/writes two at a time): */
-			_read_fat_sector (pfat, sec_num + sec_per_clus-1);
-		}
-		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
-		{
-			wfs_fill_buffer ( j, pfat->secbuf, bytes_per_sector, selected, wfs_fs );
-			if ( sig_recvd != 0 )
-			{
-				ret_wfs = WFS_SIGNAL;
-				break;
-			}
-			error = 0;
-			/* wipe all sectors of cluster 'cluster' */
-			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
-			{
-				if ( wfs_fs.no_wipe_zero_blocks != 0 )
-				{
-					error = _read_fat_sector (pfat,
-						sec_num + sec_iter);
-					if ( error == 0 )
-					{
-						ret_wfs = WFS_BLKRD;
-						break;
-					}
-					if ( wfs_is_block_zero (pfat->secbuf,
-						fs_block_size) != 0 )
-					{
-						/* this block is all-zeros -
-						don't wipe, as requested */
-						continue;
-					}
-				}
-				error = _write_fat_sector (pfat,
-					sec_num + sec_iter);
-				if ( error == 0 )
-				{
-					break;
-				}
-			}
-			if ( error == 0 /* _write_fat_sector returns 1 on success */ )
-			{
-				ret_wfs = WFS_BLKWR;
-				break;
-			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-			{
-				error = wfs_fat_flush_fs (wfs_fs);
-			}
-		}
-		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
-		{
-			/* last pass with zeros: */
-			error = 0;
-			/* wipe all sectors of cluster 'cluster' */
-			for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
-			{
-				if ( sig_recvd != 0 )
-				{
-					ret_wfs = WFS_SIGNAL;
-					break;
-				}
-				if ( wfs_fs.no_wipe_zero_blocks != 0 )
-				{
-					error = _read_fat_sector (pfat,
-						sec_num + sec_iter);
-					if ( error == 0 )
-					{
-						ret_wfs = WFS_BLKRD;
-						break;
-					}
-					if ( wfs_is_block_zero (pfat->secbuf,
-						fs_block_size) == 0 )
-					{
-						/* this block is all-zeros -
-						don't wipe, as requested */
-						continue;
-					}
-				}
-				WFS_MEMSET (pfat->secbuf, 0, bytes_per_sector);
-				error = _write_fat_sector (pfat,
-					sec_num + sec_iter);
-				if ( error == 0 )
-				{
-					break;
-				}
-			}
-			if ( error == 0 /* _write_fat_sector returns 1 on success */ )
-			{
-				ret_wfs = WFS_BLKWR;
-				break;
-			}
-			/* No need to flush the last writing of a given block. *
-			if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-			{
-				error = wfs_fat_flush_fs (wfs_fs);
-			}*/
-			if ( sig_recvd != 0 )
-			{
-				ret_wfs = WFS_SIGNAL;
-				break;
-			}
-		}
-		wfs_show_progress (WFS_PROGRESS_WFS,
-			(cluster * 100)/ptffs->total_clusters,
-			&prev_percent);
-		pfat->last_free_clus = (pfat->last_free_clus+1) % (ptffs->total_clusters);
-		cluster = (cluster+1) % (ptffs->total_clusters);
-		if ( (cluster == 0)
-			|| (pfat->last_free_clus == 0) )
-		{
-			break;
 		}
 	}
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
