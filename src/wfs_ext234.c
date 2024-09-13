@@ -267,7 +267,15 @@ e2_do_block (
 
 	if ( bd->wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		max_passes = 1;
+		if ( bd->wd.is_zero_pass == 0 )
+		{
+			max_passes = 1;
+		}
+		else
+		{
+			/* a marker to wipe with zeros as the last pass */
+			max_passes = 0;
+		}
 	}
 	else
 	{
@@ -331,7 +339,8 @@ e2_do_block (
 			gerror = wfs_e234_flush_fs (bd->wd.filesys);
 		}
 	}
-	if ( (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
+	if ( ( (bd->wd.filesys.wipe_mode != WFS_WIPE_MODE_PATTERN) || (bd->wd.is_zero_pass == 1) )
+		&& (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* perform last wipe with zeros */
 		if ( j != bd->wd.filesys.npasses * 2 )
@@ -1004,6 +1013,7 @@ wfs_e234_wipe_fs (
 	block_data.wd.filesys = wfs_fs;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
+	block_data.wd.is_zero_pass = 0;
 	block_data.ino = NULL;
 	block_data.wd.isjournal = 0;
 	block_data.curr_inode = 0;
@@ -1059,7 +1069,8 @@ wfs_e234_wipe_fs (
 				{
 					block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
 					wfs_show_progress (WFS_PROGRESS_WFS,
-						(unsigned int)(((e2fs->super->s_blocks_count * j + blno) * 100)/(e2fs->super->s_blocks_count * wfs_fs.npasses)),
+						(unsigned int)(((e2fs->super->s_blocks_count * j + blno) * 100)
+							/(e2fs->super->s_blocks_count * wfs_fs.npasses)),
 						&prev_percent);
 					if ( (block_ret != 0) || (sig_recvd != 0) )
 					{
@@ -1075,6 +1086,26 @@ wfs_e234_wipe_fs (
 			wfs_show_progress (WFS_PROGRESS_WFS,
 				(unsigned int)((j + 1) * 100 / wfs_fs.npasses),
 				&prev_percent);
+		}
+		if ( (block_data.wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
+		{
+			/* last pass with zeros */
+			wfs_e234_flush_fs (wfs_fs);
+			block_data.wd.is_zero_pass = 1;
+			for ( blno = 1; (blno < e2fs->super->s_blocks_count)
+				&& (sig_recvd == 0); blno++ )
+			{
+				if ( ext2fs_test_block_bitmap (e2fs->block_map, blno) == 0 )
+				{
+					block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
+					if ( (block_ret != 0) || (sig_recvd != 0) )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+				}
+			}
+			wfs_e234_flush_fs (wfs_fs);
 		}
 	}
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);

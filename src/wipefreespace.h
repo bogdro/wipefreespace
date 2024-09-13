@@ -60,7 +60,7 @@ Stat macros broken. Change your C library.
 # define	WFS_MNTBUFLEN 4096
 
 # undef		WFS_IS_SYNC_NEEDED
-# define	WFS_IS_SYNC_NEEDED(fs) ( ((((fs).npasses > 1) && ((fs).wipe_mode != WFS_WIPE_MODE_PATTERN)) || ((fs).zero_pass != 0)) && (sig_recvd == 0))
+# define	WFS_IS_SYNC_NEEDED(fs) ( ((((fs).npasses > 1) || ((fs).zero_pass != 0)) && ((fs).wipe_mode != WFS_WIPE_MODE_PATTERN)) && (sig_recvd == 0))
 
 # undef		WFS_IS_SYNC_NEEDED_PAT
 # define	WFS_IS_SYNC_NEEDED_PAT(fs) ( (((fs).npasses > 1) && ((fs).wipe_mode == WFS_WIPE_MODE_PATTERN)) && (sig_recvd == 0))
@@ -323,6 +323,7 @@ struct wfs_wipedata
 	int			ret_val;	/* return value, for threads */
 	unsigned char *		buf;		/* current buffer */
 	int			isjournal;	/* is the journal being wiped currently */
+	int			is_zero_pass;	/* is the current pass the zero pass */
 };
 
 typedef struct wfs_wipedata wfs_wipedata_t;
