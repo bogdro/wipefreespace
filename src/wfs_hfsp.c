@@ -287,7 +287,7 @@ wfs_hfsp_wipe_part_file (
 		if ( (prev_percent != NULL) && (hfsp_volume->vol.file_count != 0) )
 		{
 			wfs_show_progress (WFS_PROGRESS_PART,
-				(unsigned int)((*curr_file_no)/(hfsp_volume->vol.file_count)), prev_percent);
+				(unsigned int)(((*curr_file_no) * 100)/(hfsp_volume->vol.file_count)), prev_percent);
 		}
 	}
 
