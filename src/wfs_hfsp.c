@@ -727,7 +727,7 @@ wfs_hfsp_wipe_fs (
 				}
 			} /* if (volume_allocated) */
 			wfs_show_progress (WFS_PROGRESS_WFS,
-				(unsigned int)(curr_block / hfsp_volume->vol.total_blocks),
+				(unsigned int)((curr_block * 100) / hfsp_volume->vol.total_blocks),
 				&prev_percent);
 		} /* for (curr_block) */
 	}
