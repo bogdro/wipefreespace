@@ -1543,12 +1543,6 @@ wfs_fat_wipe_fs (
 					ret_wfs = WFS_BLKWR;
 					break;
 				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
-				{
-					error = wfs_fat_flush_fs (wfs_fs);
-				}
 				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 				{
 					/* last pass with zeros: */
@@ -1612,6 +1606,12 @@ wfs_fat_wipe_fs (
 				{
 					break;
 				}
+			}
+			/* Flush after each writing, if more than 1 overwriting needs to be done.
+			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
+			{
+				error = wfs_fat_flush_fs (wfs_fs);
 			}
 		}
 	}
