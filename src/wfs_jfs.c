@@ -777,8 +777,9 @@ wfs_jfs_wipe_fs (
 			if ( block_map[i]->nfree == 0 )
 			{
 				/* update the progress: */
-				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((i*100)/ndmaps
-					+ (j*100)/block_map[i]->nblocks/ndmaps), &prev_percent);
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int)((i*100)/ndmaps),
+					&prev_percent);
 				continue;
 			}
 			for ( j = 0; (j < block_map[i]->nblocks)
