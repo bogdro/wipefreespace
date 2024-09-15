@@ -52,10 +52,6 @@
 # include <stdlib.h>	/* exit() */
 #endif
 
-#ifdef HAVE_SYS_SYSMACROS_H
-# include <sys/sysmacros.h>
-#endif
-
 #ifdef HAVE_SYS_STAT_H
 # include <sys/stat.h>
 #endif
