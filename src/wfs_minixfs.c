@@ -676,19 +676,6 @@ wfs_minixfs_wipe_fs (
 						ret_wfs = WFS_SIGNAL;
 						break;
 					}
-					error = 0;
-					WFS_SET_ERRNO (0);
-					written = fwrite (buf, 1, fs_block_size,
-						goto_blk (minix->fp,
-						(int)(current_block & 0x0FFFFFFFF)));
-					if ( written != fs_block_size )
-					{
-# ifdef HAVE_ERRNO_H
-						error = errno;
-# endif
-						ret_wfs = WFS_BLKWR;
-						break;
-					}
 				}
 				while ( (current_block != -1L) && (sig_recvd == 0) );
 				wfs_minixfs_flush_fs (wfs_fs);
