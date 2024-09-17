@@ -624,24 +624,6 @@ wfs_hfsp_wipe_fs (
 						ret_wfs = WFS_BLKWR;
 						break;
 					}
-					if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
-						&& (ret_wfs == WFS_SUCCESS) )
-					{
-						/* perform last wipe with zeros */
-						WFS_MEMSET ( buf, 0, fs_block_size );
-						error = volume_writetobuf (hfsp_volume,
-							buf, (long int)curr_block);
-						if ( error != 0 )
-						{
-							ret_wfs = WFS_BLKWR;
-							/* do NOT break here */
-						}
-						/* No need to flush the last writing of a given block. *
-						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-						{
-							error = wfs_hfsp_flush_fs (wfs_fs);
-						}*/
-					}
 				} /* if (volume_allocated) */
 				wfs_show_progress (WFS_PROGRESS_WFS,
 					(unsigned int)(((hfsp_volume->vol.total_blocks * j + curr_block) * 100)
@@ -654,6 +636,31 @@ wfs_hfsp_wipe_fs (
 			{
 				error = wfs_hfsp_flush_fs (wfs_fs);
 			}
+		}
+		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
+			&& (ret_wfs == WFS_SUCCESS) )
+		{
+			wfs_hfsp_flush_fs (wfs_fs);
+			/* perform last wipe with zeros */
+			WFS_MEMSET ( buf, 0, fs_block_size );
+			for ( curr_block = 0;
+				(curr_block < hfsp_volume->vol.total_blocks)
+				&& (sig_recvd == 0);
+				curr_block++ )
+			{
+				if ( volume_allocated (hfsp_volume, curr_block) == 0 )
+				{
+					/* block is not allocated - wipe it */
+					error = volume_writetobuf (hfsp_volume,
+						buf, (long int)curr_block);
+					if ( error != 0 )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+				} /* if (volume_allocated) */
+			}
+			wfs_hfsp_flush_fs (wfs_fs);
 		}
 	}
 	else
