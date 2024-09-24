@@ -42,6 +42,10 @@
 # endif /* MAJOR_IN_SYSMACROS */
 #endif
 
+#ifdef HAVE_SYS_SYSMACROS_H
+# include <sys/sysmacros.h>
+#endif
+
 #ifdef HAVE_ASM_TYPES_H
 # include <asm/types.h>
 #else
