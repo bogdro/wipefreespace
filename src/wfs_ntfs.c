@@ -2224,59 +2224,64 @@ wfs_ntfs_wipe_fs (
 		}
 		return WFS_MALLOC;
 	}
-
-	for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
+	if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		/* check if cluster in use */
-		if (utils_cluster_in_use (ntfs, i) != 0)
-		{
-			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters),
-				&prev_percent);
-			continue;
-		}
-
-		/* cluster is unused - wipe it */
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			size = ntfs->cluster_size;
-			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
 			{
-				result = ntfs_pread (ntfs->dev, ntfs->cluster_size * i, size, buf);
+				/* check if cluster in use */
+				if (utils_cluster_in_use (ntfs, i) != 0)
+				{
+					wfs_show_progress (WFS_PROGRESS_WFS,
+						(unsigned int) (((ntfs->nr_clusters * (s64)j + i) * 100)/(ntfs->nr_clusters * (s64)wfs_fs.npasses)),
+						&prev_percent);
+					continue;
+				}
+
+				/* cluster is unused - wipe it */
+				size = ntfs->cluster_size;
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					result = ntfs_pread (ntfs->dev, ntfs->cluster_size * i, size, buf);
+					if (result != size)
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (buf, (size_t)size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						break;
+					}
+				}
+				wfs_fill_buffer (j, buf, fs_block_size, selected, wfs_fs);/* buf OK */
+				if ( sig_recvd != 0 )
+				{
+					break;
+				}
+
+				/* writing modified cluster here: */
+				result = ntfs_pwrite (ntfs->dev, ntfs->cluster_size * i, size, buf);
 				if (result != size)
 				{
-					ret_wfs = WFS_BLKRD;
-					break;
+					free (buf);
+					wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+					if ( error_ret != NULL )
+					{
+						*error_ret = error;
+					}
+					return WFS_BLKWR;
 				}
-				if ( wfs_is_block_zero (buf, (size_t)size) != 0 )
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
-					/* this block is all-zeros - don't wipe, as requested */
-					j = wfs_fs.npasses * 2;
-					break;
+					error = wfs_ntfs_flush_fs (wfs_fs);
 				}
-			}
-			wfs_fill_buffer (j, buf, fs_block_size, selected, wfs_fs);/* buf OK */
-			if ( sig_recvd != 0 )
-			{
-		       		break;
-			}
-
-			/* writing modified cluster here: */
-			result = ntfs_pwrite (ntfs->dev, ntfs->cluster_size * i, size, buf);
-			if (result != size)
-			{
-				free (buf);
-				wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
-				if ( error_ret != NULL )
-				{
-					*error_ret = error;
-				}
-				return WFS_BLKWR;
-			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-			{
-				error = wfs_ntfs_flush_fs (wfs_fs);
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int) (((ntfs->nr_clusters * (s64)j + i) * 100)/(ntfs->nr_clusters * (s64)wfs_fs.npasses)),
+					&prev_percent);
 			}
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
@@ -2284,33 +2289,124 @@ wfs_ntfs_wipe_fs (
 			/* last pass with zeros: */
 			if ( j != wfs_fs.npasses * 2 )
 			{
-				/* this block is NOT all-zeros - wipe */
-				WFS_MEMSET (buf, 0, fs_block_size);
 				if ( sig_recvd == 0 )
 				{
+					WFS_MEMSET (buf, 0, fs_block_size);
 					size = ntfs->cluster_size;
-					/* writing modified cluster here: */
-					result = ntfs_pwrite (ntfs->dev,
-						ntfs->cluster_size * i, size, buf);
-					if (result != size)
+					for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
 					{
-						free (buf);
-						wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
-						if ( error_ret != NULL )
+						/* writing modified cluster here: */
+						result = ntfs_pwrite (ntfs->dev,
+							ntfs->cluster_size * i, size, buf);
+						if (result != size)
 						{
-							*error_ret = error;
+							free (buf);
+							wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+							if ( error_ret != NULL )
+							{
+								*error_ret = error;
+							}
+							return WFS_BLKWR;
 						}
-						return WFS_BLKWR;
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_ntfs_flush_fs (wfs_fs);
+						}*/
 					}
-					/* No need to flush the last writing of a given block. *
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-					{
-						error = wfs_ntfs_flush_fs (wfs_fs);
-					}*/
 				}
 			}
 		}
-		wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters), &prev_percent);
+	}
+	else
+	{
+		for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
+		{
+			/* check if cluster in use */
+			if (utils_cluster_in_use (ntfs, i) != 0)
+			{
+				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters),
+					&prev_percent);
+				continue;
+			}
+
+			/* cluster is unused - wipe it */
+			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+			{
+				size = ntfs->cluster_size;
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					result = ntfs_pread (ntfs->dev, ntfs->cluster_size * i, size, buf);
+					if (result != size)
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (buf, (size_t)size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				wfs_fill_buffer (j, buf, fs_block_size, selected, wfs_fs);/* buf OK */
+				if ( sig_recvd != 0 )
+				{
+					break;
+				}
+
+				/* writing modified cluster here: */
+				result = ntfs_pwrite (ntfs->dev, ntfs->cluster_size * i, size, buf);
+				if (result != size)
+				{
+					free (buf);
+					wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+					if ( error_ret != NULL )
+					{
+						*error_ret = error;
+					}
+					return WFS_BLKWR;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+				{
+					error = wfs_ntfs_flush_fs (wfs_fs);
+				}
+			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				/* last pass with zeros: */
+				if ( j != wfs_fs.npasses * 2 )
+				{
+					/* this block is NOT all-zeros - wipe */
+					WFS_MEMSET (buf, 0, fs_block_size);
+					if ( sig_recvd == 0 )
+					{
+						size = ntfs->cluster_size;
+						/* writing modified cluster here: */
+						result = ntfs_pwrite (ntfs->dev,
+							ntfs->cluster_size * i, size, buf);
+						if (result != size)
+						{
+							free (buf);
+							wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+							if ( error_ret != NULL )
+							{
+								*error_ret = error;
+							}
+							return WFS_BLKWR;
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_ntfs_flush_fs (wfs_fs);
+						}*/
+					}
+				}
+			}
+			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters), &prev_percent);
+		}
 	}
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	free (buf);
