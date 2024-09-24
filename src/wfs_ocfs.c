@@ -584,77 +584,83 @@ wfs_ocfs_wipe_fs (
 		return WFS_MALLOC;
 	}
 
-	for ( curr_cluster = 0;
-		(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
-		curr_cluster++ )
+	if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		is_alloc = 1;
-		err = ocfs2_test_cluster_allocated (ocfs2, curr_cluster,
-			&is_alloc);
-		if ( err != 0 )
-		{
-			ret_wfs = WFS_BLBITMAPREAD;
-			wfs_show_progress (WFS_PROGRESS_WFS,
-				(unsigned int) (curr_cluster/ocfs2->fs_clusters),
-				&prev_percent);
-			continue;
-		}
-		if ( is_alloc != 0 )
-		{
-			wfs_show_progress (WFS_PROGRESS_WFS,
-				(unsigned int) (curr_cluster/ocfs2->fs_clusters),
-				&prev_percent);
-			continue;
-		}
-
-		/* cluster is unused - wipe it */
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			for ( curr_cluster = 0;
+				(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
+				curr_cluster++ )
 			{
-				err = io_read_block_nocache (ocfs2->fs_io,
+				is_alloc = 1;
+				err = ocfs2_test_cluster_allocated (ocfs2, curr_cluster,
+					&is_alloc);
+				if ( err != 0 )
+				{
+					ret_wfs = WFS_BLBITMAPREAD;
+					wfs_show_progress (WFS_PROGRESS_WFS,
+						(unsigned int) (((ocfs2->fs_clusters * j + curr_cluster) * 100)/(ocfs2->fs_clusters * wfs_fs.npasses)),
+						&prev_percent);
+					continue;
+				}
+				if ( is_alloc != 0 )
+				{
+					wfs_show_progress (WFS_PROGRESS_WFS,
+						(unsigned int) (curr_cluster/ocfs2->fs_clusters),
+						&prev_percent);
+					continue;
+				}
+
+				/* cluster is unused - wipe it */
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					err = io_read_block_nocache (ocfs2->fs_io,
+						/* blkno */ curr_cluster * blocks_per_cluster,
+						/* count */ (int)blocks_per_cluster,
+						(char *)buf);
+					if ( err != 0 )
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (buf, cluster_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				wfs_fill_buffer ( j, buf, cluster_size,
+					selected, wfs_fs );/* buf OK */
+				if ( sig_recvd != 0 )
+				{
+					break;
+				}
+				/* writing modified cluster here: */
+				err = io_write_block_nocache (ocfs2->fs_io,
 					/* blkno */ curr_cluster * blocks_per_cluster,
 					/* count */ (int)blocks_per_cluster,
 					(char *)buf);
 				if ( err != 0 )
 				{
-					ret_wfs = WFS_BLKRD;
-					break;
+					free (buf);
+					wfs_show_progress (WFS_PROGRESS_WFS, 100,
+						&prev_percent);
+					if ( error_ret != NULL )
+					{
+						*error_ret = error;
+					}
+					return WFS_BLKWR;
 				}
-				if ( wfs_is_block_zero (buf, cluster_size) != 0 )
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
-					/* this block is all-zeros - don't wipe, as requested */
-					j = wfs_fs.npasses * 2;
-					break;
+					error = wfs_ocfs_flush_fs (wfs_fs);
 				}
-			}
-			wfs_fill_buffer ( j, buf, cluster_size,
-				selected, wfs_fs );/* buf OK */
-			if ( sig_recvd != 0 )
-			{
-		       		break;
-			}
-			/* writing modified cluster here: */
-			err = io_write_block_nocache (ocfs2->fs_io,
-				/* blkno */ curr_cluster * blocks_per_cluster,
-				/* count */ (int)blocks_per_cluster,
-				(char *)buf);
-			if ( err != 0 )
-			{
-				free (buf);
-				wfs_show_progress (WFS_PROGRESS_WFS, 100,
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int) (((ocfs2->fs_clusters * j + curr_cluster) * 100)/(ocfs2->fs_clusters * wfs_fs.npasses)),
 					&prev_percent);
-				if ( error_ret != NULL )
-				{
-					*error_ret = error;
-				}
-				return WFS_BLKWR;
-			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-			{
-				error = wfs_ocfs_flush_fs (wfs_fs);
 			}
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
@@ -665,32 +671,145 @@ wfs_ocfs_wipe_fs (
 				WFS_MEMSET ( buf, 0, cluster_size );
 				if ( sig_recvd == 0 )
 				{
-					/* writing modified cluster here: */
-					err = io_write_block_nocache (ocfs2->fs_io,
-						curr_cluster * blocks_per_cluster,
-						(int)blocks_per_cluster, (char *)buf);
-					if ( err != 0 )
+					for ( curr_cluster = 0;
+						(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
+						curr_cluster++ )
 					{
-						free (buf);
-						wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
-						if ( error_ret != NULL )
+						/* writing modified cluster here: */
+						err = io_write_block_nocache (ocfs2->fs_io,
+							curr_cluster * blocks_per_cluster,
+							(int)blocks_per_cluster, (char *)buf);
+						if ( err != 0 )
 						{
-							*error_ret = error;
+							free (buf);
+							wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+							if ( error_ret != NULL )
+							{
+								*error_ret = error;
+							}
+							return WFS_BLKWR;
 						}
-						return WFS_BLKWR;
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_ocfs_flush_fs (
+								wfs_fs);
+						}*/
 					}
-					/* No need to flush the last writing of a given block. *
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-					{
-						error = wfs_ocfs_flush_fs (
-							wfs_fs);
-					}*/
 				}
 			}
 		}
-		wfs_show_progress (WFS_PROGRESS_WFS,
-			(unsigned int) ((100*curr_cluster)/ocfs2->fs_clusters),
-			&prev_percent);
+	}
+	else
+	{
+		for ( curr_cluster = 0;
+			(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
+			curr_cluster++ )
+		{
+			is_alloc = 1;
+			err = ocfs2_test_cluster_allocated (ocfs2, curr_cluster,
+				&is_alloc);
+			if ( err != 0 )
+			{
+				ret_wfs = WFS_BLBITMAPREAD;
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int) (curr_cluster/ocfs2->fs_clusters),
+					&prev_percent);
+				continue;
+			}
+			if ( is_alloc != 0 )
+			{
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int) (curr_cluster/ocfs2->fs_clusters),
+					&prev_percent);
+				continue;
+			}
+
+			/* cluster is unused - wipe it */
+			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+			{
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					err = io_read_block_nocache (ocfs2->fs_io,
+						/* blkno */ curr_cluster * blocks_per_cluster,
+						/* count */ (int)blocks_per_cluster,
+						(char *)buf);
+					if ( err != 0 )
+					{
+						ret_wfs = WFS_BLKRD;
+						break;
+					}
+					if ( wfs_is_block_zero (buf, cluster_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				wfs_fill_buffer ( j, buf, cluster_size,
+					selected, wfs_fs );/* buf OK */
+				if ( sig_recvd != 0 )
+				{
+					break;
+				}
+				/* writing modified cluster here: */
+				err = io_write_block_nocache (ocfs2->fs_io,
+					/* blkno */ curr_cluster * blocks_per_cluster,
+					/* count */ (int)blocks_per_cluster,
+					(char *)buf);
+				if ( err != 0 )
+				{
+					free (buf);
+					wfs_show_progress (WFS_PROGRESS_WFS, 100,
+						&prev_percent);
+					if ( error_ret != NULL )
+					{
+						*error_ret = error;
+					}
+					return WFS_BLKWR;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+				{
+					error = wfs_ocfs_flush_fs (wfs_fs);
+				}
+			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				if ( j != wfs_fs.npasses * 2 )
+				{
+					/* last pass with zeros: */
+					WFS_MEMSET ( buf, 0, cluster_size );
+					if ( sig_recvd == 0 )
+					{
+						/* writing modified cluster here: */
+						err = io_write_block_nocache (ocfs2->fs_io,
+							curr_cluster * blocks_per_cluster,
+							(int)blocks_per_cluster, (char *)buf);
+						if ( err != 0 )
+						{
+							free (buf);
+							wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
+							if ( error_ret != NULL )
+							{
+								*error_ret = error;
+							}
+							return WFS_BLKWR;
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_ocfs_flush_fs (
+								wfs_fs);
+						}*/
+					}
+				}
+			}
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int) ((100*curr_cluster)/ocfs2->fs_clusters),
+				&prev_percent);
+		}
 	}
 
 	free (buf);
