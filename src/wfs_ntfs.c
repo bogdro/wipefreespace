@@ -2291,6 +2291,7 @@ wfs_ntfs_wipe_fs (
 			{
 				if ( sig_recvd == 0 )
 				{
+					wfs_ntfs_flush_fs (wfs_fs);
 					WFS_MEMSET (buf, 0, fs_block_size);
 					size = ntfs->cluster_size;
 					for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
@@ -2314,6 +2315,7 @@ wfs_ntfs_wipe_fs (
 							error = wfs_ntfs_flush_fs (wfs_fs);
 						}*/
 					}
+					wfs_ntfs_flush_fs (wfs_fs);
 				}
 			}
 		}

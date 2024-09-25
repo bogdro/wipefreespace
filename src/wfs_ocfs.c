@@ -671,6 +671,7 @@ wfs_ocfs_wipe_fs (
 				WFS_MEMSET ( buf, 0, cluster_size );
 				if ( sig_recvd == 0 )
 				{
+					wfs_ocfs_flush_fs (wfs_fs);
 					for ( curr_cluster = 0;
 						(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
 						curr_cluster++ )
@@ -696,6 +697,7 @@ wfs_ocfs_wipe_fs (
 								wfs_fs);
 						}*/
 					}
+					wfs_ocfs_flush_fs (wfs_fs);
 				}
 			}
 		}
