@@ -1568,7 +1568,6 @@ wfs_fat_wipe_fs (
 			pfat->last_free_clus = 0;
 			cluster = 0;
 			prev_cluster = 0;
-			WFS_MEMSET (pfat->secbuf, 0, bytes_per_sector);
 			while (sig_recvd == 0)
 			{
 				if ( _lookup_free_clus (pfat, &cluster) != FAT_OK )
@@ -1607,6 +1606,7 @@ wfs_fat_wipe_fs (
 				}
 				error = 0;
 				/* wipe all sectors of cluster 'cluster' */
+				WFS_MEMSET (pfat->secbuf, 0, bytes_per_sector);
 				for ( sec_iter = 0; sec_iter < sec_per_clus; sec_iter++ )
 				{
 					error = _write_fat_sector (pfat,
