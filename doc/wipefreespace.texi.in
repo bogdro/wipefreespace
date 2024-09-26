@@ -283,11 +283,24 @@ Then compile and install that package. Ext4 support requires new enough versions
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks (@strong{NOTE}: may print errors
 on sparse files and other exotic objects)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks),
 wiping deleted files' names and setting deleted files' names' lengths once to zero
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping the journal
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -316,10 +329,23 @@ in the official release of ntfsprogs, WipeFreeSpace still will compile.
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks (in files exceeding i-node size)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' names, deleted files' names' lengths (wiping, not zeroing once),
 wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping the journal
+ @itemize
+ @item block-order
+ @end itemize
 @item running the dedicated wiping tool, @command{ntfswipe}
 @end itemize
 
@@ -364,8 +390,17 @@ Version 2.7.11 is enough, earlier versions will probably also work.
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -452,11 +487,27 @@ won't help in this case.
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks, but only if the
 block has just 1 item, and limited to 2^32 blocks
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' names
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping the journal
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -512,8 +563,18 @@ You can use the provided patches to do this:
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping the journal
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -553,10 +614,23 @@ ALL its header - @file{*.h} - files (including the private ones, from the @file{
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks (@strong{NOTE}: may crash on sparse files
 and other exotic objects)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' names (at least the short ones)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 @strong{NOTE}: the original TFFS library does its own data flushing (in the
@@ -620,9 +694,22 @@ to do this:
 Operations:
 @itemize
 @item wiping the free space, limited to 2^32 blocks
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' names
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -671,8 +758,18 @@ won't help in this case.
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping the journal (log)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space)
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -699,8 +796,18 @@ put the correct @option{-I} and @option{-L} options in the compiler flags).
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 
@@ -725,10 +832,26 @@ to get it. Then compile and install that package.
 Operations:
 @itemize
 @item wiping the free space
+ @itemize
+ @item pattern-order
+ @item block-order
+ @end itemize
 @item wiping free space in partially used blocks
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' names (if the library works)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping deleted files' data (part of free space or partially used blocks)
+ @itemize
+ @item block-order
+ @end itemize
 @item wiping the journal (log)
+ @itemize
+ @item block-order
+ @end itemize
 @end itemize
 
 @c ==================================================================
