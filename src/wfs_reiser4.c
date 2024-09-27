@@ -569,7 +569,7 @@ wfs_r4_wipe_part_work (
 			{
 				curr_direlem++;
 				wfs_show_progress (WFS_PROGRESS_PART,
-					(unsigned int) (curr_direlem/direlems),
+					(unsigned int) ((curr_direlem * 100)/direlems),
 					&prev_percent);
 			}
 		}

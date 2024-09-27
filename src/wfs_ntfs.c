@@ -1817,7 +1817,7 @@ wfs_ntfs_wipe_journal (
 			error = wfs_ntfs_flush_fs (wfs_fs);
 		}
 		wfs_show_progress (WFS_PROGRESS_UNRM,
-			(unsigned int) (j / (wfs_fs.npasses+1)), &prev_percent);
+			(unsigned int) (50 + (j * 50) / (wfs_fs.npasses+1)), &prev_percent);
 	}
 	free (buf);
 	ntfs_attr_close(na);
@@ -2009,7 +2009,7 @@ wfs_ntfs_wipe_part (
 				ret_wfs = WFS_INOREAD;
 			}
 			wfs_show_progress (WFS_PROGRESS_PART,
-				(unsigned int) (inode_num/nr_mft_records),
+				(unsigned int) ((inode_num * 100)/nr_mft_records),
 				&prev_percent);
 			continue;
                 }
@@ -2017,7 +2017,7 @@ wfs_ntfs_wipe_part (
 		{
 			ret_wfs = WFS_INOREAD;
 			wfs_show_progress (WFS_PROGRESS_PART,
-				(unsigned int) (inode_num/nr_mft_records),
+				(unsigned int) ((inode_num * 100)/nr_mft_records),
 				&prev_percent);
 			continue;
                 }
@@ -2075,7 +2075,7 @@ wfs_ntfs_wipe_part (
 		}
 		ntfs_inode_close (ni);
 		wfs_show_progress (WFS_PROGRESS_PART,
-			(unsigned int) (inode_num/nr_mft_records),
+			(unsigned int) ((inode_num * 100)/nr_mft_records),
 			&prev_percent);
 	}
 	wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
@@ -2327,7 +2327,8 @@ wfs_ntfs_wipe_fs (
 			/* check if cluster in use */
 			if (utils_cluster_in_use (ntfs, i) != 0)
 			{
-				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters),
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int) ((i * 100)/ntfs->nr_clusters),
 					&prev_percent);
 				continue;
 			}
@@ -2407,7 +2408,8 @@ wfs_ntfs_wipe_fs (
 					}
 				}
 			}
-			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int) (i/ntfs->nr_clusters), &prev_percent);
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int) ((i * 100)/ntfs->nr_clusters), &prev_percent);
 		}
 	}
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
@@ -2651,7 +2653,7 @@ wfs_ntfs_wipe_unrm (
 			}
 		}
 		wfs_show_progress (WFS_PROGRESS_UNRM,
-			(unsigned int) ((i * 50) / (bmpsize * 8)), &prev_percent);
+			(unsigned int) ((i * 8 * 50) / (bmpsize * 8)), &prev_percent);
 	}
 done:
 	ntfs_attr_close (bitmapattr);

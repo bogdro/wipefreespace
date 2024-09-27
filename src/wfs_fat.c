@@ -1151,7 +1151,7 @@ wfs_fat_wipe_file_tails_in_dir (
 			{
 				curr_direlem++;
 				wfs_show_progress (WFS_PROGRESS_PART,
-					curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+					(curr_direlem * 100)/((tffs_t *)fat)->pbs->root_ent_cnt,
 					&prev_percent);
 			}
 			continue;
@@ -1275,7 +1275,7 @@ wfs_fat_wipe_file_tails_in_dir (
 		{
 			curr_direlem++;
 			wfs_show_progress (WFS_PROGRESS_PART,
-				curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+				(curr_direlem * 100)/((tffs_t *)fat)->pbs->root_ent_cnt,
 				&prev_percent);
 		}
 	}
@@ -1939,7 +1939,7 @@ wfs_fat_wipe_unrm_dir (
 			{
 				curr_direlem++;
 				wfs_show_progress (WFS_PROGRESS_UNRM,
-					curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+					(curr_direlem * 100)/((tffs_t *)fat)->pbs->root_ent_cnt,
 					&prev_percent);
 			}
 		}
@@ -1974,7 +1974,7 @@ wfs_fat_wipe_unrm_dir (
 		{
 			curr_direlem++;
 			wfs_show_progress (WFS_PROGRESS_UNRM,
-				curr_direlem/((tffs_t *)fat)->pbs->root_ent_cnt,
+				(curr_direlem * 100)/((tffs_t *)fat)->pbs->root_ent_cnt,
 				&prev_percent);
 		}
 	}

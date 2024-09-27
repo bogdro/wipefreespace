@@ -606,7 +606,7 @@ wfs_ocfs_wipe_fs (
 				if ( is_alloc != 0 )
 				{
 					wfs_show_progress (WFS_PROGRESS_WFS,
-						(unsigned int) (curr_cluster/ocfs2->fs_clusters),
+						(unsigned int) (((ocfs2->fs_clusters * j + curr_cluster) * 100)/(ocfs2->fs_clusters * wfs_fs.npasses)),
 						&prev_percent);
 					continue;
 				}
@@ -715,14 +715,14 @@ wfs_ocfs_wipe_fs (
 			{
 				ret_wfs = WFS_BLBITMAPREAD;
 				wfs_show_progress (WFS_PROGRESS_WFS,
-					(unsigned int) (curr_cluster/ocfs2->fs_clusters),
+					(unsigned int) ((curr_cluster * 100)/ocfs2->fs_clusters),
 					&prev_percent);
 				continue;
 			}
 			if ( is_alloc != 0 )
 			{
 				wfs_show_progress (WFS_PROGRESS_WFS,
-					(unsigned int) (curr_cluster/ocfs2->fs_clusters),
+					(unsigned int) ((curr_cluster * 100)/ocfs2->fs_clusters),
 					&prev_percent);
 				continue;
 			}
