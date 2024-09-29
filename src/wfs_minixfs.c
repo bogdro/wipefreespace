@@ -265,12 +265,11 @@ wfs_minixfs_wipe_dir (
 				{
 					continue;
 				}
-				if (blk[j+2] == '.' && blk[j+3] == '\0')
+				if (WFS_IS_NAME_CURRENT_DIR(&blk[j+2]))
 				{
 					continue;
 				}
-				if (blk[j+2] == '.' && blk[j+3] == '.'
-					&& blk[j+4] == '\0')
+				if (WFS_IS_NAME_PARENT_DIR(&blk[j+2]))
 				{
 					continue;
 				}
@@ -307,12 +306,11 @@ wfs_minixfs_wipe_dir (
 						continue;
 					}
 					/* wiping partially used blocks */
-					if (blk[j+2] == '.' && blk[j+3] == '\0')
+					if (WFS_IS_NAME_CURRENT_DIR(&blk[j+2]))
 					{
 						continue;
 					}
-					if (blk[j+2] == '.' && blk[j+3] == '.'
-						&& blk[j+4] == '\0')
+					if (WFS_IS_NAME_PARENT_DIR(&blk[j+2]))
 					{
 						continue;
 					}
