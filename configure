@@ -6915,21 +6915,9 @@ then :
 printf "%s\n" "#define HAVE_NTFS_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "ntfs/ntfs_volume.h" "ac_cv_header_ntfs_ntfs_volume_h" "#ifdef HAVE_STDARG_H
+  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
-
-
-"
-if test "x$ac_cv_header_ntfs_ntfs_volume_h" = xyes
-then :
-
-printf "%s\n" "#define HAVE_NTFS_NTFS_VOLUME_H 1" >>confdefs.h
-
-else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
 
 
 "
@@ -6940,8 +6928,6 @@ printf "%s\n" "#define HAVE_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
   has_ntfs_h=no
-fi
-
 fi
 
 fi
@@ -6959,21 +6945,9 @@ then :
 printf "%s\n" "#define HAVE_NTFS_3G_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "ntfs-3g/ntfs_volume.h" "ac_cv_header_ntfs_3g_ntfs_volume_h" "#ifdef HAVE_STDARG_H
+  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
-
-
-"
-if test "x$ac_cv_header_ntfs_3g_ntfs_volume_h" = xyes
-then :
-
-printf "%s\n" "#define HAVE_NTFS_3G_NTFS_VOLUME_H 1" >>confdefs.h
-
-else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
 
 
 "
@@ -6984,8 +6958,6 @@ printf "%s\n" "#define HAVE_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
   has_ntfs_h=no
-fi
-
 fi
 
 fi

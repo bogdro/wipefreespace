@@ -465,18 +465,10 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 			AC_CHECK_HEADER([ntfs/volume.h],
 					[AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
 						[Whether you have the ntfs/volume.h header.])],
-					[AC_CHECK_HEADER([ntfs/ntfs_volume.h],
-						AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
-							[Whether you have the ntfs/ntfs_volume.h header.]),
-						[AC_CHECK_HEADER([volume.h],
-							AC_DEFINE([HAVE_VOLUME_H],[1],
-								[Whether you have the volume.h header.]),
-							[has_ntfs_h=no],
-						[[#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
-						]]
-						)],
+					[AC_CHECK_HEADER([volume.h],
+						AC_DEFINE([HAVE_VOLUME_H],[1],
+							[Whether you have the volume.h header.]),
+						[has_ntfs_h=no],
 					[[#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
@@ -491,18 +483,10 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 			AC_CHECK_HEADER([ntfs-3g/volume.h],
 					[AC_DEFINE([HAVE_NTFS_3G_VOLUME_H],[1],
 						[Whether you have the ntfs-3g/volume.h header.])],
-					[AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
-						AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
-							[Whether you have the ntfs-3g/ntfs_volume.h header.]),
-						[AC_CHECK_HEADER([volume.h],
-							AC_DEFINE([HAVE_VOLUME_H],[1],
-								[Whether you have the volume.h header.]),
-							[has_ntfs_h=no],
-						[[#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
-						]]
-						)],
+					[AC_CHECK_HEADER([volume.h],
+						AC_DEFINE([HAVE_VOLUME_H],[1],
+							[Whether you have the volume.h header.]),
+						[has_ntfs_h=no],
 					[[#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
