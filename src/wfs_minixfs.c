@@ -492,7 +492,7 @@ wfs_minixfs_wipe_part (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -562,7 +562,7 @@ wfs_minixfs_wipe_fs (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -830,7 +830,7 @@ wfs_minixfs_wipe_unrm (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -915,7 +915,7 @@ wfs_minixfs_open_fs (
 	minix = (struct minix_fs_dat *) malloc (sizeof (struct minix_fs_dat));
 	if ( minix == NULL )
 	{
-		ret = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		ret = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = ret;
@@ -926,7 +926,7 @@ wfs_minixfs_open_fs (
 	minix->fp = fopen (wfs_fs->fsname, "r+b");
 	if ( minix->fp == NULL )
 	{
-		ret = WFS_GET_ERRNO_OR_DEFAULT (9); /* EBADF */
+		ret = WFS_GET_ERRNO_OR_DEFAULT (EBADF);
 		free (minix);
 		if ( error_ret != NULL )
 		{
@@ -1043,7 +1043,7 @@ wfs_minixfs_close_fs (
 			WFS_SET_ERRNO (0);
 			if ( fclose (minix->fp) != 0 )
 			{
-				error = WFS_GET_ERRNO_OR_DEFAULT (9); /* EBADF */
+				error = WFS_GET_ERRNO_OR_DEFAULT (EBADF);
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;

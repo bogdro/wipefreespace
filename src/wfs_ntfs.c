@@ -1081,7 +1081,7 @@ destroy_record (
 	file = (struct ufile *) malloc (sizeof (struct ufile));
 	if ( file == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1101,7 +1101,7 @@ destroy_record (
 # endif
 	if ( file->mft == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		free_file (file);
 		if ( error_ret != NULL )
 		{
@@ -1712,7 +1712,7 @@ wfs_ntfs_wipe_journal (
 	buf = (unsigned char *) malloc ((size_t)blocksize);
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		ntfs_attr_close (na);
 		ntfs_inode_close (ni);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
@@ -1896,7 +1896,7 @@ wfs_ntfs_wipe_part (
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 			if ( error_ret != NULL )
 			{
@@ -1926,7 +1926,7 @@ wfs_ntfs_wipe_part (
 		if ( ret_wfs != WFS_SUCCESS )
 		{
 			/* error */
-			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 			wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 			wfs_free_array_deep_copy (args_ntfswipe_copy,
 				sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
@@ -1985,7 +1985,7 @@ wfs_ntfs_wipe_part (
 	buf = (unsigned char *) malloc (fs_block_size);
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -2147,7 +2147,7 @@ wfs_ntfs_wipe_fs (
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 			if ( error_ret != NULL )
 			{
@@ -2177,7 +2177,7 @@ wfs_ntfs_wipe_fs (
 		if ( ret_wfs != WFS_SUCCESS )
 		{
 			/* error */
-			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 			/* yes, compare pointers */
 			wfs_free_array_deep_copy (args_ntfswipe_copy,
@@ -2216,7 +2216,7 @@ wfs_ntfs_wipe_fs (
 	buf = (unsigned char *) malloc (fs_block_size);
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -2486,7 +2486,7 @@ wfs_ntfs_wipe_unrm (
 			sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
 		if ( args_ntfswipe_copy == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			if ( error_ret != NULL )
 			{
@@ -2516,7 +2516,7 @@ wfs_ntfs_wipe_unrm (
 		if ( ret_wfs != WFS_SUCCESS )
 		{
 			/* error */
-			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			wfs_free_array_deep_copy (args_ntfswipe_copy,
 				sizeof (args_ntfswipe) / sizeof (args_ntfswipe[0]));
@@ -2554,7 +2554,7 @@ wfs_ntfs_wipe_unrm (
 	mybuf = (unsigned char *) malloc (MYBUF_SIZE);
 	if (mybuf == NULL)
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_ntfs_wipe_journal (wfs_fs);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
@@ -2568,7 +2568,7 @@ wfs_ntfs_wipe_unrm (
 	buf = (unsigned char *) malloc (fs_block_size);
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		free (mybuf);
 		wfs_ntfs_wipe_journal (wfs_fs);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);

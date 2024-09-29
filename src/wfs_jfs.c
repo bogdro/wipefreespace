@@ -586,7 +586,7 @@ wfs_jfs_wipe_fs (
 	buf = (unsigned char *) malloc ( bufsize );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -631,7 +631,7 @@ wfs_jfs_wipe_fs (
 	block_map = (struct dmap **) malloc ((size_t)ndmaps * sizeof (struct dmap *));
 	if ( block_map == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		free (buf);
 		if ( error_ret != NULL )
@@ -651,7 +651,7 @@ wfs_jfs_wipe_fs (
 		block_map[i] = (struct dmap *) malloc (sizeof (struct dmap));
 		if ( block_map[i] == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			start += PSIZE;
 			continue;
 		}
@@ -940,7 +940,7 @@ wfs_jfs_wipe_unrm (
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			ret_unrm = WFS_MALLOC;
 			if ( sig_recvd != 0 )
@@ -1080,7 +1080,7 @@ wfs_jfs_wipe_unrm (
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			fclose (journal_fp);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			ret_unrm = WFS_MALLOC;
@@ -1187,7 +1187,7 @@ wfs_jfs_open_fs (
 	jfs = (struct wfs_jfs *) malloc (sizeof (struct wfs_jfs));
 	if ( jfs == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1198,7 +1198,7 @@ wfs_jfs_open_fs (
 	jfs->fs = fopen ( wfs_fs->fsname, "r+b" );
 	if ( jfs->fs == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);	/* EPERM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		ret = WFS_OPENFS;
 		free (jfs);
 	}
@@ -1295,7 +1295,7 @@ wfs_jfs_close_fs (
 			free (jfs);
 			if ( res != 0 )
 			{
-				error = WFS_GET_ERRNO_OR_DEFAULT (9L);	/* EBADF */
+				error = WFS_GET_ERRNO_OR_DEFAULT (EBADF);
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;

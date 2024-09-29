@@ -375,6 +375,15 @@ typedef union wfs_fsdata wfs_fsdata_t;
 #  define WFS_GET_ERRNO_OR_DEFAULT(val) (val)
 #  define WFS_SET_ERRNO(value)
 # endif
+# ifndef EPERM
+#  define EPERM 1
+# endif
+# ifndef EBADF
+#  define EBADF 9
+# endif
+# ifndef ENOMEM
+#  define ENOMEM 12
+# endif
 
 extern int GCC_WARN_UNUSED_RESULT
 	wfs_is_stdout_open WFS_PARAMS ((void));

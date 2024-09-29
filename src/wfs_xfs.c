@@ -420,7 +420,7 @@ wfs_xfs_wipe_fs	(
 	
 	if ( args_db_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -437,7 +437,7 @@ wfs_xfs_wipe_fs	(
 			sizeof (args_freeze) / sizeof (args_freeze[0]));
 		if ( args_freeze_copy == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_free_array_deep_copy (args_db_copy,
 				sizeof (args_db) / sizeof (args_db[0]));
 			wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
@@ -453,7 +453,7 @@ wfs_xfs_wipe_fs	(
 			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
 		if ( args_unfreeze_copy == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_free_array_deep_copy (args_freeze_copy,
 				sizeof (args_freeze) / sizeof (args_freeze[0]));
 			wfs_free_array_deep_copy (args_db_copy,
@@ -470,7 +470,7 @@ wfs_xfs_wipe_fs	(
 	buffer = (unsigned char *) malloc ( fs_block_size );
 	if ( buffer == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_free_array_deep_copy (args_unfreeze_copy,
 			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
 		wfs_free_array_deep_copy (args_freeze_copy,
@@ -490,7 +490,7 @@ wfs_xfs_wipe_fs	(
 		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 	if ( wfs_xfs_xfs_db_env_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		free (buffer);
 		wfs_free_array_deep_copy (args_unfreeze_copy,
 			sizeof (args_unfreeze) / sizeof (args_unfreeze[0]));
@@ -514,7 +514,7 @@ wfs_xfs_wipe_fs	(
 # endif
 		 )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		wfs_free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
 			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
@@ -557,7 +557,7 @@ wfs_xfs_wipe_fs	(
 		if ( ret_child != WFS_SUCCESS )
 		{
 			/* error */
-			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 			close (pipe_fd[PIPE_R]);
 			close (pipe_fd[PIPE_W]);
 			free (buffer);
@@ -595,7 +595,7 @@ wfs_xfs_wipe_fs	(
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		/* can't return from here - have to un-freeze first */
 		ret_wfs = WFS_FORKERR;
 	}
@@ -814,7 +814,7 @@ wfs_xfs_wipe_fs	(
 		if ( ret_child != WFS_SUCCESS )
 		{
 			/* error */
-			error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 			ret_wfs = WFS_FORKERR;
 		}
 		/* parent */
@@ -949,7 +949,7 @@ wfs_xfs_wipe_part (
 	args_db_copy = wfs_deep_copy_array (args_db, sizeof (args_db) / sizeof (args_db[0]));
 	if ( args_db_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -964,7 +964,7 @@ wfs_xfs_wipe_part (
 		sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
 	if ( args_db_ncheck_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_free_array_deep_copy (args_db_copy,
 			sizeof (args_db) / sizeof (args_db[0]));
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
@@ -979,7 +979,7 @@ wfs_xfs_wipe_part (
 	buffer = (unsigned char *) malloc ( fs_block_size );
 	if ( buffer == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_free_array_deep_copy (args_db_ncheck_copy,
 			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
 		wfs_free_array_deep_copy (args_db_copy,
@@ -997,7 +997,7 @@ wfs_xfs_wipe_part (
 		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 	if ( wfs_xfs_xfs_db_env_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		free (buffer);
 		wfs_free_array_deep_copy (args_db_ncheck_copy,
 			sizeof (args_db_ncheck) / sizeof (args_db_ncheck[0]));
@@ -1019,7 +1019,7 @@ wfs_xfs_wipe_part (
 #  endif
 		 )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		wfs_free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
 			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		free (buffer);
@@ -1043,7 +1043,7 @@ wfs_xfs_wipe_part (
 #  endif
 		 )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		wfs_free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
@@ -1069,7 +1069,7 @@ wfs_xfs_wipe_part (
 #  endif
 		 )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		close (pipe_to_blk_db[PIPE_R]);
@@ -1104,7 +1104,7 @@ wfs_xfs_wipe_part (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		close (pipe_to_blk_db[PIPE_R]);
@@ -1141,7 +1141,7 @@ wfs_xfs_wipe_part (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		close (pipe_from_ino_db[PIPE_R]);
 		close (pipe_from_ino_db[PIPE_W]);
 		wfs_wait_for_child (&child_ncheck);
@@ -1580,7 +1580,7 @@ wfs_xfs_check_err (
 	args_copy = wfs_deep_copy_array (args, sizeof (args) / sizeof (args[0]));
 	if ( args_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1595,7 +1595,7 @@ wfs_xfs_check_err (
 #endif
 		 )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		wfs_free_array_deep_copy (args_copy,
 			sizeof (args) / sizeof (args[0]));
 		if ( error_ret != NULL )
@@ -1626,7 +1626,7 @@ wfs_xfs_check_err (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		close (pipe_fd[PIPE_R]);
 		close (pipe_fd[PIPE_W]);
 		wfs_free_array_deep_copy (args_copy,
@@ -1775,7 +1775,7 @@ wfs_xfs_open_fs (
 	xxfs = (struct wfs_xfs *) malloc (sizeof (struct wfs_xfs));
 	if ( xxfs == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1798,7 +1798,7 @@ wfs_xfs_open_fs (
 #endif
 	   )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1824,7 +1824,7 @@ wfs_xfs_open_fs (
 	xxfs->dev_name = WFS_STRDUP (wfs_fs->fsname);
 	if ( xxfs->dev_name == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1838,7 +1838,7 @@ wfs_xfs_open_fs (
 	args_copy = wfs_deep_copy_array (args, sizeof (args) / sizeof (args[0]));
 	if ( args_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
@@ -1854,7 +1854,7 @@ wfs_xfs_open_fs (
 		sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 	if ( wfs_xfs_xfs_db_env_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_free_array_deep_copy (args_copy,
 			sizeof (args) / sizeof (args[0]));
 		free (xxfs->dev_name);
@@ -1875,7 +1875,7 @@ wfs_xfs_open_fs (
 #endif
 		 )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		wfs_free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
 			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		wfs_free_array_deep_copy (args_copy,
@@ -1913,7 +1913,7 @@ wfs_xfs_open_fs (
 	if ( ret_child != WFS_SUCCESS )
 	{
 		/* error */
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		wfs_free_array_deep_copy (wfs_xfs_xfs_db_env_copy,
 			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		wfs_free_array_deep_copy (args_copy,
@@ -2174,7 +2174,7 @@ wfs_xfs_open_fs (
 		xxfs->mnt_point = WFS_STRDUP (buffer);
 		if ( xxfs->mnt_point == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			xxfs->wfs_xfs_agblocks = 0;
 			xxfs->wfs_xfs_blocksize = 0;
 			wfs_free_array_deep_copy (wfs_xfs_xfs_db_env_copy,

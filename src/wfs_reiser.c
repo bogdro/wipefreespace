@@ -230,7 +230,7 @@ wfs_reiser_wipe_part (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -540,7 +540,7 @@ wfs_reiser_wipe_fs (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -889,7 +889,7 @@ wfs_reiser_wipe_unrm (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1341,7 +1341,7 @@ wfs_reiser_open_fs (
 	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;

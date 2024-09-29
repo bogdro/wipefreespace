@@ -445,7 +445,7 @@ wfs_r4_wipe_part_work (
 		buf = (unsigned char *) malloc (fs_block_size);
 		if ( buf == NULL )
 		{
-			r4error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			r4error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			if ( dir == rootdir )
 			{
 				wfs_show_progress (WFS_PROGRESS_PART,
@@ -1554,7 +1554,7 @@ wfs_r4_open_fs (
 	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;

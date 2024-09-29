@@ -359,7 +359,7 @@ wfs_ocfs_wipe_part (
 	inode_buf = (char *) malloc ( cluster_size );
 	if ( inode_buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -371,7 +371,7 @@ wfs_ocfs_wipe_part (
 	buf = (unsigned char *) malloc ( cluster_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		free (inode_buf);
 		if ( error_ret != NULL )
@@ -575,7 +575,7 @@ wfs_ocfs_wipe_fs (
 	buf = (unsigned char *) malloc ( cluster_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1003,7 +1003,7 @@ wfs_ocfs_wipe_unrm (
 	buf = (unsigned char *) malloc ( cluster_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1093,7 +1093,7 @@ wfs_ocfs_wipe_unrm (
 		if ( jbuf == NULL )
 		{
 			ocfs2_free_cached_inode (ocfs2, ci);
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			break;
 		}
 		/*journal_size_in_clusters = (jsb->s_blocksize * jsb->s_maxlen) >>

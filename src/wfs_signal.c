@@ -238,7 +238,7 @@ static void print_signal_error (
 	{
 		wf_gen.fs_error = &err;
 
-		err = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		err = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 # ifdef HAVE_SNPRINTF
 		res = snprintf (tmp, TMPSIZE, "%.*d", TMPSIZE-1, signum);
 # else

@@ -747,7 +747,7 @@ wfs_e234_wipe_part (
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1003,7 +1003,7 @@ wfs_e234_wipe_fs (
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1213,7 +1213,7 @@ wfs_e234_wipe_journal (
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		if ( error_ret != NULL )
 		{
