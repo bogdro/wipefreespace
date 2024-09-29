@@ -856,7 +856,7 @@ free_file (
 	struct filename *f = NULL;
 	struct data *d = NULL;
 
-	if ( (file==NULL) || (sig_recvd!=0) )
+	if ( file == NULL )
 	{
 		return;
 	}
