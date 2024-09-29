@@ -121,15 +121,6 @@ AC_ARG_ENABLE(OCFS,[[  --enable-OCFS		OCFS support (default=yes).]],
 	]
 	,[feat_ocfs=yes])
 
-AC_ARG_ENABLE([random-method],[[  --enable-random-method	DEPRECATED: Random pattern method (like shred) instead of full Gutmann.]],
-	[if (test "x$enableval" = "xyes"); then
-		want_rand=yes
-	 else
-		want_rand=no
-	 fi
-	]
-	,[want_rand=no])
-
 AC_ARG_ENABLE(wfs,[[  --enable-wfs		enable wiping free space (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
 		feat_wfs=no
@@ -174,10 +165,6 @@ AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for WipeFr
 	 fi
 	]
 	,feat_LIBNETBLOCK=no)
-
-if ( test "x$want_rand" = "xyes" ); then
-	AC_MSG_WARN([[--enable-random-method if deprecated. Use --method <name> when running the program.]])
-fi
 
 if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
 	AC_MSG_ERROR([[All three options --enable-wfs=no --enable-unrm=no --enable-part=no can NOT be given together.]])
