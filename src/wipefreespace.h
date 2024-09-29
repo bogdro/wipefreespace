@@ -65,6 +65,11 @@ Stat macros broken. Change your C library.
 # undef		WFS_IS_SYNC_NEEDED_PAT
 # define	WFS_IS_SYNC_NEEDED_PAT(fs) ( (((fs).npasses > 1) && ((fs).wipe_mode == WFS_WIPE_MODE_PATTERN)) && (sig_recvd == 0))
 
+# undef		WFS_IS_NAME_CURRENT_DIR
+# define	WFS_IS_NAME_CURRENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '\0')
+# undef		WFS_IS_NAME_PARENT_DIR
+# define	WFS_IS_NAME_PARENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '.' && ((x)[2]) == '\0')
+
 enum wfs_errcode
 {
 	WFS_SUCCESS		= 0,
