@@ -18,6 +18,7 @@ build:
     - for i in po/*.po; do touch ${i/.po/.gmo}; done
     - sleep 1
     - ./configure
+    - sleep 1
     - touch doc/wipefreespace.info
     - sleep 1
     - make
