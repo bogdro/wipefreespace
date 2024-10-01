@@ -2202,6 +2202,10 @@ wfs_xfs_open_fs (
 	}
 	if ( sig_recvd != 0 )
 	{
+		if ( xxfs->mnt_point == NULL )
+		{
+			free (xxfs->mnt_point);
+		}
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
