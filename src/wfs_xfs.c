@@ -1918,6 +1918,8 @@ wfs_xfs_open_fs (
 			sizeof (wfs_xfs_xfs_db_env) / sizeof (wfs_xfs_xfs_db_env[0]));
 		wfs_free_array_deep_copy (args_copy,
 			sizeof (args) / sizeof (args[0]));
+		close (pipe_fd[PIPE_R]);
+		close (pipe_fd[PIPE_W]);
 		free (xxfs->dev_name);
 		xxfs->dev_name = NULL;
 		free (xxfs);
