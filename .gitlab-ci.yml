@@ -9,7 +9,7 @@ image: gcc
 build:
   stage: build
   script:
-    - sudo apt-get -y install libext2fs-dev ntfs-3g-dev xfsprogs libreiser4-dev libhfsp-dev ocfs2-tools-dev
+    - apt-get -y install libext2fs-dev ntfs-3g-dev xfsprogs libreiser4-dev libhfsp-dev ocfs2-tools-dev
     #- mkdir -p $HOME/bin
     #- touch $HOME/bin/xfs_db
     #- chmod u+x $HOME/bin/xfs_db
