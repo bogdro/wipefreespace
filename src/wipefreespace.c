@@ -1101,7 +1101,7 @@ main (
 		}
 
 		/* NOTE: these shouldn't be a sequence of else-ifs */
-		if ( (opt_char == (int)'?') || (opt_char == (int)':') )
+		if ( (opt_char == '?') || (opt_char == ':') )
 		{
 			if ( stdout_open == 1 )
 			{
@@ -1110,7 +1110,7 @@ main (
 			return WFS_BAD_CMDLN;
 		}
 
-		if ( (opt_char == (int)'h') || (opt_help == 1) )
+		if ( (opt_char == 'h') || (opt_help == 1) )
 		{
 			if ( stdout_open == 1 )
 			{
@@ -1119,14 +1119,14 @@ main (
 			return WFS_NOTHING;
 		}
 
-		if ( (opt_char == (int)'V') || (opt_version == 1) )
+		if ( (opt_char == 'V') || (opt_version == 1) )
 		{
 			wfs_show_msg ( 1, ver_str, VERSION, wf_gen );
 			wfs_print_version ();
 			return WFS_NOTHING;
 		}
 
-		if ( (opt_char == (int)'l') || (opt_license == 1) )
+		if ( (opt_char == 'l') || (opt_license == 1) )
 		{
 			if ( stdout_open == 1 )
 			{
@@ -1137,7 +1137,7 @@ main (
 			return WFS_NOTHING;
 		}
 
-		if ( (opt_char == (int)'n') || (opt_number == 1) )
+		if ( (opt_char == 'n') || (opt_number == 1) )
 		{
 			res = wfs_read_ulong_param ( optarg, &npasses );
 			if ( res != 0 )
@@ -1151,7 +1151,7 @@ main (
 			opt_number = 0;
 		}
 
-		if ( (opt_char == (int)'B') || (opt_blksize == 1) )
+		if ( (opt_char == 'B') || (opt_blksize == 1) )
 		{
 			res = wfs_read_ulong_param ( optarg, &blocksize );
 			if ( res != 0 )
@@ -1165,7 +1165,7 @@ main (
 			opt_blksize = 0;
 		}
 
-		if ( (opt_char == (int)'b') || (opt_super == 1) )
+		if ( (opt_char == 'b') || (opt_super == 1) )
 		{
 			res = wfs_read_ulong_param ( optarg, &super_off );
 			if ( res != 0 )
@@ -1179,12 +1179,12 @@ main (
 			opt_super = 0;
 		}
 
-		if ( (opt_char == (int)'v') /* do NOT check for opt_verbose here */ )
+		if ( (opt_char == 'v') /* do NOT check for opt_verbose here */ )
 		{
 			opt_verbose++;
 		}
 
-		if ( (opt_char == (int)'f') || (opt_force == 1) )
+		if ( (opt_char == 'f') || (opt_force == 1) )
 		{
 			opt_force = 1;
 		}
