@@ -55,18 +55,20 @@ jobs:
       - name: Run build-wrapper
         run: |
           #autoreconf --install
-          touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in po/*gmo
+          touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in
+          for i in po/*.po; do touch ${i/.po/.gmo}; done
           sleep 1
           ./configure
           sleep 1
           touch doc/wipefreespace.info
+          sleep 1
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make all
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Put the name of your token here
         run: |
-          sonar-scanner --define sonar.projectKey=bogdro_wipefreespace --define sonar.organization=bogdro --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}"
+          sonar-scanner --define sonar.projectKey=bogdro_wipefreespace --define sonar.organization=bogdro --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}"
       
       #- name: Analyze with SonarCloud
 
