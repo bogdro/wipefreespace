@@ -95,7 +95,7 @@ struct wfs_ocfs_block_data
 	wfs_wipedata_t wd;
 };
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

@@ -55,7 +55,7 @@
 # undef WFS_HAVE_STAT
 #endif
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

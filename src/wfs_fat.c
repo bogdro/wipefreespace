@@ -88,7 +88,7 @@ Something wrong. FAT12/16/32 requested, but tffs.h or libtffs missing.
 #include "wfs_wiping.h"
 #include "wfs_mount_check.h"
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

@@ -83,7 +83,7 @@ extern int volume_writetobuf WFS_PARAMS ((volume * vol, void * buf, long int blo
 #include "wfs_wiping.h"
 #include "wfs_mount_check.h"
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

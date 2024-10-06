@@ -30,12 +30,14 @@ Stat macros broken. Change your C library.
 #  endif
 # endif
 
+# ifdef WFS_ATTR
+#  undef WFS_ATTR
+# endif
+
 # undef WFS_ATTR
 # ifdef __GNUC__
 #  define WFS_ATTR(x)	__attribute__(x)
 /*#  pragma GCC poison strcpy strcat*/
-# else
-#  define WFS_ATTR(x)
 # endif
 
 # ifndef GCC_WARN_UNUSED_RESULT
@@ -46,28 +48,58 @@ Stat macros broken. Change your C library.
 #  define GCC_WARN_UNUSED_RESULT /*WFS_ATTR((warn_unused_result))*/
 # endif
 
-# undef		WFS_ERR_MSG_FORMATL
+# ifdef WFS_ERR_MSG_FORMATL
+#  undef WFS_ERR_MSG_FORMATL
+# endif
+
 # define 	WFS_ERR_MSG_FORMATL		"(%s %ld) %s '%s', FS='%s'"
-# undef		WFS_ERR_MSG_FORMAT
+
+# ifdef WFS_ERR_MSG_FORMAT
+#  undef WFS_ERR_MSG_FORMAT
+# endif
+
 # define 	WFS_ERR_MSG_FORMAT		"(%s %d) %s '%s', FS='%s'"
 
-# undef		WFS_PASSES
+# ifdef WFS_PASSES
+#  undef WFS_PASSES
+# endif
+
 # define	WFS_PASSES 35 /* default Gutmann */
-# undef		WFS_NPAT
+
+# ifdef WFS_NPAT
+#  undef WFS_NPAT
+# endif
+
 # define	WFS_NPAT 50 /* anything more than the maximum number of patterns in all wiping methods. */
 
-# undef		WFS_MNTBUFLEN
+# ifdef WFS_MNTBUFLEN
+#  undef WFS_MNTBUFLEN
+# endif
+
 # define	WFS_MNTBUFLEN 4096
 
-# undef		WFS_IS_SYNC_NEEDED
+# ifdef WFS_IS_SYNC_NEEDED
+#  undef WFS_IS_SYNC_NEEDED
+# endif
+
 # define	WFS_IS_SYNC_NEEDED(fs) ( ((((fs).npasses > 1) || ((fs).zero_pass != 0)) && ((fs).wipe_mode != WFS_WIPE_MODE_PATTERN)) && (sig_recvd == 0))
 
-# undef		WFS_IS_SYNC_NEEDED_PAT
+# ifdef WFS_IS_SYNC_NEEDED_PAT
+#  undef WFS_IS_SYNC_NEEDED_PAT
+# endif
+
 # define	WFS_IS_SYNC_NEEDED_PAT(fs) ( (((fs).npasses > 1) && ((fs).wipe_mode == WFS_WIPE_MODE_PATTERN)) && (sig_recvd == 0))
 
-# undef		WFS_IS_NAME_CURRENT_DIR
+# ifdef WFS_IS_NAME_CURRENT_DIR
+#  undef WFS_IS_NAME_CURRENT_DIR
+# endif
+
 # define	WFS_IS_NAME_CURRENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '\0')
-# undef		WFS_IS_NAME_PARENT_DIR
+
+# ifdef WFS_IS_NAME_PARENT_DIR
+#  undef WFS_IS_NAME_PARENT_DIR
+# endif
+
 # define	WFS_IS_NAME_PARENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '.' && ((x)[2]) == '\0')
 
 enum wfs_errcode
@@ -152,12 +184,18 @@ typedef long int off64_t;
 
 /* ================ Beginning of filesystem includes ================ */
 
+# ifdef WFS_EXT234
+#  undef WFS_EXT234
+# endif
+
 # if (defined HAVE_EXT2FS_EXT2FS_H) && (defined HAVE_LIBEXT2FS) && (defined HAVE_DEV_T)
 #  define	WFS_EXT234	1
 # elif (defined HAVE_EXT2FS_H) && (defined HAVE_LIBEXT2FS) && (defined HAVE_DEV_T)
 #  define	WFS_EXT234	1
-# else
-#  undef	WFS_EXT234
+# endif
+
+# ifdef WFS_NTFS
+#  undef WFS_NTFS
 # endif
 
 # if ((defined HAVE_NTFS_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_NTFS_VOLUME_H)) \
@@ -167,9 +205,11 @@ typedef long int off64_t;
 #  if ((defined HAVE_NTFS_VOLUME_H) || (defined HAVE_NTFS_3G_VOLUME_H)) \
 	&& ((defined HAVE_LIBNTFS) || (defined HAVE_LIBNTFS_3G))
 #   define	WFS_NTFS	1
-#  else
-#   undef	WFS_NTFS
 #  endif
+# endif
+
+# ifdef WFS_XFS
+#  undef WFS_XFS
 # endif
 
 # if ((defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT))	\
@@ -187,8 +227,10 @@ typedef long int off64_t;
 	)							\
 	&& (defined HAVE_XFS_DB)
 #  define	WFS_XFS		1
-# else
-#  undef	WFS_XFS
+# endif
+
+# ifdef WFS_REISER
+#  undef WFS_REISER
 # endif
 
 # if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)	\
@@ -204,30 +246,43 @@ typedef unsigned short int __u16;
 #  endif
 
 #  define	WFS_REISER	1
-# else
-#  undef	WFS_REISER
+# endif
+
+# ifdef WFS_REISER4
+#  undef WFS_REISER4
 # endif
 
 # if (defined HAVE_REISER4_LIBREISER4_H) && (defined HAVE_LIBREISER4)	\
 	/*&& (defined HAVE_LIBREISER4MISC)*/ && (defined HAVE_LIBAAL)
 #  define	WFS_REISER4	1
-# else
-#  undef	WFS_REISER4
 # endif
 
-# undef div
-# undef index
+# ifdef div
+#  undef div
+# endif
+
+# ifdef index
+#  undef index
+# endif
+
+# ifdef WFS_FATFS
+#  undef WFS_FATFS
+# endif
 
 # if (defined HAVE_TFFS_H) && (defined HAVE_LIBTFFS)
 #  define	WFS_FATFS	1
-# else
-#  undef	WFS_FATFS
+# endif
+
+# ifdef WFS_MINIXFS
+#  undef WFS_MINIXFS
 # endif
 
 # if (defined HAVE_MINIX_FS_H) && (defined HAVE_LIBMINIXFS)
 #  define	WFS_MINIXFS	1
-# else
-#  undef	WFS_MINIXFS
+# endif
+
+# ifdef WFS_JFS
+#  undef WFS_JFS
 # endif
 
 # if (defined HAVE_JFS_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
@@ -235,9 +290,11 @@ typedef unsigned short int __u16;
 # else
 #  if (defined HAVE_JFS_SUPERBLOCK_H) && (defined HAVE_LIBFS)
 #   define	WFS_JFS		1
-#  else
-#   undef	WFS_JFS
 #  endif
+# endif
+
+# ifdef WFS_HFSP
+#  undef WFS_HFSP
 # endif
 
 # if (defined HAVE_HFSPLUS_LIBHFSP_H) && (defined HAVE_LIBHFSP)
@@ -245,9 +302,11 @@ typedef unsigned short int __u16;
 # else
 #  if (defined HAVE_LIBHFSP_H) && (defined HAVE_LIBHFSP)
 #   define	WFS_HFSP	1
-#  else
-#   undef	WFS_HFSP
 #  endif
+# endif
+
+# ifdef WFS_OCFS
+#  undef WFS_OCFS
 # endif
 
 # if (defined HAVE_OCFS2_OCFS2_H) && (defined HAVE_LIBOCFS2)
@@ -255,21 +314,23 @@ typedef unsigned short int __u16;
 # else
 #  if (defined HAVE_OCFS2_H) && (defined HAVE_LIBOCFS2)
 #   define	WFS_OCFS	1
-#  else
-#   undef	WFS_OCFS
 #  endif
+# endif
+
+# ifdef WFS_HAVE_LIBHIDEIP
+#  undef WFS_HAVE_LIBHIDEIP
 # endif
 
 # if (defined HAVE_LIBHIDEIP) && (defined HAVE_LIBHIDEIP_H)
 #  define WFS_HAVE_LIBHIDEIP	1
-# else
-#  undef WFS_HAVE_LIBHIDEIP
+# endif
+
+# ifdef WFS_HAVE_LIBNETBLOCK
+#  undef WFS_HAVE_LIBNETBLOCK
 # endif
 
 # if (defined HAVE_LIBNETBLOCK) && (defined HAVE_LIBNETBLOCK_H)
 #  define WFS_HAVE_LIBNETBLOCK	1
-# else
-#  undef WFS_HAVE_LIBNETBLOCK
 # endif
 
 /* ================ End of filesystem includes ================ */
@@ -351,7 +412,14 @@ typedef union wfs_fsdata wfs_fsdata_t;
 /* autoconf: WFS_PARAMS is a macro used to wrap function prototypes, so that
         compilers that don't understand ANSI C prototypes still work,
         and ANSI C compilers can issue warnings about type mismatches. */
-# undef WFS_PARAMS
+# ifdef WFS_PARAMS
+#  undef WFS_PARAMS
+# endif
+
+# ifdef WFS_ANSIC
+#  undef WFS_ANSIC
+# endif
+
 # if defined (__STDC__) || defined (_AIX) \
 	|| (defined (__mips) && defined (_SYSTYPE_SVR4)) \
 	|| defined (WIN32) || defined (__cplusplus)
@@ -359,7 +427,6 @@ typedef union wfs_fsdata wfs_fsdata_t;
 #  define WFS_ANSIC
 # else
 #  define WFS_PARAMS(protos) ()
-#  undef WFS_ANSIC
 # endif
 
 # ifdef WFS_ANSIC

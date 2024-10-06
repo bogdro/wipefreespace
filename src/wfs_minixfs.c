@@ -63,7 +63,7 @@ Something wrong. MinixFS requested, but minix_fs.h or libminixfs missing.
 #include "wfs_wiping.h"
 #include "wfs_mount_check.h"
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

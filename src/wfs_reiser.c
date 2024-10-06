@@ -136,7 +136,7 @@ static const unsigned long long int bh_up2date = BH_Uptodate;
 #define mark_buffer_dirty2(bh)    misc_set_bit (bh_dirty,   &(bh)->b_state)
 #define mark_buffer_uptodate2(bh) misc_set_bit (bh_up2date, &(bh)->b_state)
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

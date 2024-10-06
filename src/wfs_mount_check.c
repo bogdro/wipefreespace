@@ -126,16 +126,20 @@
 # define LOOPMAJOR	7
 #endif
 
+#ifdef WFS_HAVE_MNTENT
+# undef WFS_HAVE_MNTENT
+#endif
+
 #if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
 # define WFS_HAVE_MNTENT 1
-#else
-# undef WFS_HAVE_MNTENT
+#endif
+
+#ifdef WFS_HAVE_MNTINFO
+# undef WFS_HAVE_MNTINFO
 #endif
 
 #if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
 # define WFS_HAVE_MNTINFO 1
-#else
-# undef WFS_HAVE_MNTINFO
 #endif
 
 #if !( (defined WFS_HAVE_MNTENT) || (defined WFS_HAVE_MNTINFO) )
@@ -144,17 +148,20 @@
 # define WFS_USED_ONLY_WITH_MOUNTS
 #endif
 
+#ifdef WFS_HAVE_IOCTL_LOOP
+# undef WFS_HAVE_IOCTL_LOOP
+#endif
+
 #if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H) \
 	&& (defined HAVE_IOCTL) && (defined HAVE_SYS_STAT_H) \
 	&& ((defined HAVE_LOOP_H) || (defined HAVE_LINUX_LOOP_H))
 # define WFS_HAVE_IOCTL_LOOP 1
 # define WFS_USED_ONLY_WITH_LOOP WFS_ATTR ((unused))
 #else
-# undef WFS_HAVE_IOCTL_LOOP
 # define WFS_USED_ONLY_WITH_LOOP
 #endif
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

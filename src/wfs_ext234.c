@@ -117,7 +117,7 @@ struct wfs_e234_block_data
 	unsigned int number_of_blocks_in_inode;
 };
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

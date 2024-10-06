@@ -182,7 +182,7 @@ v_fsck_send_msg (
 	return 0;
 }
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

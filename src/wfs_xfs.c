@@ -143,7 +143,7 @@ struct wfs_xfs
 	unsigned long long int free_blocks;
 };
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

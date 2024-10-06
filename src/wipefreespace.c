@@ -273,7 +273,7 @@ static int stdout_open = 1, stderr_open = 1;
 
 static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

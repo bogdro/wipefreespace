@@ -102,7 +102,7 @@ static unsigned int patterns_dod[] =
 	0xFFF, 0x000	/* will be filled in later */
 };
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
