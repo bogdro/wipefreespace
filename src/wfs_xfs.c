@@ -370,7 +370,9 @@ wfs_xfs_wipe_fs	(
 	int res;
 	int pipe_fd[2];
 	int fs_fd;
-	child_id_t child_freeze, child_unfreeze, child_xfsdb;
+	child_id_t child_freeze;
+	child_id_t child_unfreeze;
+	child_id_t child_xfsdb;
 	wfs_errcode_t ret_child;
 	/* 	 xfs_freeze -f (freeze) | -u (unfreeze) mount-point */
 # define FSNAME_POS_FREEZE 2
@@ -388,7 +390,9 @@ wfs_xfs_wipe_fs	(
 	const char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
 	char ** wfs_xfs_xfs_db_env_copy = NULL;
 	char read_buffer[WFS_XFSBUFSIZE];
-	unsigned long long int agno, agoff, length;
+	unsigned long long int agno;
+	unsigned long long int agoff;
+	unsigned long long int length;
 	unsigned char * buffer;
 	unsigned long long int j;
 	int selected[WFS_NPAT] = {0};
@@ -895,7 +899,8 @@ wfs_xfs_wipe_part (
 	int res;
 	ssize_t write_res;
 	int pipe_from_ino_db[2];
-	int pipe_from_blk_db[2], pipe_to_blk_db[2];
+	int pipe_from_blk_db[2];
+	int pipe_to_blk_db[2];
 	int fs_fd;
 	child_id_t child_ncheck, child_xfsdb;
 	wfs_errcode_t ret_child;
@@ -915,10 +920,14 @@ wfs_xfs_wipe_part (
 	char * pos2 = NULL;
 	unsigned char * buffer;
 	int selected[WFS_NPAT] = {0};
-	unsigned long long int inode, inode_size, start_block, number_of_blocks;
+	unsigned long long int inode;
+	unsigned long long int inode_size;
+	unsigned long long int start_block;
+	unsigned long long int number_of_blocks;
 	int length_to_wipe;
 	unsigned long long int trash;
-	int got_mode_line, got_size_line;
+	int got_mode_line;
+	int got_size_line;
 	unsigned int mode;
 	unsigned int offset;
 	char inode_cmd[40];
@@ -1749,9 +1758,16 @@ wfs_xfs_open_fs (
 	const char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
 	char ** wfs_xfs_xfs_db_env_copy = NULL;
 	char buffer[WFS_XFSBUFSIZE];
-	int blocksize_set = 0, agblocks_set = 0, inprogress_found = 0,
-		used_inodes_set = 0, free_blocks_set = 0;
-	char *pos1 = NULL, *pos2 = NULL, *pos3 = NULL, *pos4 = NULL, *pos5 = NULL;
+	int blocksize_set = 0;
+	int agblocks_set = 0;
+	int inprogress_found = 0;
+	int used_inodes_set = 0;
+	int free_blocks_set = 0;
+	char *pos1 = NULL;
+	char *pos2 = NULL;
+	char *pos3 = NULL;
+	char *pos4 = NULL;
+	char *pos5 = NULL;
 	int is_rw;
 	unsigned long long int inprogress;
 	size_t namelen;

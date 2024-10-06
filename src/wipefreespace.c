@@ -269,7 +269,8 @@ static unsigned long int super_off = 0;
 static wfs_wipe_mode_t wiping_mode = WFS_WIPE_MODE_PATTERN;
 
 static /*@observer@*/ const char *wfs_progname;	/* The name of the program */
-static int stdout_open = 1, stderr_open = 1;
+static int stdout_open = 1;
+static int stderr_open = 1;
 
 static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
 
@@ -1005,7 +1006,9 @@ main (
 	char* argv[];
 #endif
 {
-	int res, i, j;
+	int res;
+	int i;
+	int j;
 	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
 #if (defined WFS_REISER) || (defined WFS_MINIXFS)
 	pid_t child_pid;
