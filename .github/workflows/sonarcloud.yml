@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Put the name of your token here
         run: |
-          sonar-scanner --define sonar.projectKey=bogdro_wipefreespace --define sonar.organization=bogdro --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}"
+          sonar-scanner --define sonar.projectKey=bogdro_wipefreespace --define sonar.organization=bogdro --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
       
       #- name: Analyze with SonarCloud
 
