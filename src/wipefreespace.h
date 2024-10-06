@@ -22,6 +22,33 @@
 #ifndef WFS_HEADER
 # define WFS_HEADER 1
 
+# ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+# endif
+# ifndef HAVE_OFF64_T
+#  if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+typedef long long int off64_t;
+#  else
+typedef long int off64_t;
+#  endif
+# endif
+
+# if defined HAVE_SYS_STAT_H
+#  include <sys/stat.h>
+# elif (!defined HAVE_DEV_T) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
+/* can't proceed with ext2/3/4 without the 'dev_t' type */
+#  undef HAVE_EXT2FS_EXT2FS_H
+#  undef HAVE_EXT2FS_H
+#  undef HAVE_LIBEXT2FS
+# endif
+
+# ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+# endif
+# ifndef HAVE_SIG_ATOMIC_T
+typedef int sig_atomic_t;
+# endif
+
 # ifdef STAT_MACROS_BROKEN
 #  if STAT_MACROS_BROKEN
 #   error Stat macros broken. Change your C library.
@@ -161,26 +188,6 @@ enum wfs_wipe_mode
 };
 
 typedef enum wfs_wipe_mode wfs_wipe_mode_t;
-
-# ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-# endif
-# ifndef HAVE_OFF64_T
-#  if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
-typedef long long int off64_t;
-#  else
-typedef long int off64_t;
-#  endif
-# endif
-
-# if defined HAVE_SYS_STAT_H
-#  include <sys/stat.h>
-# elif (!defined HAVE_DEV_T) && ((defined HAVE_EXT2FS_EXT2FS_H) || (defined HAVE_EXT2FS_H))
-/* can't proceed with ext2/3/4 without the 'dev_t' type */
-#  undef HAVE_EXT2FS_EXT2FS_H
-#  undef HAVE_EXT2FS_H
-#  undef HAVE_LIBEXT2FS
-# endif
 
 /* ================ Beginning of filesystem includes ================ */
 
@@ -345,13 +352,6 @@ typedef unsigned short int __u16;
 
 # define	gettext_noop(String)	String
 # define	N_(String)		String
-
-# ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-# endif
-# ifndef HAVE_SIG_ATOMIC_T
-typedef int sig_atomic_t;
-# endif
 
 struct wfs_fsid
 {

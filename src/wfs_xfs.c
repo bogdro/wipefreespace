@@ -422,7 +422,7 @@ wfs_xfs_wipe_fs	(
 	WFS_SET_ERRNO (0);
 	args_db[FSNAME_POS_FREESP] = xxfs->dev_name;
 	args_db_copy = wfs_deep_copy_array (args_db, sizeof (args_db) / sizeof (args_db[0]));
-	
+
 	if ( args_db_copy == NULL )
 	{
 		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
@@ -1573,7 +1573,7 @@ wfs_xfs_check_err (
 		}
 	}
 #endif
-	
+
 	/* Copy the file system name into the right places */
 	WFS_SET_ERRNO (0);
 	if ( res == 0 )
