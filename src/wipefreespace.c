@@ -1091,7 +1091,8 @@ main (
 	/* Parsing the command line */
 #if (defined HAVE_GETOPT_H) && (defined HAVE_GETOPT_LONG)
 	optind = 0;
-	while (1==1)
+	opt_char = 0;
+	while (opt_char != -1)
 	{
 		opt_char = getopt_long ( argc, argv, "Vhln:B:b:vf", opts, NULL );
 		if ( opt_char == -1 )
