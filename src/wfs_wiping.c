@@ -368,9 +368,9 @@ wfs_fill_buffer (
 				do
 				{
 #if (!defined __STRICT_ANSI__) && (defined HAVE_RANDOM)
-					i = (size_t) ((size_t)random () % npat);
+					i = (size_t)random () % npat;
 #else
-					i = (size_t) ((size_t)rand () % npat);
+					i = (size_t)rand () % npat;
 #endif
 					if ( selected == NULL )
 					{
