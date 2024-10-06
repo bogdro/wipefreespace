@@ -441,8 +441,10 @@ wfs_get_mnt_point_mounts (
 # ifdef LOOP_GET_STATUS
 				WFS_MEMSET ( &li, 0, sizeof (struct loop_info) );
 # endif
+# if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
 				res = -1;
 				res64 = -1;
+# endif
 # ifdef LOOP_GET_STATUS64
 				res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
 				res = res64;
@@ -785,7 +787,9 @@ wfs_check_loop_mounted (
 			close (fd);
 			return 0;
 		}
+# if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
 		res = -1;
+# endif
 # ifdef LOOP_GET_STATUS64
 		res = ioctl (fd, LOOP_GET_STATUS64, &li64);
 		if ( res < 0 )
