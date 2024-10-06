@@ -121,15 +121,6 @@ AC_ARG_ENABLE(OCFS,[[  --enable-OCFS		OCFS support (default=yes).]],
 	]
 	,[feat_ocfs=yes])
 
-AC_ARG_ENABLE([random-method],[[  --enable-random-method	DEPRECATED: Random pattern method (like shred) instead of full Gutmann.]],
-	[if (test "x$enableval" = "xyes"); then
-		want_rand=yes
-	 else
-		want_rand=no
-	 fi
-	]
-	,[want_rand=no])
-
 AC_ARG_ENABLE(wfs,[[  --enable-wfs		enable wiping free space (default=yes).]],
 	[if (test "x$enableval" = "xno"); then
 		feat_wfs=no
@@ -174,10 +165,6 @@ AC_ARG_ENABLE(LIBNETBLOCK,[[  --enable-LIBNETBLOCK	Enable libnetblock for WipeFr
 	 fi
 	]
 	,feat_LIBNETBLOCK=no)
-
-if ( test "x$want_rand" = "xyes" ); then
-	AC_MSG_WARN([[--enable-random-method if deprecated. Use --method <name> when running the program.]])
-fi
 
 if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
 	AC_MSG_ERROR([[All three options --enable-wfs=no --enable-unrm=no --enable-part=no can NOT be given together.]])
@@ -465,18 +452,10 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 			AC_CHECK_HEADER([ntfs/volume.h],
 					[AC_DEFINE([HAVE_NTFS_VOLUME_H],[1],
 						[Whether you have the ntfs/volume.h header.])],
-					[AC_CHECK_HEADER([ntfs/ntfs_volume.h],
-						AC_DEFINE([HAVE_NTFS_NTFS_VOLUME_H],[1],
-							[Whether you have the ntfs/ntfs_volume.h header.]),
-						[AC_CHECK_HEADER([volume.h],
-							AC_DEFINE([HAVE_VOLUME_H],[1],
-								[Whether you have the volume.h header.]),
-							[has_ntfs_h=no],
-						[[#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
-						]]
-						)],
+					[AC_CHECK_HEADER([volume.h],
+						AC_DEFINE([HAVE_VOLUME_H],[1],
+							[Whether you have the volume.h header.]),
+						[has_ntfs_h=no],
 					[[#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
@@ -491,18 +470,10 @@ if ( test "x$feat_ntfs" = "xyes" ); then
 			AC_CHECK_HEADER([ntfs-3g/volume.h],
 					[AC_DEFINE([HAVE_NTFS_3G_VOLUME_H],[1],
 						[Whether you have the ntfs-3g/volume.h header.])],
-					[AC_CHECK_HEADER([ntfs-3g/ntfs_volume.h],
-						AC_DEFINE([HAVE_NTFS_3G_NTFS_VOLUME_H],[1],
-							[Whether you have the ntfs-3g/ntfs_volume.h header.]),
-						[AC_CHECK_HEADER([volume.h],
-							AC_DEFINE([HAVE_VOLUME_H],[1],
-								[Whether you have the volume.h header.]),
-							[has_ntfs_h=no],
-						[[#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
-						]]
-						)],
+					[AC_CHECK_HEADER([volume.h],
+						AC_DEFINE([HAVE_VOLUME_H],[1],
+							[Whether you have the volume.h header.]),
+						[has_ntfs_h=no],
 					[[#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif

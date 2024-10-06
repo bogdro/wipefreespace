@@ -182,7 +182,7 @@ v_fsck_send_msg (
 	return 0;
 }
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -308,8 +308,8 @@ wfs_jfs_get_block_size (
 /* ======================================================================== */
 
 # ifndef WFS_ANSIC
-static wfs_errcode_t wfs_jfs_wipe_block WFS_PARAMS ((const wfs_fsid_t wfs_fs, const int64_t blocknum,
-	unsigned char * const buf, const size_t bufsize, FILE * fp));
+static wfs_errcode_t wfs_jfs_wipe_block WFS_PARAMS ((const wfs_wipedata_t wd,
+	const int64_t blocknum, FILE * fp));
 # endif
 
 /**
@@ -319,28 +319,26 @@ static wfs_errcode_t wfs_jfs_wipe_block WFS_PARAMS ((const wfs_fsid_t wfs_fs, co
 static wfs_errcode_t
 wfs_jfs_wipe_block (
 # ifdef WFS_ANSIC
-	const wfs_fsid_t wfs_fs, const int64_t blocknum,
-	unsigned char * const buf, const size_t bufsize,
-	FILE * fp)
+	const wfs_wipedata_t wd, const int64_t blocknum, FILE * fp)
 # else
-	wfs_fs, blocknum, buf, bufsize, fp)
-	const wfs_fsid_t wfs_fs;
+	wd, blocknum, fp)
+	const wfs_wipedata_t wd;
 	const int64_t blocknum;
-	unsigned char * buf;
-	size_t bufsize;
 	FILE * fp;
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
 	unsigned long int j;
+	unsigned long int max_passes;
+	unsigned long int pat_no;
 	int selected[WFS_NPAT] = {0};
 	int res;
 	wfs_errcode_t error = 0;
 	wfs_errcode_t * error_ret;
 	size_t fs_block_size;
 
-	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
-	if ( (buf == NULL) || (fp == NULL) )
+	error_ret = (wfs_errcode_t *) wd.filesys.fs_error;
+	if ( (wd.buf == NULL) || (fp == NULL) )
 	{
 		ret_wfs = WFS_BADPARAM;
 		if ( sig_recvd != 0 )
@@ -353,50 +351,74 @@ wfs_jfs_wipe_block (
 		}
 		return ret_wfs;
 	}
-	fs_block_size = wfs_jfs_get_block_size (wfs_fs);
+	fs_block_size = wfs_jfs_get_block_size (wd.filesys);
 	if ( fs_block_size == 0 )
 	{
 		return WFS_BADPARAM;
 	}
 
-	for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+	if ( wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		if ( wfs_fs.no_wipe_zero_blocks != 0 )
+		if ( wd.is_zero_pass == 0 )
+		{
+			max_passes = 1;
+		}
+		else
+		{
+			/* a marker to wipe with zeros as the last pass */
+			max_passes = 0;
+		}
+	}
+	else
+	{
+		max_passes = wd.filesys.npasses;
+	}
+	for ( j = 0; (j < max_passes) && (sig_recvd == 0); j++ )
+	{
+		if ( wd.filesys.no_wipe_zero_blocks != 0 )
 		{
 			res = ujfs_rw_diskblocks (fp,
 				blocknum * (int64_t)fs_block_size,
-				(int32_t)bufsize, buf, GET);
+				(int32_t)fs_block_size, wd.buf, GET);
 			if ( res != 0 )
 			{
 				ret_wfs = WFS_BLKRD;
 				break;
 			}
-			if ( wfs_is_block_zero (buf, fs_block_size) != 0 )
+			if ( wfs_is_block_zero (wd.buf, fs_block_size) != 0 )
 			{
 				/* this block is all-zeros - don't wipe, as requested */
-				j = wfs_fs.npasses * 2;
+				j = wd.filesys.npasses * 2;
 				break;
 			}
 		}
-		wfs_fill_buffer ( j, buf, bufsize, selected, wfs_fs );
+		if ( wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
+		{
+			pat_no = wd.passno;
+		}
+		else
+		{
+			pat_no = j;
+		}
+		wfs_fill_buffer ( pat_no, wd.buf, fs_block_size, selected, wd.filesys );
 		if ( sig_recvd != 0 )
 		{
 			break;
 		}
 		res = ujfs_rw_diskblocks (fp, blocknum * (int64_t)fs_block_size,
-			(int32_t)bufsize, buf, PUT);
+			(int32_t)fs_block_size, wd.buf, PUT);
 		if ( res != 0 )
 		{
 			break;
 		}
 		/* Flush after each writing, if more than 1 overwriting needs to be done.
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
-		if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+		if ( WFS_IS_SYNC_NEEDED(wd.filesys) )
 		{
 			error = ujfs_flush_dev (fp);
 		}
 	}
-	if ( j < wfs_fs.npasses )
+	if ( j < max_passes )
 	{
 		if ( ret_wfs == WFS_SUCCESS )
 		{
@@ -408,17 +430,18 @@ wfs_jfs_wipe_block (
 		}
 		return ret_wfs;
 	}
-	if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+	if ( ( (wd.filesys.wipe_mode != WFS_WIPE_MODE_PATTERN) || (wd.is_zero_pass == 1) )
+		&& (wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* last pass with zeros: */
-		if ( j != wfs_fs.npasses * 2 )
+		if ( j != wd.filesys.npasses * 2 )
 		{
-			WFS_MEMSET ( buf, 0, bufsize );
+			WFS_MEMSET ( wd.buf, 0, fs_block_size );
 			if ( sig_recvd == 0 )
 			{
 				res = ujfs_rw_diskblocks (fp,
 					blocknum * (int64_t)fs_block_size,
-					(int32_t)bufsize, buf, PUT);
+					(int32_t)fs_block_size, wd.buf, PUT);
 				if ( res != 0 )
 				{
 					ret_wfs = WFS_BLKWR;
@@ -429,7 +452,7 @@ wfs_jfs_wipe_block (
 					return ret_wfs;
 				}
 				/* No need to flush the last writing of a given block. *
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				if ( (wd.filesys.npasses > 1) && (sig_recvd == 0) )
 				{
 					error = ujfs_flush_dev (fp);
 				}*/
@@ -518,6 +541,7 @@ wfs_jfs_wipe_fs (
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
+	wfs_wipedata_t wd;
 	unsigned int prev_percent = 0;
 	int res = 0;
 	int64_t total_size = 0;
@@ -534,6 +558,7 @@ wfs_jfs_wipe_fs (
 	wfs_errcode_t error = 0;
 	struct wfs_jfs * jfs;
 	wfs_errcode_t * error_ret;
+	unsigned long int pass_no;
 
 	jfs = (struct wfs_jfs *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -561,7 +586,7 @@ wfs_jfs_wipe_fs (
 	buf = (unsigned char *) malloc ( bufsize );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -606,7 +631,7 @@ wfs_jfs_wipe_fs (
 	block_map = (struct dmap **) malloc ((size_t)ndmaps * sizeof (struct dmap *));
 	if ( block_map == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		free (buf);
 		if ( error_ret != NULL )
@@ -626,7 +651,7 @@ wfs_jfs_wipe_fs (
 		block_map[i] = (struct dmap *) malloc (sizeof (struct dmap));
 		if ( block_map[i] == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			start += PSIZE;
 			continue;
 		}
@@ -642,43 +667,144 @@ wfs_jfs_wipe_fs (
 # endif
 		start += PSIZE;
 	}
+	wd.filesys = wfs_fs;
+	wd.total_fs = 0;	/* dummy value, unused */
+	wd.ret_val = WFS_SUCCESS;
+	wd.buf = buf;
+	wd.isjournal = 0;
+	wd.is_zero_pass = 0;
 
-	for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
+	if ( wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		if ( block_map[i] == NULL )
+		for ( pass_no = 0; (pass_no < wfs_fs.npasses) && (sig_recvd == 0)
+			/*&& (ret == WFS_SUCCESS)*/; pass_no++ )
 		{
-			continue;
-		}
-		/* skip this dmap if no free blocks */
-		if ( block_map[i]->nfree == 0 )
-		{
-			/* update the progress: */
-			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((i*100)/ndmaps
-				+ (j*100)/block_map[i]->nblocks/ndmaps), &prev_percent);
-			continue;
-		}
-		for ( j = 0; (j < block_map[i]->nblocks)
-			&& (sig_recvd == 0); j++ )
-		{
-			if ( is_block_free (block_map[i]->start + j,
-				block_map, ndmaps) == 1 )
+			wd.passno = pass_no;
+			for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
 			{
-				/* wipe the block here */
-				if ( ret_wfs == WFS_SUCCESS )
+				if ( block_map[i] == NULL )
 				{
-					ret_wfs = wfs_jfs_wipe_block (wfs_fs,
-						block_map[i]->start + j,
-						buf, bufsize, jfs->fs);
+					continue;
 				}
-				else
+				/* skip this dmap if no free blocks */
+				if ( block_map[i]->nfree == 0 )
 				{
-					wfs_jfs_wipe_block (wfs_fs,
-						block_map[i]->start + j,
-						buf, bufsize, jfs->fs);
+					/* update the progress: */
+					wfs_show_progress (WFS_PROGRESS_WFS,
+						(unsigned int)(((ndmaps * (int64_t)pass_no + i)*100)/(ndmaps * (int64_t)wfs_fs.npasses)),
+						&prev_percent);
+					continue;
 				}
+				for ( j = 0; (j < block_map[i]->nblocks)
+					&& (sig_recvd == 0); j++ )
+				{
+					if ( is_block_free (block_map[i]->start + j,
+						block_map, ndmaps) == 1 )
+					{
+						/* wipe the block here */
+						if ( ret_wfs == WFS_SUCCESS )
+						{
+							ret_wfs = wfs_jfs_wipe_block (wd,
+								block_map[i]->start + j,
+								jfs->fs);
+						}
+						else
+						{
+							wfs_jfs_wipe_block (wd,
+								block_map[i]->start + j,
+								jfs->fs);
+						}
+						/* update the progress: */
+						wfs_show_progress (WFS_PROGRESS_WFS,
+							(unsigned int)(((ndmaps * (int64_t)pass_no + i)*100)/(ndmaps * (int64_t)wfs_fs.npasses)
+							+ (j*100)/block_map[i]->nblocks/(ndmaps * (int64_t)wfs_fs.npasses)),
+							&prev_percent);
+					}
+				}
+			}
+		}
+		if ( (wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
+		{
+			/* last pass with zeros */
+			ujfs_flush_dev (jfs->fs);
+			wd.is_zero_pass = 1;
+			for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
+			{
+				if ( block_map[i] == NULL )
+				{
+					continue;
+				}
+				/* skip this dmap if no free blocks */
+				if ( block_map[i]->nfree == 0 )
+				{
+					continue;
+				}
+				for ( j = 0; (j < block_map[i]->nblocks)
+					&& (sig_recvd == 0); j++ )
+				{
+					if ( is_block_free (block_map[i]->start + j,
+						block_map, ndmaps) == 1 )
+					{
+						/* wipe the block here */
+						if ( ret_wfs == WFS_SUCCESS )
+						{
+							ret_wfs = wfs_jfs_wipe_block (wd,
+								block_map[i]->start + j,
+								jfs->fs);
+						}
+						else
+						{
+							wfs_jfs_wipe_block (wd,
+								block_map[i]->start + j,
+								jfs->fs);
+						}
+					}
+				}
+			}
+			ujfs_flush_dev (jfs->fs);
+		}
+	}
+	else
+	{
+		wd.passno = 0;
+		for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
+		{
+			if ( block_map[i] == NULL )
+			{
+				continue;
+			}
+			/* skip this dmap if no free blocks */
+			if ( block_map[i]->nfree == 0 )
+			{
 				/* update the progress: */
-				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((i*100)/ndmaps
-					+ (j*100)/block_map[i]->nblocks/ndmaps), &prev_percent);
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int)((i*100)/ndmaps),
+					&prev_percent);
+				continue;
+			}
+			for ( j = 0; (j < block_map[i]->nblocks)
+				&& (sig_recvd == 0); j++ )
+			{
+				if ( is_block_free (block_map[i]->start + j,
+					block_map, ndmaps) == 1 )
+				{
+					/* wipe the block here */
+					if ( ret_wfs == WFS_SUCCESS )
+					{
+						ret_wfs = wfs_jfs_wipe_block (wd,
+							block_map[i]->start + j,
+							jfs->fs);
+					}
+					else
+					{
+						wfs_jfs_wipe_block (wd,
+							block_map[i]->start + j,
+							jfs->fs);
+					}
+					/* update the progress: */
+					wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((i*100)/ndmaps
+						+ (j*100)/block_map[i]->nblocks/ndmaps), &prev_percent);
+				}
 			}
 		}
 	}
@@ -724,6 +850,7 @@ wfs_jfs_wipe_unrm (
 	wfs_fsid_t wfs_fs;
 # endif
 {
+	wfs_wipedata_t wd;
 	wfs_errcode_t ret_unrm = WFS_SUCCESS;
 	struct logsuper journal;
 	FILE * journal_fp = NULL;
@@ -760,6 +887,12 @@ wfs_jfs_wipe_unrm (
 		}
 		return WFS_BADPARAM;
 	}
+	wd.filesys = wfs_fs;
+	wd.total_fs = 0;	/* dummy value, unused */
+	wd.ret_val = WFS_SUCCESS;
+	wd.buf = buf;
+	wd.isjournal = 0;
+	wd.is_zero_pass = 0;
 
 	/* The library doesn't provide any method to search or open directories/files,
 	   so wipe only the journal (log).*/
@@ -807,7 +940,7 @@ wfs_jfs_wipe_unrm (
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			ret_unrm = WFS_MALLOC;
 			if ( sig_recvd != 0 )
@@ -832,15 +965,15 @@ wfs_jfs_wipe_unrm (
 			   "block" is an offset here, because it is required so below */
 			if ( ret_unrm == WFS_SUCCESS )
 			{
-				ret_unrm = wfs_jfs_wipe_block (wfs_fs,
+				ret_unrm = wfs_jfs_wipe_block (wd,
 					(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
-					buf, bufsize, jfs->fs);
+					jfs->fs);
 			}
 			else
 			{
-				wfs_jfs_wipe_block (wfs_fs,
+				wfs_jfs_wipe_block (wd,
 					(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
-					buf, bufsize, jfs->fs);
+					jfs->fs);
 			}
 			wfs_show_progress (WFS_PROGRESS_UNRM,
 				(unsigned int)(50 /* unrm i-nodes */ + (i * 50)/(journal.size - 2)),
@@ -947,7 +1080,7 @@ wfs_jfs_wipe_unrm (
 		buf = (unsigned char *) malloc ( bufsize );
 		if ( buf == NULL )
 		{
-			error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+			error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 			fclose (journal_fp);
 			wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 			ret_unrm = WFS_MALLOC;
@@ -968,13 +1101,12 @@ wfs_jfs_wipe_unrm (
 		{
 			if ( ret_unrm == WFS_SUCCESS )
 			{
-				ret_unrm = wfs_jfs_wipe_block (wfs_fs, block,
-					buf, bufsize, journal_fp);
+				ret_unrm = wfs_jfs_wipe_block (wd, block,
+					journal_fp);
 			}
 			else
 			{
-				wfs_jfs_wipe_block (wfs_fs, block, buf,
-					bufsize, journal_fp);
+				wfs_jfs_wipe_block (wd, block, journal_fp);
 			}
 			wfs_show_progress (WFS_PROGRESS_UNRM,
 				(unsigned int)(50 /* unrm i-nodes */ + (block * 50)/nblocks),
@@ -1055,7 +1187,7 @@ wfs_jfs_open_fs (
 	jfs = (struct wfs_jfs *) malloc (sizeof (struct wfs_jfs));
 	if ( jfs == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -1066,7 +1198,7 @@ wfs_jfs_open_fs (
 	jfs->fs = fopen ( wfs_fs->fsname, "r+b" );
 	if ( jfs->fs == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (1L);	/* EPERM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		ret = WFS_OPENFS;
 		free (jfs);
 	}
@@ -1163,7 +1295,7 @@ wfs_jfs_close_fs (
 			free (jfs);
 			if ( res != 0 )
 			{
-				error = WFS_GET_ERRNO_OR_DEFAULT (9L);	/* EBADF */
+				error = WFS_GET_ERRNO_OR_DEFAULT (EBADF);
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;

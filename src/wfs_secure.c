@@ -55,7 +55,7 @@
 # undef WFS_HAVE_STAT
 #endif
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -94,7 +94,7 @@ wfs_clear_cap (WFS_VOID)
 # endif
 		   )
 		{
-			ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			ret = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		}
 		/* don't care about any cap_free() errors right now */
 		cap_free (my_capab);
@@ -119,7 +119,7 @@ wfs_clear_cap (WFS_VOID)
 # endif
 			   )
 			{
-				ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
+				ret = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 			}
 			else
 			{	/* cap_clear() success */
@@ -131,7 +131,7 @@ wfs_clear_cap (WFS_VOID)
 # endif
 				   )
 				{
-					ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
+					ret = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 				}
 			}
 			/* don't care about any cap_free() errors right now */
@@ -140,7 +140,7 @@ wfs_clear_cap (WFS_VOID)
 		else
 		{
 			/* cap_get_proc() failed. */
-			ret = WFS_GET_ERRNO_OR_DEFAULT (1L);
+			ret = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 		}
 	}
 #endif /* #if (defined HAVE_SYS_CAPABILITY_H) && (defined HAVE_LIBCAP) */

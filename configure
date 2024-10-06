@@ -820,7 +820,6 @@ enable_MINIX
 enable_JFS
 enable_HFSP
 enable_OCFS
-enable_random_method
 enable_wfs
 enable_unrm
 enable_part
@@ -1486,7 +1485,6 @@ Optional Features:
   --enable-JFS		JFS support (default=yes).
   --enable-HFSP		HFS+ support (default=yes).
   --enable-OCFS		OCFS support (default=yes).
-  --enable-random-method	DEPRECATED: Random pattern method (like shred) instead of full Gutmann.
   --enable-wfs		enable wiping free space (default=yes).
   --enable-unrm		enable wiping undelete data (default=yes).
   --enable-part		enable wiping partially-used blocks (default=yes).
@@ -3536,21 +3534,6 @@ else $as_nop
 fi
 
 
-# Check whether --enable-random-method was given.
-if test ${enable_random_method+y}
-then :
-  enableval=$enable_random_method; if (test "x$enableval" = "xyes"); then
-		want_rand=yes
-	 else
-		want_rand=no
-	 fi
-
-
-else $as_nop
-  want_rand=no
-fi
-
-
 # Check whether --enable-wfs was given.
 if test ${enable_wfs+y}
 then :
@@ -3625,11 +3608,6 @@ else $as_nop
   feat_LIBNETBLOCK=no
 fi
 
-
-if ( test "x$want_rand" = "xyes" ); then
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: --enable-random-method if deprecated. Use --method <name> when running the program." >&5
-printf "%s\n" "$as_me: WARNING: --enable-random-method if deprecated. Use --method <name> when running the program." >&2;}
-fi
 
 if ( test "x$feat_wfs" != "xyes" && test "x$feat_unrm" != "xyes" && test "x$feat_part" != "xyes" ); then
 	as_fn_error $? "All three options --enable-wfs=no --enable-unrm=no --enable-part=no can NOT be given together." "$LINENO" 5
@@ -6915,21 +6893,9 @@ then :
 printf "%s\n" "#define HAVE_NTFS_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "ntfs/ntfs_volume.h" "ac_cv_header_ntfs_ntfs_volume_h" "#ifdef HAVE_STDARG_H
+  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
-
-
-"
-if test "x$ac_cv_header_ntfs_ntfs_volume_h" = xyes
-then :
-
-printf "%s\n" "#define HAVE_NTFS_NTFS_VOLUME_H 1" >>confdefs.h
-
-else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
 
 
 "
@@ -6940,8 +6906,6 @@ printf "%s\n" "#define HAVE_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
   has_ntfs_h=no
-fi
-
 fi
 
 fi
@@ -6959,21 +6923,9 @@ then :
 printf "%s\n" "#define HAVE_NTFS_3G_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "ntfs-3g/ntfs_volume.h" "ac_cv_header_ntfs_3g_ntfs_volume_h" "#ifdef HAVE_STDARG_H
+  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
 					# include <stdarg.h>
 					#endif
-
-
-"
-if test "x$ac_cv_header_ntfs_3g_ntfs_volume_h" = xyes
-then :
-
-printf "%s\n" "#define HAVE_NTFS_3G_NTFS_VOLUME_H 1" >>confdefs.h
-
-else $as_nop
-  ac_fn_c_check_header_compile "$LINENO" "volume.h" "ac_cv_header_volume_h" "#ifdef HAVE_STDARG_H
-						# include <stdarg.h>
-						#endif
 
 
 "
@@ -6984,8 +6936,6 @@ printf "%s\n" "#define HAVE_VOLUME_H 1" >>confdefs.h
 
 else $as_nop
   has_ntfs_h=no
-fi
-
 fi
 
 fi

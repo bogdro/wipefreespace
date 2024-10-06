@@ -307,6 +307,7 @@ Command line options:
 			virtual/sparse devices, where empty areas are read as
 			all-zeros and do not take physical space unless
 			actually written to)
+--order <type>		Use the given order for wiping (read below)
 --use-dedicated		Use the program dedicated for the given filesystem
 			type if supported. Fallback to WipeFreeSpace if
 			unsupported (currently, only 'ntfswipe' is supported)
@@ -339,6 +340,15 @@ Each given filesystem is wiped ONLY ONCE, no matter how many times it
  appears on the command line.
 WipeFreeSpace also works for file systems created inside regular
  files on any host file system.
+
+WipeFreeSpace supports two wiping orders:
+ - block - wipe block by block with all patterns and flush the overwriting
+   data to disk after each pattern (so, each block waits to be wiped until the
+   previous one is done),
+ - pattern - wipe the whole filesystem with each pattern (all blocks with the
+   first pattern, then all blocks with the second pattern, and so on), and
+   flushing the overwriting data to disk after each pattern. This is the
+   default.
 
 NOTE: wiping with just one pattern at a time (-n 1) will NOT perform wiping
  with all patterns of the given method one by one, it will always use the

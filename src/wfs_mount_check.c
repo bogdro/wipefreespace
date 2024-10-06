@@ -126,16 +126,20 @@
 # define LOOPMAJOR	7
 #endif
 
+#ifdef WFS_HAVE_MNTENT
+# undef WFS_HAVE_MNTENT
+#endif
+
 #if (defined HAVE_MNTENT_H) && ((defined HAVE_GETMNTENT) || (defined HAVE_GETMNTENT_R))
 # define WFS_HAVE_MNTENT 1
-#else
-# undef WFS_HAVE_MNTENT
+#endif
+
+#ifdef WFS_HAVE_MNTINFO
+# undef WFS_HAVE_MNTINFO
 #endif
 
 #if (defined HAVE_SYS_MOUNT_H) && (defined HAVE_GETMNTINFO)
 # define WFS_HAVE_MNTINFO 1
-#else
-# undef WFS_HAVE_MNTINFO
 #endif
 
 #if !( (defined WFS_HAVE_MNTENT) || (defined WFS_HAVE_MNTINFO) )
@@ -144,17 +148,20 @@
 # define WFS_USED_ONLY_WITH_MOUNTS
 #endif
 
+#ifdef WFS_HAVE_IOCTL_LOOP
+# undef WFS_HAVE_IOCTL_LOOP
+#endif
+
 #if (defined HAVE_FCNTL_H) && (defined HAVE_SYS_IOCTL_H) \
 	&& (defined HAVE_IOCTL) && (defined HAVE_SYS_STAT_H) \
 	&& ((defined HAVE_LOOP_H) || (defined HAVE_LINUX_LOOP_H))
 # define WFS_HAVE_IOCTL_LOOP 1
 # define WFS_USED_ONLY_WITH_LOOP WFS_ATTR ((unused))
 #else
-# undef WFS_HAVE_IOCTL_LOOP
 # define WFS_USED_ONLY_WITH_LOOP
 #endif
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -206,7 +213,8 @@ wfs_get_mnt_point_getmntent (
 # endif
 {
 	FILE *mnt_f;
-	struct mntent *mnt, mnt_copy;
+	const struct mntent *mnt;
+	struct mntent mnt_copy;
 # ifdef HAVE_GETMNTENT_R
 	char buffer[WFS_MNTBUFLEN];
 # endif
@@ -433,8 +441,10 @@ wfs_get_mnt_point_mounts (
 # ifdef LOOP_GET_STATUS
 				WFS_MEMSET ( &li, 0, sizeof (struct loop_info) );
 # endif
+# if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
 				res = -1;
 				res64 = -1;
+# endif
 # ifdef LOOP_GET_STATUS64
 				res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
 				res = res64;
@@ -777,7 +787,9 @@ wfs_check_loop_mounted (
 			close (fd);
 			return 0;
 		}
+# if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
 		res = -1;
+# endif
 # ifdef LOOP_GET_STATUS64
 		res = ioctl (fd, LOOP_GET_STATUS64, &li64);
 		if ( res < 0 )

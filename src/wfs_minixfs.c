@@ -63,7 +63,7 @@ Something wrong. MinixFS requested, but minix_fs.h or libminixfs missing.
 #include "wfs_wiping.h"
 #include "wfs_mount_check.h"
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -97,7 +97,7 @@ wfs_minixfs_get_free_bit (
 		return -1L;
 	}
 
-	for (i = 0; i < bitmap_size_in_blocks * BLOCK_SIZE
+	for (i = 0; (i < bitmap_size_in_blocks * BLOCK_SIZE)
 		&& (sig_recvd == 0); i++)
 	{
 		if (bmap[i] != 0xff)
@@ -265,12 +265,11 @@ wfs_minixfs_wipe_dir (
 				{
 					continue;
 				}
-				if (blk[j+2] == '.' && blk[j+3] == '\0')
+				if (WFS_IS_NAME_CURRENT_DIR(&blk[j+2]))
 				{
 					continue;
 				}
-				if (blk[j+2] == '.' && blk[j+3] == '.'
-					&& blk[j+4] == '\0')
+				if (WFS_IS_NAME_PARENT_DIR(&blk[j+2]))
 				{
 					continue;
 				}
@@ -307,12 +306,11 @@ wfs_minixfs_wipe_dir (
 						continue;
 					}
 					/* wiping partially used blocks */
-					if (blk[j+2] == '.' && blk[j+3] == '\0')
+					if (WFS_IS_NAME_CURRENT_DIR(&blk[j+2]))
 					{
 						continue;
 					}
-					if (blk[j+2] == '.' && blk[j+3] == '.'
-						&& blk[j+4] == '\0')
+					if (WFS_IS_NAME_PARENT_DIR(&blk[j+2]))
 					{
 						continue;
 					}
@@ -494,7 +492,7 @@ wfs_minixfs_wipe_part (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -564,7 +562,7 @@ wfs_minixfs_wipe_fs (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -573,67 +571,152 @@ wfs_minixfs_wipe_fs (
 		return WFS_MALLOC;
 	}
 
-	do
+	if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		current_block = wfs_minixfs_get_free_bit (minix->zone_bmap,
-			ZMAPS (minix), start_pos);
-		if ( current_block == -1L )
-		{
-			break;
-		}
-		start_pos = current_block + 1;
-		current_block += FIRSTZONE (minix)-1;
-		if ( (unsigned long int)current_block > BLOCKS (minix) )
-		{
-			break;
-		}
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			start_pos = 0;
+			do
 			{
-				was_read = fread (buf, 1,
-					fs_block_size,
-					goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
-				if ( (was_read == fs_block_size)
-					&& (wfs_is_block_zero (buf,
-					fs_block_size) != 0) )
+				current_block = wfs_minixfs_get_free_bit (minix->zone_bmap,
+					ZMAPS (minix), start_pos);
+				if ( current_block == -1L )
 				{
-					/* this block is all-zeros - don't wipe, as requested */
-					j = wfs_fs.npasses * 2;
 					break;
 				}
-			}
-			wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
-			if ( sig_recvd != 0 )
-			{
-				ret_wfs = WFS_SIGNAL;
-				break;
-			}
-			error = 0;
-			WFS_SET_ERRNO (0);
-			written = fwrite (buf, 1, fs_block_size,
-				goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
-			if ( written != fs_block_size )
-			{
+				start_pos = current_block + 1;
+				current_block += FIRSTZONE (minix)-1;
+				if ( (unsigned long int)current_block > BLOCKS (minix) )
+				{
+					break;
+				}
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					was_read = fread (buf, 1,
+						fs_block_size,
+						goto_blk (minix->fp,
+						(int)(current_block & 0x0FFFFFFFF)));
+					if ( (was_read == fs_block_size)
+						&& (wfs_is_block_zero (buf,
+						fs_block_size) != 0) )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						continue;
+					}
+				}
+				wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
+				error = 0;
+				WFS_SET_ERRNO (0);
+				written = fwrite (buf, 1, fs_block_size,
+					goto_blk (minix->fp,
+					(int)(current_block & 0x0FFFFFFFF)));
+				if ( written != fs_block_size )
+				{
 # ifdef HAVE_ERRNO_H
-				error = errno;
+					error = errno;
 # endif
-				ret_wfs = WFS_BLKWR;
-				break;
+					ret_wfs = WFS_BLKWR;
+					break;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+				{
+					error = wfs_minixfs_flush_fs (wfs_fs);
+				}
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int)((((BLOCKS (minix)) * j + (unsigned long int)current_block) * 100)
+						/((BLOCKS (minix)) * wfs_fs.npasses)),
+					&prev_percent);
 			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-			{
-				error = wfs_minixfs_flush_fs (wfs_fs);
-			}
+			while ( (current_block != -1L) && (sig_recvd == 0) );
+			wfs_minixfs_flush_fs (wfs_fs);
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
+			wfs_minixfs_flush_fs (wfs_fs);
 			/* last pass with zeros: */
-			if ( j != wfs_fs.npasses * 2 )
+			WFS_MEMSET ( buf, 0, fs_block_size );
+			if ( sig_recvd == 0 )
 			{
-				WFS_MEMSET ( buf, 0, fs_block_size );
+				do
+				{
+					current_block = wfs_minixfs_get_free_bit (minix->zone_bmap,
+						ZMAPS (minix), start_pos);
+					if ( current_block == -1L )
+					{
+						break;
+					}
+					start_pos = current_block + 1;
+					current_block += FIRSTZONE (minix)-1;
+					if ( (unsigned long int)current_block > BLOCKS (minix) )
+					{
+						break;
+					}
+					error = 0;
+					WFS_SET_ERRNO (0);
+					written = fwrite (buf, 1, fs_block_size,
+						goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
+					if ( written != fs_block_size )
+					{
+# ifdef HAVE_ERRNO_H
+						error = errno;
+# endif
+						ret_wfs = WFS_BLKWR;
+					}
+					if ( sig_recvd != 0 )
+					{
+						ret_wfs = WFS_SIGNAL;
+						break;
+					}
+				}
+				while ( (current_block != -1L) && (sig_recvd == 0) );
+				wfs_minixfs_flush_fs (wfs_fs);
+			}
+			else
+			{
+				ret_wfs = WFS_SIGNAL;
+			}
+		}
+	}
+	else
+	{
+		do
+		{
+			current_block = wfs_minixfs_get_free_bit (minix->zone_bmap,
+				ZMAPS (minix), start_pos);
+			if ( current_block == -1L )
+			{
+				break;
+			}
+			start_pos = current_block + 1;
+			current_block += FIRSTZONE (minix)-1;
+			if ( (unsigned long int)current_block > BLOCKS (minix) )
+			{
+				break;
+			}
+			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+			{
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					was_read = fread (buf, 1,
+						fs_block_size,
+						goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
+					if ( (was_read == fs_block_size)
+						&& (wfs_is_block_zero (buf,
+						fs_block_size) != 0) )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
 				if ( sig_recvd != 0 )
 				{
 					ret_wfs = WFS_SIGNAL;
@@ -651,18 +734,49 @@ wfs_minixfs_wipe_fs (
 					ret_wfs = WFS_BLKWR;
 					break;
 				}
-				/* No need to flush the last writing of a given block. *
-				if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 				{
 					error = wfs_minixfs_flush_fs (wfs_fs);
-				}*/
+				}
 			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				/* last pass with zeros: */
+				if ( j != wfs_fs.npasses * 2 )
+				{
+					WFS_MEMSET ( buf, 0, fs_block_size );
+					if ( sig_recvd != 0 )
+					{
+						ret_wfs = WFS_SIGNAL;
+						break;
+					}
+					error = 0;
+					WFS_SET_ERRNO (0);
+					written = fwrite (buf, 1, fs_block_size,
+						goto_blk (minix->fp, (int)(current_block & 0x0FFFFFFFF)));
+					if ( written != fs_block_size )
+					{
+# ifdef HAVE_ERRNO_H
+						error = errno;
+# endif
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+					/* No need to flush the last writing of a given block. *
+					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					{
+						error = wfs_minixfs_flush_fs (wfs_fs);
+					}*/
+				}
+			}
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int)((current_block * 100)/(BLOCKS (minix))),
+				&prev_percent);
 		}
-		wfs_show_progress (WFS_PROGRESS_WFS,
-			(unsigned int)((current_block * 100)/(BLOCKS (minix))),
-			&prev_percent);
+		while ( (current_block != -1L) && (sig_recvd == 0) );
 	}
-	while ( (current_block != -1L) && (sig_recvd == 0) );
 
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	free (buf);
@@ -716,7 +830,7 @@ wfs_minixfs_wipe_unrm (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -801,7 +915,7 @@ wfs_minixfs_open_fs (
 	minix = (struct minix_fs_dat *) malloc (sizeof (struct minix_fs_dat));
 	if ( minix == NULL )
 	{
-		ret = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		ret = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = ret;
@@ -812,7 +926,7 @@ wfs_minixfs_open_fs (
 	minix->fp = fopen (wfs_fs->fsname, "r+b");
 	if ( minix->fp == NULL )
 	{
-		ret = WFS_GET_ERRNO_OR_DEFAULT (9); /* EBADF */
+		ret = WFS_GET_ERRNO_OR_DEFAULT (EBADF);
 		free (minix);
 		if ( error_ret != NULL )
 		{
@@ -929,7 +1043,7 @@ wfs_minixfs_close_fs (
 			WFS_SET_ERRNO (0);
 			if ( fclose (minix->fp) != 0 )
 			{
-				error = WFS_GET_ERRNO_OR_DEFAULT (9); /* EBADF */
+				error = WFS_GET_ERRNO_OR_DEFAULT (EBADF);
 				if ( error_ret != NULL )
 				{
 					*error_ret = error;

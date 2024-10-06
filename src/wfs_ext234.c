@@ -117,7 +117,7 @@ struct wfs_e234_block_data
 	unsigned int number_of_blocks_in_inode;
 };
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -190,6 +190,8 @@ e2_do_block (
 		/*@requires notnull wfs_fs, BLOCKNR @*/
 {
 	unsigned long int j;
+	unsigned long int max_passes;
+	unsigned long int pat_no;
 	int returns = 0;
 	size_t buf_start = 0;
 	int selected[WFS_NPAT] = {0};
@@ -263,7 +265,23 @@ e2_do_block (
 		return 0;
 	}
 
-	for ( j = 0; (j < bd->wd.filesys.npasses) && (sig_recvd == 0); j++ )
+	if ( bd->wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
+	{
+		if ( bd->wd.is_zero_pass == 0 )
+		{
+			max_passes = 1;
+		}
+		else
+		{
+			/* a marker to wipe with zeros as the last pass */
+			max_passes = 0;
+		}
+	}
+	else
+	{
+		max_passes = bd->wd.filesys.npasses;
+	}
+	for ( j = 0; (j < max_passes) && (sig_recvd == 0); j++ )
 	{
 		if ( bd->wd.filesys.no_wipe_zero_blocks != 0 )
 		{
@@ -274,7 +292,15 @@ e2_do_block (
 				break;
 			}
 		}
-		wfs_fill_buffer (j, bd->wd.buf + buf_start /* buf OK */,
+		if ( bd->wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
+		{
+			pat_no = bd->wd.passno;
+		}
+		else
+		{
+			pat_no = j;
+		}
+		wfs_fill_buffer (pat_no, bd->wd.buf + buf_start /* buf OK */,
 			fs_block_size - buf_start,
 			selected, bd->wd.filesys);
 		if ( sig_recvd != 0 )
@@ -313,7 +339,8 @@ e2_do_block (
 			gerror = wfs_e234_flush_fs (bd->wd.filesys);
 		}
 	}
-	if ( (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
+	if ( ( (bd->wd.filesys.wipe_mode != WFS_WIPE_MODE_PATTERN) || (bd->wd.is_zero_pass == 1) )
+		&& (bd->wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
 	{
 		/* perform last wipe with zeros */
 		if ( j != bd->wd.filesys.npasses * 2 )
@@ -690,6 +717,7 @@ wfs_e234_wipe_part (
 	errcode_t e2error = 0;
 	wfs_errcode_t gerror = 0;
 	size_t fs_block_size;
+	unsigned long int j;
 
 	e2fs = (ext2_filsys) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -719,7 +747,7 @@ wfs_e234_wipe_part (
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -728,10 +756,10 @@ wfs_e234_wipe_part (
 		return WFS_MALLOC;
 	}
 	block_data.wd.filesys = wfs_fs;
-	block_data.wd.passno = 0;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
 	block_data.wd.isjournal = 0;
+	block_data.wd.is_zero_pass = 0;
 
 	e2error = ext2fs_open_inode_scan (e2fs, 0, &ino_scan);
 	if ( e2error != 0 )
@@ -839,8 +867,34 @@ wfs_e234_wipe_part (
 			}
 			/* partially wipe the last block */
 			block_data.ino = &ino;
-			ret_part = e2_do_block (e2fs, &last_block_no,
-				1, &block_data);
+			if ( block_data.wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
+			{
+				/* effectively also block-order */
+				for ( j = 0; (j <= wfs_fs.npasses)
+					&& (sig_recvd == 0)
+					/*&& (ret == WFS_SUCCESS)*/; j++ )
+				{
+					block_data.wd.passno = j;
+					ret_part = e2_do_block (e2fs,
+						&last_block_no,
+						1, &block_data);
+					if ( (ret_part != 0) || (sig_recvd != 0) )
+					{
+						ret_part = WFS_BLKWR;
+						break;
+					}
+					if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
+					{
+						gerror = wfs_e234_flush_fs (wfs_fs);
+					}
+				}
+			}
+			else
+			{
+				block_data.wd.passno = 0;
+				ret_part = e2_do_block (e2fs, &last_block_no,
+					1, &block_data);
+			}
 
 			if ( ret_part != WFS_SUCCESS )
 			{
@@ -919,6 +973,7 @@ wfs_e234_wipe_fs (
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
 	size_t fs_block_size;
+	unsigned long int j;
 
 	e2fs = (ext2_filsys) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -948,7 +1003,7 @@ wfs_e234_wipe_fs (
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -957,9 +1012,9 @@ wfs_e234_wipe_fs (
 		return WFS_MALLOC;
 	}
 	block_data.wd.filesys = wfs_fs;
-	block_data.wd.passno = 0;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
+	block_data.wd.is_zero_pass = 0;
 	block_data.ino = NULL;
 	block_data.wd.isjournal = 0;
 	block_data.curr_inode = 0;
@@ -980,20 +1035,77 @@ wfs_e234_wipe_fs (
 	}
 
 	/* wiping free blocks on the whole device */
-	for ( blno = 1; (blno < e2fs->super->s_blocks_count)
-		&& (sig_recvd == 0); blno++ )
+	if ( block_data.wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		/* if we find an empty block, we shred it */
-		if ( ext2fs_test_block_bitmap (e2fs->block_map, blno) == 0 )
+		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
+			/*&& (ret == WFS_SUCCESS)*/; j++ )
 		{
-			block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
-			wfs_show_progress (WFS_PROGRESS_WFS,
-				(blno * 100)/e2fs->super->s_blocks_count,
-				&prev_percent);
-			if ( (block_ret != 0) || (sig_recvd != 0) )
+			block_data.wd.passno = j;
+			for ( blno = 1; (blno < e2fs->super->s_blocks_count)
+				&& (sig_recvd == 0); blno++ )
 			{
-				ret_wfs = WFS_BLKWR;
-				break;
+				/* if we find an empty block, we shred it */
+				if ( ext2fs_test_block_bitmap (e2fs->block_map, blno) == 0 )
+				{
+					block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
+					wfs_show_progress (WFS_PROGRESS_WFS,
+						(unsigned int)(((e2fs->super->s_blocks_count * j + blno) * 100)
+							/(e2fs->super->s_blocks_count * wfs_fs.npasses)),
+						&prev_percent);
+					if ( (block_ret != 0) || (sig_recvd != 0) )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+				}
+			}
+			if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
+			{
+				wfs_e234_flush_fs (wfs_fs);
+			}
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int)((j + 1) * 100 / wfs_fs.npasses),
+				&prev_percent);
+		}
+		if ( (block_data.wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
+		{
+			/* last pass with zeros */
+			wfs_e234_flush_fs (wfs_fs);
+			block_data.wd.is_zero_pass = 1;
+			for ( blno = 1; (blno < e2fs->super->s_blocks_count)
+				&& (sig_recvd == 0); blno++ )
+			{
+				if ( ext2fs_test_block_bitmap (e2fs->block_map, blno) == 0 )
+				{
+					block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
+					if ( (block_ret != 0) || (sig_recvd != 0) )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+				}
+			}
+			wfs_e234_flush_fs (wfs_fs);
+		}
+	}
+	else
+	{
+		block_data.wd.passno = 0;
+		for ( blno = 1; (blno < e2fs->super->s_blocks_count)
+			&& (sig_recvd == 0); blno++ )
+		{
+			/* if we find an empty block, we shred it */
+			if ( ext2fs_test_block_bitmap (e2fs->block_map, blno) == 0 )
+			{
+				block_ret = e2_do_block (e2fs, &blno, 1, &block_data);
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(blno * 100)/e2fs->super->s_blocks_count,
+					&prev_percent);
+				if ( (block_ret != 0) || (sig_recvd != 0) )
+				{
+					ret_wfs = WFS_BLKWR;
+					break;
+				}
 			}
 		}
 	}
@@ -1040,6 +1152,7 @@ wfs_e234_wipe_journal (
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
 	size_t fs_block_size;
+	unsigned long int j;
 
 	e2fs = (ext2_filsys) wfs_fs.fs_backend;
 	error_ret = (errcode_t *) wfs_fs.fs_error;
@@ -1060,7 +1173,6 @@ wfs_e234_wipe_journal (
 		return WFS_BADPARAM;
 	}
 	block_data.wd.filesys = wfs_fs;
-	block_data.wd.passno = 0;
 	block_data.wd.ret_val = WFS_SUCCESS;
 	block_data.wd.total_fs = 0;	/* dummy value, unused */
 	block_data.ino = NULL;
@@ -1101,7 +1213,7 @@ wfs_e234_wipe_journal (
 	block_data.wd.buf = (unsigned char *) malloc (fs_block_size);
 	if ( block_data.wd.buf == NULL )
 	{
-		e2error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		e2error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &(block_data.prev_percent));
 		if ( error_ret != NULL )
 		{
@@ -1122,9 +1234,28 @@ wfs_e234_wipe_journal (
 	}
 	block_data.number_of_blocks_in_inode = jino.i_blocks;
 
-	e2error = ext2fs_block_iterate (e2fs,
-		e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
-		BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
+	if ( block_data.wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
+	{
+		for ( j = 0; (j <= wfs_fs.npasses) && (sig_recvd == 0)
+			/*&& (ret == WFS_SUCCESS)*/; j++ )
+		{
+			block_data.wd.passno = j;
+			e2error = ext2fs_block_iterate (e2fs,
+				e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
+				BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
+			if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
+			{
+				wfs_e234_flush_fs (wfs_fs);
+			}
+		}
+	}
+	else
+	{
+		block_data.wd.passno = 0;
+		e2error = ext2fs_block_iterate (e2fs,
+			e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
+			BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
+	}
 
 	if ( e2error != 0 )
 	{

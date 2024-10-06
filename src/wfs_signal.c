@@ -55,7 +55,7 @@
 #include "wfs_wrappers.h"
 #include "wfs_util.h"
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -212,7 +212,7 @@ child_signal_received (
 # undef void
 }
 
-static wfs_fsid_t wf_gen = {"", 0, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0};
+static wfs_fsid_t wf_gen = {"", 0, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_BLOCK};
 
 /* =============================================================== */
 
@@ -238,7 +238,7 @@ static void print_signal_error (
 	{
 		wf_gen.fs_error = &err;
 
-		err = WFS_GET_ERRNO_OR_DEFAULT (1L);
+		err = WFS_GET_ERRNO_OR_DEFAULT (EPERM);
 # ifdef HAVE_SNPRINTF
 		res = snprintf (tmp, TMPSIZE, "%.*d", TMPSIZE-1, signum);
 # else

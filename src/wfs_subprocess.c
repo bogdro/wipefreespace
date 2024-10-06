@@ -77,7 +77,7 @@
 # define STDERR_FILENO	2
 #endif
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 

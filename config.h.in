@@ -274,14 +274,8 @@
 /* Define to 1 if you have the `mount' function. */
 #undef HAVE_MOUNT
 
-/* Whether you have the ntfs-3g/ntfs_volume.h header. */
-#undef HAVE_NTFS_3G_NTFS_VOLUME_H
-
 /* Whether you have the ntfs-3g/volume.h header. */
 #undef HAVE_NTFS_3G_VOLUME_H
-
-/* Whether you have the ntfs/ntfs_volume.h header. */
-#undef HAVE_NTFS_NTFS_VOLUME_H
 
 /* Whether you have the ntfs/volume.h header. */
 #undef HAVE_NTFS_VOLUME_H

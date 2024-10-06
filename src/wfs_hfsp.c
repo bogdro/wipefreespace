@@ -83,7 +83,7 @@ extern int volume_writetobuf WFS_PARAMS ((volume * vol, void * buf, long int blo
 #include "wfs_wiping.h"
 #include "wfs_mount_check.h"
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -287,7 +287,7 @@ wfs_hfsp_wipe_part_file (
 		if ( (prev_percent != NULL) && (hfsp_volume->vol.file_count != 0) )
 		{
 			wfs_show_progress (WFS_PROGRESS_PART,
-				(unsigned int)((*curr_file_no)/(hfsp_volume->vol.file_count)), prev_percent);
+				(unsigned int)(((*curr_file_no) * 100)/(hfsp_volume->vol.file_count)), prev_percent);
 		}
 	}
 
@@ -499,7 +499,7 @@ wfs_hfsp_wipe_part (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -575,7 +575,7 @@ wfs_hfsp_wipe_fs (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -584,78 +584,160 @@ wfs_hfsp_wipe_fs (
 		return WFS_MALLOC;
 	}
 
-	for ( curr_block = 0;
-		(curr_block < hfsp_volume->vol.total_blocks)
-		&& (sig_recvd == 0);
-		curr_block++ )
+	if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		if ( volume_allocated (hfsp_volume, curr_block) == 0 )
+		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
 		{
-			/* block is not allocated - wipe it */
-			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+			for ( curr_block = 0;
+				(curr_block < hfsp_volume->vol.total_blocks)
+				&& (sig_recvd == 0);
+				curr_block++ )
 			{
-				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				if ( volume_allocated (hfsp_volume, curr_block) == 0 )
 				{
-					res = volume_readinbuf (hfsp_volume, buf,
-						(long int)curr_block);
-					if ( res != 0 )
+					/* block is not allocated - wipe it */
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
 					{
-						if ( error_ret != NULL )
+						res = volume_readinbuf (hfsp_volume, buf,
+							(long int)curr_block);
+						if ( res != 0 )
 						{
-							*error_ret = error;
+							if ( error_ret != NULL )
+							{
+								*error_ret = error;
+							}
+							return WFS_BLKRD;
 						}
-						return WFS_BLKRD;
+						if ( wfs_is_block_zero (buf,
+							fs_block_size) != 0 )
+						{
+							/* this block is all-zeros -
+							 don't wipe, as requested */
+							break;
+						}
 					}
-					if ( wfs_is_block_zero (buf,
-						fs_block_size) != 0 )
-					{
-						/* this block is all-zeros - don't wipe, as requested */
-						j = wfs_fs.npasses * 2;
-						break;
-					}
-				}
-				wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
-				error = volume_writetobuf (hfsp_volume,
-					buf, (long int)curr_block);
-				if ( error != 0 )
-				{
-					ret_wfs = WFS_BLKWR;
-					break;
-				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-				{
-					error = wfs_hfsp_flush_fs (wfs_fs);
-				}
-			}
-			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
-				&& (ret_wfs == WFS_SUCCESS) )
-			{
-				/* this block is NOT all-zeros - wipe */
-				if ( j != wfs_fs.npasses * 2 )
-				{
-					/* perform last wipe with zeros */
-					WFS_MEMSET ( buf, 0, fs_block_size );
+					wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
 					error = volume_writetobuf (hfsp_volume,
 						buf, (long int)curr_block);
 					if ( error != 0 )
 					{
 						ret_wfs = WFS_BLKWR;
-						/* do NOT break here */
+						break;
 					}
-					/* No need to flush the last writing of a given block. *
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+				} /* if (volume_allocated) */
+				wfs_show_progress (WFS_PROGRESS_WFS,
+					(unsigned int)(((hfsp_volume->vol.total_blocks * j + curr_block) * 100)
+						/ (hfsp_volume->vol.total_blocks * wfs_fs.npasses)),
+					&prev_percent);
+			}
+			/* Flush after each writing, if more than 1 overwriting needs to be done.
+			Allow I/O bufferring (efficiency), if just one pass is needed. */
+			if ( WFS_IS_SYNC_NEEDED_PAT(wfs_fs) )
+			{
+				error = wfs_hfsp_flush_fs (wfs_fs);
+			}
+		}
+		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
+			&& (ret_wfs == WFS_SUCCESS) )
+		{
+			wfs_hfsp_flush_fs (wfs_fs);
+			/* perform last wipe with zeros */
+			WFS_MEMSET ( buf, 0, fs_block_size );
+			for ( curr_block = 0;
+				(curr_block < hfsp_volume->vol.total_blocks)
+				&& (sig_recvd == 0);
+				curr_block++ )
+			{
+				if ( volume_allocated (hfsp_volume, curr_block) == 0 )
+				{
+					/* block is not allocated - wipe it */
+					error = volume_writetobuf (hfsp_volume,
+						buf, (long int)curr_block);
+					if ( error != 0 )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+				} /* if (volume_allocated) */
+			}
+			wfs_hfsp_flush_fs (wfs_fs);
+		}
+	}
+	else
+	{
+		for ( curr_block = 0;
+			(curr_block < hfsp_volume->vol.total_blocks)
+			&& (sig_recvd == 0);
+			curr_block++ )
+		{
+			if ( volume_allocated (hfsp_volume, curr_block) == 0 )
+			{
+				/* block is not allocated - wipe it */
+				for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0); j++ )
+				{
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
+					{
+						res = volume_readinbuf (hfsp_volume, buf,
+							(long int)curr_block);
+						if ( res != 0 )
+						{
+							if ( error_ret != NULL )
+							{
+								*error_ret = error;
+							}
+							return WFS_BLKRD;
+						}
+						if ( wfs_is_block_zero (buf,
+							fs_block_size) != 0 )
+						{
+							/* this block is all-zeros - don't wipe, as requested */
+							j = wfs_fs.npasses * 2;
+							break;
+						}
+					}
+					wfs_fill_buffer ( j, buf, fs_block_size, selected, wfs_fs );
+					error = volume_writetobuf (hfsp_volume,
+						buf, (long int)curr_block);
+					if ( error != 0 )
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 					{
 						error = wfs_hfsp_flush_fs (wfs_fs);
-					}*/
+					}
 				}
-			}
-		} /* if (volume_allocated) */
-		wfs_show_progress (WFS_PROGRESS_WFS,
-			(unsigned int)(curr_block / hfsp_volume->vol.total_blocks),
-			&prev_percent);
-	} /* for (curr_block) */
+				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0)
+					&& (ret_wfs == WFS_SUCCESS) )
+				{
+					/* this block is NOT all-zeros - wipe */
+					if ( j != wfs_fs.npasses * 2 )
+					{
+						/* perform last wipe with zeros */
+						WFS_MEMSET ( buf, 0, fs_block_size );
+						error = volume_writetobuf (hfsp_volume,
+							buf, (long int)curr_block);
+						if ( error != 0 )
+						{
+							ret_wfs = WFS_BLKWR;
+							/* do NOT break here */
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_hfsp_flush_fs (wfs_fs);
+						}*/
+					}
+				}
+			} /* if (volume_allocated) */
+			wfs_show_progress (WFS_PROGRESS_WFS,
+				(unsigned int)((curr_block * 100) / hfsp_volume->vol.total_blocks),
+				&prev_percent);
+		} /* for (curr_block) */
+	}
 	free (buf);
 
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
@@ -755,7 +837,7 @@ wfs_hfsp_open_fs (
 	hfsp_volume = (struct volume *) malloc (sizeof (struct volume));
 	if ( hfsp_volume == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;
@@ -769,7 +851,7 @@ wfs_hfsp_open_fs (
 	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		free (hfsp_volume);
 		if ( error_ret != NULL )
 		{

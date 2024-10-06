@@ -42,6 +42,10 @@
 # endif /* MAJOR_IN_SYSMACROS */
 #endif
 
+#ifdef HAVE_SYS_SYSMACROS_H
+# include <sys/sysmacros.h>
+#endif
+
 #ifdef HAVE_ASM_TYPES_H
 # include <asm/types.h>
 #else
@@ -132,7 +136,7 @@ static const unsigned long long int bh_up2date = BH_Uptodate;
 #define mark_buffer_dirty2(bh)    misc_set_bit (bh_dirty,   &(bh)->b_state)
 #define mark_buffer_uptodate2(bh) misc_set_bit (bh_up2date, &(bh)->b_state)
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -226,7 +230,7 @@ wfs_reiser_wipe_part (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_PART, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -536,7 +540,7 @@ wfs_reiser_wipe_fs (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -545,124 +549,274 @@ wfs_reiser_wipe_fs (
 		return WFS_MALLOC;
 	}
 
-	/*blk_no < wfs_fs.rfs.fs_ondisk_sb->s_v1.sb_block_count*/
-	for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
-		&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
+	if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		if (       (not_data_block   ( rfs, blk_no ) != 0)
-			|| (block_of_bitmap  ( rfs, blk_no ) != 0)
-			|| (block_of_journal ( rfs, blk_no ) != 0)
-			|| (reiserfs_bitmap_test_bit (rfs->fs_bitmap2, (unsigned int)(blk_no & 0x0FFFFFFFF)) != 0)
-		)
-		{
-			curr_sector++;
-			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
-				/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
-			continue;
-		}
-		/* read the block just to fill the structure */
-		bh = bread (rfs->fs_dev, blk_no, fs_block_size);
-		if ( bh == NULL )
-		{
-			curr_sector++;
-			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
-				/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
-			continue;
-		}
-
-		/* write the block here. */
 		for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
 			/*&& (ret_wfs == WFS_SUCCESS)*/; j++ )
 		{
-			if ( wfs_fs.no_wipe_zero_blocks != 0 )
+			curr_sector = 0;
+			/*blk_no < wfs_fs.rfs.fs_ondisk_sb->s_v1.sb_block_count*/
+			for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
+				&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 			{
-				if ( wfs_is_block_zero ((unsigned char *)bh->b_data, fs_block_size) != 0 )
+				if (       (not_data_block   ( rfs, blk_no ) != 0)
+					|| (block_of_bitmap  ( rfs, blk_no ) != 0)
+					|| (block_of_journal ( rfs, blk_no ) != 0)
+					|| (reiserfs_bitmap_test_bit (rfs->fs_bitmap2, (unsigned int)(blk_no & 0x0FFFFFFFF)) != 0)
+				)
 				{
-					/* this block is all-zeros - don't wipe, as requested */
-					j = wfs_fs.npasses * 2;
-					break;
+					curr_sector++;
+					wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)(((get_sb_block_count (rfs->fs_ondisk_sb) * j + curr_sector) * 100)
+						/ (get_sb_block_count (rfs->fs_ondisk_sb) * wfs_fs.npasses)), &prev_percent);
+					continue;
 				}
-			}
+				/* read the block just to fill the structure */
+				bh = bread (rfs->fs_dev, blk_no, fs_block_size);
+				if ( bh == NULL )
+				{
+					curr_sector++;
+					wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)(((get_sb_block_count (rfs->fs_ondisk_sb) * j + curr_sector) * 100)
+						/ (get_sb_block_count (rfs->fs_ondisk_sb) * wfs_fs.npasses)), &prev_percent);
+					continue;
+				}
 
-			wfs_fill_buffer ( j, (unsigned char *) bh->b_data,
-				fs_block_size, selected, wfs_fs );
-			if ( sig_recvd != 0 )
-			{
-				ret_wfs = WFS_SIGNAL;
-		       		break;
-			}
-			mark_buffer_dirty2 (bh);
-			mark_buffer_uptodate2 (bh);
-			error = bwrite (bh);
-			if ( error != 0 )
-			{
-				/* check if block is marked as bad. If there is no 'badblocks' list
-				   or the block is marked OK, then print the error. */
-				if (rfs->fs_badblocks_bm == NULL)
+				/* write the block here. */
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
 				{
-					ret_wfs = WFS_BLKWR;
+					if ( wfs_is_block_zero ((unsigned char *)bh->b_data, fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						break;
+					}
+				}
+
+				wfs_fill_buffer ( j, (unsigned char *) bh->b_data,
+					fs_block_size, selected, wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
 					break;
 				}
-				else if (reiserfs_bitmap_test_bit (
-					rfs->fs_badblocks_bm,
-					(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
+				mark_buffer_dirty2 (bh);
+				mark_buffer_uptodate2 (bh);
+				error = bwrite (bh);
+				if ( error != 0 )
 				{
-					ret_wfs = WFS_BLKWR;
-					break;
+					/* check if block is marked as bad. If there is no 'badblocks' list
+					or the block is marked OK, then print the error. */
+					if (rfs->fs_badblocks_bm == NULL)
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+					else if (reiserfs_bitmap_test_bit (
+						rfs->fs_badblocks_bm,
+						(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
 				}
-			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-			{
-				error = wfs_reiser_flush_fs (wfs_fs);
-			}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+				{
+					error = wfs_reiser_flush_fs (wfs_fs);
+				}
+				curr_sector++;
+				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)(((get_sb_block_count (rfs->fs_ondisk_sb) * j + curr_sector) * 100)
+					/ (get_sb_block_count (rfs->fs_ondisk_sb) * wfs_fs.npasses)), &prev_percent);
+				if (bh->b_count != 0)
+				{
+					brelse (bh);
+				}
+			}	/* for block */
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			if ( j != wfs_fs.npasses * 2 )
 			{
 				/* last pass with zeros: */
-				WFS_MEMSET ( (unsigned char *) bh->b_data, 0,
-					fs_block_size );
 				if ( sig_recvd == 0 )
 				{
-					mark_buffer_dirty2 (bh);
-					mark_buffer_uptodate2 (bh);
-					error = bwrite (bh);
-					if ( error != 0 )
+					wfs_reiser_flush_fs (wfs_fs);
+					/*blk_no < wfs_fs.rfs.fs_ondisk_sb->s_v1.sb_block_count*/
+					for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
+						&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 					{
-						/* check if block is marked as bad. If there is no 'badblocks'
-						list or the block is marked OK, then print the error. */
-						if (rfs->fs_badblocks_bm == NULL)
+						if (       (not_data_block   ( rfs, blk_no ) != 0)
+							|| (block_of_bitmap  ( rfs, blk_no ) != 0)
+							|| (block_of_journal ( rfs, blk_no ) != 0)
+							|| (reiserfs_bitmap_test_bit (rfs->fs_bitmap2, (unsigned int)(blk_no & 0x0FFFFFFFF)) != 0)
+						)
 						{
-							ret_wfs = WFS_BLKWR;
-							break;
+							continue;
 						}
-						else if (reiserfs_bitmap_test_bit (
-							rfs->fs_badblocks_bm,
-							(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
+						/* read the block just to fill the structure */
+						bh = bread (rfs->fs_dev, blk_no, fs_block_size);
+						if ( bh == NULL )
 						{
-							ret_wfs = WFS_BLKWR;
-							break;
+							continue;
+						}
+						WFS_MEMSET ( (unsigned char *) bh->b_data, 0,
+							fs_block_size );
+
+						mark_buffer_dirty2 (bh);
+						mark_buffer_uptodate2 (bh);
+						error = bwrite (bh);
+						if ( error != 0 )
+						{
+							/* check if block is marked as bad. If there is no 'badblocks'
+							list or the block is marked OK, then print the error. */
+							if (rfs->fs_badblocks_bm == NULL)
+							{
+								ret_wfs = WFS_BLKWR;
+								break;
+							}
+							else if (reiserfs_bitmap_test_bit (
+								rfs->fs_badblocks_bm,
+								(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
+							{
+								ret_wfs = WFS_BLKWR;
+								break;
+							}
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_reiser_flush_fs (wfs_fs);
+						}*/
+						if (bh->b_count != 0)
+						{
+							brelse (bh);
 						}
 					}
-					/* No need to flush the last writing of a given block. *
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
-					{
-						error = wfs_reiser_flush_fs (wfs_fs);
-					}*/
+					wfs_reiser_flush_fs (wfs_fs);
 				}
 			}
 		}
-		if (bh->b_count != 0)
+	}
+	else
+	{
+		/*blk_no < wfs_fs.rfs.fs_ondisk_sb->s_v1.sb_block_count*/
+		for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
+			&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 		{
-			brelse (bh);
-		}
-		curr_sector++;
-		wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
-			/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
-	}	/* for block */
+			if (       (not_data_block   ( rfs, blk_no ) != 0)
+				|| (block_of_bitmap  ( rfs, blk_no ) != 0)
+				|| (block_of_journal ( rfs, blk_no ) != 0)
+				|| (reiserfs_bitmap_test_bit (rfs->fs_bitmap2, (unsigned int)(blk_no & 0x0FFFFFFFF)) != 0)
+			)
+			{
+				curr_sector++;
+				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
+					/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
+				continue;
+			}
+			/* read the block just to fill the structure */
+			bh = bread (rfs->fs_dev, blk_no, fs_block_size);
+			if ( bh == NULL )
+			{
+				curr_sector++;
+				wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
+					/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
+				continue;
+			}
+
+			/* write the block here. */
+			for ( j = 0; (j < wfs_fs.npasses) && (sig_recvd == 0)
+				/*&& (ret_wfs == WFS_SUCCESS)*/; j++ )
+			{
+				if ( wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					if ( wfs_is_block_zero ((unsigned char *)bh->b_data, fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = wfs_fs.npasses * 2;
+						break;
+					}
+				}
+
+				wfs_fill_buffer ( j, (unsigned char *) bh->b_data,
+					fs_block_size, selected, wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_wfs = WFS_SIGNAL;
+					break;
+				}
+				mark_buffer_dirty2 (bh);
+				mark_buffer_uptodate2 (bh);
+				error = bwrite (bh);
+				if ( error != 0 )
+				{
+					/* check if block is marked as bad. If there is no 'badblocks' list
+					or the block is marked OK, then print the error. */
+					if (rfs->fs_badblocks_bm == NULL)
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+					else if (reiserfs_bitmap_test_bit (
+						rfs->fs_badblocks_bm,
+						(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
+					{
+						ret_wfs = WFS_BLKWR;
+						break;
+					}
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+				{
+					error = wfs_reiser_flush_fs (wfs_fs);
+				}
+			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				if ( j != wfs_fs.npasses * 2 )
+				{
+					/* last pass with zeros: */
+					WFS_MEMSET ( (unsigned char *) bh->b_data, 0,
+						fs_block_size );
+					if ( sig_recvd == 0 )
+					{
+						mark_buffer_dirty2 (bh);
+						mark_buffer_uptodate2 (bh);
+						error = bwrite (bh);
+						if ( error != 0 )
+						{
+							/* check if block is marked as bad. If there is no 'badblocks'
+							list or the block is marked OK, then print the error. */
+							if (rfs->fs_badblocks_bm == NULL)
+							{
+								ret_wfs = WFS_BLKWR;
+								break;
+							}
+							else if (reiserfs_bitmap_test_bit (
+								rfs->fs_badblocks_bm,
+								(unsigned int)(blk_no & 0x0FFFFFFFF)) == 0)
+							{
+								ret_wfs = WFS_BLKWR;
+								break;
+							}
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							error = wfs_reiser_flush_fs (wfs_fs);
+						}*/
+					}
+				}
+			}
+			if (bh->b_count != 0)
+			{
+				brelse (bh);
+			}
+			curr_sector++;
+			wfs_show_progress (WFS_PROGRESS_WFS, (unsigned int)((curr_sector * 100)
+				/ get_sb_block_count (rfs->fs_ondisk_sb)), &prev_percent);
+		}	/* for block */
+	}
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 	free (buf);
 	if ( error_ret != NULL )
@@ -735,7 +889,7 @@ wfs_reiser_wipe_unrm (
 	buf = (unsigned char *) malloc ( fs_block_size );
 	if ( buf == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		wfs_show_progress (WFS_PROGRESS_UNRM, 100, &prev_percent);
 		if ( error_ret != NULL )
 		{
@@ -1187,7 +1341,7 @@ wfs_reiser_open_fs (
 	dev_name_copy = WFS_STRDUP (wfs_fs->fsname);
 	if ( dev_name_copy == NULL )
 	{
-		error = WFS_GET_ERRNO_OR_DEFAULT (12L);	/* ENOMEM */
+		error = WFS_GET_ERRNO_OR_DEFAULT (ENOMEM);
 		if ( error_ret != NULL )
 		{
 			*error_ret = error;

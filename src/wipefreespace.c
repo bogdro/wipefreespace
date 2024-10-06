@@ -219,6 +219,7 @@ static int opt_blksize       = 0;
 static int opt_help          = 0;
 static int opt_license       = 0;
 static int opt_number        = 0;
+static int opt_order         = 0;
 static int opt_super         = 0;
 static int opt_version       = 0;
 static int opt_method        = 0;
@@ -243,6 +244,7 @@ static const struct option opts[] =
 	{ "nounrm",              no_argument,       &opt_nounrm,        1 },
 	{ "nowfs",               no_argument,       &opt_nowfs,         1 },
 	{ "no-wipe-zero-blocks", no_argument,       &opt_no_wipe_zero,  1 },
+	{ "order",               required_argument, &opt_order,         1 },
 	{ "superblock",          required_argument, &opt_super,         1 },
 	{ "use-dedicated",       no_argument,       &opt_use_dedicated, 1 },
 	{ "use-ioctl",           no_argument,       &opt_ioctl,         1 },
@@ -264,13 +266,15 @@ const char * const wfs_sig_unk = N_("unknown");
 
 static unsigned long int blocksize = 0;
 static unsigned long int super_off = 0;
+static wfs_wipe_mode_t wiping_mode = WFS_WIPE_MODE_PATTERN;
 
 static /*@observer@*/ const char *wfs_progname;	/* The name of the program */
-static int stdout_open = 1, stderr_open = 1;
+static int stdout_open = 1;
+static int stderr_open = 1;
 
 static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -606,6 +610,7 @@ print_help (
 	puts ( _("--nounrm\t\tDo NOT wipe undelete information") );
 	puts ( _("--nowfs\t\t\tDo NOT wipe free space on file system") );
 	puts ( _("--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system") );
+	puts ( _("--order <mode>\t\tWiping order - pattern or block") );
 	puts ( _("--use-dedicated\t\tUse the program dedicated for the given filesystem type") );
 	puts ( _("--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)") );
 	puts ( _("-v|--verbose\t\tVerbose output") );
@@ -644,6 +649,7 @@ wfs_wipe_filesytem (
 	fs.whichfs = WFS_CURR_FS_NONE;
 	fs.no_wipe_zero_blocks = opt_no_wipe_zero;
 	fs.use_dedicated = opt_use_dedicated;
+	fs.wipe_mode = wiping_mode;
 
 	if ( dev_name == NULL )
 	{
@@ -1000,7 +1006,9 @@ main (
 	char* argv[];
 #endif
 {
-	int res, i, j;
+	int res;
+	int i;
+	int j;
 	wfs_errcode_t ret = WFS_SUCCESS;	/* Value returned by main() ("last error") */
 #if (defined WFS_REISER) || (defined WFS_MINIXFS)
 	pid_t child_pid;
@@ -1083,7 +1091,8 @@ main (
 	/* Parsing the command line */
 #if (defined HAVE_GETOPT_H) && (defined HAVE_GETOPT_LONG)
 	optind = 0;
-	while (1==1)
+	opt_char = 0;
+	while (opt_char != -1)
 	{
 		opt_char = getopt_long ( argc, argv, "Vhln:B:b:vf", opts, NULL );
 		if ( opt_char == -1 )
@@ -1092,7 +1101,7 @@ main (
 		}
 
 		/* NOTE: these shouldn't be a sequence of else-ifs */
-		if ( (opt_char == (int)'?') || (opt_char == (int)':') )
+		if ( (opt_char == '?') || (opt_char == ':') )
 		{
 			if ( stdout_open == 1 )
 			{
@@ -1101,7 +1110,7 @@ main (
 			return WFS_BAD_CMDLN;
 		}
 
-		if ( (opt_char == (int)'h') || (opt_help == 1) )
+		if ( (opt_char == 'h') || (opt_help == 1) )
 		{
 			if ( stdout_open == 1 )
 			{
@@ -1110,14 +1119,14 @@ main (
 			return WFS_NOTHING;
 		}
 
-		if ( (opt_char == (int)'V') || (opt_version == 1) )
+		if ( (opt_char == 'V') || (opt_version == 1) )
 		{
 			wfs_show_msg ( 1, ver_str, VERSION, wf_gen );
 			wfs_print_version ();
 			return WFS_NOTHING;
 		}
 
-		if ( (opt_char == (int)'l') || (opt_license == 1) )
+		if ( (opt_char == 'l') || (opt_license == 1) )
 		{
 			if ( stdout_open == 1 )
 			{
@@ -1128,7 +1137,7 @@ main (
 			return WFS_NOTHING;
 		}
 
-		if ( (opt_char == (int)'n') || (opt_number == 1) )
+		if ( (opt_char == 'n') || (opt_number == 1) )
 		{
 			res = wfs_read_ulong_param ( optarg, &npasses );
 			if ( res != 0 )
@@ -1142,7 +1151,7 @@ main (
 			opt_number = 0;
 		}
 
-		if ( (opt_char == (int)'B') || (opt_blksize == 1) )
+		if ( (opt_char == 'B') || (opt_blksize == 1) )
 		{
 			res = wfs_read_ulong_param ( optarg, &blocksize );
 			if ( res != 0 )
@@ -1156,7 +1165,7 @@ main (
 			opt_blksize = 0;
 		}
 
-		if ( (opt_char == (int)'b') || (opt_super == 1) )
+		if ( (opt_char == 'b') || (opt_super == 1) )
 		{
 			res = wfs_read_ulong_param ( optarg, &super_off );
 			if ( res != 0 )
@@ -1170,12 +1179,12 @@ main (
 			opt_super = 0;
 		}
 
-		if ( (opt_char == (int)'v') /* do NOT check for opt_verbose here */ )
+		if ( (opt_char == 'v') /* do NOT check for opt_verbose here */ )
 		{
 			opt_verbose++;
 		}
 
-		if ( (opt_char == (int)'f') || (opt_force == 1) )
+		if ( (opt_char == 'f') || (opt_force == 1) )
 		{
 			opt_force = 1;
 		}
@@ -1183,6 +1192,26 @@ main (
 		{
 			opt_method_name = optarg;
 			opt_method = 0;
+		}
+		if ( opt_order == 1 )
+		{
+			if ( WFS_STRCASECMP ( optarg, "block" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_BLOCK;
+			}
+			else if ( WFS_STRCASECMP ( optarg, "pattern" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_PATTERN;
+			}
+			else
+			{
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			opt_order = 0;
 		}
 	}
 	wfs_optind = optind;
@@ -1393,6 +1422,36 @@ main (
 			continue;
 		}
 
+		if ( strcmp (argv[i], "--order") == 0 )
+		{
+			if ( i >= argc-1 )
+			{
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			if ( WFS_STRCASECMP ( argv[i+1], "block" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_BLOCK;
+			}
+			else if ( WFS_STRCASECMP ( argv[i+1], "pattern" ) == 0 )
+			{
+				wiping_mode = WFS_WIPE_MODE_PATTERN;
+			}
+			else
+			{
+				if ( stdout_open == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			argv[i] = NULL;
+			argv[i+1] = NULL;
+			continue;
+		}
 		if ( strcmp (argv[i], "--") == 0 )
 		{
 			/* end-of-arguments marker */

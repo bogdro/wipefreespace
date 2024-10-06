@@ -83,6 +83,8 @@ Do NOT wipe free space on file system
 Do NOT wipe all-zero blocks on file system (useful for virtual/sparse devices,
 where empty areas are read as all-zeros and do not take physical space unless
 actually written to).
+.IP "--order TYPE"
+Use the given order for wiping (read below).
 .IP --use-dedicated
 Use the program dedicated for the given filesystem type if supported. Fallback to
 WipeFreeSpace if unsupported (currently, only 'ntfswipe' is supported)
@@ -105,6 +107,17 @@ The following method names (case-insensitive) are available:
 .IP dod 10
 - DoD, 3 passes, contains NAVSO P-5239-26 and German Federal Office for Information Security
 
+.SH "WIPING ORDERS"
+WipeFreeSpace supports two wiping orders:
+.IP block 10
+- wipe block by block with all patterns and flush the overwriting
+data to disk after each pattern (so, each block waits to be wiped until the
+previous one is done)
+.IP pattern 10
+- wipe the whole filesystem with each pattern (all blocks with the
+first pattern, then all blocks with the second pattern, and so on), and
+flushing the overwriting data to disk after each pattern. This is the
+default
 
 .SH DIAGNOSTICS
 The program returns with 0 exit code if everything went fine. If there

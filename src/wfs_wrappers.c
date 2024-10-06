@@ -71,7 +71,7 @@
 # include "wfs_ocfs.h"
 #endif
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
 
@@ -435,7 +435,7 @@ wfs_chk_mount (
 	const wfs_fsid_t wfs_fs;
 #endif
 {
-	wfs_errcode_t ret_wfs = WFS_SUCCESS;
+	wfs_errcode_t ret_wfs;
 
 #ifdef WFS_EXT234
 	ret_wfs = wfs_e234_chk_mount (wfs_fs);
@@ -508,7 +508,7 @@ wfs_chk_mount (
 	}
 #endif
 
-	return ret_wfs;
+	return WFS_SUCCESS;
 }
 
 /* ======================================================================== */

@@ -102,87 +102,9 @@ static unsigned int patterns_dod[] =
 	0xFFF, 0x000	/* will be filled in later */
 };
 
-#ifdef TEST_COMPILE
+#if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
 #endif
-
-/* ======================================================================== */
-
-#ifdef HAVE_STRCASECMP
-# define WFS_STRCASECMP strcasecmp
-#else
-# ifndef WFS_ANSIC
-static int wfs_compare WFS_PARAMS ((const char string1[], const char string2[]));
-# endif
-
-# define WFS_TOUPPER(c) ((char)( ((c) >= 'a' && (c) <= 'z')? ((c) & 0x5F) : (c) ))
-
-/**
- * Compares the given strings case-insensitively.
- * \param string1 The first string.
- * \param string2 The second string.
- * \return 0 if the strings are equal, -1 is string1 is "less" than string2 and 1 otherwise.
- */
-static int
-wfs_compare (
-# ifdef WFS_ANSIC
-	const char string1[], const char string2[])
-# else
-	string1, string2)
-	const char string1[];
-	const char string2[];
-# endif
-{
-	size_t i, len1, len2;
-	char c1, c2;
-
-	if ( (string1 == NULL) && (string2 == NULL) )
-	{
-		return 0;
-	}
-	else if ( string1 == NULL )
-	{
-		return -1;
-	}
-	else if ( string2 == NULL )
-	{
-		return 1;
-	}
-	else
-	{
-		/* both strings not-null */
-		len1 = strlen (string1);
-		len2 = strlen (string2);
-		if ( len1 < len2 )
-		{
-			return -1;
-		}
-		else if ( len1 > len2 )
-		{
-			return 1;
-		}
-		else
-		{
-			/* both lengths equal */
-			for ( i = 0; i < len1; i++ )
-			{
-				c1 = WFS_TOUPPER (string1[i]);
-				c2 = WFS_TOUPPER (string2[i]);
-				if ( c1 < c2 )
-				{
-					return -1;
-				}
-				else if ( c1 > c2 )
-				{
-					return 1;
-				}
-			}
-		}
-	}
-	return 0;
-}
-# define WFS_STRCASECMP wfs_compare
-#endif /* HAVE_STRCASECMP */
 
 /* ======================================================================== */
 
@@ -446,9 +368,9 @@ wfs_fill_buffer (
 				do
 				{
 #if (!defined __STRICT_ANSI__) && (defined HAVE_RANDOM)
-					i = (size_t) ((size_t)random () % npat);
+					i = (size_t)random () % npat;
 #else
-					i = (size_t) ((size_t)rand () % npat);
+					i = (size_t)rand () % npat;
 #endif
 					if ( selected == NULL )
 					{
