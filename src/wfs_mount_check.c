@@ -213,7 +213,7 @@ wfs_get_mnt_point_getmntent (
 # endif
 {
 	FILE *mnt_f;
-	struct mntent *mnt;
+	const struct mntent *mnt;
 	struct mntent mnt_copy;
 # ifdef HAVE_GETMNTENT_R
 	char buffer[WFS_MNTBUFLEN];

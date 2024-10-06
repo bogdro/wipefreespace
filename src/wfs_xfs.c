@@ -151,7 +151,8 @@ struct wfs_xfs
 
 #ifndef WFS_ANSIC
 static int WFS_ATTR ((nonnull)) GCC_WARN_UNUSED_RESULT wfs_xfs_read_line
-	WFS_PARAMS ((int fd, char * const buf, child_id_t * const child, const size_t bufsize));
+	WFS_PARAMS ((int fd, char * const buf, const child_id_t * const child,
+		const size_t bufsize));
 #endif
 
 /**
@@ -169,12 +170,12 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_xfs_read_line (
 #ifdef WFS_ANSIC
-	int fd, char * const buf, child_id_t * const child, const size_t bufsize)
+	int fd, char * const buf, const child_id_t * const child, const size_t bufsize)
 #else
 	fd, buf, child, bufsize)
 	int fd;
 	char * const buf;
-	child_id_t * const child;
+	const child_id_t * const child;
 	const size_t bufsize;
 #endif
 {
@@ -336,7 +337,7 @@ wfs_xfs_get_block_size (
 	const wfs_fsid_t wfs_fs;
 # endif
 {
-	struct wfs_xfs * xxfs;
+	const struct wfs_xfs * xxfs;
 
 	xxfs = (struct wfs_xfs *) wfs_fs.fs_backend;
 	if ( xxfs == NULL )
@@ -400,7 +401,7 @@ wfs_xfs_wipe_fs	(
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_block = 0;
 	wfs_errcode_t error = 0;
-	struct wfs_xfs * xxfs;
+	const struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
 	size_t fs_block_size;
 	off64_t file_offset;
@@ -916,8 +917,8 @@ wfs_xfs_wipe_part (
 	const char * const wfs_xfs_xfs_db_env[] = { "LC_ALL=C", NULL };
 	char ** wfs_xfs_xfs_db_env_copy = NULL;
 	char read_buffer[WFS_XFSBUFSIZE];
-	char * pos1 = NULL;
-	char * pos2 = NULL;
+	const char * pos1 = NULL;
+	const char * pos2 = NULL;
 	unsigned char * buffer;
 	int selected[WFS_NPAT] = {0};
 	unsigned long long int inode;
@@ -934,7 +935,7 @@ wfs_xfs_wipe_part (
 	unsigned int prev_percent = 0;
 	unsigned long long int curr_inode = 0;
 	wfs_errcode_t error = 0;
-	struct wfs_xfs * xxfs;
+	const struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
 	size_t fs_block_size;
 	off64_t file_offset;
@@ -1541,7 +1542,7 @@ wfs_xfs_check_err (
 	char ** args_copy = NULL;
 	char buffer[WFS_XFSBUFSIZE];
 	wfs_errcode_t error = 0;
-	struct wfs_xfs * xxfs;
+	const struct wfs_xfs * xxfs;
 	wfs_errcode_t * error_ret;
 #ifdef HAVE_STAT_H
 # ifdef HAVE_STAT64
@@ -1763,11 +1764,11 @@ wfs_xfs_open_fs (
 	int inprogress_found = 0;
 	int used_inodes_set = 0;
 	int free_blocks_set = 0;
-	char *pos1 = NULL;
-	char *pos2 = NULL;
-	char *pos3 = NULL;
-	char *pos4 = NULL;
-	char *pos5 = NULL;
+	const char *pos1 = NULL;
+	const char *pos2 = NULL;
+	const char *pos3 = NULL;
+	const char *pos4 = NULL;
+	const char *pos5 = NULL;
 	int is_rw;
 	unsigned long long int inprogress;
 	size_t namelen;
