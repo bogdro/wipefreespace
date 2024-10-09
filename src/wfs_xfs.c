@@ -903,7 +903,8 @@ wfs_xfs_wipe_part (
 	int pipe_from_blk_db[2];
 	int pipe_to_blk_db[2];
 	int fs_fd;
-	child_id_t child_ncheck, child_xfsdb;
+	child_id_t child_ncheck;
+	child_id_t child_xfsdb;
 	wfs_errcode_t ret_child;
 	/*	 xfs_db   dev_name */
 #  define FSNAME_POS_PART_NCHECK 9
