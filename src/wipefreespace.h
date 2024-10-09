@@ -61,7 +61,6 @@ Stat macros broken. Change your C library.
 #  undef WFS_ATTR
 # endif
 
-# undef WFS_ATTR
 # ifdef __GNUC__
 #  define WFS_ATTR(x)	__attribute__(x)
 /*#  pragma GCC poison strcpy strcat*/
