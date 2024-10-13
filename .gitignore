@@ -20,6 +20,7 @@ wfs_cfg.h
 
 po/POTFILES
 po/Makefile.in
+po/*.gmo
 
 test_wfs_util
 test_wfs_mount_check
