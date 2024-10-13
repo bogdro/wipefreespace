@@ -23,6 +23,7 @@
 
 AC_PREREQ([2.71])
 AC_INIT([WipeFreeSpace],[2.6],[bogdro@users.sourceforge.net], [wipefreespace], [https://wipefreespace.sourceforge.io])
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_FILES([Makefile src/Makefile doc/wipefreespace.texi wipefreespace.spec\
 	src/wfs_cfg.h doc/Makefile po/Makefile.in po/Makefile test/Makefile])

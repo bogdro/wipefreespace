@@ -23,7 +23,7 @@ SUBDIRS = doc src po test
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = config.rpath mkinstalldirs m4/ChangeLog wipefreespace.spec.in \
+EXTRA_DIST = m4/ChangeLog wipefreespace.spec.in \
 	m4/ax_c_check_flag.m4 THANKS patches INSTALL-WFS.txt m4/ax_check_link_flag.m4
 
 x-pack:	doc/wipefreespace.info
