@@ -11,6 +11,9 @@ TODO*
 wipefreespace
 .deps
 *.o
+*.gcov
+*.gcda
+*.gcno
 
 *.info
 *.html
