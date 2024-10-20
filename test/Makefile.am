@@ -82,6 +82,17 @@ endif
 if FATFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_fat.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_fat.o
+
+TESTS += test_wfs_fat
+check_PROGRAMS += test_wfs_fat
+
+test_wfs_fat_SOURCES = test_wfs_fat.c test_stubs.c
+test_wfs_fat_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_fat_LDADD = $(top_builddir)/src/wfs_fat.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 if MINIXFS
