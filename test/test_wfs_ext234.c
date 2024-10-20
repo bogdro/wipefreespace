@@ -33,6 +33,20 @@
 
 #define FS_NAME_EXTFS "test-fs-extfs"
 
+/* =================== stubs =================================== */
+
+wfs_errcode_t
+wfs_check_mounted (
+#ifdef WFS_ANSIC
+	const wfs_fsid_t wfs_fs)
+#else
+	wfs_fs)
+	const wfs_fsid_t wfs_fs;
+#endif
+{
+	return 0;
+}
+
 /* ============================================================= */
 
 static wfs_fsid_t wfs_fs = {FS_NAME_EXTFS, 1, 0, NULL, NULL, WFS_CURR_FS_EXT234FS, 0, 0, WFS_WIPE_MODE_PATTERN};

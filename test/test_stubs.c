@@ -23,6 +23,7 @@
 #include "src/wfs_mount_check.h"
 
 int sig_recvd = 0;
+int sigchld_recvd = 0;
 const char * const wfs_err_msg = "error";
 
 void
@@ -74,16 +75,4 @@ int
 wfs_is_stderr_open (WFS_VOID)
 {
 	return 1;
-}
-
-wfs_errcode_t
-wfs_check_mounted (
-#ifdef WFS_ANSIC
-	const wfs_fsid_t wfs_fs)
-#else
-	wfs_fs)
-	const wfs_fsid_t wfs_fs;
-#endif
-{
-	return 0;
 }
