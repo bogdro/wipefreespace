@@ -36,6 +36,17 @@ test_wfs_mount_check_LDADD = $(top_builddir)/src/wfs_mount_check.o \
 
 if EXT234FS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_ext234.o
+
+TESTS += test_wfs_ext234
+check_PROGRAMS += test_wfs_ext234
+
+test_wfs_ext234_SOURCES = test_wfs_ext234.c test_stubs.c
+test_wfs_ext234_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_ext234_LDADD = $(top_builddir)/src/wfs_ext234.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 if NTFS

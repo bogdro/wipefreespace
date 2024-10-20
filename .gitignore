@@ -28,6 +28,7 @@ po/*.gmo
 test_wfs_util
 test_wfs_mount_check
 test_wfs_wiping
+test_wfs_ext234
 *.log
 *.trs
-test-fs
+test-fs*
