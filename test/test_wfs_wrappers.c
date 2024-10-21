@@ -37,7 +37,7 @@ END_TEST
 START_TEST(test_wfs_check_err)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
-	ck_assert_int_eq(0, wfs_e234_check_err(wfs_fs));
+	ck_assert_int_eq(0, wfs_check_err(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
 END_TEST
