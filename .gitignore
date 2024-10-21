@@ -31,6 +31,7 @@ test_wfs_wiping
 test_wfs_ext234
 test_wfs_wrappers
 test_wfs_fat
+test_wfs_hfsp
 *.log
 *.trs
 test-fs*

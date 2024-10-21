@@ -57,4 +57,15 @@
 #  define ck_assert_str_ne(X, Y) _ck_assert_str(strcmp(X, Y), X, !=, Y)
 # endif
 
+# ifndef ck_assert_uint_gt
+#  define _ck_assert_uint(X, OP, Y) do { \
+      uintmax_t _ck_x = (X); \
+      uintmax_t _ck_y = (Y); \
+      ck_assert_msg(_ck_x OP _ck_y, "Assertion '%s' failed: %s == %ju, %s == %ju", #X" "#OP" "#Y, #X, _ck_x, #Y, _ck_y); \
+    } while (0)
+#  define ck_assert_uint_gt(X, Y) _ck_assert_uint(X, >, Y)
+# endif
+
+# define WFS_AUTOMAKE_TEST_SKIP 77
+
 #endif /* WFS_TEST_COMMON */

@@ -108,6 +108,17 @@ endif
 if HFSP
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_hfsp.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_hfsp.o
+
+TESTS += test_wfs_hfsp
+check_PROGRAMS += test_wfs_hfsp
+
+test_wfs_hfsp_SOURCES = test_wfs_hfsp.c test_stubs.c
+test_wfs_hfsp_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_hfsp_LDADD = $(top_builddir)/src/wfs_hfsp.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 if OCFS
