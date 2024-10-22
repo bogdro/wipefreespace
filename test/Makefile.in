@@ -112,13 +112,15 @@ host_triplet = @host@
 @WFS_TESTS_ENABLED_TRUE@	test_wfs_wiping$(EXEEXT) \
 @WFS_TESTS_ENABLED_TRUE@	test_wfs_wrappers$(EXEEXT) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_1) $(am__EXEEXT_2) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4)
+@WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_5)
 @WFS_TESTS_ENABLED_TRUE@check_PROGRAMS =  \
 @WFS_TESTS_ENABLED_TRUE@	test_wfs_mount_check$(EXEEXT) \
 @WFS_TESTS_ENABLED_TRUE@	test_wfs_wiping$(EXEEXT) \
 @WFS_TESTS_ENABLED_TRUE@	test_wfs_wrappers$(EXEEXT) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_1) $(am__EXEEXT_2) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4)
+@WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__EXEEXT_5)
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_1 = $(top_builddir)/src/wfs_ext234.o
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_2 = $(top_builddir)/src/wfs_ext234.o
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_3 = test_wfs_ext234
@@ -137,16 +139,18 @@ host_triplet = @host@
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_16 = test_wfs_fat
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_17 = $(top_builddir)/src/wfs_minixfs.o
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_18 = $(top_builddir)/src/wfs_minixfs.o
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_19 = $(top_builddir)/src/wfs_jfs.o
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_20 = $(top_builddir)/src/wfs_jfs.o
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_21 = test_wfs_jfs
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_22 = test_wfs_jfs
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_23 = $(top_builddir)/src/wfs_hfsp.o
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_24 = $(top_builddir)/src/wfs_hfsp.o
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_25 = test_wfs_hfsp
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_26 = test_wfs_hfsp
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_27 = $(top_builddir)/src/wfs_ocfs.o
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_28 = $(top_builddir)/src/wfs_ocfs.o
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_19 = test_wfs_minixfs
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_20 = test_wfs_minixfs
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_21 = $(top_builddir)/src/wfs_jfs.o
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_22 = $(top_builddir)/src/wfs_jfs.o
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_23 = test_wfs_jfs
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_24 = test_wfs_jfs
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_25 = $(top_builddir)/src/wfs_hfsp.o
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_26 = $(top_builddir)/src/wfs_hfsp.o
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_27 = test_wfs_hfsp
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_28 = test_wfs_hfsp
+@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_29 = $(top_builddir)/src/wfs_ocfs.o
+@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__append_30 = $(top_builddir)/src/wfs_ocfs.o
 subdir = test
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c_check_flag.m4 \
@@ -168,9 +172,10 @@ CONFIG_CLEAN_VPATH_FILES =
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_1 = test_wfs_ext234$(EXEEXT)
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_2 =  \
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_fat$(EXEEXT)
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_3 =  \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_3 = test_wfs_minixfs$(EXEEXT)
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_4 =  \
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_jfs$(EXEEXT)
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_4 =  \
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@am__EXEEXT_5 =  \
 @HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_hfsp$(EXEEXT)
 am__test_wfs_ext234_SOURCES_DIST = test_wfs_ext234.c test_stubs.c
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@am_test_wfs_ext234_OBJECTS = test_wfs_ext234-test_wfs_ext234.$(OBJEXT) \
@@ -217,6 +222,17 @@ test_wfs_jfs_OBJECTS = $(am_test_wfs_jfs_OBJECTS)
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
 test_wfs_jfs_LINK = $(CCLD) $(test_wfs_jfs_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am__test_wfs_minixfs_SOURCES_DIST = test_wfs_minixfs.c test_stubs.c
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@am_test_wfs_minixfs_OBJECTS = test_wfs_minixfs-test_wfs_minixfs.$(OBJEXT) \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_minixfs-test_stubs.$(OBJEXT)
+test_wfs_minixfs_OBJECTS = $(am_test_wfs_minixfs_OBJECTS)
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_DEPENDENCIES = $(top_builddir)/src/wfs_minixfs.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+test_wfs_minixfs_LINK = $(CCLD) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_mount_check_SOURCES_DIST = test_wfs_mount_check.c
 @WFS_TESTS_ENABLED_TRUE@am_test_wfs_mount_check_OBJECTS = test_wfs_mount_check-test_wfs_mount_check.$(OBJEXT)
 test_wfs_mount_check_OBJECTS = $(am_test_wfs_mount_check_OBJECTS)
@@ -229,8 +245,8 @@ test_wfs_mount_check_OBJECTS = $(am_test_wfs_mount_check_OBJECTS)
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_5) $(am__append_7) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_9) $(am__append_11) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_13) $(am__append_17) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_19) $(am__append_23) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_27)
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_21) $(am__append_25) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_29)
 test_wfs_mount_check_LINK = $(CCLD) $(test_wfs_mount_check_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_wiping_SOURCES_DIST = test_wfs_wiping.c
@@ -255,8 +271,8 @@ test_wfs_wrappers_OBJECTS = $(am_test_wfs_wrappers_OBJECTS)
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_6) $(am__append_8) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_10) $(am__append_12) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_14) $(am__append_18) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_20) $(am__append_24) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_28)
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_22) $(am__append_26) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_30)
 test_wfs_wrappers_LINK = $(CCLD) $(test_wfs_wrappers_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -282,6 +298,8 @@ am__depfiles_remade = ./$(DEPDIR)/test_wfs_ext234-test_stubs.Po \
 	./$(DEPDIR)/test_wfs_hfsp-test_wfs_hfsp.Po \
 	./$(DEPDIR)/test_wfs_jfs-test_stubs.Po \
 	./$(DEPDIR)/test_wfs_jfs-test_wfs_jfs.Po \
+	./$(DEPDIR)/test_wfs_minixfs-test_stubs.Po \
+	./$(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Po \
 	./$(DEPDIR)/test_wfs_mount_check-test_wfs_mount_check.Po \
 	./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po \
 	./$(DEPDIR)/test_wfs_wrappers-test_stubs.Po \
@@ -305,12 +323,13 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(test_wfs_ext234_SOURCES) $(test_wfs_fat_SOURCES) \
 	$(test_wfs_hfsp_SOURCES) $(test_wfs_jfs_SOURCES) \
-	$(test_wfs_mount_check_SOURCES) $(test_wfs_wiping_SOURCES) \
-	$(test_wfs_wrappers_SOURCES)
+	$(test_wfs_minixfs_SOURCES) $(test_wfs_mount_check_SOURCES) \
+	$(test_wfs_wiping_SOURCES) $(test_wfs_wrappers_SOURCES)
 DIST_SOURCES = $(am__test_wfs_ext234_SOURCES_DIST) \
 	$(am__test_wfs_fat_SOURCES_DIST) \
 	$(am__test_wfs_hfsp_SOURCES_DIST) \
 	$(am__test_wfs_jfs_SOURCES_DIST) \
+	$(am__test_wfs_minixfs_SOURCES_DIST) \
 	$(am__test_wfs_mount_check_SOURCES_DIST) \
 	$(am__test_wfs_wiping_SOURCES_DIST) \
 	$(am__test_wfs_wrappers_SOURCES_DIST)
@@ -683,8 +702,8 @@ top_srcdir = @top_srcdir@
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_1) $(am__append_5) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_7) $(am__append_9) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_11) $(am__append_13) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_17) $(am__append_19) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_23) $(am__append_27)
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_17) $(am__append_21) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_25) $(am__append_29)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_SOURCES = test_wfs_wrappers.c test_stubs.c
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_LDADD =  \
@@ -697,8 +716,8 @@ top_srcdir = @top_srcdir@
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_2) $(am__append_6) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_8) $(am__append_10) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_12) $(am__append_14) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_18) $(am__append_20) \
-@WFS_TESTS_ENABLED_TRUE@	$(am__append_24) $(am__append_28)
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_18) $(am__append_22) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__append_26) $(am__append_30)
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_SOURCES = test_wfs_ext234.c test_stubs.c
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_LDADD = $(top_builddir)/src/wfs_ext234.o \
@@ -714,6 +733,14 @@ top_srcdir = @top_srcdir@
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_SOURCES = test_wfs_minixfs.c test_stubs.c
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_LDADD = $(top_builddir)/src/wfs_minixfs.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
 
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_jfs_SOURCES = test_wfs_jfs.c test_stubs.c
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_jfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
@@ -787,6 +814,10 @@ test_wfs_jfs$(EXEEXT): $(test_wfs_jfs_OBJECTS) $(test_wfs_jfs_DEPENDENCIES) $(EX
 	@rm -f test_wfs_jfs$(EXEEXT)
 	$(AM_V_CCLD)$(test_wfs_jfs_LINK) $(test_wfs_jfs_OBJECTS) $(test_wfs_jfs_LDADD) $(LIBS)
 
+test_wfs_minixfs$(EXEEXT): $(test_wfs_minixfs_OBJECTS) $(test_wfs_minixfs_DEPENDENCIES) $(EXTRA_test_wfs_minixfs_DEPENDENCIES) 
+	@rm -f test_wfs_minixfs$(EXEEXT)
+	$(AM_V_CCLD)$(test_wfs_minixfs_LINK) $(test_wfs_minixfs_OBJECTS) $(test_wfs_minixfs_LDADD) $(LIBS)
+
 test_wfs_mount_check$(EXEEXT): $(test_wfs_mount_check_OBJECTS) $(test_wfs_mount_check_DEPENDENCIES) $(EXTRA_test_wfs_mount_check_DEPENDENCIES) 
 	@rm -f test_wfs_mount_check$(EXEEXT)
 	$(AM_V_CCLD)$(test_wfs_mount_check_LINK) $(test_wfs_mount_check_OBJECTS) $(test_wfs_mount_check_LDADD) $(LIBS)
@@ -813,6 +844,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_hfsp-test_wfs_hfsp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_jfs-test_stubs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_jfs-test_wfs_jfs.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_minixfs-test_stubs.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_mount_check-test_wfs_mount_check.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_wfs_wrappers-test_stubs.Po@am__quote@ # am--include-marker
@@ -949,6 +982,34 @@ test_wfs_jfs-test_stubs.obj: test_stubs.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_stubs.c' object='test_wfs_jfs-test_stubs.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_jfs_CFLAGS) $(CFLAGS) -c -o test_wfs_jfs-test_stubs.obj `if test -f 'test_stubs.c'; then $(CYGPATH_W) 'test_stubs.c'; else $(CYGPATH_W) '$(srcdir)/test_stubs.c'; fi`
+
+test_wfs_minixfs-test_wfs_minixfs.o: test_wfs_minixfs.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -MT test_wfs_minixfs-test_wfs_minixfs.o -MD -MP -MF $(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Tpo -c -o test_wfs_minixfs-test_wfs_minixfs.o `test -f 'test_wfs_minixfs.c' || echo '$(srcdir)/'`test_wfs_minixfs.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Tpo $(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_wfs_minixfs.c' object='test_wfs_minixfs-test_wfs_minixfs.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -c -o test_wfs_minixfs-test_wfs_minixfs.o `test -f 'test_wfs_minixfs.c' || echo '$(srcdir)/'`test_wfs_minixfs.c
+
+test_wfs_minixfs-test_wfs_minixfs.obj: test_wfs_minixfs.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -MT test_wfs_minixfs-test_wfs_minixfs.obj -MD -MP -MF $(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Tpo -c -o test_wfs_minixfs-test_wfs_minixfs.obj `if test -f 'test_wfs_minixfs.c'; then $(CYGPATH_W) 'test_wfs_minixfs.c'; else $(CYGPATH_W) '$(srcdir)/test_wfs_minixfs.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Tpo $(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_wfs_minixfs.c' object='test_wfs_minixfs-test_wfs_minixfs.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -c -o test_wfs_minixfs-test_wfs_minixfs.obj `if test -f 'test_wfs_minixfs.c'; then $(CYGPATH_W) 'test_wfs_minixfs.c'; else $(CYGPATH_W) '$(srcdir)/test_wfs_minixfs.c'; fi`
+
+test_wfs_minixfs-test_stubs.o: test_stubs.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -MT test_wfs_minixfs-test_stubs.o -MD -MP -MF $(DEPDIR)/test_wfs_minixfs-test_stubs.Tpo -c -o test_wfs_minixfs-test_stubs.o `test -f 'test_stubs.c' || echo '$(srcdir)/'`test_stubs.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_wfs_minixfs-test_stubs.Tpo $(DEPDIR)/test_wfs_minixfs-test_stubs.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_stubs.c' object='test_wfs_minixfs-test_stubs.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -c -o test_wfs_minixfs-test_stubs.o `test -f 'test_stubs.c' || echo '$(srcdir)/'`test_stubs.c
+
+test_wfs_minixfs-test_stubs.obj: test_stubs.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -MT test_wfs_minixfs-test_stubs.obj -MD -MP -MF $(DEPDIR)/test_wfs_minixfs-test_stubs.Tpo -c -o test_wfs_minixfs-test_stubs.obj `if test -f 'test_stubs.c'; then $(CYGPATH_W) 'test_stubs.c'; else $(CYGPATH_W) '$(srcdir)/test_stubs.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_wfs_minixfs-test_stubs.Tpo $(DEPDIR)/test_wfs_minixfs-test_stubs.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_stubs.c' object='test_wfs_minixfs-test_stubs.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) -c -o test_wfs_minixfs-test_stubs.obj `if test -f 'test_stubs.c'; then $(CYGPATH_W) 'test_stubs.c'; else $(CYGPATH_W) '$(srcdir)/test_stubs.c'; fi`
 
 test_wfs_mount_check-test_wfs_mount_check.o: test_wfs_mount_check.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_wfs_mount_check_CFLAGS) $(CFLAGS) -MT test_wfs_mount_check-test_wfs_mount_check.o -MD -MP -MF $(DEPDIR)/test_wfs_mount_check-test_wfs_mount_check.Tpo -c -o test_wfs_mount_check-test_wfs_mount_check.o `test -f 'test_wfs_mount_check.c' || echo '$(srcdir)/'`test_wfs_mount_check.c
@@ -1234,6 +1295,13 @@ test_wfs_fat.log: test_wfs_fat$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_wfs_minixfs.log: test_wfs_minixfs$(EXEEXT)
+	@p='test_wfs_minixfs$(EXEEXT)'; \
+	b='test_wfs_minixfs'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_wfs_jfs.log: test_wfs_jfs$(EXEEXT)
 	@p='test_wfs_jfs$(EXEEXT)'; \
 	b='test_wfs_jfs'; \
@@ -1347,6 +1415,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_wfs_hfsp-test_wfs_hfsp.Po
 	-rm -f ./$(DEPDIR)/test_wfs_jfs-test_stubs.Po
 	-rm -f ./$(DEPDIR)/test_wfs_jfs-test_wfs_jfs.Po
+	-rm -f ./$(DEPDIR)/test_wfs_minixfs-test_stubs.Po
+	-rm -f ./$(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Po
 	-rm -f ./$(DEPDIR)/test_wfs_mount_check-test_wfs_mount_check.Po
 	-rm -f ./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
 	-rm -f ./$(DEPDIR)/test_wfs_wrappers-test_stubs.Po
@@ -1404,6 +1474,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_wfs_hfsp-test_wfs_hfsp.Po
 	-rm -f ./$(DEPDIR)/test_wfs_jfs-test_stubs.Po
 	-rm -f ./$(DEPDIR)/test_wfs_jfs-test_wfs_jfs.Po
+	-rm -f ./$(DEPDIR)/test_wfs_minixfs-test_stubs.Po
+	-rm -f ./$(DEPDIR)/test_wfs_minixfs-test_wfs_minixfs.Po
 	-rm -f ./$(DEPDIR)/test_wfs_mount_check-test_wfs_mount_check.Po
 	-rm -f ./$(DEPDIR)/test_wfs_wiping-test_wfs_wiping.Po
 	-rm -f ./$(DEPDIR)/test_wfs_wrappers-test_stubs.Po

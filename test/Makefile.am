@@ -98,6 +98,17 @@ endif
 if MINIXFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_minixfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_minixfs.o
+
+TESTS += test_wfs_minixfs
+check_PROGRAMS += test_wfs_minixfs
+
+test_wfs_minixfs_SOURCES = test_wfs_minixfs.c test_stubs.c
+test_wfs_minixfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_minixfs_LDADD = $(top_builddir)/src/wfs_minixfs.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 if JFS

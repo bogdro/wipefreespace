@@ -33,6 +33,7 @@ test_wfs_wrappers
 test_wfs_fat
 test_wfs_hfsp
 test_wfs_jfs
+test_wfs_minixfs
 *.log
 *.trs
 test-fs*
