@@ -890,7 +890,6 @@ wfs_jfs_wipe_unrm (
 	wd.filesys = wfs_fs;
 	wd.total_fs = 0;	/* dummy value, unused */
 	wd.ret_val = WFS_SUCCESS;
-	wd.buf = buf;
 	wd.isjournal = 0;
 	wd.is_zero_pass = 0;
 
@@ -953,6 +952,7 @@ wfs_jfs_wipe_unrm (
 			}
 			return ret_unrm;
 		}
+		wd.buf = buf;
 
 		/* Skip the superblock, because we need its old UUID.
 		Note that LOGPSIZE has been added TWICE to the "block" variable.
@@ -1094,6 +1094,7 @@ wfs_jfs_wipe_unrm (
 			}
 			return ret_unrm;
 		}
+		wd.buf = buf;
 
 		nblocks = LOGPNTOB (LOGSUPER_B) + LOGPSIZE + total_size / journal.bsize;
 		/* skip the superblock, because we need its old UUID */
