@@ -23,14 +23,6 @@
 #include "src/wfs_fat.h"
 #include "src/wfs_mount_check.h"
 
-#ifdef HAVE_COM_ERR_H
-# include <com_err.h>
-#else
-# if defined HAVE_ET_COM_ERR_H
-#  include <et/com_err.h>
-# endif
-#endif
-
 #define FS_NAME_FATFS "test-fs-fat"
 
 /* =================== stubs =================================== */
@@ -141,7 +133,7 @@ END_TEST
 
 START_TEST(test_wfs_fat_show_error)
 {
-	errcode_t e = 0;
+	long int e = 0;
 	wfs_fs.fs_error = &e;
 	wfs_fat_show_error("err", "extra", wfs_fs);
 }
