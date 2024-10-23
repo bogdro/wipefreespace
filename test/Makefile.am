@@ -62,6 +62,17 @@ endif
 if NTFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_ntfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_ntfs.o
+
+TESTS += test_wfs_ntfs
+check_PROGRAMS += test_wfs_ntfs
+
+test_wfs_ntfs_SOURCES = test_wfs_ntfs.c test_stubs.c
+test_wfs_ntfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_ntfs_LDADD = $(top_builddir)/src/wfs_ntfs.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 if XFS
