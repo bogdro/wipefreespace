@@ -37,6 +37,7 @@ test_wfs_minixfs
 test_wfs_ntfs
 test_wfs_ocfs
 test_wfs_reiser
+test_wfs_reiser4
 *.log
 *.trs
 test-fs*
