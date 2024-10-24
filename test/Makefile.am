@@ -83,6 +83,17 @@ endif
 if REISERFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_reiser.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_reiser.o
+
+TESTS += test_wfs_reiser
+check_PROGRAMS += test_wfs_reiser
+
+test_wfs_reiser_SOURCES = test_wfs_reiser.c test_stubs.c
+test_wfs_reiser_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_reiser_LDADD = $(top_builddir)/src/wfs_reiser.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 if REISER4
