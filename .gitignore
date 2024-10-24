@@ -35,6 +35,7 @@ test_wfs_hfsp
 test_wfs_jfs
 test_wfs_minixfs
 test_wfs_ntfs
+test_wfs_ocfs
 *.log
 *.trs
 test-fs*

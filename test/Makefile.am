@@ -157,6 +157,17 @@ endif
 if OCFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_ocfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_ocfs.o
+
+TESTS += test_wfs_ocfs
+check_PROGRAMS += test_wfs_ocfs
+
+test_wfs_ocfs_SOURCES = test_wfs_ocfs.c test_stubs.c
+test_wfs_ocfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_ocfs_LDADD = $(top_builddir)/src/wfs_ocfs.o \
+	$(top_builddir)/src/wfs_util.o \
+	$(top_builddir)/src/wfs_subprocess.o \
+	$(top_builddir)/src/wfs_wiping.o \
+	$(WFSTEST_COMMON_LDADD)
 endif
 
 test_wfs_wiping_SOURCES = test_wfs_wiping.c
