@@ -8,7 +8,7 @@ mktestfs()
 	[[ -z $size ]] && size=35
 	echo "================= Creating $fsname"
 	dd if=/dev/zero of=$fsname bs=1M count=$size
-	$mkfscmd
+	$mkfscmd || rm -f $fsname
 }
 
 mktestfs 'test-fs-extfs' 'mkfs.ext4 -F -j test-fs-extfs'
