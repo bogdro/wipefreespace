@@ -23,8 +23,20 @@
 #include "src/wfs_hfsp.h"
 #include "src/wfs_mount_check.h"
 
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #define FS_NAME_HFSP "test-fs-hfsp"
-static const int skip_tests = 1;
+static const int skip_tests = 1; /* until "y" can be input to stdin */
 
 /* =================== stubs =================================== */
 
@@ -173,14 +185,22 @@ static Suite * wfs_create_suite(void)
 int main(void)
 {
 	int failed = 0;
+	struct stat fs_stat;
+	Suite * s;
+	SRunner * sr;
 
 	if (skip_tests != 0)
 	{
 		return WFS_AUTOMAKE_TEST_SKIP;
 	}
 
-	Suite * s = wfs_create_suite();
-	SRunner * sr = srunner_create(s);
+	if (stat(FS_NAME_HFSP, &fs_stat) != 0)
+	{
+		return WFS_AUTOMAKE_TEST_SKIP;
+	}
+
+	s = wfs_create_suite();
+	sr = srunner_create(s);
 
 	srunner_run_all(sr, CK_NORMAL);
 
