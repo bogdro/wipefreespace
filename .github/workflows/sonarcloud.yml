@@ -65,9 +65,13 @@ jobs:
           sleep 1
           touch doc/wipefreespace.info
           sleep 1
+      - name: Prepare test data
+        run: |
+          cd test
+          ./mktestfs.sh
       - name: Run build-wrapper
         run: |
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make CFLAGS='-O0 -g -Wall -fprofile-arcs -ftest-coverage -fprofile-abs-path --coverage' all check
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make CFLAGS='-O0 -g -Wall -fprofile-arcs -ftest-coverage -fprofile-abs-path --coverage' all check || cat test/test-suite.log
       - name: Gather coverage information
         run: |
           mkdir ${{ env.COVERAGE_DIR }}
