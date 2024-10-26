@@ -30,6 +30,7 @@ static wfs_fsdata_t data = {{0, 0}};
 START_TEST(test_open_close)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	wfs_close_fs(wfs_fs);
 }
 END_TEST
@@ -37,6 +38,7 @@ END_TEST
 START_TEST(test_wfs_check_err)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_check_err(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
@@ -45,6 +47,7 @@ END_TEST
 START_TEST(test_wfs_is_dirty)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_is_dirty(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
@@ -53,6 +56,7 @@ END_TEST
 START_TEST(test_wfs_flush_fs)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_flush_fs(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
