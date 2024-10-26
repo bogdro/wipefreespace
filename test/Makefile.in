@@ -204,11 +204,13 @@ am__test_wfs_ext234_SOURCES_DIST = test_wfs_ext234.c test_stubs.c
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_ext234-test_stubs.$(OBJEXT)
 test_wfs_ext234_OBJECTS = $(am_test_wfs_ext234_OBJECTS)
 am__DEPENDENCIES_1 =
+@WFS_TESTS_ENABLED_TRUE@am__DEPENDENCIES_2 =  \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
+@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_DEPENDENCIES = $(top_builddir)/src/wfs_ext234.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_ext234_LINK = $(CCLD) $(test_wfs_ext234_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_fat_SOURCES_DIST = test_wfs_fat.c test_stubs.c
@@ -216,10 +218,7 @@ am__test_wfs_fat_SOURCES_DIST = test_wfs_fat.c test_stubs.c
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_fat-test_stubs.$(OBJEXT)
 test_wfs_fat_OBJECTS = $(am_test_wfs_fat_OBJECTS)
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_fat_DEPENDENCIES = $(top_builddir)/src/wfs_fat.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_fat_LINK = $(CCLD) $(test_wfs_fat_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_hfsp_SOURCES_DIST = test_wfs_hfsp.c test_stubs.c
@@ -227,10 +226,7 @@ am__test_wfs_hfsp_SOURCES_DIST = test_wfs_hfsp.c test_stubs.c
 @HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_hfsp-test_stubs.$(OBJEXT)
 test_wfs_hfsp_OBJECTS = $(am_test_wfs_hfsp_OBJECTS)
 @HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_hfsp_DEPENDENCIES = $(top_builddir)/src/wfs_hfsp.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_hfsp_LINK = $(CCLD) $(test_wfs_hfsp_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_jfs_SOURCES_DIST = test_wfs_jfs.c test_stubs.c
@@ -238,10 +234,7 @@ am__test_wfs_jfs_SOURCES_DIST = test_wfs_jfs.c test_stubs.c
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_jfs-test_stubs.$(OBJEXT)
 test_wfs_jfs_OBJECTS = $(am_test_wfs_jfs_OBJECTS)
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_jfs_DEPENDENCIES = $(top_builddir)/src/wfs_jfs.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_jfs_LINK = $(CCLD) $(test_wfs_jfs_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_minixfs_SOURCES_DIST = test_wfs_minixfs.c test_stubs.c
@@ -249,10 +242,7 @@ am__test_wfs_minixfs_SOURCES_DIST = test_wfs_minixfs.c test_stubs.c
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_minixfs-test_stubs.$(OBJEXT)
 test_wfs_minixfs_OBJECTS = $(am_test_wfs_minixfs_OBJECTS)
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_DEPENDENCIES = $(top_builddir)/src/wfs_minixfs.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_minixfs_LINK = $(CCLD) $(test_wfs_minixfs_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_mount_check_SOURCES_DIST = test_wfs_mount_check.c
@@ -260,10 +250,7 @@ am__test_wfs_mount_check_SOURCES_DIST = test_wfs_mount_check.c
 test_wfs_mount_check_OBJECTS = $(am_test_wfs_mount_check_OBJECTS)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_mount_check_DEPENDENCIES =  \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_mount_check.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1) $(am__append_1) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2) $(am__append_1) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_5) $(am__append_9) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_13) $(am__append_17) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_21) $(am__append_25) \
@@ -276,10 +263,7 @@ am__test_wfs_ntfs_SOURCES_DIST = test_wfs_ntfs.c test_stubs.c
 @NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_ntfs-test_stubs.$(OBJEXT)
 test_wfs_ntfs_OBJECTS = $(am_test_wfs_ntfs_OBJECTS)
 @NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ntfs_DEPENDENCIES = $(top_builddir)/src/wfs_ntfs.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_ntfs_LINK = $(CCLD) $(test_wfs_ntfs_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_ocfs_SOURCES_DIST = test_wfs_ocfs.c test_stubs.c
@@ -287,10 +271,7 @@ am__test_wfs_ocfs_SOURCES_DIST = test_wfs_ocfs.c test_stubs.c
 @OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_ocfs-test_stubs.$(OBJEXT)
 test_wfs_ocfs_OBJECTS = $(am_test_wfs_ocfs_OBJECTS)
 @OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ocfs_DEPENDENCIES = $(top_builddir)/src/wfs_ocfs.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_ocfs_LINK = $(CCLD) $(test_wfs_ocfs_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_reiser_SOURCES_DIST = test_wfs_reiser.c test_stubs.c
@@ -298,10 +279,7 @@ am__test_wfs_reiser_SOURCES_DIST = test_wfs_reiser.c test_stubs.c
 @REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_reiser-test_stubs.$(OBJEXT)
 test_wfs_reiser_OBJECTS = $(am_test_wfs_reiser_OBJECTS)
 @REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser_DEPENDENCIES = $(top_builddir)/src/wfs_reiser.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_reiser_LINK = $(CCLD) $(test_wfs_reiser_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_reiser4_SOURCES_DIST = test_wfs_reiser4.c test_stubs.c
@@ -309,10 +287,7 @@ am__test_wfs_reiser4_SOURCES_DIST = test_wfs_reiser4.c test_stubs.c
 @REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	test_wfs_reiser4-test_stubs.$(OBJEXT)
 test_wfs_reiser4_OBJECTS = $(am_test_wfs_reiser4_OBJECTS)
 @REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser4_DEPENDENCIES = $(top_builddir)/src/wfs_reiser4.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1)
+@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_reiser4_LINK = $(CCLD) $(test_wfs_reiser4_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__test_wfs_wiping_SOURCES_DIST = test_wfs_wiping.c
@@ -329,11 +304,8 @@ am__test_wfs_wrappers_SOURCES_DIST = test_wfs_wrappers.c test_stubs.c
 test_wfs_wrappers_OBJECTS = $(am_test_wfs_wrappers_OBJECTS)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_DEPENDENCIES =  \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wrappers.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_mount_check.o \
-@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_1) $(am__append_2) \
+@WFS_TESTS_ENABLED_TRUE@	$(am__DEPENDENCIES_2) $(am__append_2) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_6) $(am__append_10) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_14) $(am__append_18) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_22) $(am__append_26) \
@@ -346,10 +318,7 @@ am__test_wfs_xfs_SOURCES_DIST = test_wfs_xfs.c test_stubs.c
 @WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	test_wfs_xfs-test_stubs.$(OBJEXT)
 test_wfs_xfs_OBJECTS = $(am_test_wfs_xfs_OBJECTS)
 @WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@test_wfs_xfs_DEPENDENCIES = $(top_builddir)/src/wfs_xfs.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(top_builddir)/src/wfs_util.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(am__DEPENDENCIES_1)
+@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(am__DEPENDENCIES_2)
 test_wfs_xfs_LINK = $(CCLD) $(test_wfs_xfs_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -786,28 +755,31 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 @WFS_TESTS_ENABLED_TRUE@WFSTEST_COMMON_CFLAGS = @CHECK_CFLAGS@ -I $(top_builddir)/src
 @WFS_TESTS_ENABLED_TRUE@WFSTEST_COMMON_LDADD = @CHECK_LIBS@ @LIBS@
+@WFS_TESTS_ENABLED_TRUE@WFSTEST_FS_COMMON_LDADD = \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
+@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
+@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+
 @WFS_TESTS_ENABLED_TRUE@test_wfs_mount_check_SOURCES = test_wfs_mount_check.c
 @WFS_TESTS_ENABLED_TRUE@test_wfs_mount_check_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_mount_check_LDADD =  \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_mount_check.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD) \
+@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_1) $(am__append_5) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_9) $(am__append_13) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_17) $(am__append_21) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_25) $(am__append_29) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_33) $(am__append_37)
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_SOURCES = test_wfs_wiping.c
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_LDADD = $(top_builddir)/src/wfs_wiping.o $(WFSTEST_COMMON_LDADD)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_SOURCES = test_wfs_wrappers.c test_stubs.c
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @WFS_TESTS_ENABLED_TRUE@test_wfs_wrappers_LDADD =  \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wrappers.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
 @WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_mount_check.o \
-@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD) \
+@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_2) $(am__append_6) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_10) $(am__append_14) \
 @WFS_TESTS_ENABLED_TRUE@	$(am__append_18) $(am__append_22) \
@@ -816,86 +788,53 @@ top_srcdir = @top_srcdir@
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_SOURCES = test_wfs_ext234.c test_stubs.c
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ext234_LDADD = $(top_builddir)/src/wfs_ext234.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@EXT234FS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ntfs_SOURCES = test_wfs_ntfs.c test_stubs.c
 @NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ntfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ntfs_LDADD = $(top_builddir)/src/wfs_ntfs.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@NTFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@test_wfs_xfs_SOURCES = test_wfs_xfs.c test_stubs.c
 @WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@test_wfs_xfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@test_wfs_xfs_LDADD = $(top_builddir)/src/wfs_xfs.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(top_builddir)/src/wfs_util.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(WFSTEST_COMMON_LDADD)
+@WFS_TESTS_ENABLED_TRUE@@XFS_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser_SOURCES = test_wfs_reiser.c test_stubs.c
 @REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser_LDADD = $(top_builddir)/src/wfs_reiser.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@REISERFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser4_SOURCES = test_wfs_reiser4.c test_stubs.c
 @REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser4_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_reiser4_LDADD = $(top_builddir)/src/wfs_reiser4.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@REISER4_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_fat_SOURCES = test_wfs_fat.c test_stubs.c
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_fat_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_fat_LDADD = $(top_builddir)/src/wfs_fat.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@FATFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_SOURCES = test_wfs_minixfs.c test_stubs.c
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_minixfs_LDADD = $(top_builddir)/src/wfs_minixfs.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@MINIXFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_jfs_SOURCES = test_wfs_jfs.c test_stubs.c
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_jfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_jfs_LDADD = $(top_builddir)/src/wfs_jfs.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@JFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_hfsp_SOURCES = test_wfs_hfsp.c test_stubs.c
 @HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_hfsp_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_hfsp_LDADD = $(top_builddir)/src/wfs_hfsp.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@HFSP_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
 @OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ocfs_SOURCES = test_wfs_ocfs.c test_stubs.c
 @OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ocfs_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 @OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@test_wfs_ocfs_LDADD = $(top_builddir)/src/wfs_ocfs.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_util.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_subprocess.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(top_builddir)/src/wfs_wiping.o \
-@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_COMMON_LDADD)
+@OCFS_TRUE@@WFS_TESTS_ENABLED_TRUE@	$(WFSTEST_FS_COMMON_LDADD)
 
-@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_SOURCES = test_wfs_wiping.c
-@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
-@WFS_TESTS_ENABLED_TRUE@test_wfs_wiping_LDADD = $(top_builddir)/src/wfs_wiping.o $(WFSTEST_COMMON_LDADD)
 all: all-am
 
 .SUFFIXES:
