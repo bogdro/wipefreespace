@@ -127,6 +127,7 @@ static int errno = -1;
 
 /* ============================================================= */
 
+#define WFS_GENERIC_FS "proc"
 #define WFS_TEST_MOUNT_POINT "testdir"
 #define WFS_TEST_LOOP_DEVICE "/dev/loop3"	/* chosen arbitrarily */
 
@@ -139,7 +140,7 @@ START_TEST(test_wfs_check_mounted)
 	wfs_fs.fs_error = malloc (sizeof(wfs_errcode_t));
 	if ( wfs_fs.fs_error != NULL )
 	{
-		wfs_fs.fsname = "proc";
+		wfs_fs.fsname = WFS_GENERIC_FS;
 		ret = wfs_check_mounted (wfs_fs);
 		free (wfs_fs.fs_error);
 		ck_assert_int_eq (ret, WFS_MNTRW);
@@ -547,56 +548,62 @@ static void teardown_test(void)
 
 static Suite * wfs_create_suite(void)
 {
+	struct stat fs_stat;
 	Suite * s = suite_create("wfs_mount_check");
 
 	TCase * tests_mount = tcase_create("mount");
 
-	tcase_add_test(tests_mount, test_wfs_check_mounted);
+	if (stat(WFS_GENERIC_FS, &fs_stat) == 0)
+	{
+		tcase_add_test(tests_mount, test_wfs_check_mounted);
+	}
 #ifdef WFS_TEST_CAN_MOUNT
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_rw);
+	if (stat(WFS_TEST_FILESYSTEM, &fs_stat) == 0)
+	{
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_rw);
 # ifdef WFS_EXT234
-	tcase_add_test(tests_mount, test_wfs_check_mounted_e2_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_e2_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_e2_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_e2_rw);
 # endif
 # ifdef WFS_NTFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_rw);
 # endif
 # ifdef WFS_XFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_rw);
 # endif
 # ifdef WFS_REISER
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r3_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r3_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r3_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r3_rw);
 # endif
 # ifdef WFS_REISER4
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r4_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r4_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r4_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r4_rw);
 # endif
 # ifdef WFS_FATFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_fat_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_fat_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_fat_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_fat_rw);
 # endif
 # ifdef WFS_MINIXFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_minix_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_minix_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_minix_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_minix_rw);
 # endif
 # ifdef WFS_JFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_rw);
 # endif
 # ifdef WFS_HFSP
-	tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_rw);
 # endif
 # ifdef WFS_OCFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_rw);
 # endif
+	}
 #endif
-
 	/*tcase_add_checked_fixture(tests_mount, &setup_test, &teardown_test);*/
 	tcase_add_unchecked_fixture(tests_mount, &setup_global, &teardown_global);
 
