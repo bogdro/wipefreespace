@@ -654,7 +654,7 @@ static void teardown_test(void)
 
 static Suite * wfs_create_suite(void)
 {
-	Suite * s = suite_create("wfs_util");
+	Suite * s = suite_create("wfs_mount_check");
 
 	TCase * tests_mount = tcase_create("mount");
 
