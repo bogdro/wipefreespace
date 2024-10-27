@@ -36,7 +36,7 @@ test_wfs_mount_check_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 test_wfs_mount_check_LDADD = $(top_builddir)/src/wfs_mount_check.o \
 	$(WFSTEST_FS_COMMON_LDADD)
 
-test_wfs_wiping_SOURCES = test_wfs_wiping.c
+test_wfs_wiping_SOURCES = test_wfs_wiping.c test_stubs.c
 test_wfs_wiping_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
 test_wfs_wiping_LDADD = $(top_builddir)/src/wfs_wiping.o $(WFSTEST_COMMON_LDADD)
 
