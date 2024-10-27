@@ -79,5 +79,6 @@
 # endif
 
 # define WFS_AUTOMAKE_TEST_SKIP 77
+# define WFS_TEST_FILESYSTEM "test-fs"
 
 #endif /* WFS_TEST_COMMON */

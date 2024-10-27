@@ -22,11 +22,10 @@
 #include "wfs_test_common.h"
 #include "src/wfs_wrappers.h"
 
-#define FS_NAME "test-fs"
-
 /* ============================================================= */
 
-static wfs_fsid_t wfs_fs = {FS_NAME, 1, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
+static wfs_fsid_t wfs_fs = {WFS_TEST_FILESYSTEM, 1, 0, NULL, NULL,
+	WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
 static wfs_fsdata_t data = {{0, 0}};
 
 START_TEST(test_open_close)
@@ -130,7 +129,7 @@ int main(void)
 	Suite * s;
 	SRunner * sr;
 
-	if (stat(FS_NAME, &fs_stat) != 0)
+	if (stat(WFS_TEST_FILESYSTEM, &fs_stat) != 0)
 	{
 		return WFS_AUTOMAKE_TEST_SKIP;
 	}

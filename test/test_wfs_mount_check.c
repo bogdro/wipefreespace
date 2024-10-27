@@ -127,7 +127,6 @@ static int errno = -1;
 
 /* ============================================================= */
 
-#define WFS_TEST_FILESYSTEM "test-fs"
 #define WFS_TEST_MOUNT_POINT "testdir"
 #define WFS_TEST_LOOP_DEVICE "/dev/loop3"	/* chosen arbitrarily */
 
