@@ -23,18 +23,6 @@
 #include "src/wfs_fat.h"
 #include "src/wfs_mount_check.h"
 
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
-
 #define FS_NAME_FATFS "test-fs-fat"
 
 /* =================== stubs =================================== */

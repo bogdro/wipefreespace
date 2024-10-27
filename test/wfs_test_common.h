@@ -66,6 +66,18 @@
 #  define ck_assert_uint_gt(X, Y) _ck_assert_uint(X, >, Y)
 # endif
 
+# ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+# endif
+
+# ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h>
+# endif
+
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+# endif
+
 # define WFS_AUTOMAKE_TEST_SKIP 77
 
 #endif /* WFS_TEST_COMMON */
