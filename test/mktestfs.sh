@@ -5,7 +5,9 @@ mktestfs()
 	fsname=$1
 	mkfscmd=$2
 	size=$3
-	[[ -z $size ]] && size=35
+	if ( test -z $size ); then
+		size=35
+	fi
 	echo "================= Creating $fsname"
 	dd if=/dev/zero of=$fsname bs=1M count=$size
 	$mkfscmd || rm -f $fsname

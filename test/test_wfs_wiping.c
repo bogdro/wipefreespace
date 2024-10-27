@@ -19,67 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _XOPEN_SOURCE 600
-#define _LARGEFILE64_SOURCE 1
-#define _GNU_SOURCE	1
-#define _ATFILE_SOURCE 1
-#define __USE_GNU
-
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#include "src/wipefreespace.h"
+#include "wfs_test_common.h"
 #include "src/wfs_wiping.h"
 
-#include <check.h>
-
-/* compatibility with older check versions */
-#ifndef ck_abort
-# define ck_abort() ck_abort_msg(NULL)
-# define ck_abort_msg fail
-# define ck_assert(C) ck_assert_msg(C, NULL)
-# define ck_assert_msg fail_unless
-#endif
-
-#ifndef _ck_assert_int
-# define _ck_assert_int(X, O, Y) ck_assert_msg((X) O (Y), "Assertion '"#X#O#Y"' failed: "#X"==%d, "#Y"==%d", X, Y)
-# define ck_assert_int_eq(X, Y) _ck_assert_int(X, ==, Y)
-# define ck_assert_int_ne(X, Y) _ck_assert_int(X, !=, Y)
-#endif
-
-#ifndef _ck_assert_str
-# define _ck_assert_str(C, X, O, Y) ck_assert_msg(C, "Assertion '"#X#O#Y"' failed: "#X"==\"%s\", "#Y"==\"%s\"", X, Y)
-# define ck_assert_str_eq(X, Y) _ck_assert_str(!strcmp(X, Y), X, ==, Y)
-# define ck_assert_str_ne(X, Y) _ck_assert_str(strcmp(X, Y), X, !=, Y)
-#endif
-
 #include <stdio.h>
-
-/* ============ stubs: */
-
-int sig_recvd = 0;
-
-void
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
-wfs_show_msg (
-#ifdef WFS_ANSIC
-	const int		type WFS_ATTR ((unused)),
-	const char * const	msg WFS_ATTR ((unused)),
-	const char * const	extra WFS_ATTR ((unused)),
-	const wfs_fsid_t	wfs_fs WFS_ATTR ((unused)) )
-#else
-	type, msg, extra, wfs_fs )
-	const int		type WFS_ATTR ((unused));
-	const char * const	msg WFS_ATTR ((unused));
-	const char * const	extra WFS_ATTR ((unused));
-	const wfs_fsid_t	wfs_fs WFS_ATTR ((unused));
-#endif
-{
-}
 
 /* ============================================================= */
 

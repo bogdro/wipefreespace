@@ -24,12 +24,14 @@
 
 /* ============================================================= */
 
-static wfs_fsid_t wfs_fs = {"test-fs", 1, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
+static wfs_fsid_t wfs_fs = {WFS_TEST_FILESYSTEM, 1, 0, NULL, NULL,
+	WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
 static wfs_fsdata_t data = {{0, 0}};
 
 START_TEST(test_open_close)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	wfs_close_fs(wfs_fs);
 }
 END_TEST
@@ -37,6 +39,7 @@ END_TEST
 START_TEST(test_wfs_check_err)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_check_err(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
@@ -45,6 +48,7 @@ END_TEST
 START_TEST(test_wfs_is_dirty)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_is_dirty(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
@@ -53,6 +57,7 @@ END_TEST
 START_TEST(test_wfs_flush_fs)
 {
 	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_flush_fs(wfs_fs));
 	wfs_close_fs(wfs_fs);
 }
@@ -120,9 +125,17 @@ static Suite * wfs_create_suite(void)
 int main(void)
 {
 	int failed = 0;
+	struct stat fs_stat;
+	Suite * s;
+	SRunner * sr;
 
-	Suite * s = wfs_create_suite();
-	SRunner * sr = srunner_create(s);
+	if (stat(WFS_TEST_FILESYSTEM, &fs_stat) != 0)
+	{
+		return WFS_AUTOMAKE_TEST_SKIP;
+	}
+
+	s = wfs_create_suite();
+	sr = srunner_create(s);
 
 	srunner_run_all(sr, CK_NORMAL);
 

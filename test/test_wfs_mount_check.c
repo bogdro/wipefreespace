@@ -19,20 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _XOPEN_SOURCE 600
-#define _LARGEFILE64_SOURCE 1
-#define _GNU_SOURCE	1
-#define _ATFILE_SOURCE 1
-#define __USE_GNU
-
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#include "src/wipefreespace.h"
+#include "wfs_test_common.h"
 #include "src/wfs_mount_check.h"
-#include "src/wfs_wiping.h"
 
 #ifdef WFS_EXT234
 # include "wfs_ext234.h"
@@ -74,29 +62,6 @@
 # include "wfs_ocfs.h"
 #endif
 
-#include <check.h>
-
-/* compatibility with older check versions */
-#ifndef ck_abort
-# define ck_abort() ck_abort_msg(NULL)
-# define ck_abort_msg fail
-# define ck_assert(C) ck_assert_msg(C, NULL)
-# define ck_assert_msg fail_unless
-#endif
-
-#ifndef _ck_assert_int
-# define _ck_assert_int(X, O, Y) ck_assert_msg((X) O (Y), "Assertion '"#X#O#Y"' failed: "#X"==%d, "#Y"==%d", X, Y)
-# define ck_assert_int_eq(X, Y) _ck_assert_int(X, ==, Y)
-# define ck_assert_int_ne(X, Y) _ck_assert_int(X, !=, Y)
-#endif
-
-#ifndef _ck_assert_str
-# define _ck_assert_str(C, X, O, Y) ck_assert_msg(C, "Assertion '"#X#O#Y"' failed: "#X"==\"%s\", "#Y"==\"%s\"", X, Y)
-# define ck_assert_str_eq(X, Y) _ck_assert_str(!strcmp(X, Y), X, ==, Y)
-# define ck_assert_str_ne(X, Y) _ck_assert_str(strcmp(X, Y), X, !=, Y)
-#endif
-
-
 #ifdef HAVE_ERRNO_H
 # include <errno.h>
 #else
@@ -105,10 +70,6 @@ static int errno = -1;
 
 #ifdef HAVE_MALLOC_H
 # include <malloc.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
 #endif
 
 #include <stdio.h>
@@ -133,9 +94,7 @@ static int errno = -1;
 # define O_TRUNC	01000
 #endif
 
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
-#else
+#ifndef HAVE_SYS_STAT_H
 # define S_IRUSR 0600
 # define S_IWUSR 0400
 #endif
@@ -166,74 +125,9 @@ static int errno = -1;
 # undef WFS_TEST_CAN_MOUNT
 #endif
 
-/* ============ stubs: */
-
-const char * const wfs_err_msg = "ERROR";
-int sig_recvd = 0;
-int sigchld_recvd = 0;
-
-int
-wfs_is_stderr_open (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
-{
-	return 0;
-}
-
-const char *
-wfs_get_program_name (
-#ifdef WFS_ANSIC
-	void
-#endif
-)
-{
-	return "test_wfs_util";
-}
-
-void
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
-wfs_show_progress (
-#ifdef WFS_ANSIC
-	const wfs_progress_type_t	type WFS_ATTR ((unused)),
-	const unsigned int		percent WFS_ATTR ((unused)),
-	unsigned int * const		prev_percent WFS_ATTR ((unused))
-	)
-#else
-	type, percent, prev_percent )
-	const wfs_progress_type_t	type;
-	const unsigned int		percent;
-	unsigned int * const		prev_percent;
-#endif
-{
-}
-
-void
-#ifdef WFS_ANSIC
-WFS_ATTR ((nonnull))
-#endif
-wfs_show_msg (
-#ifdef WFS_ANSIC
-	const int		type,
-	const char * const	msg,
-	const char * const	extra,
-	const wfs_fsid_t	wfs_fs )
-#else
-	type, msg, extra, wfs_fs )
-	const int		type;
-	const char * const	msg;
-	const char * const	extra;
-	const wfs_fsid_t	wfs_fs;
-#endif
-{
-}
-
 /* ============================================================= */
 
-#define WFS_TEST_FILESYSTEM "test-fs"
+#define WFS_GENERIC_FS "proc"
 #define WFS_TEST_MOUNT_POINT "testdir"
 #define WFS_TEST_LOOP_DEVICE "/dev/loop3"	/* chosen arbitrarily */
 
@@ -246,7 +140,7 @@ START_TEST(test_wfs_check_mounted)
 	wfs_fs.fs_error = malloc (sizeof(wfs_errcode_t));
 	if ( wfs_fs.fs_error != NULL )
 	{
-		wfs_fs.fsname = "/dev/sda2";
+		wfs_fs.fsname = WFS_GENERIC_FS;
 		ret = wfs_check_mounted (wfs_fs);
 		free (wfs_fs.fs_error);
 		ck_assert_int_eq (ret, WFS_MNTRW);
@@ -654,56 +548,62 @@ static void teardown_test(void)
 
 static Suite * wfs_create_suite(void)
 {
-	Suite * s = suite_create("wfs_util");
+	struct stat fs_stat;
+	Suite * s = suite_create("wfs_mount_check");
 
 	TCase * tests_mount = tcase_create("mount");
 
-	tcase_add_test(tests_mount, test_wfs_check_mounted);
+	if (stat(WFS_GENERIC_FS, &fs_stat) == 0)
+	{
+		tcase_add_test(tests_mount, test_wfs_check_mounted);
+	}
 #ifdef WFS_TEST_CAN_MOUNT
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_rw);
+	if (stat(WFS_TEST_FILESYSTEM, &fs_stat) == 0)
+	{
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_rw);
 # ifdef WFS_EXT234
-	tcase_add_test(tests_mount, test_wfs_check_mounted_e2_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_e2_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_e2_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_e2_rw);
 # endif
 # ifdef WFS_NTFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ntfs_rw);
 # endif
 # ifdef WFS_XFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_xfs_rw);
 # endif
 # ifdef WFS_REISER
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r3_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r3_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r3_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r3_rw);
 # endif
 # ifdef WFS_REISER4
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r4_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_r4_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r4_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_r4_rw);
 # endif
 # ifdef WFS_FATFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_fat_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_fat_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_fat_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_fat_rw);
 # endif
 # ifdef WFS_MINIXFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_minix_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_minix_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_minix_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_minix_rw);
 # endif
 # ifdef WFS_JFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_jfs_rw);
 # endif
 # ifdef WFS_HFSP
-	tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_hfsp_rw);
 # endif
 # ifdef WFS_OCFS
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_ro);
-	tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_rw);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_ro);
+		tcase_add_test(tests_mount, test_wfs_check_mounted_ocfs_rw);
 # endif
+	}
 #endif
-
 	/*tcase_add_checked_fixture(tests_mount, &setup_test, &teardown_test);*/
 	tcase_add_unchecked_fixture(tests_mount, &setup_global, &teardown_global);
 
