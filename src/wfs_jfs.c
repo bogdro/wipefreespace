@@ -866,6 +866,7 @@ wfs_jfs_wipe_unrm (
 	unsigned int prev_percent = 0;
 	struct wfs_jfs * jfs;
 	wfs_errcode_t * error_ret;
+	unsigned long int j;
 
 	jfs = (struct wfs_jfs *) wfs_fs.fs_backend;
 	error_ret = (wfs_errcode_t *) wfs_fs.fs_error;
@@ -958,26 +959,69 @@ wfs_jfs_wipe_unrm (
 		Note that LOGPSIZE has been added TWICE to the "block" variable.
 		*/
 		block += LOGPSIZE;
-		for ( i = 0; i < journal.size - 2; i++ )
+		if ( wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
 		{
-			/* NOTE: not the same block number for wfs_fs.jfs.fs and the journal. */
-			/* wfs_jfs_wipe_block expects a block number, not an offset, while
-			   "block" is an offset here, because it is required so below */
-			if ( ret_unrm == WFS_SUCCESS )
+			for ( j = 0; (j <= wfs_fs.npasses) && (sig_recvd == 0)
+				/*&& (ret == WFS_SUCCESS)*/; j++ )
 			{
-				ret_unrm = wfs_jfs_wipe_block (wd,
-					(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
-					jfs->fs);
+				wd.passno = j;
+				for ( i = 0; i < journal.size - 2; i++ )
+				{
+					/* NOTE: not the same block number for wfs_fs.jfs.fs and the journal. */
+					/* wfs_jfs_wipe_block expects a block number, not an offset, while
+					"block" is an offset here, because it is required so below */
+					if ( ret_unrm == WFS_SUCCESS )
+					{
+						ret_unrm = wfs_jfs_wipe_block (wd,
+							(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
+							jfs->fs);
+					}
+					else
+					{
+						wfs_jfs_wipe_block (wd,
+							(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
+							jfs->fs);
+					}
+					wfs_show_progress (WFS_PROGRESS_UNRM,
+						(unsigned int)(50 /* unrm i-nodes */
+							+ ((((unsigned long int)journal.size - 2) * (j + 1)
+								+ (unsigned long int)i) * 50)
+							/(((unsigned long int)journal.size - 2) * (wfs_fs.npasses + 1))),
+						&prev_percent);
+				}
 			}
-			else
+		}
+		else
+		{
+			for ( i = 0; i < journal.size - 2; i++ )
 			{
-				wfs_jfs_wipe_block (wd,
-					(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
-					jfs->fs);
+				for ( j = 0; (j <= wfs_fs.npasses) && (sig_recvd == 0)
+					/*&& (ret == WFS_SUCCESS)*/; j++ )
+				{
+					wd.passno = j;
+					/* NOTE: not the same block number for wfs_fs.jfs.fs and the journal. */
+					/* wfs_jfs_wipe_block expects a block number, not an offset, while
+					"block" is an offset here, because it is required so below */
+					if ( ret_unrm == WFS_SUCCESS )
+					{
+						ret_unrm = wfs_jfs_wipe_block (wd,
+							(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
+							jfs->fs);
+					}
+					else
+					{
+						wfs_jfs_wipe_block (wd,
+							(block + i*jfs->super.s_bsize)/jfs->super.s_bsize,
+							jfs->fs);
+					}
+					wfs_show_progress (WFS_PROGRESS_UNRM,
+						(unsigned int)(50 /* unrm i-nodes */
+							+ ((((unsigned long int)journal.size - 2) * (j + 1)
+								+ (unsigned long int)i) * 50)
+							/(((unsigned long int)journal.size - 2) * (wfs_fs.npasses + 1))),
+						&prev_percent);
+				}
 			}
-			wfs_show_progress (WFS_PROGRESS_UNRM,
-				(unsigned int)(50 /* unrm i-nodes */ + (i * 50)/(journal.size - 2)),
-				&prev_percent);
 		}
 		free (buf);
 		/* format a new journal: */
@@ -1098,20 +1142,57 @@ wfs_jfs_wipe_unrm (
 
 		nblocks = LOGPNTOB (LOGSUPER_B) + LOGPSIZE + total_size / journal.bsize;
 		/* skip the superblock, because we need its old UUID */
-		for ( block = LOGPNTOB (LOGSUPER_B) + LOGPSIZE; block < nblocks; block++ )
+		if ( wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
 		{
-			if ( ret_unrm == WFS_SUCCESS )
+			for ( j = 0; (j <= wfs_fs.npasses) && (sig_recvd == 0)
+				/*&& (ret == WFS_SUCCESS)*/; j++ )
 			{
-				ret_unrm = wfs_jfs_wipe_block (wd, block,
-					journal_fp);
+				wd.passno = j;
+				for ( block = LOGPNTOB (LOGSUPER_B) + LOGPSIZE; block < nblocks; block++ )
+				{
+					if ( ret_unrm == WFS_SUCCESS )
+					{
+						ret_unrm = wfs_jfs_wipe_block (wd, block,
+							journal_fp);
+					}
+					else
+					{
+						wfs_jfs_wipe_block (wd, block, journal_fp);
+					}
+					wfs_show_progress (WFS_PROGRESS_UNRM,
+						(unsigned int)(50 /* unrm i-nodes */
+							+ (((unsigned long long int)nblocks * (j + 1)
+								+ (unsigned long long int)block) * 50)
+							/(unsigned long long int)(nblocks * (int64_t)wfs_fs.npasses)),
+						&prev_percent);
+				}
 			}
-			else
+		}
+		else
+		{
+			for ( block = LOGPNTOB (LOGSUPER_B) + LOGPSIZE; block < nblocks; block++ )
 			{
-				wfs_jfs_wipe_block (wd, block, journal_fp);
+				for ( j = 0; (j <= wfs_fs.npasses) && (sig_recvd == 0)
+					/*&& (ret == WFS_SUCCESS)*/; j++ )
+				{
+					wd.passno = j;
+					if ( ret_unrm == WFS_SUCCESS )
+					{
+						ret_unrm = wfs_jfs_wipe_block (wd, block,
+							journal_fp);
+					}
+					else
+					{
+						wfs_jfs_wipe_block (wd, block, journal_fp);
+					}
+					wfs_show_progress (WFS_PROGRESS_UNRM,
+						(unsigned int)(50 /* unrm i-nodes */
+							+ (((unsigned long long int)nblocks * (j + 1)
+								+ (unsigned long long int)block) * 50)
+							/(unsigned long long int)(nblocks * (int64_t)wfs_fs.npasses)),
+						&prev_percent);
+				}
 			}
-			wfs_show_progress (WFS_PROGRESS_UNRM,
-				(unsigned int)(50 /* unrm i-nodes */ + (block * 50)/nblocks),
-				&prev_percent);
 		}
 		free (buf);
 		/* format a new journal */

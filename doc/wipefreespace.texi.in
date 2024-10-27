@@ -764,6 +764,7 @@ Operations:
  @end itemize
 @item wiping the journal (log)
  @itemize
+ @item pattern-order
  @item block-order
  @end itemize
 @item wiping deleted files' data (part of free space)
