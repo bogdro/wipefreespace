@@ -246,7 +246,7 @@ START_TEST(test_wfs_check_mounted)
 	wfs_fs.fs_error = malloc (sizeof(wfs_errcode_t));
 	if ( wfs_fs.fs_error != NULL )
 	{
-		wfs_fs.fsname = "/dev/sda2";
+		wfs_fs.fsname = "proc";
 		ret = wfs_check_mounted (wfs_fs);
 		free (wfs_fs.fs_error);
 		ck_assert_int_eq (ret, WFS_MNTRW);
