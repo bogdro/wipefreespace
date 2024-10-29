@@ -52,7 +52,7 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Install requirements
-        run: sudo apt-get -y --ignore-missing install
+        run: sudo apt-get -my install
           libext2fs-dev
           ntfs-3g-dev
           xfsprogs 
