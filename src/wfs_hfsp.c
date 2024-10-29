@@ -194,7 +194,7 @@ wfs_hfsp_wipe_part_file (
 	}
 
 	remainder = file->record.u.file.data_fork.total_size % fs_block_size;
-	if ( (remainder == 0) || (remainder >= fs_block_size) /* for quality tools */ )
+	if ( remainder == 0 )
 	{
 		if ( sig_recvd != 0 )
 		{

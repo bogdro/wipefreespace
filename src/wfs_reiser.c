@@ -61,15 +61,27 @@ typedef short int __u16;
 # define MAJOR_IN_SYSMACROS 0
 #endif
 
-#if (defined HAVE_REISERFS_LIB_H) && (defined HAVE_LIBCORE)
+#if ((defined HAVE_REISERFS_LIB_H) || (defined HAVE_REISERFS_REISERFS_LIB_H)) \
+	&& ((defined HAVE_LIBCORE) || (defined HAVE_LIBREISERFSCORE))
 /* Avoid some Reiser3 header files' name conflicts:
  reiserfs_lib.h uses the same name for a function and a variable,
  so let's redefine one to avoid name conflicts */
 # define div reiser_div
 # define index reiser_index
 # define key_format(x) key_format0 (x)
-# include <reiserfs_lib.h>
-# include <io.h>
+# ifdef HAVE_REISERFS_REISERFS_LIB_H
+#  include <reiserfs/reiserfs_lib.h>
+#  include <reiserfs/io.h>
+# else
+#  ifdef HAVE_REISERFS_LIB_H
+#   include <reiserfs_lib.h>
+#   include <io.h>
+#  else
+#   error Something wrong. ReiserFS requested, but headers or library missing.
+    /* make a syntax error, because not all compilers treat #error as an error */
+    Something wrong. ReiserFS requested, but headers or library missing.
+#  endif
+# endif
 # undef div
 # undef index
 # undef key_format
