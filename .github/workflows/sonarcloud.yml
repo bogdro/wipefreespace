@@ -52,17 +52,24 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Install requirements
-        run: sudo apt-get -y install libext2fs-dev ntfs-3g-dev xfsprogs 
-          libreiser4-dev libhfsp-dev hfsutils hfsprogs ocfs2-tools-dev 
-          reiser4progs reiserfsprogs check
+        run: sudo apt-get -y --ignore-missing install
+          libext2fs-dev
+          ntfs-3g-dev
+          xfsprogs 
+          libreiser4-dev reiser4progs
+          libhfsp-dev hfsutils hfsprogs
+          ocfs2-tools-dev 
+          reiserfsprogs libreiserfscore-dev
+          check
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v3
       - name: Configure
         run: |
           #autoreconf --install
-          touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in test/Makefile.in config.h.in
+          touch aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in test/Makefile.in config.h.in
           for i in po/*.po; do touch ${i/.po/.gmo}; done
           sleep 1
+          touch configure
           ./configure
           sleep 1
           touch doc/wipefreespace.info
@@ -78,9 +85,10 @@ jobs:
           ./mktestfs.sh
       - name: Run build-wrapper
         run: |
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make CFLAGS='-O0 -g -Wall -Wno-nonnull-compare -fprofile-arcs -ftest-coverage -fprofile-abs-path --coverage' all check || cat test/test-suite.log
+          sudo build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make CFLAGS='-O0 -g -Wall -Wno-nonnull-compare -fprofile-arcs -ftest-coverage -fprofile-abs-path --coverage' all check || cat test/test-suite.log
       - name: Gather coverage information
         run: |
+          sudo chmod -R o+rX .
           mkdir ${{ env.COVERAGE_DIR }}
           cd ${{ env.COVERAGE_DIR }}
           find .. -name '*.o' | xargs gcov --preserve-paths
