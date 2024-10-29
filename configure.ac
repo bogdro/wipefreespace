@@ -248,6 +248,11 @@ if ( test "x$feat_reiser" = "xyes" ); then
 		has_patched_r3=yes
 		AC_CHECK_LIB([misc],[misc_test_bit],,[libmisc=no],[-luuid])
 		AC_CHECK_LIB([core],[reiserfs_open],,[libcore=no],[-lmisc -luuid])
+		if (test "x$libcore" = "xno"); then
+
+			libcore=yes
+			AC_CHECK_LIB([reiserfscore],[reiserfs_open],,[libcore=no],[-luuid])
+		fi
 		AC_CHECK_FUNC([reiser3_new_bread], AC_DEFINE([HAVE_REISER3_NEW_BREAD],[1],
 			[Whether you have patched Reiser3FS library.]),[has_patched_r3=no])
 	else
@@ -504,7 +509,11 @@ if ( test "x$feat_reiser" = "xyes" ); then
 		AC_CHECK_HEADER([reiserfs_lib.h],
 			AC_DEFINE([HAVE_REISERFS_LIB_H],[1],
 				[Whether you have the reiserfs_lib.h header.]),
-			[has_reiser_h=no],[[#include <misc.h>]])
+			AC_CHECK_HEADER([reiserfs/reiserfs_lib.h],
+				AC_DEFINE([HAVE_REISERFS_REISERFS_LIB_H],[1],
+					[Whether you have the reiserfs/reiserfs_lib.h header.]),
+				[has_reiser_h=no],[[#include <reiserfs/misc.h>]]),
+			[[#include <misc.h>]])
 	fi
 fi
 

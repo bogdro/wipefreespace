@@ -5614,6 +5614,55 @@ else $as_nop
   libcore=no
 fi
 
+		if (test "x$libcore" = "xno"); then
+
+			libcore=yes
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for reiserfs_open in -lreiserfscore" >&5
+printf %s "checking for reiserfs_open in -lreiserfscore... " >&6; }
+if test ${ac_cv_lib_reiserfscore_reiserfs_open+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lreiserfscore -luuid $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+char reiserfs_open ();
+int
+main (void)
+{
+return reiserfs_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_reiserfscore_reiserfs_open=yes
+else $as_nop
+  ac_cv_lib_reiserfscore_reiserfs_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_reiserfscore_reiserfs_open" >&5
+printf "%s\n" "$ac_cv_lib_reiserfscore_reiserfs_open" >&6; }
+if test "x$ac_cv_lib_reiserfscore_reiserfs_open" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIBREISERFSCORE 1" >>confdefs.h
+
+  LIBS="-lreiserfscore $LIBS"
+
+else $as_nop
+  libcore=no
+fi
+
+		fi
 		ac_fn_c_check_func "$LINENO" "reiser3_new_bread" "ac_cv_func_reiser3_new_bread"
 if test "x$ac_cv_func_reiser3_new_bread" = xyes
 then :
@@ -6966,7 +7015,17 @@ then :
 printf "%s\n" "#define HAVE_REISERFS_LIB_H 1" >>confdefs.h
 
 else $as_nop
+  ac_fn_c_check_header_compile "$LINENO" "reiserfs/reiserfs_lib.h" "ac_cv_header_reiserfs_reiserfs_lib_h" "#include <reiserfs/misc.h>
+"
+if test "x$ac_cv_header_reiserfs_reiserfs_lib_h" = xyes
+then :
+
+printf "%s\n" "#define HAVE_REISERFS_REISERFS_LIB_H 1" >>confdefs.h
+
+else $as_nop
   has_reiser_h=no
+fi
+
 fi
 
 	fi

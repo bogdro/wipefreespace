@@ -154,6 +154,7 @@
 #  define HAVE_LIBOCFS2			1
 #  define HAVE_LIBREISER4		1
 #  define HAVE_LIBREISER4MISC		1
+#  undef HAVE_LIBREISERFSCORE
 #  define HAVE_LIBTFFS			1	/* FAT */
 #  define HAVE_LIBUUID			1	/* ReiserFSv3/4, OCFS2, JFS */
 #  define HAVE_MINIX_FS_H		1
@@ -161,6 +162,7 @@
 #  define HAVE_OCFS2_OCFS2_H		1
 #  define HAVE_REISER4_LIBREISER4_H	1
 #  define HAVE_REISERFS_LIB_H		1	/* ReiserFSv3 */
+#  undef HAVE_REISERFS_REISERFS_LIB_H
 #  define HAVE_SYS_CAPABILITY_H		1
 #  define HAVE_TFFS_H			1	/* FAT */
 #  define HAVE_UUID_UUID_H		1	/* JFS */

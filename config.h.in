@@ -220,6 +220,9 @@
 /* Define to 1 if you have the `reiser4misc' library (-lreiser4misc). */
 #undef HAVE_LIBREISER4MISC
 
+/* Define to 1 if you have the `reiserfscore' library (-lreiserfscore). */
+#undef HAVE_LIBREISERFSCORE
+
 /* Define to 1 if you have the `tffs' library (-ltffs). */
 #undef HAVE_LIBTFFS
 
@@ -312,6 +315,9 @@
 
 /* Whether you have the reiserfs_lib.h header. */
 #undef HAVE_REISERFS_LIB_H
+
+/* Whether you have the reiserfs/reiserfs_lib.h header. */
+#undef HAVE_REISERFS_REISERFS_LIB_H
 
 /* Define to 1 if you have the <sched.h> header file. */
 #undef HAVE_SCHED_H
