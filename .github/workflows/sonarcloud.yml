@@ -59,7 +59,7 @@ jobs:
           libreiser4-dev reiser4progs
           libhfsp-dev hfsutils hfsprogs
           ocfs2-tools-dev 
-          reiserfsprogs libreiserfscore-dev
+          reiserfsprogs
           check
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v3
