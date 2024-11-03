@@ -860,7 +860,7 @@ wfs_jfs_wipe_unrm (
 	int64_t total_size = 0;
 	unsigned char * buf = NULL;
 	size_t bufsize;
-	int64_t nblocks = 0;
+	int64_t nblocks;
 	int32_t i;
 	wfs_errcode_t error = 0;
 	unsigned int prev_percent = 0;
@@ -1245,7 +1245,7 @@ wfs_jfs_open_fs (
 #endif
 {
 	wfs_errcode_t ret = WFS_OPENFS;
-	int res = 0;
+	int res;
 	wfs_errcode_t error = 0;
 	struct wfs_jfs * jfs;
 	wfs_errcode_t * error_ret = NULL;
@@ -1361,7 +1361,7 @@ wfs_jfs_close_fs (
 	wfs_fsid_t wfs_fs;
 #endif
 {
-	int res = 0;
+	int res;
 	wfs_errcode_t error = 0;
 	struct wfs_jfs * jfs;
 	wfs_errcode_t * error_ret;
