@@ -479,8 +479,7 @@ wfs_get_mnt_point_mounts (
 #  endif
 # endif
 # ifdef LOOP_GET_STATUS
-					((res >= 0)
-					&& (li.lo_device == s.st_dev)
+					((li.lo_device == s.st_dev)
 					&& (li.lo_inode == s.st_ino))
 # endif
 # if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
