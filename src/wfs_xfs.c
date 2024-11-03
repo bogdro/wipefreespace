@@ -794,12 +794,12 @@ wfs_xfs_wipe_fs	(
 		{
 			break;
 		}
+		close (fs_fd);
 	}
 	/* child stopped writing? something went wrong?
 	close the wfs_fs and kill the child process
 	*/
 
-	close (fs_fd);
 	wfs_wait_for_child (&child_xfsdb);
 	wfs_show_progress (WFS_PROGRESS_WFS, 100, &prev_percent);
 
