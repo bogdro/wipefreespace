@@ -1137,6 +1137,10 @@ wfs_ocfs_wipe_unrm (
 				{
 					err = wfs_ocfs_flush_fs (
 						wfs_fs);
+					if ( err != 0 )
+					{
+						error = err;
+					}
 				}
 			}
 			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
@@ -1167,6 +1171,10 @@ wfs_ocfs_wipe_unrm (
 					{
 						err = wfs_ocfs_flush_fs (
 							wfs_fs);
+						if ( err != 0 )
+						{
+							error = err;
+						}
 					}*/
 				}
 			}
