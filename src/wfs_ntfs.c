@@ -2530,7 +2530,7 @@ wfs_ntfs_open_fs (
 {
 
 	wfs_errcode_t ret = WFS_SUCCESS;
-	int res = 0;
+	int res;
 	ntfs_volume *nv = NULL;
 	wfs_errcode_t * error_ret;
 	wfs_errcode_t error = 0;
