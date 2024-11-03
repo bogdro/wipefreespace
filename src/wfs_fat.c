@@ -1398,8 +1398,8 @@ wfs_fat_wipe_fs (
 # endif
 {
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
-	unsigned int cluster = 0;
-	unsigned int prev_cluster = 0;
+	unsigned int cluster;
+	unsigned int prev_cluster;
 	unsigned long int j;
 	int selected[WFS_NPAT] = {0};
 	tfat_t * pfat;
