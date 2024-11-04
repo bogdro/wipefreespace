@@ -352,9 +352,10 @@ wfs_get_mnt_point_mounts (
 	struct stat s;
 # endif
 	int res;
-	int res64;
 	int fd;
+	int ioctl_res;
 # ifdef LOOP_GET_STATUS64
+	int ioctl_res64;
 	struct loop_info64 li64;
 # endif
 # ifdef LOOP_GET_STATUS
@@ -435,28 +436,23 @@ wfs_get_mnt_point_mounts (
 				{
 					continue;
 				}
-# ifdef LOOP_GET_STATUS64
-				WFS_MEMSET ( &li64, 0, sizeof (struct loop_info64) );
-# endif
-# ifdef LOOP_GET_STATUS
-				WFS_MEMSET ( &li, 0, sizeof (struct loop_info) );
-# endif
 # if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
-				res = -1;
-				res64 = -1;
+				ioctl_res = -1;
 # endif
 # ifdef LOOP_GET_STATUS64
-				res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
-				res = res64;
-				if ( res64 < 0 )
+				WFS_MEMSET (&li64, 0, sizeof (struct loop_info64));
+				ioctl_res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
+				ioctl_res = ioctl_res64;
+				if ( ioctl_res64 < 0 )zzz
 # endif
 				{
 # ifdef LOOP_GET_STATUS
-					res = ioctl (fd, LOOP_GET_STATUS, &li);
+					WFS_MEMSET (&li, 0, sizeof (struct loop_info));
+					ioctl_res = ioctl (fd, LOOP_GET_STATUS, &li);
 # endif
 				}
 				close (fd);
-				if ( res < 0 )
+				if ( ioctl_res < 0 )
 				{
 					continue;
 				}
@@ -471,7 +467,7 @@ wfs_get_mnt_point_mounts (
 				}
 				if (
 # ifdef LOOP_GET_STATUS64
-					((res64 >= 0)
+					((ioctl_res64 >= 0)
 					&& (li64.lo_device == s.st_dev)
 					&& (li64.lo_inode == s.st_ino))
 #  ifdef LOOP_GET_STATUS
@@ -479,7 +475,8 @@ wfs_get_mnt_point_mounts (
 #  endif
 # endif
 # ifdef LOOP_GET_STATUS
-					((li.lo_device == s.st_dev)
+					((ioctl_res >= 0)
+					&& (li.lo_device == s.st_dev)
 					&& (li.lo_inode == s.st_ino))
 # endif
 # if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
