@@ -443,7 +443,7 @@ wfs_get_mnt_point_mounts (
 				WFS_MEMSET (&li64, 0, sizeof (struct loop_info64));
 				ioctl_res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
 				ioctl_res = ioctl_res64;
-				if ( ioctl_res64 < 0 )zzz
+				if ( ioctl_res64 < 0 )
 # endif
 				{
 # ifdef LOOP_GET_STATUS
