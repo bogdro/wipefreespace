@@ -1049,9 +1049,12 @@ first pattern, then all blocks with the second pattern, and so on), and
 flushing the overwriting data to disk after each pattern. This is the default.
 @end itemize
 
-@strong{NOTE}: wiping with just one pattern at a time (@option{-n 1}) will @strong{NOT} perform wiping
+@strong{NOTE}: wiping with just one pass at a time (@option{-n 1}) will @strong{NOT} perform wiping
 with all patterns of the given method one by one, it will always use the
-first pattern. However, it will be @strong{MUCH} faster than any "full" method.
+first pattern. However, it will be @strong{MUCH} faster than the block-order
+method with more than one pass. It is more secure to use pattern-order,
+where you can have more than one iteration and still good performance.
+
 If you need just random wiping, run
 
 	@samp{wipefreespace -n 1 /dev/XY}

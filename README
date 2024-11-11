@@ -350,10 +350,12 @@ WipeFreeSpace supports two wiping orders:
    flushing the overwriting data to disk after each pattern. This is the
    default.
 
-NOTE: wiping with just one pattern at a time (-n 1) will NOT perform wiping
+NOTE: wiping with just one pass at a time (-n 1) will NOT perform wiping
  with all patterns of the given method one by one, it will always use the
- first pattern. However, it will be MUCH faster than any "full" method.
- If you need just random wiping, run
+ first pattern. However, it will be MUCH faster than the block-order
+ method with more than one pass. It is more secure to use pattern-order,
+ where you can have more than one iteration and still good performance.
+If you need just random wiping, run
 
 	wipefreespace -n 1 /dev/XY
 
