@@ -1,3 +1,162 @@
+2024-11-03      Bogdan Drozdowski <bogdro #at# users . sourceforge . net>
+
+	* WipeFreeSpace version 3.0
+	  Wiping orders are introduced: by block and by pattern. Portability
+	  updates - WipeFreeSpace now compiles on Solaris/SunOS and should
+	  compile without patching on ArchLinux. Fixes in displaying the
+	  wiping progress. Other important and small fixes. Utility functions
+	  have been split into more files. Code quality updates. Updates in
+	  the build system. Many new unit tests, for each filesystem backend
+	  (current coverage: 38% with all filesystems enabled). Documentation
+	  updates.
+	* configure.ac: Removed the deprecated --enable-random-method option.
+	  Use an auxiliary build directory. Search for the ReiserFS library
+	  in an additional way.
+	* configure.ac, src/wfs_ntfs.c: Removed support for ntfs_ headers.
+	* src/wipefreespace.{c,h}, doc/wipefreespace.texi.in, po/*, README,
+	  src/wfs_signal.c, doc/wipefreespace.1: Added configuration support
+	  for work modes: pattern-order and block-order.
+	* src/wfs_ext234.c: Added support for work modes: pattern-order and
+	  block-order.
+	* src/wfs_fat.c (wfs_fat_wipe_fs): Added support for work modes:
+	  pattern-order and block-order. Fixed useless setting of variable
+	  (found by cppcheck).
+	* src/wfs_hfsp.c (wfs_hfsp_wipe_fs): Added support for work modes:
+	  pattern-order and block-order. Fixed displaying the wiping progress.
+	* src/wfs_jfs.c (wfs_jfs_wipe_fs): Added support for work modes:
+	  pattern-order and block-order. Fixed displaying the wiping progress.
+	* src/wfs_minixfs.c (wfs_minixfs_wipe_fs): Added support for work
+	  modes: pattern-order and block-order.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_fs): Added support for work modes:
+	  pattern-order and block-order.
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_fs): Added support for work modes:
+	  pattern-order and block-order. Fixed displaying the wiping
+	  progress.
+	* src/wfs_reiser.c (wfs_reiser_wipe_fs): Added support for work modes:
+	  pattern-order and block-order.
+	* src/wfs_reiser4.c (wfs_r4_wipe_fs): Added support for work modes:
+	  pattern-order and block-order.
+	* src/wfs_hfsp.c (wfs_hfsp_wipe_part_file): Fixed displaying the
+	  wiping progress. Fixed parameter type in call to blockiter_skip().
+	* src/wfs_fat.c (wfs_fat_wipe_file_tails_in_dir,wfs_fat_wipe_unrm_dir):
+	  Fixed displaying the wiping progress.
+	* src/wfs_ntfs.c (wfs_ntfs_wipe_journal, wfs_ntfs_wipe_part,
+	  wfs_ntfs_wipe_fs, wfs_ntfs_wipe_unrm): Fixed displaying the wiping
+	  progress.
+	* src/wfs_reiser4.c (wfs_r4_wipe_part_work): Fixed displaying the
+	  wiping progress.
+	* src/wipefreespace.c, src/wfs_xfs.c: Changed #if to #ifdef for the
+	  sys/time.h include.
+	* src/wipefreespace.c (print_help): Display the full program name.
+	* src/wfs_xfs.c (wfs_xfs_init, wfs_xfs_deinit): Added comments to
+	  functions to confirm they're meant to be empty (code style).
+	* src/wfs_xfs.c (wfs_xfs_is_dirty): Removed "FIXME" (code style).
+	* src/wfs_signal.c (print_signal_error): Changed to use a static
+	  structure to print error messages.
+	* src/wfs_util.{c,h}, src/wipefreespace.c (wfs_wipe_filesytem):
+	  Renamed the functions convert_fs_to_name, enable_drive_cache and
+	  disable_drive_cache to have the wfs_ prefix.
+	* src/wfs_util.{c,h}, src/wfs_xfs.c (wfs_xfs_wipe_part), src/wfs_hfsp.c
+	  (wfs_hfsp_open_fs): Renamed the flush_pipe_input function to have
+	  the wfs_ prefix.
+	* src/wfs_util.{c,h}, src/wfs_xfs.c, src/wfs_ntfs.c: Renamed the
+	  deep_copy_array and free_array_deep_copy functions to have the
+	  wfs_ prefix.
+	* src/wfs_util.c (child_function): Close the standard file descriptors
+	  only if not reassigning them.
+	* src/wfs_wiping.{c,h}, src/wipefreespace.c (main): Renamed the
+	  init_wiping function to have the wfs_ prefix.
+	* src/wfs_wiping.{c,h}, src/*.c: Renamed the fill_buffer function
+	  to have the wfs_ prefix.
+	* src/wfs_subprocess.{c,h}, src/wfs_util.{c,h}, src/wfs_ntfs.c,
+	  src/wfs_xfs.c, src/Makefile.am: Moved functions related to creating
+	  subprocesses - from util to a new file.
+	* src/wfs_mount_check.{c,h}, src/wfs_util.{c,h}, src/*.c: Moved
+	  functions related to checking if a filesystem is mounted - from util
+	  to a new file.
+	* src/wfs_util.{c,h}, src/wfs_wiping.c: Moved the wfs_compare function
+	  to util.
+	* src/wfs_fat.c, src/wipefreespace.h: Move the WFS_IS_NAME_x_DIR macros
+	  to the main header file.
+	* src/wfs_minixfs.c (wfs_minixfs_wipe_dir): Use the WFS_IS_NAME_x_DIR
+	  macros from the main header file.
+	* src/wipefreespace.h, src/*.c: Define name for the used errno values
+	  if not defined already, and use them instead of values.
+	* src/wfs_ntfs.c (free_file): Fixed the entry condition to avoid
+	  memory leaks (found by the GCC analyser).
+	* src/wfs_xfs.c (wfs_xfs_open_fs): Fixed a potential memory and
+	  resource leak (found by the GCC analyser).
+	* src/wfs_jfs.c (wfs_jfs_wipe_unrm): Fixed setting the buffer pointer.
+	* src/wfs_jfs.c (wfs_jfs_wipe_unrm, wfs_jfs_open_fs, wfs_jfs_close_fs):
+	  Fixed useless setting of variable (found by cppcheck).
+	* src/wfs_ntfs.c (wfs_ntfs_open_fs): Fixed useless setting of variable
+	  (found by cppcheck).
+	* src/wfs_ocfs.c (wfs_ocfs_wipe_unrm): Fixed ignoring an error value
+	  (found by cppcheck).
+	* src/wfs_xfs.c (wfs_xfs_wipe_fs): Fixed a potential close of an
+	  invalid file descriptor (found by cppcheck).
+	* src/wfs_mount_check.c (wfs_get_mnt_point_mounts): Fixed checking the
+	  results of the ioctl() calls (found by cppcheck).
+	* src/wfs_cfg.h.in: Added a flag to allow compiling on Solaris/SunOS.
+	  Added the _ALL_SOURCE and _NETBSD_SOURCE flags.
+	* src/wfs_mount_check.c: Added a stand-alone #include <sys/sysmacros.h>
+	  to allow compiling on ArchLinux.
+	* src/wfs_reiser.c: Added a standalone #include <sys/sysmacros.h>.
+	* src/*.c, src/wipefreespace.h: Code quality updates (SonarCloud):
+	  #undef macros only if defined, write only one declaration per line,
+	  use the 'const' qualifier more, set variables to default values only
+	  if they're not being set later, remove unused casts and assignments,
+	  move #includes to top of the file, change loop condition.
+	* Makefile.am: Added a make target to display files containing
+	  translation strings.
+	* README, doc/wipefreespace.1: Typo fixes.
+	* doc/wipefreespace.texi.in: List wiping modes in each filesystem's
+	  section. The list of supported filesystems is now in @itemize
+	  syntax. The 'screen' and 'nohup' program names are now marked as
+	  commands. Corrected marking function names.
+	* README, README.md: Added the project's SourceForge URL.
+	* po/wipefreespace.pot: Header update.
+	* wipefreespace.spec.in: Added texinfo to BuildRequires (found by the
+	  ALT Linux project). Added the %{?dist} tag to 'Release:', as
+	  recommended by the Fedora packaging guidelines:
+	  https://docs.fedoraproject.org/en-US/packaging-guidelines/DistTag/.
+	* test/test_wfs_mount_check.c: Renamed from test/test_wfs_util.c and
+	  updated with the new names.
+	* test/test_wfs_wiping.c: Updated with the new function names.
+	* test/Makefile.am: Changed test name. Added dependencies.
+	* test/test_wfs_ext234.c, test/Makefile.am: Added a test for the
+	  wfs_ext234.c file.
+	* test/test_wfs_fat.c, test/Makefile.am: Added a test for the
+	  wfs_fat.c file.
+	* test/test_wfs_hfsp.c, test/Makefile.am: Added a test for the
+	  wfs_hfsp.c file.
+	* test/test_wfs_jfs.c, test/Makefile.am: Added a test for the
+	  wfs_jfs.c file.
+	* test/test_wfs_minixfs.c, test/Makefile.am: Added a test for the
+	  wfs_minixfs.c file.
+	* test/test_wfs_ntfs.c, test/Makefile.am: Added a test for the
+	  wfs_ntfs.c file.
+	* test/test_wfs_ocfs.c, test/Makefile.am: Added a test for the
+	  wfs_ocfs.c file.
+	* test/test_wfs_reiser.c, test/Makefile.am: Added a test for the
+	  wfs_reiser.c file.
+	* test/test_wfs_reiser4.c, test/Makefile.am: Added a test for the
+	  wfs_reiser4.c file.
+	* test/test_wfs_xfs.c, test/Makefile.am: Added a test for the
+	  wfs_xfs.c file.
+	* test/test_wfs_wrappers.c, test/Makefile.am: Added a test for the
+	  wrapper functions.
+	* test/test_stubs.c: Added a file with some common stubs for tests.
+	* test/wfs_test_common.h: Added a header with common declarations.
+	* test/mktestfs.sh: Added a script to create test filesystems.
+	* po/*.po: Change encoding to UTF-8.
+	* src/*.c, src/*.h, src/*.h.in, test/*.c, po/*.po, **/Makefile.am,
+	  wipefreespace.spec.in, configure.ac: Added or updated the license
+	  block and copyright.
+	* INSTALL, compile, depcomp, doc/texinfo.tex, missing, test-driver,
+	  po/en@boldquot.po, po/en@quot.po, config.guess, config.sub,
+	  ylwrap, mkinstalldirs: Forced update using new Autotools.
+
 2022-09-01      Bogdan Drozdowski <bogdro #at# users . sourceforge . net>
 
 	* WipeFreeSpace version 2.6
