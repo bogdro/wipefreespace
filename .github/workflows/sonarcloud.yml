@@ -51,6 +51,8 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
+      - name: Update package list
+        run: sudo apt-get update
       - name: Install requirements
         run: sudo apt-get -my install
           libext2fs-dev
@@ -61,8 +63,8 @@ jobs:
           ocfs2-tools-dev 
           reiserfsprogs
           check
-      - name: Install sonar-scanner and build-wrapper
-        uses: SonarSource/sonarcloud-github-c-cpp@v3
+      - name: Install Build Wrapper
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6.0.0
       - name: Configure
         run: |
           #autoreconf --install
@@ -70,6 +72,7 @@ jobs:
           for i in po/*.po; do touch ${i/.po/.gmo}; done
           sleep 1
           touch configure
+          sleep 1
           ./configure
           sleep 1
           touch doc/wipefreespace.info
@@ -85,7 +88,7 @@ jobs:
           ./mktestfs.sh
       - name: Run build-wrapper
         run: |
-          sudo /home/runner/work/wipefreespace/wipefreespace/.sonar/build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make CFLAGS='-O0 -g -Wall -Wno-nonnull-compare -fprofile-arcs -ftest-coverage -fprofile-abs-path --coverage' all check || cat test/test-suite.log
+          sudo /home/runner/work/wipefreespace/wipefreespace/.sonar/build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make CFLAGS='-O0 -g -Wall -Wno-nonnull-compare -fprofile-arcs -ftest-coverage -fprofile-abs-path --coverage' all check || cat test/test-suite.log || cat test/*.log
       - name: Gather coverage information
         run: |
           sudo chmod -R o+rX .
@@ -93,13 +96,26 @@ jobs:
           cd ${{ env.COVERAGE_DIR }}
           find .. -name '*.o' | xargs gcov --preserve-paths
           cd ..
-      - name: Run sonar-scanner
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Put the name of your token here
-        run: |
-          ls -l ${{ env.BUILD_WRAPPER_OUT_DIR }}
-          sonar-scanner --define sonar.projectKey=bogdro_wipefreespace --define sonar.organization=bogdro --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json" --define sonar.cfamily.gcov.reportsPath="${{ env.COVERAGE_DIR }}"
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # Consult https://docs.sonarsource.com/sonarqube-server/latest/analyzing-source-code/scanners/sonarscanner/ for more information and options
+          args: >
+            --define sonar.projectKey=bogdro_wipefreespace
+            --define sonar.organization=bogdro
+            --define sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json
+            --define sonar.cfamily.gcov.reportsPath=${{ env.COVERAGE_DIR }}
+
+      
+      #- name: Run sonar-scanner
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Put the name of your token here
+      #  run: |
+      #    ls -l ${{ env.BUILD_WRAPPER_OUT_DIR }}
+      #    sonar-scanner --define sonar.projectKey=bogdro_wipefreespace --define sonar.organization=bogdro --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json" --define sonar.cfamily.gcov.reportsPath="${{ env.COVERAGE_DIR }}"
       
       #- name: Analyze with SonarCloud
 
