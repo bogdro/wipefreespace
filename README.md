@@ -41,11 +41,13 @@ makes sure the journal is committed.
 *NOTE*: if a block is damaged, it is only wiped until the first error.
 There is no guarantee that it will be fully wiped.
 
-Project homepage: <https://wipefreespace.sourceforge.io/>.
-
 Author: Bogdan Drozdowski, bogdro (at) users . sourceforge . net
 
 License: GPLv2+
+
+Project homepage: <https://wipefreespace.sourceforge.io/>.
+
+[![Build Status](https://app.travis-ci.com/bogdro/wipefreespace.svg?token=T93Xpo2K5F4sXcUCVsd5&branch=dev)](https://app.travis-ci.com/bogdro/wipefreespace)
 
 ## WARNING ##
 
