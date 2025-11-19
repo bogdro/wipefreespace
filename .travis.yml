@@ -61,13 +61,16 @@ script:
         - ls -ld $HOME/bin || true
         - ls -l $HOME || true
         - chmod 700 $HOME/bin || true
-        - echo '#!/bin/bash' > $HOME/bin/xfs_db
-        - chmod 700 $HOME/bin/xfs_db
+        - echo '#!/bin/bash' > $HOME/bin/xfs_db || true
+        - chmod 700 $HOME/bin/xfs_db || true
+        - export PATH=$PATH:$HOME/bin
         - pwd
+        - whoami || true
+        - groups || true
         - mkdir bin || true
         - chmod 700 bin || true
-        - echo '#!/bin/bash' > bin/xfs_db
-        - chmod 700 bin/xfs_db
+        - echo '#!/bin/bash' > bin/xfs_db || true
+        - chmod 700 bin/xfs_db || true
         - export PATH=$PATH:`pwd`/bin
         - touch configure aclocal.m4 Makefile.in src/Makefile.in doc/Makefile.in config.h.in
         - for i in po/*.po; do touch ${i/.po/.gmo}; done
