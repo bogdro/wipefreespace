@@ -58,6 +58,8 @@ branches:
 
 script:
         - mkdir $HOME/bin || true
+        - ls -d $HOME/bin || true
+        - chmod 700 $HOME/bin || true
         - echo '#!/bin/bash' > $HOME/bin/xfs_db
         - chmod 700 $HOME/bin/xfs_db
         - export PATH=$PATH:$HOME/bin
