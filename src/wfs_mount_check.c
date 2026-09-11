@@ -354,8 +354,8 @@ wfs_get_mnt_point_mounts (
 	int res;
 	int fd;
 	int ioctl_res;
-# ifdef LOOP_GET_STATUS64
 	int ioctl_res64;
+# ifdef LOOP_GET_STATUS64
 	struct loop_info64 li64;
 # endif
 # ifdef LOOP_GET_STATUS
@@ -438,11 +438,11 @@ wfs_get_mnt_point_mounts (
 				}
 # if (!defined LOOP_GET_STATUS64) && (!defined LOOP_GET_STATUS)
 				ioctl_res = -1;
+				ioctl_res64 = -1;
 # endif
 # ifdef LOOP_GET_STATUS64
 				WFS_MEMSET (&li64, 0, sizeof (struct loop_info64));
 				ioctl_res64 = ioctl (fd, LOOP_GET_STATUS64, &li64);
-				ioctl_res = ioctl_res64;
 				if ( ioctl_res64 < 0 )
 # endif
 				{
@@ -451,8 +451,12 @@ wfs_get_mnt_point_mounts (
 					ioctl_res = ioctl (fd, LOOP_GET_STATUS, &li);
 # endif
 				}
+				else
+				{
+					ioctl_res = -1;
+				}
 				close (fd);
-				if ( ioctl_res < 0 )
+				if ( (ioctl_res < 0) && (ioctl_res64 < 0) )
 				{
 					continue;
 				}
