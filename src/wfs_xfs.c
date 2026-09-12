@@ -2222,7 +2222,7 @@ wfs_xfs_open_fs (
 	}
 	if ( sig_recvd != 0 )
 	{
-		if ( xxfs->mnt_point == NULL )
+		if ( xxfs->mnt_point != NULL )
 		{
 			free (xxfs->mnt_point);
 		}
