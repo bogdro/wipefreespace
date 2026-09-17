@@ -28,14 +28,23 @@ The following method names (case-insensitive) are available:
 
 - Gutmann (method similar to Gutmann's, the default, 36 passes)
 - random (shred-like, 25 passes)
-- schneier (Shneier's method, 7 passes, contains ITSG-06)
-- dod (DoD, 3 passes, contains NAVSO P-5239-26 and
-  German Federal Office for Information Security)
+- schneier (Schneier's method, 7 passes, contains ITSG-06 and "British HMG
+  IS5 Enhanced Standard")
+- dod (U.S. DoD Unclassified Computer Hard Drive Disposition, 3 passes,
+  contains NAVSO P-5239-26 and German Federal Office for Information Security)
+- vsitr (Standard VSITR of Germany Federal Office for Information Security,
+  7-pass)
+
+Additionally:
+- wiping with zeros covers the "NIST SP-800-88 Rev. 1" standard,
+- wiping with any random pattern covers "British HMG Infosec Standard 5,
+   Baseline Standard" and "Australian Government ICT Security Manual
+   2014 - Controls"
 
 WipeFreeSpace also works for file systems created inside regular files
 on any host file system.
 
-*NOTE*: it is best to use this program on unmounted file systems, what
+*NOTE*: it is best to use this program on unmounted file systems, which
 makes sure the journal is committed.
 
 *NOTE*: if a block is damaged, it is only wiped until the first error.

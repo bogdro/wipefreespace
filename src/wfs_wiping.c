@@ -60,7 +60,8 @@ enum wfs_method
 	WFS_METHOD_GUTMANN,
 	WFS_METHOD_RANDOM,
 	WFS_METHOD_SCHNEIER,
-	WFS_METHOD_DOD
+	WFS_METHOD_DOD,
+	WFS_METHOD_VSITR
 };
 
 static const char * const msg_pattern     = N_("Using pattern");
@@ -100,6 +101,11 @@ static const unsigned int patterns_schneier[] =
 static unsigned int patterns_dod[] =
 {
 	0xFFF, 0x000	/* will be filled in later */
+};
+
+static const unsigned int patterns_vsitr[] =
+{
+	0x000, 0xFFF, 0x000, 0xFFF, 0x000, 0xFFF, 0xAAA
 };
 
 #if (defined TEST_COMPILE) && (defined WFS_ANSIC)
@@ -235,6 +241,11 @@ wfs_init_wiping (
 			number_of_passes = sizeof (patterns_dod)/sizeof (patterns_dod[0])
 				+ 1;
 		}
+		else if ( WFS_STRCASECMP (method, "vsitr") == 0 )
+		{
+			opt_method = WFS_METHOD_VSITR;
+			number_of_passes = sizeof (patterns_vsitr)/sizeof (patterns_vsitr[0]);
+		}
 	}
 	else
 	{
@@ -316,6 +327,10 @@ wfs_fill_buffer (
 	else if ( opt_method == WFS_METHOD_DOD )
 	{
 		npat = sizeof (patterns_dod)/sizeof (patterns_dod[0]);
+	}
+	else if ( opt_method == WFS_METHOD_VSITR )
+	{
+		npat = sizeof (patterns_vsitr)/sizeof (patterns_vsitr[0]);
 	}
 	else
 	{
@@ -404,9 +419,13 @@ wfs_fill_buffer (
 			{
 				bits = patterns_schneier[i];
 			}
-			else /*if ( opt_method == WFS_METHOD_DOD )*/
+			else if ( opt_method == WFS_METHOD_DOD )
 			{
 				bits = patterns_dod[i] & 0xFFF;
+			}
+			else /*if ( opt_method == WFS_METHOD_VSITR )*/
+			{
+				bits = patterns_vsitr[i] & 0xFFF;
 			}
 			if ( selected != NULL )
 			{
