@@ -128,6 +128,8 @@ Stat macros broken. Change your C library.
 
 # define	WFS_IS_NAME_PARENT_DIR(x) (((x)[0]) == '.' && ((x)[1]) == '.' && ((x)[2]) == '\0')
 
+# define	PROGRAM_NAME	PACKAGE /*"wipefreespace"*/
+
 enum wfs_errcode
 {
 	WFS_SUCCESS		= 0,
@@ -457,12 +459,19 @@ extern int GCC_WARN_UNUSED_RESULT
 extern int GCC_WARN_UNUSED_RESULT
 	wfs_is_stderr_open WFS_PARAMS ((void));
 
+extern void wfs_set_stdout_open WFS_PARAMS((int value));
+
+extern void wfs_set_stderr_open WFS_PARAMS((int value));
+
 extern const char * GCC_WARN_UNUSED_RESULT
 	wfs_get_program_name WFS_PARAMS ((void));
 
 extern void WFS_ATTR ((nonnull))
 	wfs_show_msg WFS_PARAMS ((const int type, const char * const msg,
 		const char * const extra, const wfs_fsid_t wfs_fs));
+
+extern const char * GCC_WARN_UNUSED_RESULT
+	wfs_get_err_msg WFS_PARAMS((const wfs_errcode_t wfs_err));
 
 enum wfs_progress_type
 {
@@ -510,6 +519,5 @@ extern const char * const wfs_err_msg_seek;
 extern const char * const wfs_err_msg_ioctl;
 
 extern const char * const wfs_sig_unk;
-
 
 #endif	/* WFS_HEADER */
