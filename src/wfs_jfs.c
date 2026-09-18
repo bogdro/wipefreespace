@@ -415,7 +415,7 @@ wfs_jfs_wipe_block (
 		Allow I/O bufferring (efficiency), if just one pass is needed. */
 		if ( WFS_IS_SYNC_NEEDED(wd.filesys) )
 		{
-			error = ujfs_flush_dev (fp);
+			error = wfs_jfs_flush_fs (wd.filesys);
 		}
 	}
 	if ( j < max_passes )
@@ -454,7 +454,7 @@ wfs_jfs_wipe_block (
 				/* No need to flush the last writing of a given block. *
 				if ( (wd.filesys.npasses > 1) && (sig_recvd == 0) )
 				{
-					error = ujfs_flush_dev (fp);
+					error = wfs_jfs_flush_fs (wd.filesys);
 				}*/
 			}
 		}
@@ -726,7 +726,7 @@ wfs_jfs_wipe_fs (
 		if ( (wd.filesys.zero_pass != 0) && (sig_recvd == 0) )
 		{
 			/* last pass with zeros */
-			ujfs_flush_dev (jfs->fs);
+			wfs_jfs_flush_fs (wfs_fs);
 			wd.is_zero_pass = 1;
 			for ( i = 0; (i < ndmaps) && (sig_recvd == 0); i++ )
 			{
@@ -761,7 +761,7 @@ wfs_jfs_wipe_fs (
 					}
 				}
 			}
-			ujfs_flush_dev (jfs->fs);
+			wfs_jfs_flush_fs (wfs_fs);
 		}
 	}
 	else
