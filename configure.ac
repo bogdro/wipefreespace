@@ -1380,28 +1380,28 @@ echo "***********************************"
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes" ); then
 
-	AC_MSG_WARN([[ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the REDME file.]])
+	AC_MSG_WARN([[ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the README file.]])
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_minixfs" = "xyes" ); then
 
-	AC_MSG_WARN([[ReiserFSv3 and MinixFS both enabled. They may conflict - read the REDME file.]])
+	AC_MSG_WARN([[ReiserFSv3 and MinixFS both enabled. They may conflict - read the README file.]])
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" ); then
 
-	AC_MSG_WARN([[ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file.]])
+	AC_MSG_WARN([[ReiserFSv3 and JFS both enabled. They may conflict - read the README file.]])
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" \
 	&& test "x$has_patched_r3" != "xyes" && test "x$has_patched_jfs" != "xyes" ); then
 
-	AC_MSG_WARN([[ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the REDME file.]])
+	AC_MSG_WARN([[ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the README file.]])
 fi
 
 if ( test "x$wfs_have_hfsp" = "xyes"  ); then
 
-	AC_MSG_WARN([[HFS+ enabled. Make sure it is patched - read the REDME file.]])
+	AC_MSG_WARN([[HFS+ enabled. Make sure it is patched - read the README file.]])
 fi
 
 echo "***********************************"

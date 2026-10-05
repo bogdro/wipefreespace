@@ -24987,33 +24987,33 @@ echo "***********************************"
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_reiser4" = "xyes" ); then
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the REDME file." >&5
-printf "%s\n" "$as_me: WARNING: ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the REDME file." >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the README file." >&5
+printf "%s\n" "$as_me: WARNING: ReiserFSv3 and ReiserFSv4 both enabled. They may conflict - read the README file." >&2;}
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_minixfs" = "xyes" ); then
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and MinixFS both enabled. They may conflict - read the REDME file." >&5
-printf "%s\n" "$as_me: WARNING: ReiserFSv3 and MinixFS both enabled. They may conflict - read the REDME file." >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and MinixFS both enabled. They may conflict - read the README file." >&5
+printf "%s\n" "$as_me: WARNING: ReiserFSv3 and MinixFS both enabled. They may conflict - read the README file." >&2;}
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" ); then
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file." >&5
-printf "%s\n" "$as_me: WARNING: ReiserFSv3 and JFS both enabled. They may conflict - read the REDME file." >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and JFS both enabled. They may conflict - read the README file." >&5
+printf "%s\n" "$as_me: WARNING: ReiserFSv3 and JFS both enabled. They may conflict - read the README file." >&2;}
 fi
 
 if ( test "x$wfs_have_reiserfs" = "xyes" && test "x$wfs_have_jfs" = "xyes" \
 	&& test "x$has_patched_r3" != "xyes" && test "x$has_patched_jfs" != "xyes" ); then
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the REDME file." >&5
-printf "%s\n" "$as_me: WARNING: ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the REDME file." >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the README file." >&5
+printf "%s\n" "$as_me: WARNING: ReiserFSv3 and JFS both enabled and both seem NOT patched. WipeFreeSpace can crash! Read the README file." >&2;}
 fi
 
 if ( test "x$wfs_have_hfsp" = "xyes"  ); then
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HFS+ enabled. Make sure it is patched - read the REDME file." >&5
-printf "%s\n" "$as_me: WARNING: HFS+ enabled. Make sure it is patched - read the REDME file." >&2;}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HFS+ enabled. Make sure it is patched - read the README file." >&5
+printf "%s\n" "$as_me: WARNING: HFS+ enabled. Make sure it is patched - read the README file." >&2;}
 fi
 
 echo "***********************************"
