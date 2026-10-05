@@ -1,3 +1,4 @@
 # List of source files which contain translatable strings.
 src/wipefreespace.c
 src/wfs_wiping.c
+src/wfs_cmdline.c
