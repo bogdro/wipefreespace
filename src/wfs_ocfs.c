@@ -1099,66 +1099,33 @@ wfs_ocfs_wipe_unrm (
 		/*journal_size_in_clusters = (jsb->s_blocksize * jsb->s_maxlen) >>
 			OCFS2_RAW_SB(ocfs2->fs_super)->s_clustersize_bits;*/
 		journal_size = jsb->s_maxlen; /* save before overwriting */
-		for ( curr_block = journal_block_numer+1;
-			(curr_block < journal_block_numer + journal_size)
-			&& (sig_recvd == 0); curr_block++ )
+		if ( wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 		{
 			for ( j = 0; (j < wfs_fs.npasses)
 				&& (sig_recvd == 0); j++ )
 			{
-				wfs_fill_buffer ( j, jbuf,
-					(size_t)jsb->s_blocksize, selected,
-					wfs_fs );/* buf OK */
-				if ( sig_recvd != 0 )
+				for ( curr_block = journal_block_numer+1;
+					(curr_block < journal_block_numer + journal_size)
+					&& (sig_recvd == 0); curr_block++ )
 				{
-					break;
-				}
-				/* writing modified cluster here: */
-				err = io_write_block_nocache (ocfs2->fs_io,
-					/* blkno */ (int64_t)curr_block,
-					/* count */ 1,
-					(char *)jbuf);
-				if ( err != 0 )
-				{
-					free (jbuf);
-					free (buf);
-					wfs_show_progress (WFS_PROGRESS_UNRM, 100,
-						&prev_percent);
-					if ( error_ret != NULL )
+					wfs_fill_buffer ( j, jbuf,
+						(size_t)jsb->s_blocksize, selected,
+						wfs_fs );/* buf OK */
+					if ( sig_recvd != 0 )
 					{
-						*error_ret = err;
+						break;
 					}
-					ocfs2_free_cached_inode (ocfs2, ci);
-					return WFS_BLKWR;
-				}
-				/* Flush after each writing, if more than 1 overwriting needs to be done.
-				Allow I/O bufferring (efficiency), if just one pass is needed. */
-				if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
-				{
-					err = wfs_ocfs_flush_fs (
-						wfs_fs);
-					if ( err != 0 )
-					{
-						error = err;
-					}
-				}
-			}
-			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
-			{
-				/* last pass with zeros: */
-				WFS_MEMSET ( buf, 0, (size_t)jsb->s_blocksize );
-				if ( sig_recvd == 0 )
-				{
 					/* writing modified cluster here: */
 					err = io_write_block_nocache (ocfs2->fs_io,
-						(int64_t)curr_block,
-						1, (char *)jbuf);
+						/* blkno */ (int64_t)curr_block,
+						/* count */ 1,
+						(char *)jbuf);
 					if ( err != 0 )
 					{
 						free (jbuf);
 						free (buf);
-						wfs_show_progress (WFS_PROGRESS_UNRM,
-							100, &prev_percent);
+						wfs_show_progress (WFS_PROGRESS_UNRM, 100,
+							&prev_percent);
 						if ( error_ret != NULL )
 						{
 							*error_ret = err;
@@ -1166,8 +1133,9 @@ wfs_ocfs_wipe_unrm (
 						ocfs2_free_cached_inode (ocfs2, ci);
 						return WFS_BLKWR;
 					}
-					/* No need to flush the last writing of a given block. *
-					if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
 					{
 						err = wfs_ocfs_flush_fs (
 							wfs_fs);
@@ -1175,13 +1143,135 @@ wfs_ocfs_wipe_unrm (
 						{
 							error = err;
 						}
-					}*/
+					}
 				}
+				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+				{
+					/* last pass with zeros: */
+					WFS_MEMSET ( buf, 0, (size_t)jsb->s_blocksize );
+					if ( sig_recvd == 0 )
+					{
+						/* writing modified cluster here: */
+						err = io_write_block_nocache (ocfs2->fs_io,
+							(int64_t)curr_block,
+							1, (char *)jbuf);
+						if ( err != 0 )
+						{
+							free (jbuf);
+							free (buf);
+							wfs_show_progress (WFS_PROGRESS_UNRM,
+								100, &prev_percent);
+							if ( error_ret != NULL )
+							{
+								*error_ret = err;
+							}
+							ocfs2_free_cached_inode (ocfs2, ci);
+							return WFS_BLKWR;
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							err = wfs_ocfs_flush_fs (
+								wfs_fs);
+							if ( err != 0 )
+							{
+								error = err;
+							}
+						}*/
+					}
+				}
+				wfs_show_progress (WFS_PROGRESS_UNRM,
+					(unsigned int) (50+((curr_block -
+						(journal_block_numer+1))*50)/journal_size),
+					&prev_percent);
 			}
-			wfs_show_progress (WFS_PROGRESS_UNRM,
-				(unsigned int) (50+((curr_block -
-					(journal_block_numer+1))*50)/journal_size),
-				&prev_percent);
+		}
+		else
+		{
+			for ( curr_block = journal_block_numer+1;
+				(curr_block < journal_block_numer + journal_size)
+				&& (sig_recvd == 0); curr_block++ )
+			{
+				for ( j = 0; (j < wfs_fs.npasses)
+					&& (sig_recvd == 0); j++ )
+				{
+					wfs_fill_buffer ( j, jbuf,
+						(size_t)jsb->s_blocksize, selected,
+						wfs_fs );/* buf OK */
+					if ( sig_recvd != 0 )
+					{
+						break;
+					}
+					/* writing modified cluster here: */
+					err = io_write_block_nocache (ocfs2->fs_io,
+						/* blkno */ (int64_t)curr_block,
+						/* count */ 1,
+						(char *)jbuf);
+					if ( err != 0 )
+					{
+						free (jbuf);
+						free (buf);
+						wfs_show_progress (WFS_PROGRESS_UNRM, 100,
+							&prev_percent);
+						if ( error_ret != NULL )
+						{
+							*error_ret = err;
+						}
+						ocfs2_free_cached_inode (ocfs2, ci);
+						return WFS_BLKWR;
+					}
+					/* Flush after each writing, if more than 1 overwriting needs to be done.
+					Allow I/O bufferring (efficiency), if just one pass is needed. */
+					if ( WFS_IS_SYNC_NEEDED(wfs_fs) )
+					{
+						err = wfs_ocfs_flush_fs (
+							wfs_fs);
+						if ( err != 0 )
+						{
+							error = err;
+						}
+					}
+				}
+				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+				{
+					/* last pass with zeros: */
+					WFS_MEMSET ( buf, 0, (size_t)jsb->s_blocksize );
+					if ( sig_recvd == 0 )
+					{
+						/* writing modified cluster here: */
+						err = io_write_block_nocache (ocfs2->fs_io,
+							(int64_t)curr_block,
+							1, (char *)jbuf);
+						if ( err != 0 )
+						{
+							free (jbuf);
+							free (buf);
+							wfs_show_progress (WFS_PROGRESS_UNRM,
+								100, &prev_percent);
+							if ( error_ret != NULL )
+							{
+								*error_ret = err;
+							}
+							ocfs2_free_cached_inode (ocfs2, ci);
+							return WFS_BLKWR;
+						}
+						/* No need to flush the last writing of a given block. *
+						if ( (wfs_fs.npasses > 1) && (sig_recvd == 0) )
+						{
+							err = wfs_ocfs_flush_fs (
+								wfs_fs);
+							if ( err != 0 )
+							{
+								error = err;
+							}
+						}*/
+					}
+				}
+				wfs_show_progress (WFS_PROGRESS_UNRM,
+					(unsigned int) (50+((curr_block -
+						(journal_block_numer+1))*50)/journal_size),
+					&prev_percent);
+			}
 		}
 
 		free (jbuf);
