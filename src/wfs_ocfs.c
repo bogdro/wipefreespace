@@ -1144,11 +1144,20 @@ wfs_ocfs_wipe_unrm (
 							error = err;
 						}
 					}
+					wfs_show_progress (WFS_PROGRESS_UNRM,
+						(unsigned int) (50+((j * (curr_block -
+							(journal_block_numer+1)))*50)/(journal_size * wfs_fs.npasses)),
+						&prev_percent);
 				}
-				if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			}
+			if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+			{
+				/* last pass with zeros: */
+				WFS_MEMSET ( buf, 0, (size_t)jsb->s_blocksize );
+				for ( curr_block = journal_block_numer+1;
+					(curr_block < journal_block_numer + journal_size)
+					&& (sig_recvd == 0); curr_block++ )
 				{
-					/* last pass with zeros: */
-					WFS_MEMSET ( buf, 0, (size_t)jsb->s_blocksize );
 					if ( sig_recvd == 0 )
 					{
 						/* writing modified cluster here: */
@@ -1180,10 +1189,6 @@ wfs_ocfs_wipe_unrm (
 						}*/
 					}
 				}
-				wfs_show_progress (WFS_PROGRESS_UNRM,
-					(unsigned int) (50+((curr_block -
-						(journal_block_numer+1))*50)/journal_size),
-					&prev_percent);
 			}
 		}
 		else
