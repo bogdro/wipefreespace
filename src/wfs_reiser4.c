@@ -1007,48 +1007,51 @@ wfs_r4_wipe_journal (
 	}
 
 	/* wipe the journal. */
-	for ( blk_no = start; (blk_no < start+len) && (sig_recvd == 0)
-		/*&& (ret_journ == WFS_SUCCESS)*/; blk_no++ )
+	if ( bd->wfs_fs.wipe_mode == WFS_WIPE_MODE_PATTERN )
 	{
-		block = aal_block_load (r4->device,
-			(uint32_t)(fs_block_size & 0x0FFFFFFFF), blk_no);
-		if ( block == NULL )
-		{
-			curr_sector++;
-			wfs_show_progress (WFS_PROGRESS_UNRM,
-				(unsigned int) ((curr_sector*50)/len), &prev_percent);
-			continue;
-		}
 		for ( j = 0; (j < bd->wfs_fs.npasses) && (sig_recvd == 0)
 			/*&& (ret_journ == WFS_SUCCESS)*/; j++ )
 		{
-			if ( bd->wfs_fs.no_wipe_zero_blocks != 0 )
+			for ( blk_no = start; (blk_no < start+len) && (sig_recvd == 0)
+				/*&& (ret_journ == WFS_SUCCESS)*/; blk_no++ )
 			{
-				if ( wfs_is_block_zero (block->data, fs_block_size) != 0 )
+				block = aal_block_load (r4->device,
+					(uint32_t)(fs_block_size & 0x0FFFFFFFF), blk_no);
+				if ( block == NULL )
 				{
-					/* this block is all-zeros - don't wipe, as requested */
-					j = bd->wfs_fs.npasses * 2;
+					curr_sector++;
+					wfs_show_progress (WFS_PROGRESS_UNRM,
+						(unsigned int) ((curr_sector*50)/len), &prev_percent);
+					continue;
+				}
+				if ( bd->wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					if ( wfs_is_block_zero (block->data, fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = bd->wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				wfs_fill_buffer ( j, (unsigned char *) block->data,
+					fs_block_size, selected, bd->wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_journ = WFS_SIGNAL;
 					break;
 				}
-			}
-			wfs_fill_buffer ( j, (unsigned char *) block->data,
-				fs_block_size, selected, bd->wfs_fs );
-			if ( sig_recvd != 0 )
-			{
-				ret_journ = WFS_SIGNAL;
-				break;
-			}
-			r4error = aal_block_write (block);
-			if ( r4error != 0 )
-			{
-				ret_journ = WFS_BLKWR;
-				break;
-			}
-			/* Flush after each writing, if more than 1 overwriting needs to be done.
-			   Allow I/O bufferring (efficiency), if just one pass is needed. */
-			if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
-			{
-				r4error = wfs_r4_flush_fs (bd->wfs_fs);
+				r4error = aal_block_write (block);
+				if ( r4error != 0 )
+				{
+					ret_journ = WFS_BLKWR;
+					break;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
+				{
+					r4error = wfs_r4_flush_fs (bd->wfs_fs);
+				}
 			}
 		}
 		/* zero-out the first 2 blocks */
@@ -1056,11 +1059,36 @@ wfs_r4_wipe_journal (
 		{
 			if ( j != bd->wfs_fs.npasses * 2 )
 			{
-				WFS_MEMSET ( block->data, 0, fs_block_size );
-				r4error = aal_block_write (block);
-				if ( r4error != 0 )
+				block = aal_block_load (r4->device,
+					(uint32_t)(fs_block_size & 0x0FFFFFFFF), start);
+				if ( block == NULL )
 				{
-					ret_journ = WFS_BLKWR;
+					ret_journ = WFS_BLKRD;
+				}
+				else
+				{
+					WFS_MEMSET ( block->data, 0, fs_block_size );
+					r4error = aal_block_write (block);
+					if ( r4error != 0 )
+					{
+						ret_journ = WFS_BLKWR;
+					}
+				}
+
+				block = aal_block_load (r4->device,
+					(uint32_t)(fs_block_size & 0x0FFFFFFFF), start + 1);
+				if ( block == NULL )
+				{
+					ret_journ = WFS_BLKRD;
+				}
+				else
+				{
+					WFS_MEMSET ( block->data, 0, fs_block_size );
+					r4error = aal_block_write (block);
+					if ( r4error != 0 )
+					{
+						ret_journ = WFS_BLKWR;
+					}
 				}
 			}
 		}
@@ -1071,34 +1099,143 @@ wfs_r4_wipe_journal (
 				if ( (bd->wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 				{
 					/* last pass with zeros: */
-					WFS_MEMSET ((unsigned char *) block->data, 0,
-						fs_block_size);
-					if ( sig_recvd == 0 )
+					for ( blk_no = start; (blk_no < start+len) && (sig_recvd == 0)
+						/*&& (ret_journ == WFS_SUCCESS)*/; blk_no++ )
 					{
-						r4error = aal_block_write (block);
-						if ( r4error != 0 )
+						block = aal_block_load (r4->device,
+							(uint32_t)(fs_block_size & 0x0FFFFFFFF), blk_no);
+						if ( block == NULL )
 						{
-							ret_journ = WFS_BLKWR;
-							/*break; free the block first */
+							curr_sector++;
+							wfs_show_progress (WFS_PROGRESS_UNRM,
+								(unsigned int) ((curr_sector*50)/len), &prev_percent);
+							continue;
 						}
-						/* No need to flush the last
-						 * writing of a given block. *
-						if ( (bd->wfs_fs.npasses > 1)
-							&& (sig_recvd == 0) )
+						WFS_MEMSET ((unsigned char *) block->data, 0,
+							fs_block_size);
+						if ( sig_recvd == 0 )
 						{
-							r4error = wfs_r4_flush_fs (
-								bd->wfs_fs);
-						} */
+							r4error = aal_block_write (block);
+							if ( r4error != 0 )
+							{
+								ret_journ = WFS_BLKWR;
+								/*break; free the block first */
+							}
+							/* No need to flush the last
+							* writing of a given block. *
+							if ( (bd->wfs_fs.npasses > 1)
+								&& (sig_recvd == 0) )
+							{
+								r4error = wfs_r4_flush_fs (
+									bd->wfs_fs);
+							} */
+						}
+						aal_block_free (block);
 					}
 				}
 			}
 		}
-		aal_block_free (block);
 		/* increase the block number for future iterations and calls */
 		bd->block_number++;
 		curr_sector++;
 		wfs_show_progress (WFS_PROGRESS_UNRM,
 			(unsigned int) ((curr_sector*50)/len), &prev_percent);
+	}
+	else
+	{
+		for ( blk_no = start; (blk_no < start+len) && (sig_recvd == 0)
+			/*&& (ret_journ == WFS_SUCCESS)*/; blk_no++ )
+		{
+			block = aal_block_load (r4->device,
+				(uint32_t)(fs_block_size & 0x0FFFFFFFF), blk_no);
+			if ( block == NULL )
+			{
+				curr_sector++;
+				wfs_show_progress (WFS_PROGRESS_UNRM,
+					(unsigned int) ((curr_sector*50)/len), &prev_percent);
+				continue;
+			}
+			for ( j = 0; (j < bd->wfs_fs.npasses) && (sig_recvd == 0)
+				/*&& (ret_journ == WFS_SUCCESS)*/; j++ )
+			{
+				if ( bd->wfs_fs.no_wipe_zero_blocks != 0 )
+				{
+					if ( wfs_is_block_zero (block->data, fs_block_size) != 0 )
+					{
+						/* this block is all-zeros - don't wipe, as requested */
+						j = bd->wfs_fs.npasses * 2;
+						break;
+					}
+				}
+				wfs_fill_buffer ( j, (unsigned char *) block->data,
+					fs_block_size, selected, bd->wfs_fs );
+				if ( sig_recvd != 0 )
+				{
+					ret_journ = WFS_SIGNAL;
+					break;
+				}
+				r4error = aal_block_write (block);
+				if ( r4error != 0 )
+				{
+					ret_journ = WFS_BLKWR;
+					break;
+				}
+				/* Flush after each writing, if more than 1 overwriting needs to be done.
+				Allow I/O bufferring (efficiency), if just one pass is needed. */
+				if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
+				{
+					r4error = wfs_r4_flush_fs (bd->wfs_fs);
+				}
+			}
+			/* zero-out the first 2 blocks */
+			if ( (bd->block_number == 0) || (bd->block_number == 1) )
+			{
+				if ( j != bd->wfs_fs.npasses * 2 )
+				{
+					WFS_MEMSET ( block->data, 0, fs_block_size );
+					r4error = aal_block_write (block);
+					if ( r4error != 0 )
+					{
+						ret_journ = WFS_BLKWR;
+					}
+				}
+			}
+			else
+			{
+				if ( j != bd->wfs_fs.npasses * 2 )
+				{
+					if ( (bd->wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
+					{
+						/* last pass with zeros: */
+						WFS_MEMSET ((unsigned char *) block->data, 0,
+							fs_block_size);
+						if ( sig_recvd == 0 )
+						{
+							r4error = aal_block_write (block);
+							if ( r4error != 0 )
+							{
+								ret_journ = WFS_BLKWR;
+								/*break; free the block first */
+							}
+							/* No need to flush the last
+							* writing of a given block. *
+							if ( (bd->wfs_fs.npasses > 1)
+								&& (sig_recvd == 0) )
+							{
+								r4error = wfs_r4_flush_fs (
+									bd->wfs_fs);
+							} */
+						}
+					}
+				}
+			}
+			aal_block_free (block);
+			/* increase the block number for future iterations and calls */
+			bd->block_number++;
+			curr_sector++;
+			wfs_show_progress (WFS_PROGRESS_UNRM,
+				(unsigned int) ((curr_sector*50)/len), &prev_percent);
+		}
 	}
 	wfs_show_progress (WFS_PROGRESS_UNRM, 50, &prev_percent);
 	if ( error_ret != NULL )
