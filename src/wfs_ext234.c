@@ -206,9 +206,15 @@ e2_do_block (
 	{
 		return BLOCK_ABORT;
 	}
+	/* do nothing on metadata blocks or if incorrect block number given */
+	if ( (BLOCKCNT < 0) || (*BLOCKNR == 0) )
+	{
+		return 0;
+	}
 
 	bd = (struct wfs_e234_block_data *)PRIVATE;
 	error_ret = (errcode_t *) bd->wd.filesys.fs_error;
+
 	if ( bd->wd.buf == NULL )
 	{
 		return BLOCK_ABORT;
@@ -257,12 +263,6 @@ e2_do_block (
 			ext2fs_badblocks_list_free (wfs_fs->badblocks);
 			wfs_fs->badblocks = NULL;
 		}
-	}
-
-	/* do nothing on metadata blocks or if incorrect block number given */
-	if ( (BLOCKCNT < 0) || (*BLOCKNR == 0) )
-	{
-		return 0;
 	}
 
 	if ( bd->wd.filesys.wipe_mode == WFS_WIPE_MODE_PATTERN )
