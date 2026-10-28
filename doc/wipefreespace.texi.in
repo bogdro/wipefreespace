@@ -944,6 +944,11 @@ Superblock offset on the given filesystems (usually detected automatically).
 Block size on the given filesystems (usually detected automatically).
 @end quotation
 
+@noindent @option{--first-block}@*
+@quotation
+The first block allowed to be wiped.
+@end quotation
+
 @noindent @option{-f}@*@option{--force}@*
 @quotation
 Forces the program to do its job even when the file system has errors.
@@ -952,6 +957,11 @@ Forces the program to do its job even when the file system has errors.
 @noindent @option{-h}@*@option{--help}@*
 @quotation
 Print help and exit.
+@end quotation
+
+@noindent @option{--last-block}@*
+@quotation
+The last block allowed to be wiped.
 @end quotation
 
 @noindent @option{--last-zero}@*

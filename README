@@ -294,8 +294,10 @@ Command line options:
 			disables verbose mode.
 -b|--superblock <off>	Superblock offset on the given filesystems
 -B|--blocksize <size>	Block size on the given filesystems
+--first-block		The first block allowed to be wiped
 -f|--force		Wipe even if the file system has errors
 -h|--help		Print help
+--last-block		The last block allowed to be wiped
 --last-zero		Perform additional wiping with zeros
 -l|--license|--licence	Print license information
 --method <name>		Use the given method for wiping (read below)
