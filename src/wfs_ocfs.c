@@ -1126,6 +1126,24 @@ wfs_ocfs_wipe_unrm (
 					(curr_block < journal_block_numer + journal_size)
 					&& (sig_recvd == 0); curr_block++ )
 				{
+					err = io_read_block_nocache(ocfs2->fs_io,
+						(int64_t)curr_block, 1,
+						(char *)jbuf);
+					if ( err == 0 )
+					{
+						if ( wfs_fs.no_wipe_zero_blocks != 0 )
+						{
+							if ( wfs_is_block_zero (jbuf, (size_t)jsb->s_blocksize) != 0 )
+							{
+								/* this block is all-zeros - don't wipe, as requested */
+								continue;
+							}
+						}
+					}
+					else
+					{
+						continue;
+					}
 					wfs_fill_buffer ( j, jbuf,
 						(size_t)jsb->s_blocksize, selected,
 						wfs_fs );/* buf OK */
@@ -1215,6 +1233,24 @@ wfs_ocfs_wipe_unrm (
 				(curr_block < journal_block_numer + journal_size)
 				&& (sig_recvd == 0); curr_block++ )
 			{
+				err = io_read_block_nocache(ocfs2->fs_io,
+					(int64_t)curr_block, 1,
+					(char *)jbuf);
+				if ( err == 0 )
+				{
+					if ( wfs_fs.no_wipe_zero_blocks != 0 )
+					{
+						if ( wfs_is_block_zero (jbuf, (size_t)jsb->s_blocksize) != 0 )
+						{
+							/* this block is all-zeros - don't wipe, as requested */
+							continue;
+						}
+					}
+				}
+				else
+				{
+					continue;
+				}
 				for ( j = 0; (j < wfs_fs.npasses)
 					&& (sig_recvd == 0); j++ )
 				{
