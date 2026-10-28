@@ -394,6 +394,7 @@ wfs_xfs_wipe_fs	(
 	unsigned long long int agno;
 	unsigned long long int agoff;
 	unsigned long long int length;
+	unsigned long long int block_no;
 	unsigned char * buffer;
 	unsigned long long int j;
 	int selected[WFS_NPAT] = {0};
@@ -663,16 +664,21 @@ wfs_xfs_wipe_fs	(
 				Disk offset = (AG # * sb.agblocks + AG offset) * sb.blocksize.
 				*/
 
+		if (strstr(read_buffer, "agno") != NULL)
+		{
+			/* first line */
+			continue;
+		}
 		res = sscanf ( read_buffer, " %llu %llu %llu", &agno, &agoff, &length );
 		if ( res != 3 )
 		{
 			/* "from ... to ..." line probably reached */
 			break;
 		}
-		/* Disk offset = (agno * xxfs->wfs_xfs_agblocks + agoff ) * \
+		block_no = agno * xxfs->wfs_xfs_agblocks + agoff;
+		/* Disk offset = (agno * xxfs->wfs_xfs_agblocks + agoff) *
 			xxfs->wfs_xfs_blocksize */
-		file_offset = (off64_t) ((agno * xxfs->wfs_xfs_agblocks + agoff) *
-			fs_block_size);
+		file_offset = (off64_t) (block_no * fs_block_size);
 		/* Wiping loop */
 		for ( i = 0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
 		{
@@ -728,8 +734,7 @@ wfs_xfs_wipe_fs	(
 		}
 		if ( (wfs_fs.zero_pass != 0) && (sig_recvd == 0) )
 		{
-			file_offset = (off64_t) ((agno * xxfs->wfs_xfs_agblocks + agoff) *
-				fs_block_size);
+			file_offset = (off64_t) (block_no * fs_block_size);
 			/* NOTE: this must be inside */
 			if ( lseek64 (fs_fd, file_offset, SEEK_SET) != file_offset )
 			{
