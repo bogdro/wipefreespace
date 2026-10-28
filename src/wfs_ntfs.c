@@ -2050,6 +2050,12 @@ wfs_ntfs_wipe_fs (
 		{
 			for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
 			{
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && (i < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && (i > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				/* check if cluster in use */
 				if (utils_cluster_in_use (ntfs, i) != 0)
 				{
@@ -2116,6 +2122,12 @@ wfs_ntfs_wipe_fs (
 					size = ntfs->cluster_size;
 					for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
 					{
+						/* do nothing if before the first requested or after the last requested block */
+						if ( ((wfs_fs.first_block > 0) && (i < wfs_fs.first_block))
+							|| ((wfs_fs.last_block > 0) && (i > wfs_fs.last_block)) )
+						{
+							continue;
+						}
 						/* writing modified cluster here: */
 						result = ntfs_pwrite (ntfs->dev,
 							ntfs->cluster_size * i, size, buf);
@@ -2144,6 +2156,12 @@ wfs_ntfs_wipe_fs (
 	{
 		for (i = 0; (i < ntfs->nr_clusters) && (sig_recvd==0); i++)
 		{
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && (i < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && (i > wfs_fs.last_block)) )
+			{
+				continue;
+			}
 			/* check if cluster in use */
 			if (utils_cluster_in_use (ntfs, i) != 0)
 			{

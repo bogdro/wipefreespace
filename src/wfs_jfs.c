@@ -351,6 +351,12 @@ wfs_jfs_wipe_block (
 		}
 		return ret_wfs;
 	}
+	/* do nothing if before the first requested or after the last requested block */
+	if ( ((wd.filesys.first_block > 0) && (blocknum < wd.filesys.first_block))
+		|| ((wd.filesys.last_block > 0) && (blocknum > wd.filesys.last_block)) )
+	{
+		return ret_wfs;
+	}
 	fs_block_size = wfs_jfs_get_block_size (wd.filesys);
 	if ( fs_block_size == 0 )
 	{

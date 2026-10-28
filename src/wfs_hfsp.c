@@ -593,6 +593,12 @@ wfs_hfsp_wipe_fs (
 				&& (sig_recvd == 0);
 				curr_block++ )
 			{
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && ((long int)curr_block < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && ((long int)curr_block > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				if ( volume_allocated (hfsp_volume, curr_block) == 0 )
 				{
 					/* block is not allocated - wipe it */
@@ -648,6 +654,12 @@ wfs_hfsp_wipe_fs (
 				&& (sig_recvd == 0);
 				curr_block++ )
 			{
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && ((long int)curr_block < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && ((long int)curr_block > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				if ( volume_allocated (hfsp_volume, curr_block) == 0 )
 				{
 					/* block is not allocated - wipe it */
@@ -670,6 +682,12 @@ wfs_hfsp_wipe_fs (
 			&& (sig_recvd == 0);
 			curr_block++ )
 		{
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && ((long int)curr_block < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && ((long int)curr_block > wfs_fs.last_block)) )
+			{
+				continue;
+			}
 			if ( volume_allocated (hfsp_volume, curr_block) == 0 )
 			{
 				/* block is not allocated - wipe it */

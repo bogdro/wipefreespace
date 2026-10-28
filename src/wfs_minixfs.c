@@ -584,6 +584,12 @@ wfs_minixfs_wipe_fs (
 				{
 					break;
 				}
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && (current_block < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && (current_block > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				start_pos = current_block + 1;
 				current_block += FIRSTZONE (minix)-1;
 				if ( (unsigned long int)current_block > BLOCKS (minix) )
@@ -652,6 +658,12 @@ wfs_minixfs_wipe_fs (
 					{
 						break;
 					}
+					/* do nothing if before the first requested or after the last requested block */
+					if ( ((wfs_fs.first_block > 0) && (current_block < wfs_fs.first_block))
+						|| ((wfs_fs.last_block > 0) && (current_block > wfs_fs.last_block)) )
+					{
+						continue;
+					}
 					start_pos = current_block + 1;
 					current_block += FIRSTZONE (minix)-1;
 					if ( (unsigned long int)current_block > BLOCKS (minix) )
@@ -693,6 +705,12 @@ wfs_minixfs_wipe_fs (
 			if ( current_block == -1L )
 			{
 				break;
+			}
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && (current_block < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && (current_block > wfs_fs.last_block)) )
+			{
+				continue;
 			}
 			start_pos = current_block + 1;
 			current_block += FIRSTZONE (minix)-1;

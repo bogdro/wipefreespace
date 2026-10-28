@@ -741,6 +741,12 @@ wfs_r4_wipe_fs (
 				(blk_no < number_of_blocks) && (sig_recvd == 0)
 				/*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 			{
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && ((long int)blk_no < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && ((long int)blk_no > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				if ( reiser4_alloc_available (r4->alloc, blk_no, one) != 0 )
 				{
 					/* block is unallocated, wipe it */
@@ -805,6 +811,12 @@ wfs_r4_wipe_fs (
 						(blk_no < number_of_blocks) && (sig_recvd == 0)
 						/*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 					{
+						/* do nothing if before the first requested or after the last requested block */
+						if ( ((wfs_fs.first_block > 0) && ((long int)blk_no < wfs_fs.first_block))
+							|| ((wfs_fs.last_block > 0) && ((long int)blk_no > wfs_fs.last_block)) )
+						{
+							continue;
+						}
 						if ( reiser4_alloc_available (r4->alloc, blk_no, one) != 0 )
 						{
 							/* block is unallocated, wipe it */
@@ -852,6 +864,12 @@ wfs_r4_wipe_fs (
 			(blk_no < number_of_blocks) && (sig_recvd == 0)
 			/*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 		{
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && ((long int)blk_no < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && ((long int)blk_no > wfs_fs.last_block)) )
+			{
+				continue;
+			}
 			if ( reiser4_alloc_available (r4->alloc, blk_no, one) != 0 )
 			{
 				/* block is unallocated, wipe it */

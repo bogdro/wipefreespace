@@ -214,6 +214,12 @@ e2_do_block (
 
 	bd = (struct wfs_e234_block_data *)PRIVATE;
 	error_ret = (errcode_t *) bd->wd.filesys.fs_error;
+	/* do nothing if before the first requested or after the last requested block */
+	if ( ((bd->wd.filesys.first_block > 0) && (*BLOCKNR < bd->wd.filesys.first_block))
+		|| ((bd->wd.filesys.last_block > 0) && (*BLOCKNR > bd->wd.filesys.last_block)) )
+	{
+		return 0;
+	}
 
 	if ( bd->wd.buf == NULL )
 	{

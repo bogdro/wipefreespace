@@ -679,6 +679,12 @@ wfs_xfs_wipe_fs	(
 		/* Disk offset = (agno * xxfs->wfs_xfs_agblocks + agoff) *
 			xxfs->wfs_xfs_blocksize */
 		file_offset = (off64_t) (block_no * fs_block_size);
+		/* do nothing if before the first requested or after the last requested block */
+		if ( ((wfs_fs.first_block > 0) && ((long long int)block_no < wfs_fs.first_block))
+			|| ((wfs_fs.last_block > 0) && ((long long int)block_no > wfs_fs.last_block)) )
+		{
+			continue;
+		}
 		/* Wiping loop */
 		for ( i = 0; (i < wfs_fs.npasses) && (sig_recvd == 0); i++ )
 		{

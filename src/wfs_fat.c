@@ -1489,6 +1489,12 @@ wfs_fat_wipe_fs (
 					}
 					continue;
 				}
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && (sec_num < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && (sec_num > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				if ( cluster < prev_cluster )
 				{
 					/* started from the beginning - means all clusters are done */
@@ -1584,6 +1590,12 @@ wfs_fat_wipe_fs (
 					}
 					continue;
 				}
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && (sec_num < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && (sec_num > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				if ( cluster < prev_cluster )
 				{
 					/* started from the beginning - means all clusters are done */
@@ -1655,6 +1667,12 @@ wfs_fat_wipe_fs (
 				{
 					break;
 				}
+				continue;
+			}
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && (sec_num < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && (sec_num > wfs_fs.last_block)) )
+			{
 				continue;
 			}
 			if ( cluster < prev_cluster )

@@ -571,6 +571,12 @@ wfs_reiser_wipe_fs (
 			for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
 				&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 			{
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && (blk_no < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && (blk_no > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				if (       (not_data_block   ( rfs, blk_no ) != 0)
 					|| (block_of_bitmap  ( rfs, blk_no ) != 0)
 					|| (block_of_journal ( rfs, blk_no ) != 0)
@@ -656,6 +662,12 @@ wfs_reiser_wipe_fs (
 					for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
 						&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 					{
+						/* do nothing if before the first requested or after the last requested block */
+						if ( ((wfs_fs.first_block > 0) && (blk_no < wfs_fs.first_block))
+							|| ((wfs_fs.last_block > 0) && (blk_no > wfs_fs.last_block)) )
+						{
+							continue;
+						}
 						if (       (not_data_block   ( rfs, blk_no ) != 0)
 							|| (block_of_bitmap  ( rfs, blk_no ) != 0)
 							|| (block_of_journal ( rfs, blk_no ) != 0)
@@ -714,6 +726,12 @@ wfs_reiser_wipe_fs (
 		for ( blk_no = 0; (blk_no < get_sb_block_count (rfs->fs_ondisk_sb))
 			&& (sig_recvd == 0) /*&& (ret_wfs == WFS_SUCCESS)*/; blk_no++ )
 		{
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && (blk_no < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && (blk_no > wfs_fs.last_block)) )
+			{
+				continue;
+			}
 			if (       (not_data_block   ( rfs, blk_no ) != 0)
 				|| (block_of_bitmap  ( rfs, blk_no ) != 0)
 				|| (block_of_journal ( rfs, blk_no ) != 0)

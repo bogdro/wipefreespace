@@ -592,6 +592,12 @@ wfs_ocfs_wipe_fs (
 				(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
 				curr_cluster++ )
 			{
+				/* do nothing if before the first requested or after the last requested block */
+				if ( ((wfs_fs.first_block > 0) && (curr_cluster < wfs_fs.first_block))
+					|| ((wfs_fs.last_block > 0) && (curr_cluster > wfs_fs.last_block)) )
+				{
+					continue;
+				}
 				is_alloc = 1;
 				err = ocfs2_test_cluster_allocated (ocfs2, curr_cluster,
 					&is_alloc);
@@ -676,6 +682,12 @@ wfs_ocfs_wipe_fs (
 						(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
 						curr_cluster++ )
 					{
+						/* do nothing if before the first requested or after the last requested block */
+						if ( ((wfs_fs.first_block > 0) && (curr_cluster < wfs_fs.first_block))
+							|| ((wfs_fs.last_block > 0) && (curr_cluster > wfs_fs.last_block)) )
+						{
+							continue;
+						}
 						/* writing modified cluster here: */
 						err = io_write_block_nocache (ocfs2->fs_io,
 							curr_cluster * blocks_per_cluster,
@@ -708,6 +720,12 @@ wfs_ocfs_wipe_fs (
 			(curr_cluster < ocfs2->fs_clusters) && (sig_recvd == 0);
 			curr_cluster++ )
 		{
+			/* do nothing if before the first requested or after the last requested block */
+			if ( ((wfs_fs.first_block > 0) && (curr_cluster < wfs_fs.first_block))
+				|| ((wfs_fs.last_block > 0) && (curr_cluster > wfs_fs.last_block)) )
+			{
+				continue;
+			}
 			is_alloc = 1;
 			err = ocfs2_test_cluster_allocated (ocfs2, curr_cluster,
 				&is_alloc);
