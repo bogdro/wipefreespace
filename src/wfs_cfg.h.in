@@ -111,6 +111,7 @@
 #  define HAVE_STRINGS_H	1
 #  define HAVE_STRING_H		1
 #  define HAVE_STRTOL		1
+#  define HAVE_STRTOLL		1
 #  define HAVE_SYNC		1
 #  define HAVE_SYS_CAPABILITY_H	1
 #  define HAVE_SYS_IOCTL_H	1

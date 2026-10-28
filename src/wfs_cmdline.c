@@ -133,7 +133,9 @@ static int wfs_optind        = 0;
 
 #if (defined HAVE_GETOPT_H) && (defined HAVE_GETOPT_LONG)
 static int opt_blksize       = 0;
+static int opt_first_block   = 0;
 static int opt_help          = 0;
+static int opt_last_block    = 0;
 static int opt_license       = 0;
 static int opt_number        = 0;
 static int opt_order         = 0;
@@ -150,9 +152,11 @@ static const struct option opts[] =
 	{ "all-zeros",           no_argument,       &opt_allzero,       1 },
 	{ "background",          no_argument,       &opt_bg,            1 },
 	{ "blocksize",           required_argument, &opt_blksize,       1 },
+	{ "first-block",         required_argument, &opt_first_block,   1 },
 	{ "force",               no_argument,       &opt_force,         1 },
 	{ "help",                no_argument,       &opt_help,          1 },
 	{ "iterations",          required_argument, &opt_number,        1 },
+	{ "last-block",          required_argument, &opt_last_block,    1 },
 	{ "last-zero",           no_argument,       &opt_zero,          1 },
 	{ "licence",             no_argument,       &opt_license,       1 },
 	{ "license",             no_argument,       &opt_license,       1 },
@@ -179,6 +183,13 @@ static fs_ioctl_t * ioctls = NULL;	/* array of structures */
 static unsigned long int blocksize = 0;
 static unsigned long int super_off = 0;
 static wfs_wipe_mode_t wiping_mode = WFS_WIPE_MODE_PATTERN;
+# if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+static long long int first_block_opt = 0;
+static long long int last_block_opt = 0;
+# else
+static long int first_block_opt = 0;
+static long int last_block_opt = 0;
+# endif
 
 static unsigned long int npasses = 0;		/* Number of passes (patterns used) */
 
@@ -236,9 +247,11 @@ print_help (
 	puts ( _("--background\t\tContinue work in the background, if possible") );
 	puts ( _("-b|--superblock <off>\tSuperblock offset on the given filesystems") );
 	puts ( _("-B|--blocksize <size>\tBlock size on the given filesystems") );
+	puts ( _("--first-block\t\tThe first block allowed to be wiped") );
 	puts ( _("-f|--force\t\tWipe even if the file system has errors") );
 	puts ( _("-h|--help\t\tPrint help") );
 	puts ( _("-n|--iterations NNN\tNumber of passes (greater than 0)") );
+	puts ( _("--last-block\t\tThe last block allowed to be wiped") );
 	puts ( _("--last-zero\t\tPerform additional wiping with zeros") );
 	puts ( _("-l|--license\t\tPrint license information") );
 	puts ( _("--method <name>\t\tUse the given method for wiping") );
@@ -297,6 +310,8 @@ wfs_wipe_filesytem (
 	fs.no_wipe_zero_blocks = opt_no_wipe_zero;
 	fs.use_dedicated = opt_use_dedicated;
 	fs.wipe_mode = wiping_mode;
+	fs.first_block = first_block_opt;
+	fs.last_block = last_block_opt;
 
 	if ( dev_name == NULL )
 	{
@@ -638,11 +653,69 @@ static int GCC_WARN_UNUSED_RESULT wfs_read_ulong_param (
 	return 0;
 }
 
-/* ======================================================================== */
 #ifndef WFS_ANSIC
-int wfs_parse_cmdline WFS_PARAMS ((int argc, char* argv[]));
+static int GCC_WARN_UNUSED_RESULT wfs_read_longlong_param
+# if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+	WFS_PARAMS ((const char param[], long long int * const result));
+# else
+	WFS_PARAMS ((const char param[], long int * const result));
+# endif
 #endif
 
+static int GCC_WARN_UNUSED_RESULT wfs_read_longlong_param
+#ifdef WFS_ANSIC
+# if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+	(const char param[], long long int * const result)
+# else
+	(const char param[], long long int * const result)
+# endif
+#else
+	(param, result)
+	const char param[];
+# if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+	long long int * const result;
+# else
+	long int * const result;
+# endif
+#endif
+{
+#if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+	long long int tmp_value;
+#else
+	long int tmp_value;
+#endif
+#ifndef HAVE_STRTOL
+	int res;
+#endif
+
+	if ( result == NULL )
+	{
+		return -1;
+	}
+
+	WFS_SET_ERRNO (0);
+#ifdef HAVE_STRTOLL
+	tmp_value = strtoll( param, NULL, 10);
+#else
+	res = sscanf (param, "%lld", &tmp_value);
+#endif
+	if ( (tmp_value <= 0)
+#ifndef HAVE_STRTOLL
+		|| (res == 0)
+#else
+# ifdef HAVE_ERRNO_H
+		|| (errno != 0)
+# endif
+#endif
+		)
+	{
+		return -2;
+	}
+	*result = (long long int)tmp_value;
+	return 0;
+}
+
+/* ======================================================================== */
 int
 wfs_parse_cmdline (
 #ifdef WFS_ANSIC
@@ -812,6 +885,32 @@ wfs_parse_cmdline (
 				return WFS_BAD_CMDLN;
 			}
 			opt_order = 0;
+		}
+		if ( opt_first_block == 1 )
+		{
+			res = wfs_read_longlong_param(optarg, &first_block_opt);
+			if ( res != 0 )
+			{
+				if ( wfs_is_stdout_open() == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			opt_first_block = 0;
+		}
+		if ( opt_last_block == 1 )
+		{
+			res = wfs_read_longlong_param(optarg, &last_block_opt);
+			if ( res != 0 )
+			{
+				if ( wfs_is_stdout_open() == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			opt_last_block = 0;
 		}
 	}
 	wfs_optind = optind;
@@ -1052,6 +1151,54 @@ wfs_parse_cmdline (
 			argv[i+1] = NULL;
 			continue;
 		}
+
+		if ( strcmp (argv[i], "--first-block") == 0 )
+		{
+			if ( i >= argc-1 )
+			{
+				if ( wfs_is_stdout_open() == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			res = wfs_read_longlong_param(argv[i+1], &first_block_opt);
+			if ( res != 0 )
+			{
+				if ( wfs_is_stdout_open() == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			argv[i] = NULL;
+			argv[i+1] = NULL;
+			continue;
+		}
+		if ( strcmp (argv[i], "--last-block") == 0 )
+		{
+			if ( i >= argc-1 )
+			{
+				if ( wfs_is_stdout_open() == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			res = wfs_read_longlong_param(argv[i+1], &last_block_opt);
+			if ( res != 0 )
+			{
+				if ( wfs_is_stdout_open() == 1 )
+				{
+					print_help (wfs_progname);
+				}
+				return WFS_BAD_CMDLN;
+			}
+			argv[i] = NULL;
+			argv[i+1] = NULL;
+			continue;
+		}
+
 		if ( strcmp (argv[i], "--") == 0 )
 		{
 			/* end-of-arguments marker */

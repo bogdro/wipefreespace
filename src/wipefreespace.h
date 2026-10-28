@@ -376,6 +376,17 @@ struct wfs_fsid
 	int use_dedicated;
 		/* the wiping mode - block-order or pattern-order: */
 	wfs_wipe_mode_t wipe_mode;
+# if (defined HAVE_LONG_LONG) || (defined HAVE_LONG_LONG_INT)
+		/* first block allowed to be wiped */
+	long long int first_block;
+		/* last block allowed to be wiped */
+	long long int last_block;
+# else
+		/* first block allowed to be wiped */
+	long int first_block;
+		/* last block allowed to be wiped */
+	long int last_block;
+# endif
 };
 
 typedef struct wfs_fsid wfs_fsid_t;

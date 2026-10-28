@@ -8326,6 +8326,12 @@ then :
   printf "%s\n" "#define HAVE_STRTOL 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "strtoll" "ac_cv_func_strtoll"
+if test "x$ac_cv_func_strtoll" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRTOLL 1" >>confdefs.h
+
+fi
 ac_fn_c_check_func "$LINENO" "random" "ac_cv_func_random"
 if test "x$ac_cv_func_random" = xyes
 then :

@@ -859,7 +859,7 @@ AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type 
 		    (int or void).])
 
 AC_FUNC_GETMNTENT
-AC_CHECK_FUNCS([memset memcpy setlocale strtol random srandom clearenv \
+AC_CHECK_FUNCS([memset memcpy setlocale strtol strtoll random srandom clearenv \
 	getuid geteuid snprintf daemon sigaction sleep getpid getopt_long \
 	hasmntopt getmntent_r sched_yield sync fsync select ioctl \
 	getmntinfo fopen64 basename umount open stat stat64 fstat fstat64 \
