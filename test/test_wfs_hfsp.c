@@ -31,10 +31,10 @@ static const int skip_tests = 1; /* until "y" can be input to stdin */
 wfs_errcode_t
 wfs_check_mounted (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t wfs_fs)
+	const wfs_fsid_t wfs_fs WFS_ATTR ((unused)))
 #else
 	wfs_fs)
-	const wfs_fsid_t wfs_fs;
+	const wfs_fsid_t wfs_fs WFS_ATTR ((unused));
 #endif
 {
 	return 0;
@@ -42,7 +42,8 @@ wfs_check_mounted (
 
 /* ============================================================= */
 
-static wfs_fsid_t wfs_fs = {FS_NAME_HFSP, 1, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
+static wfs_fsid_t wfs_fs = {FS_NAME_HFSP, 1, 0, NULL, NULL,
+	WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN, 0, 0};
 static wfs_fsdata_t data = {{0, 0}};
 
 START_TEST(test_wfs_hfsp_chk_mount)

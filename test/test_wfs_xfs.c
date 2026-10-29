@@ -30,10 +30,10 @@
 wfs_errcode_t
 wfs_check_mounted (
 #ifdef WFS_ANSIC
-	const wfs_fsid_t wfs_fs)
+	const wfs_fsid_t wfs_fs WFS_ATTR ((unused)))
 #else
 	wfs_fs)
-	const wfs_fsid_t wfs_fs;
+	const wfs_fsid_t wfs_fs WFS_ATTR ((unused));
 #endif
 {
 	return 0;
@@ -42,10 +42,10 @@ wfs_check_mounted (
 wfs_errcode_t
 wfs_get_mnt_point (
 #ifdef WFS_ANSIC
-	const char * const dev_name,
-	wfs_errcode_t * const error,
-	char * const mnt_point,
-	const size_t mnt_point_len,
+	const char * const dev_name WFS_ATTR ((unused)),
+	wfs_errcode_t * const error WFS_ATTR ((unused)),
+	char * const mnt_point WFS_ATTR ((unused)),
+	const size_t mnt_point_len WFS_ATTR ((unused)),
 	int * const is_rw )
 #else
 	dev_name,
@@ -53,10 +53,10 @@ wfs_get_mnt_point (
 	mnt_point,
 	mnt_point_len,
 	is_rw )
-	const char * const dev_name;
-	wfs_errcode_t * const error;
-	char * const mnt_point;
-	const size_t mnt_point_len;
+	const char * const dev_name WFS_ATTR ((unused));
+	wfs_errcode_t * const error WFS_ATTR ((unused));
+	char * const mnt_point WFS_ATTR ((unused));
+	const size_t mnt_point_len WFS_ATTR ((unused));
 	int * const is_rw;
 #endif
 {
@@ -66,7 +66,8 @@ wfs_get_mnt_point (
 
 /* ============================================================= */
 
-static wfs_fsid_t wfs_fs = {FS_NAME_XFS, 1, 0, NULL, NULL, WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
+static wfs_fsid_t wfs_fs = {FS_NAME_XFS, 1, 0, NULL, NULL,
+	WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN, 0, 0};
 static wfs_fsdata_t data = {{0, 0}};
 
 START_TEST(test_wfs_xfs_chk_mount)

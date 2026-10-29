@@ -147,7 +147,7 @@ START_TEST(test_wfs_check_mounted)
 	}
 	else
 	{
-		fail ("test_wfs_check_mounted: can't allocate memory of size %ld\n",
+		ck_abort_msg("test_wfs_check_mounted: can't allocate memory of size %ld\n",
 			sizeof(wfs_errcode_t));
 	}
 }
@@ -178,7 +178,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 	fd_fs = open (WFS_TEST_FILESYSTEM, open_flags);
 	if ( fd_fs < 0 )
 	{
-		fail ("%s: can't open test filesystem '%s': errno=%d\n",
+		ck_abort_msg("%s: can't open test filesystem '%s': errno=%d\n",
 			test_name, WFS_TEST_FILESYSTEM, errno);
 	}
 
@@ -186,7 +186,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 	if ( fd_loop < 0 )
 	{
 		close (fd_fs);
-		fail ("%s: can't open loop device '%s': errno=%d\n",
+		ck_abort_msg("%s: can't open loop device '%s': errno=%d\n",
 			test_name, WFS_TEST_LOOP_DEVICE, errno);
 	}
 
@@ -198,7 +198,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 	{
 		close (fd_fs);
 		close (fd_loop);
-		fail ("%s: can't connect test filesystem to loop device: errno=%d\n",
+		ck_abort_msg("%s: can't connect test filesystem to loop device: errno=%d\n",
 			test_name, errno);
 	}
 
@@ -240,7 +240,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 			close (fd_fs);
 			ioctl (fd_loop, LOOP_CLR_FD, 0);
 			close (fd_loop);
-			fail ("%s: can't allocate memory of size %d\n",
+			ck_abort_msg("%s: can't allocate memory of size %d\n",
 				test_name, WFS_TEST_ERR_SIZE);
 		}
 	}
@@ -249,7 +249,7 @@ static wfs_errcode_t mount_and_get_result (const char * const test_name,
 		close (fd_fs);
 		ioctl (fd_loop, LOOP_CLR_FD, 0);
 		close (fd_loop);
-		fail ("%s: can't mount test filesystem: errno=%d\n",
+		ck_abort_msg("%s: can't mount test filesystem: errno=%d\n",
 			test_name, errno);
 	}
 

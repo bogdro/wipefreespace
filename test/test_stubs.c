@@ -52,15 +52,15 @@ WFS_ATTR ((nonnull))
 #endif
 wfs_show_progress (
 #ifdef WFS_ANSIC
-	const wfs_progress_type_t	type,
-	unsigned int			percent,
-	unsigned int * const		prev_percent
+	const wfs_progress_type_t	type WFS_ATTR ((unused)),
+	unsigned int			percent WFS_ATTR ((unused)),
+	unsigned int * const		prev_percent WFS_ATTR ((unused))
 	)
 #else
 	type, percent, prev_percent )
-	const wfs_progress_type_t	type;
-	unsigned int			percent;
-	unsigned int * const		prev_percent;
+	const wfs_progress_type_t	type WFS_ATTR ((unused));
+	unsigned int			percent WFS_ATTR ((unused));
+	unsigned int * const		prev_percent WFS_ATTR ((unused));
 #endif
 {
 }

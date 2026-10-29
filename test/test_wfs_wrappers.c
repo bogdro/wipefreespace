@@ -25,7 +25,7 @@
 /* ============================================================= */
 
 static wfs_fsid_t wfs_fs = {WFS_TEST_FILESYSTEM, 1, 0, NULL, NULL,
-	WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN};
+	WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN, 0, 0};
 static wfs_fsdata_t data = {{0, 0}};
 
 START_TEST(test_open_close)
@@ -71,7 +71,7 @@ END_TEST
 
 START_TEST(test_wfs_get_err_size)
 {
-	ck_assert_int_gt(wfs_get_err_size(), 0);
+	ck_assert_uint_gt(wfs_get_err_size(), 0);
 }
 END_TEST
 
