@@ -198,14 +198,25 @@ static Suite * wfs_create_suite(void)
 int main(void)
 {
 	int failed = 0;
+#ifdef HAVE_STAT64
+	struct stat64 fs_stat64;
+#else
 	struct stat fs_stat;
+#endif
 	Suite * s;
 	SRunner * sr;
 
+#ifdef HAVE_STAT64
+	if (stat64(FS_NAME_XFS, &fs_stat64) != 0)
+	{
+		return WFS_AUTOMAKE_TEST_SKIP;
+	}
+#else
 	if (stat(FS_NAME_XFS, &fs_stat) != 0)
 	{
 		return WFS_AUTOMAKE_TEST_SKIP;
 	}
+#endif
 
 	s = wfs_create_suite();
 	sr = srunner_create(s);
