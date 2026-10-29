@@ -58,6 +58,8 @@ Project homepage: <https://wipefreespace.sourceforge.io/>.
 
 [![Build Status](https://app.travis-ci.com/bogdro/wipefreespace.svg?token=T93Xpo2K5F4sXcUCVsd5&branch=dev)](https://app.travis-ci.com/bogdro/wipefreespace)
 
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=bogdro_wipefreespace)
+
 ## WARNING ##
 
 The `dev` branch may contain code which is a work in progress and committed
