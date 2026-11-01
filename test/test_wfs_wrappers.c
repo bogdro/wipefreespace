@@ -36,9 +36,71 @@ START_TEST(test_open_close)
 }
 END_TEST
 
+START_TEST(test_open_close_non_exist)
+{
+	const char fs_name[] = "/dev/not-exist-dev-test-fs";
+	wfs_fsid_t wfs_fs_nonexist = {fs_name, 1, 0, NULL, NULL,
+		WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN, 0, 0};
+	wfs_errcode_t ret_wfs;
+
+	ret_wfs = wfs_open_fs(&wfs_fs_nonexist, &data);
+	ck_assert_int_ne(WFS_SUCCESS, ret_wfs);
+}
+END_TEST
+
+START_TEST(test_open_close_dev_null)
+{
+	const char fs_name[] = "/dev/null";
+	wfs_fsid_t wfs_fs_null = {fs_name, 1, 0, NULL, NULL,
+		WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN, 0, 0};
+	wfs_errcode_t ret_wfs;
+#ifdef HAVE_STAT64
+	struct stat64 fs_stat64;
+	if (stat64(fs_name, &fs_stat64) != 0)
+	{
+		return;
+	}
+#else
+	struct stat fs_stat;
+	if (stat(fs_name, &fs_stat) != 0)
+	{
+		return;
+	}
+#endif
+	ret_wfs = wfs_open_fs(&wfs_fs_null, &data);
+	ck_assert_int_ne(WFS_SUCCESS, ret_wfs);
+}
+END_TEST
+
+START_TEST(test_open_close_dev_zero)
+{
+	const char fs_name[] = "/dev/zero";
+	wfs_fsid_t wfs_fs_zero = {fs_name, 1, 0, NULL, NULL,
+		WFS_CURR_FS_NONE, 0, 0, WFS_WIPE_MODE_PATTERN, 0, 0};
+	wfs_errcode_t ret_wfs;
+#ifdef HAVE_STAT64
+	struct stat64 fs_stat64;
+	if (stat64(fs_name, &fs_stat64) != 0)
+	{
+		return;
+	}
+#else
+	struct stat fs_stat;
+	if (stat(fs_name, &fs_stat) != 0)
+	{
+		return;
+	}
+#endif
+	ret_wfs = wfs_open_fs(&wfs_fs_zero, &data);
+	ck_assert_int_ne(WFS_SUCCESS, ret_wfs);
+}
+END_TEST
+
 START_TEST(test_wfs_check_err)
 {
-	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	wfs_errcode_t ret_wfs;
+
+	ret_wfs = wfs_open_fs(&wfs_fs, &data);
 	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_check_err(wfs_fs));
 	wfs_close_fs(wfs_fs);
@@ -47,7 +109,9 @@ END_TEST
 
 START_TEST(test_wfs_is_dirty)
 {
-	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	wfs_errcode_t ret_wfs;
+
+	ret_wfs = wfs_open_fs(&wfs_fs, &data);
 	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_is_dirty(wfs_fs));
 	wfs_close_fs(wfs_fs);
@@ -56,7 +120,9 @@ END_TEST
 
 START_TEST(test_wfs_flush_fs)
 {
-	wfs_errcode_t ret_wfs = wfs_open_fs(&wfs_fs, &data);
+	wfs_errcode_t ret_wfs;
+
+	ret_wfs = wfs_open_fs(&wfs_fs, &data);
 	ck_assert_int_eq(WFS_SUCCESS, ret_wfs);
 	ck_assert_int_eq(0, wfs_flush_fs(wfs_fs));
 	wfs_close_fs(wfs_fs);
@@ -102,6 +168,9 @@ static Suite * wfs_create_suite(void)
 	TCase * tests_wrappers = tcase_create("wrappers");
 
 	tcase_add_test(tests_wrappers, test_open_close);
+	tcase_add_test(tests_wrappers, test_open_close_non_exist);
+	tcase_add_test(tests_wrappers, test_open_close_dev_null);
+	tcase_add_test(tests_wrappers, test_open_close_dev_zero);
 	tcase_add_test(tests_wrappers, test_wfs_check_err);
 	tcase_add_test(tests_wrappers, test_wfs_is_dirty);
 	tcase_add_test(tests_wrappers, test_wfs_flush_fs);
