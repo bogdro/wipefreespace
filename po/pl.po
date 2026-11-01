@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WipeFreeSpace\n"
 "Report-Msgid-Bugs-To: bogdro@users.sourceforge.net\n"
-"POT-Creation-Date: 2026-10-05 23:35+0200\n"
+"POT-Creation-Date: 2026-11-01 17:01+0100\n"
 "PO-Revision-Date: 2007-04-23 17:24+0200\n"
 "Last-Translator: Bogdan Drozdowski <bogdro@users.sourceforge.net>\n"
 "Language-Team: Polish\n"
@@ -223,7 +223,7 @@ msgstr "Przechodzenie w tło nie jest obsługiwane lub nie powiodło się"
 msgid "Disabling cache"
 msgstr "Wyłączanie pamięci podręcznej urządzenia"
 
-#: src/wfs_cmdline.c:230
+#: src/wfs_cmdline.c:241
 msgid ""
 " - Program for secure cleaning of free space on filesystems\n"
 "Syntax: "
@@ -231,93 +231,101 @@ msgstr ""
 " - Program do bezpiecznego czyszczenia pustego miejsca na systemach plików\n"
 "Składnia: "
 
-#: src/wfs_cmdline.c:232
+#: src/wfs_cmdline.c:243
 msgid " [options] "
 msgstr " [opcje] "
 
-#: src/wfs_cmdline.c:234
+#: src/wfs_cmdline.c:245
 msgid "Options:"
 msgstr "Opcje:"
 
-#: src/wfs_cmdline.c:235
+#: src/wfs_cmdline.c:246
 msgid "--all-zeros\t\tUse only zeros for wiping"
 msgstr "--all-zeros\t\tUżywaj tylko zer do wymazywania"
 
-#: src/wfs_cmdline.c:236
+#: src/wfs_cmdline.c:247
 msgid "--background\t\tContinue work in the background, if possible"
 msgstr "--background\t\tKontynuuj pracę w tle, jeśli to możliwe"
 
-#: src/wfs_cmdline.c:237
+#: src/wfs_cmdline.c:248
 msgid "-b|--superblock <off>\tSuperblock offset on the given filesystems"
 msgstr "-b|--superblock <off>\tPozycja Superbloku na podanych systemach plików"
 
-#: src/wfs_cmdline.c:238
+#: src/wfs_cmdline.c:249
 msgid "-B|--blocksize <size>\tBlock size on the given filesystems"
 msgstr "-B|--blocksize <size>\tRozmiar bloku na podanych systemach plików"
 
-#: src/wfs_cmdline.c:239
+#: src/wfs_cmdline.c:250
+msgid "--first-block\t\tThe first block allowed to be wiped"
+msgstr ""
+
+#: src/wfs_cmdline.c:251
 msgid "-f|--force\t\tWipe even if the file system has errors"
 msgstr "-f|--force\t\tCzyść nawet gdy system plików ma błędy"
 
-#: src/wfs_cmdline.c:240
+#: src/wfs_cmdline.c:252
 msgid "-h|--help\t\tPrint help"
 msgstr "-h|--help\t\tWyświetl pomoc"
 
-#: src/wfs_cmdline.c:241
+#: src/wfs_cmdline.c:253
 msgid "-n|--iterations NNN\tNumber of passes (greater than 0)"
 msgstr "-n|--iterations NNN\tLiczba przejść (większa od 0)"
 
-#: src/wfs_cmdline.c:242
+#: src/wfs_cmdline.c:254
+msgid "--last-block\t\tThe last block allowed to be wiped"
+msgstr ""
+
+#: src/wfs_cmdline.c:255
 msgid "--last-zero\t\tPerform additional wiping with zeros"
 msgstr "--last-zero\t\tWykonaj dodatkowe zamazywanie zerami"
 
-#: src/wfs_cmdline.c:243
+#: src/wfs_cmdline.c:256
 msgid "-l|--license\t\tPrint license information"
 msgstr "-l|--license\t\tWyświetl informacje o licencji"
 
-#: src/wfs_cmdline.c:244
+#: src/wfs_cmdline.c:257
 msgid "--method <name>\t\tUse the given method for wiping"
 msgstr "--method <nazwa>\tUżyj podanej metody do wymazywania"
 
-#: src/wfs_cmdline.c:245
+#: src/wfs_cmdline.c:258
 msgid "--nopart\t\tDo NOT wipe free space in partially used blocks"
 msgstr "--nopart\t\tNIE czyść pustego miejsca w częściowo używanych blokach"
 
-#: src/wfs_cmdline.c:246
+#: src/wfs_cmdline.c:259
 msgid "--nounrm\t\tDo NOT wipe undelete information"
 msgstr "--nounrm\t\tNIE czyść informacji służących do odzyskiwania plików"
 
-#: src/wfs_cmdline.c:247
+#: src/wfs_cmdline.c:260
 msgid "--nowfs\t\t\tDo NOT wipe free space on file system"
 msgstr "--nowfs\t\t\tNIE czyść pustego miejsca na systemie plików"
 
-#: src/wfs_cmdline.c:248
+#: src/wfs_cmdline.c:261
 msgid "--no-wipe-zero-blocks\tDo NOT wipe all-zero blocks on file system"
 msgstr ""
 "--no-wipe-zero-blocks\tNIE czyść bloków zawierających same zera na systemie "
 "plików"
 
-#: src/wfs_cmdline.c:249
+#: src/wfs_cmdline.c:262
 msgid "--order <mode>\t\tWiping order - pattern or block"
 msgstr "--order <tryb>\t\tTryb czyszczenia - według wzorca lub bloku"
 
-#: src/wfs_cmdline.c:250
+#: src/wfs_cmdline.c:263
 msgid ""
 "--use-dedicated\t\tUse the program dedicated for the given filesystem type"
 msgstr ""
 "--use-dedicated\t\tUżyj programu dedykowanego pod dany typ systemu plików"
 
-#: src/wfs_cmdline.c:251
+#: src/wfs_cmdline.c:264
 msgid "--use-ioctl\t\tDisable device caching during work (can be DANGEROUS)"
 msgstr ""
 "--use-ioctl\t\tWyłącz pamięć podręczną w czasie pracy (może być "
 "NIEBEZPIECZNE)"
 
-#: src/wfs_cmdline.c:252
+#: src/wfs_cmdline.c:265
 msgid "-v|--verbose\t\tVerbose output"
 msgstr "-v|--verbose\t\tWyświetlaj szczegóły działania"
 
-#: src/wfs_cmdline.c:253
+#: src/wfs_cmdline.c:266
 msgid "-V|--version\t\tPrint version number"
 msgstr "-V|--version\t\tWyświetl numer wersji"
 
