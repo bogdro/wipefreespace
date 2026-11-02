@@ -91,6 +91,7 @@ static void * child_function WFS_PARAMS ((void * p));
  * The child function called after successful creating a child process.
  */
 static void *
+WFS_ATTR((noreturn))
 child_function (
 #ifdef WFS_ANSIC
 	void * p
