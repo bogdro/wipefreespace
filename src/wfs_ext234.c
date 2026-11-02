@@ -115,6 +115,7 @@ struct wfs_e234_block_data
 	wfs_wipedata_t wd;
 	unsigned int prev_percent;
 	unsigned int number_of_blocks_in_inode;
+	int first_journ;
 };
 
 #if (defined TEST_COMPILE) && (defined WFS_ANSIC)
@@ -196,7 +197,6 @@ e2_do_block (
 	size_t buf_start = 0;
 	int selected[WFS_NPAT] = {0};
 	struct wfs_e234_block_data *bd;
-	static int first_journ = 1;
 	errcode_t * error_ret;
 	errcode_t e2error = 0;
 	wfs_errcode_t gerror = 0;
@@ -316,7 +316,7 @@ e2_do_block (
 		}
 		e2error = 0;
 		/* do NOT overwrite the first block of the journal */
-		if ( ((bd->wd.isjournal != 0) && (first_journ == 0))
+		if ( ((bd->wd.isjournal != 0) && (bd->first_journ == 0))
 			|| (bd->wd.isjournal == 0) )
 		{
 			e2error = io_channel_write_blk (
@@ -355,7 +355,7 @@ e2_do_block (
 				fs_block_size - buf_start);
 			e2error = 0;
 			/* do NOT overwrite the first block of the journal */
-			if ( (((bd->wd.isjournal != 0) && (first_journ == 0))
+			if ( (((bd->wd.isjournal != 0) && (bd->first_journ == 0))
 				|| (bd->wd.isjournal == 0))
 				&& (sig_recvd == 0) )
 			{
@@ -388,9 +388,9 @@ e2_do_block (
 	if ( (bd->wd.isjournal != 0) && (sig_recvd == 0) )
 	{
 		/* skip the first block of the journal */
-		if ( first_journ != 0 )
+		if ( bd->first_journ != 0 )
 		{
-			first_journ--;
+			bd->first_journ--;
 		}
 		else
 		{
@@ -1246,6 +1246,7 @@ wfs_e234_wipe_journal (
 			/*&& (ret == WFS_SUCCESS)*/; j++ )
 		{
 			block_data.wd.passno = j;
+			block_data.first_journ = 1;
 			e2error = ext2fs_block_iterate (e2fs,
 				e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
 				BLOCK_FLAG_DATA_ONLY, NULL, &e2_do_block, &block_data);
@@ -1257,6 +1258,7 @@ wfs_e234_wipe_journal (
 	}
 	else
 	{
+		block_data.first_journ = 1;
 		block_data.wd.passno = 0;
 		e2error = ext2fs_block_iterate (e2fs,
 			e2fs->super->s_journal_inum,	/*EXT2_JOURNAL_INO,*/
