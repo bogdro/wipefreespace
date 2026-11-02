@@ -21,8 +21,8 @@
 
 if WFS_TESTS_ENABLED
 
-TESTS = test_wfs_mount_check test_wfs_wiping test_wfs_wrappers
-check_PROGRAMS = test_wfs_mount_check test_wfs_wiping test_wfs_wrappers
+TESTS = test_wfs_mount_check test_wfs_wiping test_wfs_wrappers test_wfs_cmdline
+check_PROGRAMS = test_wfs_mount_check test_wfs_wiping test_wfs_wrappers test_wfs_cmdline
 WFSTEST_COMMON_CFLAGS = @CHECK_CFLAGS@ -I $(top_builddir)/src
 WFSTEST_COMMON_LDADD = @CHECK_LIBS@ @LIBS@
 WFSTEST_FS_COMMON_LDADD = \
@@ -46,9 +46,17 @@ test_wfs_wrappers_LDADD = $(top_builddir)/src/wfs_wrappers.o \
 	$(top_builddir)/src/wfs_mount_check.o \
 	$(WFSTEST_FS_COMMON_LDADD)
 
+test_wfs_cmdline_SOURCES = test_wfs_cmdline.c test_stubs.c
+test_wfs_cmdline_CFLAGS = $(WFSTEST_COMMON_CFLAGS)
+test_wfs_cmdline_LDADD = $(top_builddir)/src/wfs_cmdline.o \
+	$(top_builddir)/src/wfs_wrappers.o \
+	$(top_builddir)/src/wfs_mount_check.o \
+	$(WFSTEST_FS_COMMON_LDADD)
+
 if EXT234FS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_ext234.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_ext234.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_ext234.o
 
 TESTS += test_wfs_ext234
 check_PROGRAMS += test_wfs_ext234
@@ -62,6 +70,7 @@ endif
 if NTFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_ntfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_ntfs.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_ntfs.o
 
 TESTS += test_wfs_ntfs
 check_PROGRAMS += test_wfs_ntfs
@@ -75,6 +84,7 @@ endif
 if XFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_xfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_xfs.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_xfs.o
 
 TESTS += test_wfs_xfs
 check_PROGRAMS += test_wfs_xfs
@@ -88,6 +98,7 @@ endif
 if REISERFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_reiser.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_reiser.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_reiser.o
 
 TESTS += test_wfs_reiser
 check_PROGRAMS += test_wfs_reiser
@@ -101,6 +112,7 @@ endif
 if REISER4
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_reiser4.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_reiser4.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_reiser4.o
 
 TESTS += test_wfs_reiser4
 check_PROGRAMS += test_wfs_reiser4
@@ -114,6 +126,7 @@ endif
 if FATFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_fat.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_fat.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_fat.o
 
 TESTS += test_wfs_fat
 check_PROGRAMS += test_wfs_fat
@@ -127,6 +140,7 @@ endif
 if MINIXFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_minixfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_minixfs.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_minixfs.o
 
 TESTS += test_wfs_minixfs
 check_PROGRAMS += test_wfs_minixfs
@@ -140,6 +154,7 @@ endif
 if JFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_jfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_jfs.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_jfs.o
 
 TESTS += test_wfs_jfs
 check_PROGRAMS += test_wfs_jfs
@@ -153,6 +168,7 @@ endif
 if HFSP
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_hfsp.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_hfsp.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_hfsp.o
 
 TESTS += test_wfs_hfsp
 check_PROGRAMS += test_wfs_hfsp
@@ -166,6 +182,7 @@ endif
 if OCFS
 test_wfs_mount_check_LDADD += $(top_builddir)/src/wfs_ocfs.o
 test_wfs_wrappers_LDADD += $(top_builddir)/src/wfs_ocfs.o
+test_wfs_cmdline_LDADD += $(top_builddir)/src/wfs_ocfs.o
 
 TESTS += test_wfs_ocfs
 check_PROGRAMS += test_wfs_ocfs

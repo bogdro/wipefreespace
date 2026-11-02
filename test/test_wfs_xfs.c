@@ -187,7 +187,7 @@ static Suite * wfs_create_suite(void)
 	/*tcase_add_checked_fixture(tests_xfs, &setup_test, &teardown_test);*/
 	/*tcase_add_unchecked_fixture(tests_xfs, &setup_global, &teardown_global);*/
 
-	/* set 30-second timeouts */
+	/* set 90-second timeouts */
 	tcase_set_timeout(tests_xfs, 90);
 
 	suite_add_tcase(s, tests_xfs);
