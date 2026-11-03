@@ -980,7 +980,7 @@ wfs_hfsp_check_err (
 	wfs_fsid_t wfs_fs;
 #endif
 {
-	struct volume * hfsp_volume;
+	const struct volume * hfsp_volume;
 
 	hfsp_volume = (struct volume *) wfs_fs.fs_backend;
 	if ( hfsp_volume == NULL )
