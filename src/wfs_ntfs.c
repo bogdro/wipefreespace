@@ -130,11 +130,11 @@ struct wfs_ntfs_list_head
 	} while (0)
 
 #define WFS_NTFS_LIST_ENTRY(ptr, type, member) \
-	((type *)((char *)(ptr) - (unsigned long int)(&((type *)0)->member)))
+	((type *)((char *)(ptr) - (unsigned long int)(&((type *)0)->(member))))
 
 #define WFS_NTFS_LIST_FOR_EACH_SAFE(pos, n, head) \
-	for (pos = (head)->next, n = pos->next; pos != (head); \
-		pos = n, n = pos->next)
+	for ((pos) = (head)->next, (n) = (pos)->next; (pos) != (head); \
+		(pos) = (n), (n) = pos->next)
 
 /* ======================================================================== */
 
@@ -227,7 +227,7 @@ wfs_ntfs_get_block_size (
 	const wfs_fsid_t wfs_fs;
 #endif
 {
-	ntfs_volume * ntfs;
+	const ntfs_volume * ntfs;
 
 	ntfs = (ntfs_volume *) wfs_fs.fs_backend;
 	if ( ntfs == NULL )
@@ -276,7 +276,10 @@ wipe_compressed_attribute (
 # endif
 {
 	unsigned char *mybuf = NULL;
-	s64 size, offset, ret = 0, wiped = 0;
+	s64 size;
+	s64 offset;
+	s64 ret = 0;
+	s64 wiped = 0;
 	u16 block_size;
 	VCN cur_vcn = 0;
 	runlist *rlc;
@@ -291,7 +294,7 @@ wipe_compressed_attribute (
 	/*wfs_fsid_t wfs_fs;*/
 	int go_back;
 	int selected[WFS_NPAT] = {0};
-	ntfs_volume * ntfs;
+	const ntfs_volume * ntfs;
 	wfs_errcode_t gerror = 0;
 	wfs_errcode_t * error_ret;
 	size_t fs_block_size;
@@ -337,7 +340,7 @@ wipe_compressed_attribute (
 
 		if (rlc->lcn == LCN_HOLE)
 		{
-			runlist *rlt;
+			const runlist *rlt;
 
 			offset = cur_vcn - rlc->length;
 			if (offset == (offset & (~cu_mask)))
@@ -601,7 +604,8 @@ wipe_attribute (
 	wfs_fsid_t wfs_fs;
 # endif
 {
-	s64 size, ret = 0;
+	s64 size;
+	s64 ret = 0;
 	unsigned long int j;
 	s64 offset;
 	/*wfs_fsid_t wfs_fs;*/
@@ -609,7 +613,7 @@ wipe_attribute (
 # ifdef HAVE_LIBNTFS_3G
 	s64 s64zero = 0;
 # endif
-	ntfs_volume * ntfs;
+	const ntfs_volume * ntfs;
 	wfs_errcode_t gerror = 0;
 	wfs_errcode_t * error_ret;
 
@@ -771,7 +775,8 @@ utils_cluster_in_use (
 # define	BUFSIZE	512
 	static unsigned char ntfs_buffer[BUFSIZE];
 	static s64 ntfs_bmplcn = -BUFSIZE - 1;	/* Which bit of $Bitmap is in the buffer */
-	int cbyte, bit;
+	int cbyte;
+	int bit;
 	ntfs_attr *attr = NULL;
 
 	s64 sizeof_ntfs_buffer = BUFSIZE;
@@ -852,7 +857,8 @@ free_file (
 	struct ufile * file;
 # endif
 {
-	struct wfs_ntfs_list_head *item = NULL, *tmp = NULL;
+	struct wfs_ntfs_list_head *item = NULL;
+	struct wfs_ntfs_list_head *tmp = NULL;
 	struct filename *f = NULL;
 	struct data *d = NULL;
 
@@ -987,7 +993,8 @@ destroy_record (
 	ntfs_attr *mft = NULL;
 	ntfs_attr_search_ctx *ctx = NULL;
 	wfs_errcode_t ret_wfs = WFS_SUCCESS;
-	unsigned long int pass, i;
+	unsigned long int pass;
+	unsigned long int i;
 	s64 j;
 	unsigned char * a_offset;
 	int selected[WFS_NPAT] = {0};
@@ -1452,7 +1459,9 @@ wfs_ntfs_wipe_journal (
 	wfs_errcode_t ret_journ = WFS_SUCCESS;
 	ntfs_inode *ni = NULL;
 	ntfs_attr *na = NULL;
-	s64 len, pos, count;
+	s64 len;
+	s64 pos;
+	s64 count;
 	unsigned long int j;
 	int selected[WFS_NPAT] = {0};
 	unsigned char * buf = NULL;
@@ -1941,7 +1950,9 @@ wfs_ntfs_wipe_fs (
 	char ** args_ntfswipe_copy = NULL;
 	child_id_t child_ntfswipe;
 	wfs_errcode_t error = 0;
-	s64 i, size, result;
+	s64 i;
+	s64 size;
+	s64 result;
 	unsigned long int j;
 	int selected[WFS_NPAT] = {0};
 	unsigned char * buf;
@@ -2295,7 +2306,12 @@ wfs_ntfs_wipe_unrm (
 	child_id_t child_ntfswipe;
 	int ret;
 	ntfs_attr *bitmapattr = NULL;
-	s64 bmpsize, size, nr_mft_records, i, j, k;
+	s64 bmpsize;
+	s64 size;
+	s64 nr_mft_records;
+	s64 i;
+	s64 j;
+	s64 k;
 	unsigned char b;
 	unsigned char * buf;
 #  define MYBUF_SIZE 8192
@@ -2756,7 +2772,7 @@ wfs_ntfs_check_err (
 	const wfs_fsid_t wfs_fs;
 #endif
 {
-	ntfs_volume * ntfs;
+	const ntfs_volume * ntfs;
 
 	if ( wfs_fs.use_dedicated != 0 )
 	{
@@ -2789,7 +2805,7 @@ wfs_ntfs_is_dirty (
 #endif
 {
 	int is_dirty = 0;
-	ntfs_volume * ntfs;
+	const ntfs_volume * ntfs;
 
 	if ( wfs_fs.use_dedicated != 0 )
 	{
@@ -2908,6 +2924,7 @@ size_t wfs_ntfs_get_err_size (WFS_VOID)
  */
 void wfs_ntfs_init (WFS_VOID)
 {
+	/* not needed */
 }
 
 /* ======================================================================== */
@@ -2917,6 +2934,7 @@ void wfs_ntfs_init (WFS_VOID)
  */
 void wfs_ntfs_deinit (WFS_VOID)
 {
+	/* not needed */
 }
 
 /* ======================================================================== */

@@ -806,7 +806,10 @@ wfs_xfs_wipe_fs	(
 			break;
 		}
 	}
-	close (fs_fd);
+	if (fs_fd >= 0)
+	{
+		close (fs_fd);
+	}
 	/* child stopped writing? something went wrong?
 	close the wfs_fs and kill the child process
 	*/

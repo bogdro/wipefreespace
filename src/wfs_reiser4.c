@@ -1064,6 +1064,7 @@ wfs_r4_wipe_journal (
 					ret_journ = WFS_BLKWR;
 					break;
 				}
+				aal_block_free (block);
 				/* Flush after each writing, if more than 1 overwriting needs to be done.
 				Allow I/O bufferring (efficiency), if just one pass is needed. */
 				if ( WFS_IS_SYNC_NEEDED(bd->wfs_fs) )
@@ -1092,6 +1093,7 @@ wfs_r4_wipe_journal (
 						ret_journ = WFS_BLKWR;
 					}
 				}
+				aal_block_free (block);
 
 				block = aal_block_load (r4->device,
 					(uint32_t)(fs_block_size & 0x0FFFFFFFF), start + 1);
