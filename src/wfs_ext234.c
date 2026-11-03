@@ -322,7 +322,7 @@ e2_do_block (
 			e2error = io_channel_write_blk (
 				wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 		}
-		if ( (e2error != 0) )
+		if ( e2error != 0 )
 		{
 			/* check if block is marked as bad. If there is no 'badblocks' list
 			   or the block is marked OK, then print the error. */
@@ -362,7 +362,7 @@ e2_do_block (
 				e2error = io_channel_write_blk (
 					wfs_fs->io, *BLOCKNR, 1, bd->wd.buf);
 			}
-			if ( (e2error != 0) )
+			if ( e2error != 0 )
 			{
 				/* check if block is marked as bad. If there is no 'badblocks' list
 				or the block is marked OK, then print the error. */
@@ -414,7 +414,7 @@ e2_do_block (
 				}
 				e2error = io_channel_write_blk (wfs_fs->io,
 					*BLOCKNR, 1, bd->wd.buf);
-				if ( (e2error != 0) )
+				if ( e2error != 0 )
 				{
 					/* check if block is marked as bad. If there is no 'badblocks' list
 					or the block is marked OK, then print the error. */

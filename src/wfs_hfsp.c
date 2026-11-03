@@ -75,13 +75,13 @@ Something wrong. HFS+ requested, but libhfsp.h or libhfsp missing.
 # define STDIN_FILENO	0
 #endif
 
-extern int volume_writetobuf WFS_PARAMS ((volume * vol, void * buf, long int block));
-
 #include "wfs_hfsp.h"
 #include "wfs_signal.h"
 #include "wfs_util.h"
 #include "wfs_wiping.h"
 #include "wfs_mount_check.h"
+
+extern int volume_writetobuf WFS_PARAMS ((volume * vol, void * buf, long int block));
 
 #if (defined TEST_COMPILE) && (defined WFS_ANSIC)
 # undef WFS_ANSIC
@@ -109,7 +109,7 @@ wfs_hfsp_get_block_size (
 	const wfs_fsid_t wfs_fs;
 # endif
 {
-	struct volume * hfsp_volume;
+	const struct volume * hfsp_volume;
 
 	hfsp_volume = (struct volume *) wfs_fs.fs_backend;
 	if ( hfsp_volume == NULL )
@@ -342,7 +342,7 @@ wfs_hfsp_wipe_part_dir (
 	wfs_errcode_t ret_temp = WFS_SUCCESS;
 	record curr_elem;
 	wfs_errcode_t error = 0;
-	struct volume * hfsp_volume;
+	const struct volume * hfsp_volume;
 	wfs_errcode_t * error_ret;
 
 	hfsp_volume = (struct volume *) wfs_fs.fs_backend;
@@ -1063,6 +1063,7 @@ size_t wfs_hfsp_get_err_size (WFS_VOID)
  */
 void wfs_hfsp_init (WFS_VOID)
 {
+	/* not needed */
 }
 
 /* ======================================================================== */
@@ -1072,6 +1073,7 @@ void wfs_hfsp_init (WFS_VOID)
  */
 void wfs_hfsp_deinit (WFS_VOID)
 {
+	/* not needed */
 }
 
 /* ======================================================================== */

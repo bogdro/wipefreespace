@@ -711,7 +711,7 @@ static int GCC_WARN_UNUSED_RESULT wfs_read_longlong_param
 	{
 		return -2;
 	}
-	*result = (long long int)tmp_value;
+	*result = tmp_value;
 	return 0;
 }
 
@@ -749,6 +749,8 @@ wfs_parse_cmdline (
 	wf_gen.no_wipe_zero_blocks = 0;
 	wf_gen.use_dedicated = 0;
 	wf_gen.wipe_mode = WFS_WIPE_MODE_PATTERN;
+	wf_gen.first_block = 0;
+	wf_gen.last_block = 0;
 
 	wfs_progname = wfs_get_program_name();
 

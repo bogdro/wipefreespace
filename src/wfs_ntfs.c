@@ -130,11 +130,11 @@ struct wfs_ntfs_list_head
 	} while (0)
 
 #define WFS_NTFS_LIST_ENTRY(ptr, type, member) \
-	((type *)((char *)(ptr) - (unsigned long int)(&((type *)0)->member)))
+	((type *)((char *)(ptr) - (unsigned long int)(&((type *)0)->(member))))
 
 #define WFS_NTFS_LIST_FOR_EACH_SAFE(pos, n, head) \
-	for (pos = (head)->next, n = pos->next; pos != (head); \
-		pos = n, n = pos->next)
+	for ((pos) = (head)->next, (n) = (pos)->next; (pos) != (head); \
+		(pos) = (n), (n) = pos->next)
 
 /* ======================================================================== */
 
@@ -2908,6 +2908,7 @@ size_t wfs_ntfs_get_err_size (WFS_VOID)
  */
 void wfs_ntfs_init (WFS_VOID)
 {
+	/* not needed */
 }
 
 /* ======================================================================== */
@@ -2917,6 +2918,7 @@ void wfs_ntfs_init (WFS_VOID)
  */
 void wfs_ntfs_deinit (WFS_VOID)
 {
+	/* not needed */
 }
 
 /* ======================================================================== */
