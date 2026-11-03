@@ -58,13 +58,13 @@ jobs:
           libext2fs-dev
           ntfs-3g-dev
           xfsprogs 
-          libreiser4-dev reiser4progs
           libhfsp-dev hfsutils hfsprogs
           ocfs2-tools-dev 
-          reiserfsprogs
           check
+          #libreiser4-dev reiser4progs
+          #reiserfsprogs
       - name: Install Build Wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v8.2.1
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v8.4.1
       - name: Configure
         run: |
           #autoreconf --install
@@ -99,7 +99,7 @@ jobs:
           find .. -name '*.o' | xargs gcov --preserve-paths
           cd ..
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v8.2.1
+        uses: SonarSource/sonarqube-scan-action@v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
