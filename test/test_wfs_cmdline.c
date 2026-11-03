@@ -21,6 +21,8 @@
 
 #include "wfs_test_common.h"
 #include "src/wfs_cmdline.h"
+#include "src/wfs_signal.h"
+#include "src/wfs_secure.h"
 
 /* =================== stubs =================================== */
 
@@ -33,10 +35,10 @@ wfs_is_stdout_open (WFS_VOID)
 void
 wfs_set_stdout_open (
 #ifdef WFS_ANSIC
-	int value)
+	int value WFS_ATTR ((unused)))
 #else
 	value)
-	int value;
+	int value WFS_ATTR ((unused));
 #endif
 {
 }
@@ -44,10 +46,10 @@ wfs_set_stdout_open (
 void
 wfs_set_stderr_open (
 #ifdef WFS_ANSIC
-	int value)
+	int value WFS_ATTR ((unused)))
 #else
 	value)
-	int value;
+	int value WFS_ATTR ((unused));
 #endif
 {
 }
@@ -55,10 +57,10 @@ wfs_set_stderr_open (
 const char *
 wfs_get_err_msg (
 #ifdef WFS_ANSIC
-	const wfs_errcode_t wfs_err)
+	const wfs_errcode_t wfs_err WFS_ATTR ((unused)))
 #else
 	wfs_err)
-	const wfs_errcode_t wfs_err;
+	const wfs_errcode_t wfs_err WFS_ATTR ((unused));
 #endif
 {
 	return "TEST-ERROR";
@@ -66,10 +68,10 @@ wfs_get_err_msg (
 
 void wfs_set_sigh (
 #ifdef WFS_ANSIC
-	const int opt_verbose)
+	const int opt_verbose WFS_ATTR ((unused)))
 #else
 	opt_verbose)
-	const int opt_verbose;
+	const int opt_verbose WFS_ATTR ((unused));
 #endif
 {
 }
@@ -79,7 +81,6 @@ wfs_clear_env (WFS_VOID)
 {
 }
 
-const char * const wfs_err_msg         = ("error");
 const char * const wfs_err_msg_open    = ("during opening");
 const char * const wfs_err_msg_flush   = ("while flushing");
 const char * const wfs_err_msg_close   = ("during closing");
@@ -109,7 +110,6 @@ const char * const wfs_err_msg_pipe    = ("during creating a pipe");
 const char * const wfs_err_msg_exec    = ("during starting a sub-process");
 const char * const wfs_err_msg_seek    = ("during seeking to position");
 const char * const wfs_err_msg_ioctl   = ("during performing a control operation on");
-
 
 /* ============================================================= */
 
