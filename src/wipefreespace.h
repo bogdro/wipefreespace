@@ -447,6 +447,11 @@ typedef union wfs_fsdata wfs_fsdata_t;
 #  define WFS_VOID
 # endif
 
+# ifdef __DARWIN_ONLY_64_BIT_INO_T
+#  define stat64 stat
+#  define fstat64 fstat
+# endif
+
 # ifdef HAVE_ERRNO_H
 #  define WFS_GET_ERRNO_OR_DEFAULT(val) (errno)
 #  define WFS_SET_ERRNO(value) do { errno = (value); } while (0)
